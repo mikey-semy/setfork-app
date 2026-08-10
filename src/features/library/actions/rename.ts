@@ -5,11 +5,15 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db, listRedirects, templates } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
-import { checkSlugAvailable } from '@/shared/lib/slug'
+import { checkSlugAvailable, suggestFreeSlug } from '@/shared/lib/slug'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 
-export type RenameResult = { error?: string }
+export type RenameResult = {
+  error?: string
+  /** Свободный похожий адрес — чтобы отказ «занято» не заканчивал разговор. */
+  suggestion?: string
+}
 
 /**
  * Сменить адрес списка. Прежний адрес не пропадает — он остаётся вести сюда же.
@@ -47,7 +51,11 @@ export async function renameList(
   // результата, а то, что от введённого вообще что-то осталось: строка из одних знаков
   // препинания дала бы адрес 'list', о котором человек не просил.
   if (slug === 'list' && !/[a-z0-9]/i.test(raw)) return { error: t('renameInvalid', lang) }
-  if (!free) return { error: t('renameTaken', lang) }
+  if (!free) {
+    // Отказ без выхода: предлагаем ближайший свободный, человек принимает одним кликом.
+    const suggestion = await suggestFreeSlug(raw, session.userId, templateId)
+    return { error: t('renameTaken', lang), suggestion: suggestion ?? undefined }
+  }
 
   const previous = tpl.slug
   await db.transaction(async (tx) => {

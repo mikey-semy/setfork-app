@@ -220,7 +220,23 @@ export function ListSettingsDanger({
           >
             {t('renameSuggest', lang)}
           </button>
-          {rnState?.error && <div className="text-[0.8125rem] text-danger">{rnState.error}</div>}
+          {rnState?.error && (
+            <div className="flex flex-wrap items-center gap-2 text-[0.8125rem] text-danger">
+              {rnState.error}
+              {/* Занято — но вот свободный похожий: клик подставляет его в поле. */}
+              {rnState.suggestion && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (slugInput.current) slugInput.current.value = rnState.suggestion!
+                  }}
+                  className="font-mono text-accent hover:underline"
+                >
+                  {handle}/{rnState.suggestion}
+                </button>
+              )}
+            </div>
+          )}
         </form>
       </OverlayPanel>
 

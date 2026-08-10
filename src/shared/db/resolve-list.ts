@@ -1,5 +1,6 @@
 import 'server-only'
 import { and, eq, sql } from 'drizzle-orm'
+import { envNumber } from '@/shared/env'
 import { db, listRedirects, templates, userRedirects, users } from './index'
 
 /** Поля списка, нужные canViewList и canWriteToFeature (@/core). */
@@ -57,9 +58,29 @@ export async function resolveUserByHandle(
     .select({ id: users.id, handle: users.handle })
     .from(userRedirects)
     .innerJoin(users, eq(userRedirects.userId, users.id))
-    .where(sql`lower(${userRedirects.handle}) = lower(${handle})`)
+    .where(and(sql`lower(${userRedirects.handle}) = lower(${handle})`, handleHoldAlive()))
     .limit(1)
   return previous ? { ...previous, moved: true } : null
+}
+
+/**
+ * Сколько прежний ник продолжает вести на человека, дней.
+ *
+ * Ники — ресурс ОБЩИЙ и конечный, в отличие от слагов (те заняты только у своего
+ * владельца). Держать прежние имена вечно значит навсегда выесть пространство коротких
+ * ников; освобождать сразу, как Gitea (DeleteUserRedirect в createUser) и GitHub, —
+ * значит рвать чужие ссылки в ту же секунду, когда имя кто-то занял, и молча уводить
+ * их на другого человека. Срок — середина: ссылки переживают переезд, имена
+ * возвращаются в оборот.
+ *
+ * Настройкой, а не числом: подходящая величина выяснится по тому, как часто ники
+ * меняют и как долго живут ссылки на них.
+ */
+const HANDLE_HOLD_DAYS = envNumber('SETFORK_HANDLE_HOLD_DAYS', 180)
+
+/** Условие «удержание прежнего ника ещё не истекло» — общее для лукапа и занятости. */
+export function handleHoldAlive() {
+  return sql`${userRedirects.createdAt} > now() - make_interval(days => ${HANDLE_HOLD_DAYS})`
 }
 
 /** Собрать актуальный адрес и понять, отличается ли он от запрошенного. */

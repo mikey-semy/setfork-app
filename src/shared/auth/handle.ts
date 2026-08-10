@@ -1,7 +1,8 @@
 // Handle (ник) — правила и генерация уникального при OAuth-регистрации.
 import { randomBytes } from 'crypto'
-import { sql } from 'drizzle-orm'
+import { and, sql } from 'drizzle-orm'
 import { db, userRedirects, users } from '@/shared/db'
+import { handleHoldAlive } from '@/shared/db/resolve-list'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { translitRu } from '@/shared/lib/translit'
 
@@ -44,14 +45,15 @@ export async function handleTaken(h: string): Promise<boolean> {
     .where(sql`lower(${users.handle}) = ${norm}`)
     .limit(1)
   if (row) return true
-  // Прежний ник тоже занят: он всё ещё ведёт на своего человека — из чужих ссылок,
-  // из git remote в клонах его списков. Отдать его новому владельцу значило бы
-  // передать вместе с ним чужой трафик. Gitea и GitHub здесь имя освобождают; мы
-  // сознательно строже (то же решение, что и с прежними адресами списков).
+  // Прежний ник занят, ПОКА ДЕЙСТВУЕТ УДЕРЖАНИЕ: он всё ещё ведёт на своего человека —
+  // из чужих ссылок, из git remote в клонах его списков, — и отдать его сейчас значило
+  // бы передать вместе с ним чужой трафик. Gitea и GitHub освобождают имя сразу
+  // (DeleteUserRedirect в createUser), из-за чего ссылки рвутся в ту же секунду; вечно
+  // держать тоже нельзя — ники общий и конечный ресурс. Срок — в resolve-list.
   const [previous] = await db
     .select({ id: userRedirects.id })
     .from(userRedirects)
-    .where(sql`lower(${userRedirects.handle}) = ${norm}`)
+    .where(and(sql`lower(${userRedirects.handle}) = ${norm}`, handleHoldAlive()))
     .limit(1)
   return !!previous
 }

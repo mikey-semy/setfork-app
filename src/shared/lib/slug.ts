@@ -80,6 +80,36 @@ export async function uniqueSlug(base: string, ownerId: string): Promise<string>
   return (await slugTaken(slug, ownerId)) ? `${slug}-${Date.now().toString(36).slice(-4)}` : slug
 }
 
+/**
+ * Сколько вариантов со счётчиком перебрать, прежде чем сдаться.
+ *
+ * Считанный десяток — потому что предложение нужно ЧЕЛОВЕКУ: `-2`, `-3` он прочитает и
+ * примет, а `-47` уже бессмысленно, там проще придумать другое имя. Дальше отвечаем
+ * «занято» без подсказки, а не подбираем до победного — иначе редкий случай стоил бы
+ * сотни запросов к базе.
+ */
+const SUGGEST_TRIES = 9
+
+/**
+ * Свободный адрес, похожий на желаемый: `deploy`, `deploy-2`, `deploy-3`…
+ *
+ * Именно счётчик, а не случайный суффикс: человек должен узнавать в предложении своё
+ * имя. Так же подбирает адрес приём списка при передаче владения.
+ */
+export async function suggestFreeSlug(
+  raw: string,
+  ownerId: string,
+  exceptTemplateId?: string,
+): Promise<string | null> {
+  const base = slugify(raw)
+  if (!(await slugTaken(base, ownerId, exceptTemplateId))) return base
+  for (let i = 2; i <= SUGGEST_TRIES + 1; i++) {
+    const candidate = `${base}-${i}`
+    if (!(await slugTaken(candidate, ownerId, exceptTemplateId))) return candidate
+  }
+  return null
+}
+
 /** Слаг, введённый человеком при переименовании: та же нормализация и та же занятость. */
 export async function checkSlugAvailable(
   raw: string,
