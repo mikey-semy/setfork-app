@@ -3,6 +3,7 @@ import { jwtVerify } from 'jose'
 import { isLang, DEFAULT_LANG, t, type Lang } from '@/shared/i18n'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { maintenanceEnabled } from '@/shared/settings/maintenance'
+import { dialectMime, errorScript, normalizeDialect } from '@/core/domain/script-dialect'
 
 // Режим «сайт на ремонте»: включается админом из /admin (флаг в БД, кэш 5с)
 // либо аварийно env SETFORK_MAINTENANCE=1. Всё отвечает 503 + Retry-After,
@@ -11,6 +12,8 @@ import { maintenanceEnabled } from '@/shared/settings/maintenance'
 // выключают режим в /admin. Node-runtime: нужен доступ к БД для флага.
 
 const RETRY_AFTER_SEC = '1800' // подсказка клиентам: ~полчаса
+/** Текст ремонта для машин — один на все машинные поверхности (английский: их читают не люди). */
+const MAINTENANCE_LINE = 'SetFork is down for maintenance. Retry later.'
 
 function maintenanceHtml(lang: Lang): string {
   const title = t('maintenanceTitle', lang)
@@ -73,7 +76,24 @@ export async function middleware(req: NextRequest) {
     pathname.endsWith('/releases.atom') ||
     /\/(info\/refs|git-upload-pack|git-receive-pack)$/.test(pathname)
   if (machine) {
-    return new NextResponse('SetFork is down for maintenance. Retry later.\n', {
+    // `/raw` отдаёт ИСПОЛНЯЕМЫЙ КОД, и его тело уходит прямо в интерпретатор. Обычная
+    // строка «SetFork is down for maintenance» там — не сообщение, а команда: шелл
+    // отвечает на неё `SetFork: command not found`. Поэтому режиму ремонта на этой
+    // поверхности нужна та же заглушка, что и остальным отказам: комментарии и
+    // ненулевой выход на диалекте, который просили.
+    if (pathname.endsWith('/raw')) {
+      const dialect = normalizeDialect(req.nextUrl.searchParams.get('lang'))
+      return new NextResponse(errorScript(dialect, [MAINTENANCE_LINE]), {
+        status: 503,
+        headers: {
+          'Retry-After': RETRY_AFTER_SEC,
+          'Content-Type': dialectMime(dialect),
+          'SF-Reason': 'maintenance',
+          'Cache-Control': 'no-store',
+        },
+      })
+    }
+    return new NextResponse(`${MAINTENANCE_LINE}\n`, {
       status: 503,
       headers: { 'Retry-After': RETRY_AFTER_SEC, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
     })
