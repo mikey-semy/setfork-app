@@ -3,6 +3,7 @@ import { jwtVerify } from 'jose'
 import { isLang, DEFAULT_LANG, t, type Lang } from '@/shared/i18n'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { maintenanceEnabled } from '@/shared/settings/maintenance'
+import { REQUEST_PATH_HEADER } from '@/shared/request-path'
 import { dialectMime, errorScript, normalizeDialect } from '@/core/domain/script-dialect'
 
 // Режим «сайт на ремонте»: включается админом из /admin (флаг в БД, кэш 5с)
@@ -54,19 +55,35 @@ async function isAdminRequest(req: NextRequest): Promise<boolean> {
   }
 }
 
+/**
+ * Пропустить запрос дальше, сообщив серверным компонентам ПУТЬ.
+ *
+ * В App Router путь текущего запроса компоненту недоступен, а он нужен ровно одному
+ * потребителю — перенаправлению с прежнего адреса списка (shared/db/moved-list):
+ * без пути ссылка на `/owner/старый-слаг/issues` привела бы на корень списка, а с
+ * ним сохраняется вкладка, как это делает Gitea (там заменяют сегмент owner/name и
+ * оставляют весь остаток пути с query).
+ */
+function pass(req: NextRequest): NextResponse {
+  const headers = new Headers(req.headers)
+  // Путь ВМЕСТЕ с query: перенаправление обязано сохранить и то и другое.
+  headers.set(REQUEST_PATH_HEADER, req.nextUrl.pathname + req.nextUrl.search)
+  return NextResponse.next({ request: { headers } })
+}
+
 export async function middleware(req: NextRequest) {
-  if (!(await maintenanceEnabled())) return NextResponse.next()
+  if (!(await maintenanceEnabled())) return pass(req)
 
   const { pathname } = req.nextUrl
   // /api/health — liveness-проба Docker-контейнера: ДОЛЖНА отдавать 200 даже в
   // ремонте. Иначе healthcheck валит контейнер (unhealthy → Traefik выкидывает
   // из роутинга → 404 на весь сайт, и заглушка «ремонт» даже не показывается).
-  if (pathname === '/api/health') return NextResponse.next()
+  if (pathname === '/api/health') return pass(req)
   // Дверь для админа: страница входа и auth-эндпоинты (GitHub OAuth, POST
   // server actions самого /login) остаются открыты.
-  if (pathname === '/login' || pathname.startsWith('/api/auth/')) return NextResponse.next()
+  if (pathname === '/login' || pathname.startsWith('/api/auth/')) return pass(req)
 
-  if (await isAdminRequest(req)) return NextResponse.next()
+  if (await isAdminRequest(req)) return pass(req)
 
   // Машинные поверхности — короткий text/plain (curl, git, MCP, ридеры фидов).
   const machine =

@@ -38,16 +38,45 @@ export function slugify(input: string): string {
   )
 }
 
+/**
+ * Свободен ли слаг у этого владельца.
+ *
+ * Занятым считается и ПРЕЖНИЙ адрес переименованного списка: он всё ещё ведёт на
+ * него — из чужих ссылок, из git remote в клонах, из памяти агентов. Отдать такой
+ * слаг новому списку значило бы увести чужой трафик на другой контент; именно здесь
+ * мы расходимся с Gitea и GitHub, где освободившееся имя занимается заново.
+ */
+async function slugTaken(slug: string, ownerId: string): Promise<boolean> {
+  const [{ db, listRedirects, templates }, { and, eq }] = await Promise.all([
+    import('@/shared/db'),
+    import('drizzle-orm'),
+  ])
+  const [live, previous] = await Promise.all([
+    db
+      .select({ slug: templates.slug })
+      .from(templates)
+      .where(and(eq(templates.ownerId, ownerId), eq(templates.slug, slug)))
+      .limit(1),
+    db
+      .select({ slug: listRedirects.slug })
+      .from(listRedirects)
+      .where(and(eq(listRedirects.ownerId, ownerId), eq(listRedirects.slug, slug)))
+      .limit(1),
+  ])
+  return live.length > 0 || previous.length > 0
+}
+
 /** Уникальный слаг в рамках владельца: добавляет короткий суффикс при коллизии. */
-export async function uniqueSlug(
-  base: string,
-  ownerId: string,
-): Promise<string> {
-  const [{ db, templates }, { and, eq }] = await Promise.all([import('@/shared/db'), import('drizzle-orm')])
+export async function uniqueSlug(base: string, ownerId: string): Promise<string> {
   const slug = slugify(base)
-  const owned = await db
-    .select({ slug: templates.slug })
-    .from(templates)
-    .where(and(eq(templates.ownerId, ownerId), eq(templates.slug, slug)))
-  return owned.length ? `${slug}-${Date.now().toString(36).slice(-4)}` : slug
+  return (await slugTaken(slug, ownerId)) ? `${slug}-${Date.now().toString(36).slice(-4)}` : slug
+}
+
+/** Слаг, введённый человеком при переименовании: та же нормализация и та же занятость. */
+export async function checkSlugAvailable(
+  raw: string,
+  ownerId: string,
+): Promise<{ slug: string; free: boolean }> {
+  const slug = slugify(raw)
+  return { slug, free: !(await slugTaken(slug, ownerId)) }
 }

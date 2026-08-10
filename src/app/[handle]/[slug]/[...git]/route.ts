@@ -7,6 +7,7 @@ import { authorizeGitRead, authorizeGitWrite, freshMeta, resolvePushRole, writeD
 import { gitActorContext } from '@/features/git/actor-context'
 import { GIT_CONTENT_TYPE, parseGitHttpRequest, type GitHttpOperation } from '@/features/git/http-request'
 import { gitBytesResponse, gitFailureResponse, type GitHttpFailure } from '@/features/git/http-response'
+import { gitMovedResponse } from '@/features/git/moved'
 import { scheduleAcceptedPushEffects } from '@/features/git/push-effects'
 import { clientIp, rateLimit } from '@/shared/rate-limit'
 import { envNumber } from '@/shared/env'
@@ -99,7 +100,15 @@ async function dispatch(req: Request, ctx: RouteContext, method: 'GET' | 'POST')
   if (isFailure(op)) return gitFailureResponse(op)
 
   const grant = await authorizeGitRead(req.headers.get('authorization'), op.repo, op.need)
-  if (isFailure(grant)) return gitFailureResponse(grant)
+  if (isFailure(grant)) {
+    // «Нет такого репозитория» может означать «его переименовали»: адрес живёт в
+    // git remote у каждого, кто клонировал, и обязан доводить до места.
+    if (grant.code === 'not_found') {
+      const moved = await gitMovedResponse(req, op.repo)
+      if (moved) return moved
+    }
+    return gitFailureResponse(grant)
+  }
 
   // Запись требует не только видимости, но и роли: проверяем ДО чтения тела, чтобы не
   // тянуть мегабайты ради отказа.
