@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Черновики совета пишутся ЗАМЕНОЙ, а не досыпкой.
@@ -34,7 +35,7 @@ const countFor = async (idx: number) => {
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${generations}, ${users} restart identity cascade`)
+  await resetTables(sql`${generations}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'gen-owner' }).returning({ id: users.id })
   userId = u.id
 })

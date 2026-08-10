@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * ЧЕРНОВИК ПРАВОК: копится сколько угодно, версия появляется ОДНОЙ публикацией.
@@ -57,7 +58,7 @@ const listRow = async (id: string) => {
 описание('черновик правок', () => {
   beforeAll(async () => {
     if (!CORE) return
-    await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+    await resetTables(sql`${templates}, ${users}`)
     const [u] = await db.insert(users).values({ handle: 'draft-owner' }).returning({ id: users.id })
     ownerId = u.id
     tplId = await freshList('draft-flow')

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { db, steps, templates, templateVersions, users } from '@/shared/db'
 import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
+import { resetTables } from '../../helpers/reset-db'
 
 // Проверка «такой список уже есть» ходит в БД: сравнивать надо с ТЕКУЩИМИ версиями близких по
 // теме списков. Тут проверяется именно выборка кандидатов — сама мера сходства покрыта
@@ -38,7 +39,7 @@ const clearLists = async () => {
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${steps}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${steps}, ${templateVersions}, ${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'nd-owner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'nd-other' }).returning({ id: users.id })
   ownerId = o.id

@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { db, embeddings, templates, users } from '@/shared/db'
 import { COLUMN_DIM } from '@/shared/ai/embed-space'
+import { resetTables } from '../../helpers/reset-db'
 
 // Defense-in-depth: приватные списки ИНДЕКСИРУЕМ (вектор нужен владельцу для поиска
 // СВОИХ), но их плейнтекст content/metadata в корпус не пишем. embedTexts мокаем
@@ -19,7 +20,7 @@ let pubId = ''
 let privId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${embeddings}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${embeddings}, ${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'ep-owner' }).returning({ id: users.id })
   ownerId = o.id
   const [pub] = await db
@@ -36,7 +37,7 @@ beforeAll(async () => {
   await reindexList(privId)
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${embeddings}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${embeddings}, ${templates}, ${users}`)
   vi.restoreAllMocks()
 })
 

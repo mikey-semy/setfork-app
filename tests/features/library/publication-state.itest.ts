@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Состояние публикации нового списка — часть ЗАПИСИ, а не пост-эффект.
 //
@@ -130,7 +131,7 @@ const newList = (over: Record<string, unknown> = {}) => ({
 })
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${jobs}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${jobs}, ${templateVersions}, ${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'ps-owner' }).returning({ id: users.id })
   const [c] = await db.insert(users).values({ handle: 'ps-curated', curated: true }).returning({ id: users.id })
   ownerId = o.id
@@ -142,7 +143,7 @@ beforeEach(async () => {
   h.visibleAtBirth = []
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${jobs}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${jobs}, ${templateVersions}, ${templates}, ${users}`)
 })
 
 const modOf = async (id: string) =>

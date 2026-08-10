@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // publishList (draft → published) против реального Postgres: только владелец, только
 // черновик; публичный при публикации уходит в гейт (pending), приватный — нет.
@@ -39,14 +40,14 @@ async function seedDraft(over: Partial<typeof templates.$inferInsert> = {}): Pro
 const row = async (id: string) => db.query.templates.findFirst({ where: (t, { eq }) => eq(t.id, id) })
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'powner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'pother' }).returning({ id: users.id })
   ownerId = o.id
   otherId = x.id
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
 })
 
 describe('publishList — владение + гейт', () => {

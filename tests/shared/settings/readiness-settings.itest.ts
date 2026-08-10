@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { appSettings, db } from '@/shared/db'
 import { getAiSettings } from '@/shared/settings/ai'
+import { resetTables } from '../../helpers/reset-db'
 
 // Круговой прогон настройки через БД. Именно этого не хватило в #488: ключи не были в
 // массиве KEYS, настройка из админки НИКОГДА не читалась, а режим всегда оставался 'off'.
@@ -12,7 +13,7 @@ const set = async (key: string, value: string) => {
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${appSettings}`)
+  await resetTables(sql`${appSettings}`, { restartIdentity: false, cascade: false })
 })
 
 describe('планка готовности: настройка доезжает из БД', () => {

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { agentActions, db } from '@/shared/db'
 import { getCompanyDay } from '@/features/admin/development-queries'
+import { resetTables } from '../../helpers/reset-db'
 
 // «День компании» — отчёт постфактум по журналу действий. С включённой планкой компания
 // публикует без человека, поэтому отчёт обязателен: автономия без отчёта — чёрный ящик.
@@ -21,7 +22,7 @@ const put = async (over: Partial<typeof agentActions.$inferInsert> & { daysAgo?:
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${agentActions}`)
+  await resetTables(sql`${agentActions}`, { restartIdentity: false, cascade: false })
 })
 
 beforeEach(async () => {

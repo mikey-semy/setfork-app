@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Отчёт внешней проверки — наша сторона интеграций: прогонов чужого кода у нас нет,
 // итог присылает агент снаружи. Проверяем на реальной БД то, из-за чего проверки
@@ -16,7 +17,7 @@ let templateId = ''
 let suggestionId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const rows = await db
     .insert(users)
     .values([{ handle: 'chk-owner' }, { handle: 'chk-author' }, { handle: 'chk-stranger' }])

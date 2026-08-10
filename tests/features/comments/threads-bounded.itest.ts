@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Реплики тредов грузятся ТОЛЬКО для запрошенного предложения.
@@ -47,7 +48,7 @@ async function threadWithComment(suggestionId: string, body: string) {
 }
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'cm-author' }).returning({ id: users.id })
   authorId = u.id
   const [tpl] = await db

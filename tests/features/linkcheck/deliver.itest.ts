@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Ж1b доставка против реального PG: по verdict='broken' садовник открывает ОДИН
 // issue на список (метка broken-link, URL + archive в теле, владелец уведомлён);
@@ -14,10 +15,8 @@ let templateId = ''
 let ownerId = ''
 const DEAD = 'https://ref.example.com/guide'
 
-const wipe = async () =>
-  db.execute(
-    sql`truncate table ${templates}, ${users}, ${linkChecks}, ${linkOccurrences}, ${appSettings}, ${issues}, ${notifications} restart identity cascade`,
-  )
+const wipe = () =>
+  resetTables(sql`${templates}, ${users}, ${linkChecks}, ${linkOccurrences}, ${appSettings}, ${issues}, ${notifications}`)
 
 const setDeadVerdict = async (verdict: 'broken' | 'unreachable') =>
   db.update(linkChecks).set({ verdict }).where(eq(linkChecks.urlNorm, DEAD))

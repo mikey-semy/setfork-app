@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Privesc через самоназначаемый ник закрывали в #476, но только на пути СМЕНЫ ника
 // (handleTaken/isHandleShapeValid). Регистрация по email+паролю проверяла лишь форму и
@@ -43,10 +44,10 @@ async function register(handle: string, email: string): Promise<{ error?: string
 const rowOf = async (handle: string) => db.query.users.findFirst({ where: (u, { eq }) => eq(u.handle, handle) })
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${users} restart identity cascade`)
+  await resetTables(sql`${users}`)
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${users} restart identity cascade`)
+  await resetTables(sql`${users}`)
 })
 
 describe('ник администратора нельзя занять НИ ОДНИМ путём', () => {

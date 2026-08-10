@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // РОСТ ЖИВОГО СПИСКА на реальной БД. Модель замокана: проверяем не её текст, а поведение —
 // что без новостей мы НЕ платим за вызов, что материал списывается со ссылкой на список, что
@@ -40,7 +41,7 @@ const addItem = async (title: string, url: string, tags = ['devops']) => {
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${feedItems}, ${feedSources}, ${agentActions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${feedItems}, ${feedSources}, ${agentActions}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'living-agent', accountType: 'agent' }).returning({ id: users.id })
   ownerId = u.id
   const [s] = await db.insert(feedSources).values({ url: 'https://a.example/rss', tags: ['devops'] }).returning({ id: feedSources.id })

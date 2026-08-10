@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * СМЕНА НИКА отзывает остальные сессии.
@@ -28,7 +29,7 @@ const { db, sessions, users } = await import('@/shared/db')
 const { changeHandle } = await import('@/features/settings/actions')
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${users} restart identity cascade`)
+  await resetTables(sql`${users}`)
   const [u] = await db.insert(users).values({ handle: 'old-name' }).returning({ id: users.id })
   const rows = await db
     .insert(sessions)

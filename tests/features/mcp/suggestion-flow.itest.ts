@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Предложить → отревьюить → слить через MCP.
@@ -23,7 +24,7 @@ let templateId = ''
 let fanSeq = 0
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const rows = await db
     .insert(users)
     .values([{ handle: 'flow-owner' }, { handle: 'flow-stranger' }])
@@ -36,7 +37,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   // truncate, а не delete: у списка есть зависимости, которые delete не уносит, и
   // остаток прошлого теста превращал следующий в загадку.
-  await db.execute(sql`truncate table ${templates} cascade`)
+  await resetTables(sql`${templates}`, { restartIdentity: false })
   const [fan] = await db.insert(users).values({ handle: `flow-fan-${++fanSeq}` }).returning({ id: users.id })
   fanId = fan.id
   const [tpl] = await db

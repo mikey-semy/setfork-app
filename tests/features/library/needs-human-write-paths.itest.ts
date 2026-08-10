@@ -28,6 +28,7 @@ vi.mock('@/shared/media', () => ({ avatarSrc: async () => null, imageUrl: () => 
 
 const { db, steps, suggestions, templateVersions, templates, users } = await import('@/shared/db')
 import type { ProposedItem } from '@/shared/db'
+import { resetTables } from '../../helpers/reset-db'
 const { revertToVersion } = await import('@/features/library/actions')
 // applySuggestion живёт вне экшен-файла намеренно: её личность действующего лица
 // приходит аргументом, и сетевой точкой входа она быть не должна.
@@ -55,7 +56,7 @@ const markedItem: ProposedItem = {
 }
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${suggestions}, ${steps}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${suggestions}, ${steps}, ${templateVersions}, ${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'nh-owner' }).returning({ id: users.id })
   const [a] = await db.insert(users).values({ handle: 'nh-author' }).returning({ id: users.id })
   ownerId = o.id
@@ -76,7 +77,7 @@ beforeEach(async () => {
   h.session = { userId: ownerId, handle: 'nh-owner' }
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${suggestions}, ${steps}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${suggestions}, ${steps}, ${templateVersions}, ${templates}, ${users}`)
 })
 
 const stepsOfVersion = async (version: number) => {

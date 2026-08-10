@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Массовое создание через MCP — ускоритель ПОД РУКОЙ человека. Опасность ровно в том, чем
 // он полезен: одним вызовом можно налить сотню списков. Тесты держат три предохранителя:
@@ -17,7 +18,7 @@ const list = (title: string) => ({ title, items: [{ title: `${title}: подго
 const countMine = async () => (await db.select({ n: sql<number>`count(*)::int` }).from(templates).where(eq(templates.ownerId, ownerId)))[0].n
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${agentActions}, ${suggestions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${agentActions}, ${suggestions}, ${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'bulk-owner' }).returning({ id: users.id })
   const [b] = await db.insert(users).values({ handle: 'bulk-bot', accountType: 'agent' }).returning({ id: users.id })
   ownerId = o.id

@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Бэк-офис на реальной БД. Почту мокаем: проверяем не доставку письма, а поведение петли —
 // что тревога уходит наверх, что тишина не рассылается, что сухой прогон ничего не отправляет
@@ -22,7 +23,7 @@ let adminId = ''
 
 beforeAll(async () => {
   process.env.ADMIN_HANDLES = 'boss'
-  await db.execute(sql`truncate table ${agentActions}, ${agentLoops}, ${aiUsage}, ${jobs}, ${users} restart identity cascade`)
+  await resetTables(sql`${agentActions}, ${agentLoops}, ${aiUsage}, ${jobs}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'boss', email: 'boss@example.com' }).returning({ id: users.id })
   adminId = u.id
   // Не-админ с почтой: письма компании ему уходить не должны.

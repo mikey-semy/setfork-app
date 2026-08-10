@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // ИЗОЛЯЦИЯ, путь «списки владельца» (трек tenant-isolation, путь 1 из 7).
 // Метод трека: не искать дыру чтением, а закрепить поведение проверкой. Зелёная с первого
@@ -12,7 +13,7 @@ let alice = ''
 let bob = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [a] = await db.insert(users).values({ handle: 'alice-iso' }).returning({ id: users.id })
   const [b] = await db.insert(users).values({ handle: 'bob-iso' }).returning({ id: users.id })
   alice = a.id

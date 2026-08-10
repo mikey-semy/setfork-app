@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Петля партнёров на реальной БД. Проверяем не формулировки, а поведение: что повестка растёт
 // из ЧИСЕЛ, что решение человека неприкосновенно и что закрытый сигнал закрывает пункт.
@@ -11,7 +12,7 @@ const { setLoopDryRun } = await import('@/shared/agents/policy')
 let ownerId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${agendaItems}, ${agentActions}, ${agentLoops}, ${councilExperts}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${agendaItems}, ${agentActions}, ${agentLoops}, ${councilExperts}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'partners-owner' }).returning({ id: users.id })
   ownerId = u.id
   // Один профильный мастер с пустой темой — этого достаточно, чтобы появился повод расти.

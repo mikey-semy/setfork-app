@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // MCP-прогоны по userId токена (без моков): запуск гейтится видимостью списка,
 // а сам прогон приватен — чужой не видит и не отмечает шаги (run.userId scope).
@@ -11,7 +12,7 @@ let otherId = ''
 let slug = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'mrowner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'mrother' }).returning({ id: users.id })
   ownerId = o.id
@@ -20,7 +21,7 @@ beforeAll(async () => {
   slug = (created as { ref: string }).ref.split('/')[1]
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
 })
 
 describe('mcp runs — видимость на старте + приватность прогона', () => {

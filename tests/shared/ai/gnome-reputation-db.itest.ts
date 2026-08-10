@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Подсчёт репутации против РЕАЛЬНОЙ БД. Чистая формула repScore покрыта юнитом, а сам
 // подсчёт — сложный SQL (подзапрос drafters, count distinct filter, sum(1.0/N) filter) —
@@ -24,7 +25,7 @@ const genWith = async (drafters: string[], accepted: boolean, extra: { kind?: st
 }
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${gnomeThanks}, ${generationMessages}, ${generations}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${gnomeThanks}, ${generationMessages}, ${generations}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'rep-user' }).returning({ id: users.id })
   userId = u.id
   const [t] = await db.insert(templates).values({ ownerId: userId, slug: 'rep-list', title: { ru: 'Список' } }).returning({ id: templates.id })
@@ -33,7 +34,7 @@ beforeEach(async () => {
   await new Promise((r) => setTimeout(r, 0))
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${gnomeThanks}, ${generationMessages}, ${generations}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${gnomeThanks}, ${generationMessages}, ${generations}, ${templates}, ${users}`)
 })
 
 /** Свежая репутация без кэша: кэш живёт внутри модуля, поэтому перечитываем модуль. */

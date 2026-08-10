@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Внешние проверки как гейт слияния — наш аналог required status checks.
@@ -46,13 +47,13 @@ const setChecksGate = (on: boolean) =>
 const report = (status: string) => mcpReportCheck(ownerId, { list: 'gate-owner/gate-list', number: 1, name: 'tests', status })
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [owner] = await db.insert(users).values({ handle: 'gate-owner' }).returning({ id: users.id })
   ownerId = owner.id
 })
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates} cascade`)
+  await resetTables(sql`${templates}`, { restartIdentity: false })
   const [tpl] = await db
     .insert(templates)
     .values({ ownerId, slug: 'gate-list', title: { en: 'Gate list' }, visibility: 'public', status: 'published' })

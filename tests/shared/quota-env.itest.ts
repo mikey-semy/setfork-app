@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { aiUsage, db, templates, users } from '@/shared/db'
+import { resetTables } from '../helpers/reset-db'
 
 // Денежные предохранители при ИСПОРЧЕННОЙ настройке. До правки одна и та же опечатка в env
 // давала противоположные тихие отказы: глобальный дневной кап расхода выключался совсем
@@ -10,7 +11,7 @@ import { aiUsage, db, templates, users } from '@/shared/db'
 let userId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${aiUsage}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${aiUsage}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'quota-env' }).returning({ id: users.id })
   userId = u.id
 })

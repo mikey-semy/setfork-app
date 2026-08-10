@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Реестр источников — единственная дверь, через которую чужой материал попадает в корпус.
 // Проверяем на реальной БД: fail-closed по лицензии, обязательность атрибуции там, где её
@@ -15,7 +16,7 @@ const { mcpListSources, mcpRegisterSource } = await import('@/features/mcp/tools
 let userId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${agentActions}, ${knowledgeSources}, ${users} restart identity cascade`)
+  await resetTables(sql`${agentActions}, ${knowledgeSources}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'src-owner' }).returning({ id: users.id })
   userId = u.id
 })

@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Что происходит ПОСЛЕ принятого пуша.
 //
@@ -60,7 +61,7 @@ const push = (over: Partial<Parameters<typeof runGitPushEffects>[0] & Record<str
 })
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${jobs}, ${notifications}, ${watches}, ${suggestions}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${jobs}, ${notifications}, ${watches}, ${suggestions}, ${templateVersions}, ${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'pe-owner' }).returning({ id: users.id })
   const [w] = await db.insert(users).values({ handle: 'pe-watcher' }).returning({ id: users.id })
   ownerId = o.id
@@ -85,7 +86,7 @@ beforeEach(async () => {
 })
 
 afterAll(async () => {
-  await db.execute(sql`truncate table ${jobs}, ${notifications}, ${watches}, ${suggestions}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${jobs}, ${notifications}, ${watches}, ${suggestions}, ${templateVersions}, ${templates}, ${users}`)
 })
 
 const notifOf = async (recipientId: string) =>

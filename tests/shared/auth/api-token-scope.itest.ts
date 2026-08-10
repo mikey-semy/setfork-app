@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Право записи по API-токену — FAIL-CLOSED.
@@ -25,7 +26,7 @@ async function tokenWithScope(scope: string): Promise<string> {
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${users} restart identity cascade`)
+  await resetTables(sql`${users}`)
   const [u] = await db.insert(users).values({ handle: 'tok-owner' }).returning({ id: users.id })
   userId = u.id
 })

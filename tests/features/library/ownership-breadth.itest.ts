@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Ширь ownership/видимости для остальных library-экшенов против реального Postgres.
 // Мокаем границу Next (сессия, revalidatePath) и уведомления; БД и проверки настоящие.
@@ -32,7 +33,7 @@ const isStarred = async (userId: string, templateId: string) =>
   !!(await db.select({ id: stars.id }).from(stars).where(and(eq(stars.userId, userId), eq(stars.templateId, templateId))).limit(1)).length
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'bowner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'bother' }).returning({ id: users.id })
   ownerId = o.id

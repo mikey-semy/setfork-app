@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Линза 03 (деньги), №2: решение «бюджет ЕСТЬ» кэшировалось на 30 секунд НАРАВНЕ с
 // решением «бюджета нет». После пробития дневного капа система ещё до полуминуты
@@ -21,7 +22,7 @@ async function spend(usd: number): Promise<void> {
 }
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${aiUsage}`)
+  await resetTables(sql`${aiUsage}`, { restartIdentity: false, cascade: false })
   clearBudgetCache()
 })
 
@@ -62,7 +63,7 @@ describe('окно пробитого дневного капа', () => {
     const t0 = 3_000_000
     await spend(50)
     expect(await globalBudgetOk(t0)).toBe(false)
-    await db.execute(sql`truncate table ${aiUsage}`)
+    await resetTables(sql`${aiUsage}`, { restartIdentity: false, cascade: false })
     expect(await globalBudgetOk(t0 + 1_000)).toBe(false) // ещё в окне
     expect(await globalBudgetOk(t0 + 31_000)).toBe(true) // окно истекло → снова можно
   })

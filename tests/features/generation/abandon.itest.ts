@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Генерация, чью задачу похоронила очередь.
@@ -21,7 +22,7 @@ let userId = ''
 let genId = ''
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${users}, ${generations} restart identity cascade`)
+  await resetTables(sql`${users}, ${generations}`)
   const [u] = await db.insert(users).values({ handle: 'lost-user' }).returning({ id: users.id })
   userId = u.id
   const [g] = await db

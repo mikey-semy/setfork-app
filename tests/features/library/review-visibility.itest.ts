@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Линза 02, F2: тексты ревью правок к ПРИВАТНОМУ списку читались без входа.
 // Чтение жило в файле с 'use server', то есть каждый экспорт — сетевая точка входа,
@@ -41,7 +42,7 @@ async function seedList(slug: string, over: Record<string, unknown>): Promise<st
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   for (const k of ['owner', 'author', 'reviewer', 'stranger', 'collab']) {
     const [u] = await db.insert(users).values({ handle: `rv-${k}` }).returning({ id: users.id })
     uid[k] = u.id

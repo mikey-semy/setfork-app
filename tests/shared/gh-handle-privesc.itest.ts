@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../helpers/reset-db'
 
 // Линза 02 (безопасность), пункт 1 «повышение прав»: КАЖДЫЙ путь присвоения ника
 // отдельным прогоном. Регистрация и смена ника проверяют isAdminHandle/RESERVED
@@ -21,7 +22,7 @@ async function isAdminInDb(githubId: number): Promise<{ handle: string; admin: b
 }
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${users} restart identity cascade`)
+  await resetTables(sql`${users}`)
   process.env.ADMIN_HANDLES = 'bigboss,mikey-semy'
 })
 

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { agentActions, db, templates, users } from '@/shared/db'
 import { alreadyForked, stablePasses } from '@/features/gardener/service'
+import { resetTables } from '../../helpers/reset-db'
 
 // ПРАВИЛО ОСТАНОВКИ: список, который два прохода подряд не меняется, дальше полировать
 // вредно — улучшения тоже портят. Счётчик считается по журналу действий, поэтому проверяем
@@ -13,7 +14,7 @@ let tplId = ''
 let otherId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${agentActions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${agentActions}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'sr-agent', accountType: 'agent' }).returning({ id: users.id })
   ownerId = u.id
   const [t] = await db.insert(templates).values({ ownerId, slug: 'stew', title: { ru: 'Рагу' } }).returning({ id: templates.id })
