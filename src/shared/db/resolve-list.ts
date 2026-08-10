@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, eq } from 'drizzle-orm'
-import { db, listRedirects, templates, users } from './index'
+import { and, eq, sql } from 'drizzle-orm'
+import { db, listRedirects, templates, userRedirects, users } from './index'
 
 /** Поля списка, нужные canViewList и canWriteToFeature (@/core). */
 const listProjection = {
@@ -37,13 +37,45 @@ export async function resolveListBySlug(owner: string, slug: string) {
 export type ResolvedList = NonNullable<Awaited<ReturnType<typeof resolveListBySlug>>>
 
 /**
- * То же, но с прежними адресами: список найден по устаревшему слагу → вернётся
- * `movedTo` с текущим `owner/slug`, и вызывающий обязан перенаправить.
+ * Пользователь по нику — текущему или ПРЕЖНЕМУ.
  *
- * Форма — как у Gitea (LookupRedirect в services/context/repo.go): сначала обычный
- * лукап, при промахе — таблица прежних адресов. Совпадение ищется по владельцу
- * ТОГО ВРЕМЕНИ (адрес принадлежал ему), а текущий адрес берётся у списка сейчас —
- * поэтому старая ссылка доводит и до списка, сменившего владельца.
+ * Ник стоит первым сегментом в адресе каждого списка человека, поэтому его смена
+ * обрывает ссылки не на один список, а на все сразу. Форма — как `user_redirect` в
+ * Gitea (models/user/redirect.go): имя → пользователь, сверка без учёта регистра.
+ */
+export async function resolveUserByHandle(
+  handle: string,
+): Promise<{ id: string; handle: string; moved: boolean } | null> {
+  const [live] = await db
+    .select({ id: users.id, handle: users.handle })
+    .from(users)
+    .where(sql`lower(${users.handle}) = lower(${handle})`)
+    .limit(1)
+  if (live) return { ...live, moved: false }
+
+  const [previous] = await db
+    .select({ id: users.id, handle: users.handle })
+    .from(userRedirects)
+    .innerJoin(users, eq(userRedirects.userId, users.id))
+    .where(sql`lower(${userRedirects.handle}) = lower(${handle})`)
+    .limit(1)
+  return previous ? { ...previous, moved: true } : null
+}
+
+/** Собрать актуальный адрес и понять, отличается ли он от запрошенного. */
+function addressOf(row: { ownerHandle: string; slug: string }): string {
+  return `/${row.ownerHandle}/${row.slug}`
+}
+
+/**
+ * Список по адресу с учётом ОБОИХ переездов: сменившегося ника владельца и
+ * сменившегося слага. `movedTo` — актуальный `/owner/slug`, если адрес устарел хотя
+ * бы одной частью; null — адрес и так актуален.
+ *
+ * Порядок как у Gitea (services/context/repo.go): сначала обычный лукап, при промахе
+ * — прежние имена. Разница в том, что у нас переехать могут обе части адреса разом
+ * (человек сменил ник И переименовал список), поэтому владелец и слаг ищутся
+ * последовательно, а не одним запросом по паре.
  */
 export async function resolveListOrMoved(
   owner: string,
@@ -52,11 +84,26 @@ export async function resolveListOrMoved(
   const direct = await resolveListBySlug(owner, slug)
   if (direct) return { list: direct, movedTo: null }
 
+  const user = await resolveUserByHandle(owner)
+  if (!user) return null
+
+  // Слаг ищем среди списков ЭТОГО владельца: сначала текущий, затем прежний. Владелец
+  // мог и не меняться — тогда сюда попадают из-за переименования самого списка.
+  const [live] = await db
+    .select({ ...listProjection, ownerHandle: users.handle, slug: templates.slug })
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(and(eq(templates.ownerId, user.id), eq(templates.slug, slug)))
+    .limit(1)
+  if (live) {
+    const { ownerHandle, slug: currentSlug, ...list } = live
+    return { list, movedTo: addressOf({ ownerHandle, slug: currentSlug }) }
+  }
+
   const [moved] = await db
     .select({ templateId: listRedirects.templateId })
     .from(listRedirects)
-    .innerJoin(users, eq(listRedirects.ownerId, users.id))
-    .where(and(eq(users.handle, owner), eq(listRedirects.slug, slug)))
+    .where(and(eq(listRedirects.ownerId, user.id), eq(listRedirects.slug, slug)))
     .limit(1)
   if (!moved) return null
 
@@ -71,5 +118,5 @@ export async function resolveListOrMoved(
   if (!row) return null
 
   const { ownerHandle, slug: currentSlug, ...list } = row
-  return { list, movedTo: `/${ownerHandle}/${currentSlug}` }
+  return { list, movedTo: addressOf({ ownerHandle, slug: currentSlug }) }
 }
