@@ -3,7 +3,9 @@ import { canViewList } from '@/core'
 import { findRisky } from '@/core/domain/destructive-command'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена, canViewList на месте у каждого вызова
 import { getTemplateDetail } from '@/features/library/queries'
-import { type ProposedItem } from '@/shared/db'
+import { and, eq } from 'drizzle-orm'
+import { db, listRedirects, templates, users, type ProposedItem } from '@/shared/db'
+import { resolveUserByHandle } from '@/shared/db/resolve-list'
 import { tr, trKey, type LocaleText } from '@/shared/i18n'
 import { detectTextLang } from '@/shared/lib/translit'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
@@ -219,4 +221,70 @@ export function blockForMcp(s: DetailStep) {
     // фильтруем по «есть хоть что-то», иначе чтение теряло бы то, что записано.
     refs: s.refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label || r.url),
   }
+}
+
+/**
+ * Список по человеческой ссылке «handle/slug» (или просто «slug»), с учётом
+ * ПЕРЕЖНИХ адресов: переименование списка и смена ника владельца ссылку не рвут.
+ *
+ * Так же ведёт себя GitHub API: `GET /repos/{owner}/{repo}` по прежнему имени
+ * отвечает 301 на новый адрес, а клиенты за ним следуют. Здесь HTTP-редиректа нет —
+ * поэтому вместо него возвращается `movedTo`, и инструмент кладёт его в ответ:
+ * агент видит, что адрес устарел, и обновляет свои ссылки сам.
+ *
+ * Ссылка без владельца («slug») остаётся как была: она и раньше находила первый
+ * подходящий список, прежние адреса ищутся так же.
+ */
+export async function resolveListRefOrMoved(
+  ref: string,
+): Promise<{ id: string; slug: string; ownerHandle: string; ownerId: string; movedTo: string | null } | null> {
+  const [rawOwner, rawSlug] = ref.includes('/') ? ref.split('/') : [null, ref]
+  const slug = (rawSlug ?? '').trim()
+  if (!slug) return null
+
+  const found = await findByAddress(rawOwner?.trim() || null, slug)
+  if (found) return found
+
+  // Промах — ищем прежний адрес: сначала владельца (ник мог смениться), потом слаг.
+  const ownerId = rawOwner ? (await resolveUserByHandle(rawOwner.trim()))?.id ?? null : null
+  if (rawOwner && !ownerId) return null
+
+  // Ник сменился, а слаг НЕТ — список лежит по текущему слагу у этого владельца, и в
+  // прежних адресах его нет вовсе. Без этого шага ссылка вида «прежний-ник/слаг»
+  // терялась (поймано интеграционным тестом).
+  if (ownerId) {
+    const [byOwner] = await db
+      .select({ id: templates.id, slug: templates.slug, ownerHandle: users.handle, ownerId: templates.ownerId })
+      .from(templates)
+      .innerJoin(users, eq(users.id, templates.ownerId))
+      .where(and(eq(templates.ownerId, ownerId), eq(templates.slug, slug)))
+      .limit(1)
+    if (byOwner) return { ...byOwner, movedTo: `${byOwner.ownerHandle}/${byOwner.slug}` }
+  }
+
+  const [moved] = await db
+    .select({ templateId: listRedirects.templateId })
+    .from(listRedirects)
+    .where(ownerId ? and(eq(listRedirects.ownerId, ownerId), eq(listRedirects.slug, slug)) : eq(listRedirects.slug, slug))
+    .limit(1)
+  if (!moved) return null
+
+  const [row] = await db
+    .select({ id: templates.id, slug: templates.slug, ownerHandle: users.handle, ownerId: templates.ownerId })
+    .from(templates)
+    .innerJoin(users, eq(users.id, templates.ownerId))
+    .where(eq(templates.id, moved.templateId))
+    .limit(1)
+  return row ? { ...row, movedTo: `${row.ownerHandle}/${row.slug}` } : null
+}
+
+/** Точное совпадение адреса — как было до прежних адресов. */
+async function findByAddress(owner: string | null, slug: string) {
+  const [row] = await db
+    .select({ id: templates.id, slug: templates.slug, ownerHandle: users.handle, ownerId: templates.ownerId })
+    .from(templates)
+    .innerJoin(users, eq(users.id, templates.ownerId))
+    .where(owner ? and(eq(users.handle, owner), eq(templates.slug, slug)) : eq(templates.slug, slug))
+    .limit(1)
+  return row ? { ...row, movedTo: null } : null
 }
