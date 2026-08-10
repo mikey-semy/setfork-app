@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpPatchList, mcpPublishDraft, mcpUpdateList } from '@/features/mcp/tools'
-import { itemShape } from './block-shape'
+import { itemShape } from './block-schema'
 import { json, err, type ToolKit } from './kit'
 
 /** Списки: создание, замена, точечная правка, публикация черновика, удаление. */
