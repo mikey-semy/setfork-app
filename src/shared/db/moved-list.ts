@@ -27,21 +27,21 @@ export function movedPath(requestPath: string | null, from: string, to: string):
 }
 
 /**
- * Список открыт по ПРЕЖНЕМУ адресу → постоянное перенаправление на текущий.
+ * Постоянное перенаправление с прежнего адреса на новый, с сохранением хвоста пути.
  *
- * Возврат означает «такого списка нет вообще» — вызывающий отвечает как обычно
- * (notFound). Перенаправление бросает исключение, как и notFound, поэтому код после
- * вызова выполняется только в случае «не найдено».
+ * Бросает исключение (как notFound), поэтому вызывается последним. Решение «а можно ли
+ * вообще перенаправлять» принимает вызывающий: цель должна быть видна зрителю, иначе
+ * старый адрес выдал бы существование скрытого списка (проверки видимости живут в
+ * features, shared про них знать не может).
  *
  * 308, а не 307: адрес сменился навсегда, и клиент вправе это запомнить. Gitea по той
- * же причине отвечает 301 — временное перенаправление git-клиент не запоминает и
- * ходил бы по старому адресу каждый раз.
+ * же причине отвечает 301 — временное перенаправление клиент не запоминает и ходил бы
+ * по старому адресу каждый раз; в Next серверный `permanentRedirect` умеет только 308,
+ * а смысл у них один.
  */
-export async function redirectIfListMoved(owner: string, slug: string): Promise<void> {
-  const found = await resolveListOrMoved(owner, slug)
-  if (!found?.movedTo) return
+export async function permanentRedirectTo(from: string, to: string): Promise<never> {
   const requestPath = (await headers()).get(REQUEST_PATH_HEADER)
-  permanentRedirect(movedPath(requestPath, `/${owner}/${slug}`, found.movedTo))
+  permanentRedirect(movedPath(requestPath, from, to))
 }
 
 /**
@@ -53,6 +53,7 @@ export async function redirectIfListMoved(owner: string, slug: string): Promise<
 export async function redirectIfUserMoved(handle: string): Promise<void> {
   const user = await resolveUserByHandle(handle)
   if (!user?.moved) return
-  const requestPath = (await headers()).get(REQUEST_PATH_HEADER)
-  permanentRedirect(movedPath(requestPath, `/${handle}`, `/${user.handle}`))
+  // Приватность профиля здесь не при чём: ник — публичная величина (он стоит в адресе
+  // каждого списка человека), а закрытый профиль по НОВОМУ адресу ответит 404 сам.
+  await permanentRedirectTo(`/${handle}`, `/${user.handle}`)
 }

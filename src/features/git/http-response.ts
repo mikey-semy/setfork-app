@@ -20,6 +20,8 @@ export type GitHttpFailure =
   | { code: 'auth_required' }
   /** Нет объекта ЛИБО он не виден этому актору — ответ одинаковый, иначе транспорт перечисляет чужое. */
   | { code: 'not_found' }
+  /** Адрес переехал: клиент обязан пойти на `to` (роут достроит хвост пути). */
+  | { code: 'moved'; to: string }
   /** Личность доказана, объект виден, операция не разрешена. Повторный пароль ничего не изменит. */
   | { code: 'access_denied'; detail: string }
   /** Запись запрещена состоянием списка. Причину домен знает — не смешиваем с правами. */
@@ -55,6 +57,10 @@ function body(f: GitHttpFailure): string {
       return 'Authentication required\n'
     case 'not_found':
       return 'Repository not found\n'
+    // Перенаправление тела не имеет: клиент идёт по Location, и собирает такой ответ
+    // роут (features/git/moved). Ветка нужна, чтобы разбор кодов оставался полным.
+    case 'moved':
+      return ''
     case 'access_denied':
       return `${f.detail}\n`
     case 'write_disabled':
@@ -87,6 +93,8 @@ function status(f: GitHttpFailure): number {
       return 401
     case 'not_found':
       return 404
+    case 'moved':
+      return 301
     case 'access_denied':
     case 'write_disabled':
     case 'service_not_available':

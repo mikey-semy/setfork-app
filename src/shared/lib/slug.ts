@@ -46,8 +46,8 @@ export function slugify(input: string): string {
  * слаг новому списку значило бы увести чужой трафик на другой контент; именно здесь
  * мы расходимся с Gitea и GitHub, где освободившееся имя занимается заново.
  */
-async function slugTaken(slug: string, ownerId: string): Promise<boolean> {
-  const [{ db, listRedirects, templates }, { and, eq }] = await Promise.all([
+async function slugTaken(slug: string, ownerId: string, exceptTemplateId?: string): Promise<boolean> {
+  const [{ db, listRedirects, templates }, { and, eq, ne }] = await Promise.all([
     import('@/shared/db'),
     import('drizzle-orm'),
   ])
@@ -60,7 +60,15 @@ async function slugTaken(slug: string, ownerId: string): Promise<boolean> {
     db
       .select({ slug: listRedirects.slug })
       .from(listRedirects)
-      .where(and(eq(listRedirects.ownerId, ownerId), eq(listRedirects.slug, slug)))
+      .where(
+        and(
+          eq(listRedirects.ownerId, ownerId),
+          eq(listRedirects.slug, slug),
+          // СВОИ прежние адреса занятыми не считаются — иначе к прежнему имени нельзя
+          // вернуться: переименовал `a` → `b`, а обратно уже «занято» самим собой.
+          ...(exceptTemplateId ? [ne(listRedirects.templateId, exceptTemplateId)] : []),
+        ),
+      )
       .limit(1),
   ])
   return live.length > 0 || previous.length > 0
@@ -76,7 +84,9 @@ export async function uniqueSlug(base: string, ownerId: string): Promise<string>
 export async function checkSlugAvailable(
   raw: string,
   ownerId: string,
+  /** Список, который переименовывают: его собственные прежние адреса свободны для него. */
+  templateId?: string,
 ): Promise<{ slug: string; free: boolean }> {
   const slug = slugify(raw)
-  return { slug, free: !(await slugTaken(slug, ownerId)) }
+  return { slug, free: !(await slugTaken(slug, ownerId, templateId)) }
 }
