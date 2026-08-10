@@ -1,7 +1,7 @@
 // Handle (ник) — правила и генерация уникального при OAuth-регистрации.
 import { randomBytes } from 'crypto'
 import { sql } from 'drizzle-orm'
-import { db, users } from '@/shared/db'
+import { db, userRedirects, users } from '@/shared/db'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { translitRu } from '@/shared/lib/translit'
 
@@ -43,7 +43,17 @@ export async function handleTaken(h: string): Promise<boolean> {
     .from(users)
     .where(sql`lower(${users.handle}) = ${norm}`)
     .limit(1)
-  return !!row
+  if (row) return true
+  // Прежний ник тоже занят: он всё ещё ведёт на своего человека — из чужих ссылок,
+  // из git remote в клонах его списков. Отдать его новому владельцу значило бы
+  // передать вместе с ним чужой трафик. Gitea и GitHub здесь имя освобождают; мы
+  // сознательно строже (то же решение, что и с прежними адресами списков).
+  const [previous] = await db
+    .select({ id: userRedirects.id })
+    .from(userRedirects)
+    .where(sql`lower(${userRedirects.handle}) = ${norm}`)
+    .limit(1)
+  return !!previous
 }
 
 /** Нормализовать ввод ника (обрезка, нижний регистр, снятие ведущего @). */

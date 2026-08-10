@@ -382,6 +382,32 @@ export const templates = pgTable(
   }),
 )
 
+// ── Прежние ники (смена ника не ломает ссылки) ───────────────────────
+//
+// Та же идея, что у прежних адресов списка, но на уровень выше: ник стоит ПЕРВЫМ
+// сегментом в адресе каждого списка человека, поэтому его смена рвёт разом все
+// ссылки на них — и страницы, и git remote в клонах.
+//
+// Форма — как user_redirect у Gitea (models/user/redirect.go): имя → пользователь,
+// уникальность по имени (ники глобальны, владельца у них нет). Отличие то же, что и
+// со слагами: у нас прежний ник закреплён навсегда и не может быть занят заново —
+// иначе новый владелец имени забирал бы себе чужие ссылки.
+export const userRedirects = pgTable(
+  'user_redirects',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Прежний ник (уже нормализован: ники хранятся в нижнем регистре). */
+    handle: text('handle').notNull().unique(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    user: index('user_redirects_user_idx').on(t.userId), // прежние ники человека
+  }),
+)
+
 // ── Прежние адреса списка (переименование не ломает ссылки) ──────────
 //
 // Форма взята у Gitea (models/repo/redirect.go, таблица repo_redirect): пара

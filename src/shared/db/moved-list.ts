@@ -2,7 +2,7 @@ import 'server-only'
 import { headers } from 'next/headers'
 import { permanentRedirect } from 'next/navigation'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
-import { resolveListOrMoved } from './resolve-list'
+import { resolveListOrMoved, resolveUserByHandle } from './resolve-list'
 
 /**
  * Новый адрес для запроса, пришедшего на прежний: сегмент `/owner/slug` меняется на
@@ -42,4 +42,17 @@ export async function redirectIfListMoved(owner: string, slug: string): Promise<
   if (!found?.movedTo) return
   const requestPath = (await headers()).get(REQUEST_PATH_HEADER)
   permanentRedirect(movedPath(requestPath, `/${owner}/${slug}`, found.movedTo))
+}
+
+/**
+ * Профиль открыт по ПРЕЖНЕМУ нику → перенаправление на текущий.
+ *
+ * Отдельно от списка, потому что здесь переехал только первый сегмент: адрес
+ * `/старый-ник` и всё, что под ним (`/старый-ник/catalogs` и т.п.).
+ */
+export async function redirectIfUserMoved(handle: string): Promise<void> {
+  const user = await resolveUserByHandle(handle)
+  if (!user?.moved) return
+  const requestPath = (await headers()).get(REQUEST_PATH_HEADER)
+  permanentRedirect(movedPath(requestPath, `/${handle}`, `/${user.handle}`))
 }
