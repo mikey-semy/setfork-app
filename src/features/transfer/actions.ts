@@ -2,7 +2,7 @@
 
 import { and, eq, ne } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { collaborators, db, templates, transferInvites, users } from '@/shared/db'
+import { collaborators, db, listRedirects, templates, transferInvites, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
@@ -71,9 +71,21 @@ export async function acceptTransfer(inviteId: string): Promise<void> {
   }
 
   // Уникальность slug в пределах НОВОГО владельца (тот же дедуп, что при переносе на ghost).
-  const taken = new Set(
-    (await db.select({ slug: templates.slug }).from(templates).where(eq(templates.ownerId, session.userId))).map((r) => r.slug),
-  )
+  //
+  // Прежние адреса получателя тоже заняты: если принять список на слаг, который у
+  // получателя лежит в list_redirects, прямой лукап начнёт находить ЭТОТ список и
+  // затенит перенаправление — старые ссылки на совсем другой список молча приведут
+  // сюда. Поэтому оба источника в одном наборе.
+  const [live, previous] = await Promise.all([
+    db.select({ slug: templates.slug }).from(templates).where(eq(templates.ownerId, session.userId)),
+    db
+      .select({ slug: listRedirects.slug })
+      .from(listRedirects)
+      // Прежний адрес, указывающий на ЭТОТ ЖЕ список, занять безопасно: он и так ведёт
+      // сюда. Случай реальный — список уходил к другому владельцу и возвращается.
+      .where(and(eq(listRedirects.ownerId, session.userId), ne(listRedirects.templateId, tpl.id))),
+  ])
+  const taken = new Set([...live, ...previous].map((r) => r.slug))
   let slug = tpl.slug
   if (taken.has(slug)) {
     let i = 2

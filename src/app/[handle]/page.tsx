@@ -4,6 +4,7 @@
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { redirectIfUserMoved } from '@/shared/db/moved-list'
 import { Award, BookOpen, FolderGit2, GraduationCap, Link2, ListChecks, MapPin, Pin, Star, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { agentProfile } from '@/shared/ai/gnome-account'
@@ -60,7 +61,12 @@ export default async function ProfilePage({
 }) {
   const [{ handle }, sp, lang, viewer] = await Promise.all([params, searchParams, getLang(), getSession()])
   const user = await getUserByHandle(handle)
-  if (!user) notFound()
+  // Промах может означать «ник сменили»: прежний продолжает вести на человека
+  // (перенаправление бросает исключение, как notFound).
+  if (!user) {
+    await redirectIfUserMoved(handle)
+    notFound()
+  }
   // Приватный профиль виден только владельцу — для всех прочих 404 (как приватный
   // список). Публичные списки юзера при этом остаются доступны по своим URL.
   if (user.profilePrivate && viewer?.userId !== user.id) notFound()

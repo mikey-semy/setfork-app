@@ -1,14 +1,18 @@
 'use client'
 
-import { useActionState, useId, useState, useTransition } from 'react'
-import { Archive, Globe, Lock, Snowflake, Trash2, UserRoundPlus } from 'lucide-react'
+import { useActionState, useId, useRef, useState, useTransition } from 'react'
+import { Archive, Globe, Link2, Lock, Snowflake, Trash2, UserRoundPlus } from 'lucide-react'
+import { slugify } from '@/shared/lib/slugify'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { ActionRow, DangerZone } from '@/shared/ui/DangerZone'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { t, type Lang } from '@/shared/i18n'
 import { cancelTransfer, initiateTransfer, type TransferResult } from '@/features/transfer/actions'
-import { deleteListAction, setListArchived, setListFrozen, setListVisibility } from './actions'
+// Прямые модули, а не фасад './actions': бочка тянет в клиентский бандл все экшены
+// библиотеки разом (react-doctor/no-barrel-import).
+import { deleteListAction, setListArchived, setListFrozen, setListVisibility } from './actions/list-settings'
+import { renameList, type RenameResult } from './actions/rename'
 
 // Опасная зона списка (аналог GitHub Danger Zone): опасные действия собраны
 // в одном месте, каждое — через модалку. Удаление подтверждается вводом
@@ -17,6 +21,7 @@ export function ListSettingsDanger({
   templateId,
   handle,
   slug,
+  title,
   visibility,
   moderation,
   archived,
@@ -27,6 +32,8 @@ export function ListSettingsDanger({
   templateId: string
   handle: string
   slug: string
+  /** Заголовок на текущем языке — только чтобы предложить адрес по кнопке. */
+  title: string
   visibility: 'public' | 'private'
   moderation: string
   archived: boolean
@@ -35,10 +42,14 @@ export function ListSettingsDanger({
   lang: Lang
 }) {
   const [pending, start] = useTransition()
-  const [dialog, setDialog] = useState<null | 'visibility' | 'delete' | 'archive' | 'freeze' | 'transfer'>(null)
+  const [dialog, setDialog] = useState<null | 'visibility' | 'delete' | 'archive' | 'freeze' | 'transfer' | 'rename'>(null)
   // Кнопка отправки живёт в футере окна, вне формы: связываем их атрибутом form.
   const transferFormId = useId()
+  const renameFormId = useId()
+  const slugInput = useRef<HTMLInputElement>(null)
   const [trState, trAction, trPending] = useActionState<TransferResult | null, FormData>(initiateTransfer.bind(null, templateId), null)
+  const [rnState, rnAction, rnPending] = useActionState<RenameResult | null, FormData>(renameList.bind(null, templateId), null)
+
   const fullName = `${handle}/${slug}` // видимый идентификатор для подтверждения
   const isPublic = visibility === 'public'
   // Снятый модерацией список владелец удалить не может (сервер блокирует — стирание
@@ -97,6 +108,13 @@ export function ListSettingsDanger({
           )}
         </ActionRow>
 
+        {/* Смена адреса — прежний продолжает вести сюда же (list_redirects). */}
+        <ActionRow title={t('renameList', lang)} sub={t('renameHint', lang)}>
+          <Button variant="danger" size="md" onClick={() => setDialog('rename')} className="border border-danger/40">
+            <Link2 size={14} /> {t('renameList', lang)}
+          </Button>
+        </ActionRow>
+
         {/* Удаление */}
         <ActionRow
           title={t('deleteList', lang)}
@@ -143,6 +161,82 @@ export function ListSettingsDanger({
           </label>
           {trState?.error && <div className="text-[0.8125rem] text-danger">{trState.error}</div>}
           {trState?.ok && <div className="text-[0.8125rem] text-ok">✓</div>}
+        </form>
+      </OverlayPanel>
+
+      {/* Модалка смены адреса. Заголовок списка тут НЕ трогается: он живёт своей
+          жизнью и правится в обычных настройках — здесь только адрес. */}
+      <OverlayPanel
+        open={dialog === 'rename'}
+        onClose={() => setDialog(null)}
+        width={460}
+        title={
+          <span className="inline-flex items-center gap-1.5 text-danger">
+            <Link2 size={14} /> {t('renameList', lang)}
+          </span>
+        }
+        closeLabel={t('cancel', lang)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDialog(null)}>
+              {t('cancel', lang)}
+            </Button>
+            <Button type="submit" form={renameFormId} variant="dangerSolid" disabled={rnPending}>
+              {t('renameSubmit', lang)}
+            </Button>
+          </>
+        }
+      >
+        <form key={slug} id={renameFormId} action={rnAction} className="flex flex-col gap-4">
+          <p className="text-[0.8125rem] leading-relaxed text-ink-2">{t('renameHint', lang)}</p>
+          <div className="text-[0.78125rem] text-ink-2">
+            {t('renameCurrent', lang)}: <span className="font-mono text-ink">{fullName}</span>
+          </div>
+          <label className="flex flex-col gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
+            {t('renameNewLabel', lang)}
+            <div className="mt-0.5 flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 focus-within:border-danger">
+              <span className="shrink-0 font-mono text-muted">{handle}/</span>
+              {/* Поле НЕконтролируемое, а начальное значение задаёт key={slug}: копия
+                  пропа в useState устаревала бы после переименования (поле показывало бы
+                  прежний адрес). Кнопка ниже пишет в него напрямую. */}
+              <input
+                ref={slugInput}
+                name="slug"
+                defaultValue={slug}
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full bg-transparent py-2 font-mono text-[0.8125rem] text-ink outline-hidden"
+              />
+            </div>
+          </label>
+          {/* Подставить адрес из названия — тем же slugify, что и при создании, поэтому
+              человек видит ровно то, что получится, и может поправить руками. */}
+          <button
+            type="button"
+            onClick={() => {
+              if (slugInput.current) slugInput.current.value = slugify(title)
+            }}
+            className="self-start text-[0.78125rem] text-accent hover:underline"
+          >
+            {t('renameSuggest', lang)}
+          </button>
+          {rnState?.error && (
+            <div className="flex flex-wrap items-center gap-2 text-[0.8125rem] text-danger">
+              {rnState.error}
+              {/* Занято — но вот свободный похожий: клик подставляет его в поле. */}
+              {rnState.suggestion && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (slugInput.current) slugInput.current.value = rnState.suggestion!
+                  }}
+                  className="font-mono text-accent hover:underline"
+                >
+                  {handle}/{rnState.suggestion}
+                </button>
+              )}
+            </div>
+          )}
         </form>
       </OverlayPanel>
 

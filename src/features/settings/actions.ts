@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { and, eq, inArray, ne, sql } from 'drizzle-orm'
-import { db, stars, suggestions, templates, users, sessions } from '@/shared/db'
+import { db, stars, suggestions, templates, userRedirects, users, sessions } from '@/shared/db'
 import type { Social } from '@/shared/db/schema'
 import { clearSessionCookie, refreshSessionCookie, requireSession } from '@/shared/auth/session'
 import { recordAudit } from '@/shared/audit'
@@ -104,10 +104,19 @@ export async function changeHandle(_prev: ActionResult | null, formData: FormDat
   if (next === session.handle) return { error: 'Это ваш текущий ник.' }
   if (!isHandleShapeValid(next)) return { error: 'Ник: 3–30 символов, только a–z, 0–9 и дефис; некоторые слова зарезервированы.' }
 
-  if (await handleTaken(next)) return { error: 'Этот ник уже занят.' }
+  if (await handleTaken(next, session.userId)) return { error: 'Этот ник уже занят.' }
 
   try {
-    await db.update(users).set({ handle: next }).where(eq(users.id, session.userId))
+    // Прежний ник продолжает вести на этого же человека: он стоит первым сегментом в
+    // адресе каждого его списка, и без записи смена ника разом обрывала бы все ссылки
+    // и все git remote в клонах. Порядок как в Gitea (NewUserRedirect): сначала
+    // снимаем записи на оба имени — на новое, чтобы уникальность пустила его занять,
+    // и на старое, если человек к нему возвращается, — потом заводим прежнее.
+    await db.transaction(async (tx) => {
+      await tx.delete(userRedirects).where(inArray(userRedirects.handle, [session.handle, next]))
+      await tx.insert(userRedirects).values({ handle: session.handle, userId: session.userId })
+      await tx.update(users).set({ handle: next }).where(eq(users.id, session.userId))
+    })
   } catch {
     // гонка: ник заняли между проверкой и апдейтом (unique-нарушение)
     return { error: 'Этот ник уже занят.' }

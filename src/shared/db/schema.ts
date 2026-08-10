@@ -382,6 +382,67 @@ export const templates = pgTable(
   }),
 )
 
+// ── Прежние ники (смена ника не ломает ссылки) ───────────────────────
+//
+// Та же идея, что у прежних адресов списка, но на уровень выше: ник стоит ПЕРВЫМ
+// сегментом в адресе каждого списка человека, поэтому его смена рвёт разом все
+// ссылки на них — и страницы, и git remote в клонах.
+//
+// Форма — как user_redirect у Gitea (models/user/redirect.go): имя → пользователь,
+// уникальность по имени (ники глобальны, владельца у них нет). Отличие то же, что и
+// со слагами: у нас прежний ник закреплён навсегда и не может быть занят заново —
+// иначе новый владелец имени забирал бы себе чужие ссылки.
+export const userRedirects = pgTable(
+  'user_redirects',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Прежний ник (уже нормализован: ники хранятся в нижнем регистре). */
+    handle: text('handle').notNull().unique(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    user: index('user_redirects_user_idx').on(t.userId), // прежние ники человека
+  }),
+)
+
+// ── Прежние адреса списка (переименование не ломает ссылки) ──────────
+//
+// Форма взята у Gitea (models/repo/redirect.go, таблица repo_redirect): пара
+// «владелец + прежний слаг» → список, уникальность по паре. Смысл тот же: адрес
+// уже отдан наружу — он стоит в git-remote у клонов, в ссылках агентов по MCP, в
+// зеркалах и на чужих страницах. Поэтому старый адрес не исчезает, а продолжает
+// вести на список: лукап промахивается по templates и добирает отсюда, отвечая
+// постоянным перенаправлением на текущий адрес.
+//
+// Слаг занят за списком НАВСЕГДА — в отличие от Gitea и GitHub, где освободившееся
+// имя может занять новый репозиторий и увести на себя чужие ссылки. У нас вставка
+// нового списка с таким слагом просто не пройдёт (см. uniqueSlug: он смотрит и
+// сюда), а значит перехватить чужой адрес нельзя.
+export const listRedirects = pgTable(
+  'list_redirects',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Прежний слаг (в нижнем регистре — слаги другими и не бывают, см. slugify). */
+    slug: text('slug').notNull(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    // Композитная уникальность — ТОЛЬКО uniqueIndex: именованный unique() drizzle-kit
+    // не матчит с живой БД и предлагает добавить его на каждом push (правило схемы).
+    ownerSlug: uniqueIndex('list_redirects_owner_slug_uq').on(t.ownerId, t.slug),
+    template: index('list_redirects_template_idx').on(t.templateId), // прежние адреса списка
+  }),
+)
+
 // ── Template versions (лёгкое версионирование) ───────────────────────
 export const templateVersions = pgTable(
   'template_versions',
