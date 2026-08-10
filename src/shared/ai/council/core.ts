@@ -122,9 +122,10 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const base = await pickChatModel(settings) // конфигурируемая модель — для ФИНАЛЬНОГО списка (качество)
   // Модели совета: пул, быстрая модель для промежуточных шагов и проверка «этой
   // моделью можно» — всё в council/pool.ts (провайдер, каталог, белый список, карантин).
-  const { pool, fast, usable } = await resolveCouncilPool(client.cfg.provider, settings, base)
   // Ростер — из БД (админка); пустая таблица → сид исходным составом, ошибка → SEED.
-  const EXPERTS = await getRoster()
+  // Друг от друга они не зависят, поэтому идут одновременно: оба ходят наружу (каталог
+  // моделей и БД), и последовательные await складывали их задержки без всякой причины.
+  const [{ pool, fast, usable }, EXPERTS] = await Promise.all([resolveCouncilPool(client.cfg.provider, settings, base), getRoster()])
   const maxGnomes = Math.max(1, Math.min(settings.councilMaxGnomes || 3, EXPERTS.length))
   // :online-суффикс — механика OpenRouter; на других провайдерах веб-шагов нет.
   const isOpenRouter = client.cfg.provider === 'openrouter'
