@@ -23,13 +23,20 @@ const note = (e: Error & { code?: string }) => {
   console.warn(`[db] соединение оборвано (${e.code ?? 'без кода'}): ${e.message}`)
 }
 
-const pool = getPool()
-// Два обработчика, потому что ошибка приходит в разные места:
-// `pool.on('error')` — только для клиентов, ЛЕЖАЩИХ в пуле; клиент, выданный в
-// работу (а брошенная транзакция держит именно такой), поднимает ошибку на себе.
-// Без второго обработчика vitest считает её unhandled и краснит весь прогон —
-// проверено пробой: снятие своего же бэкенда дало «Vitest caught 2 unhandled errors».
-pool.on('error', note)
-pool.on('connect', (client) => {
-  client.on('error', note)
-})
+// Этот файл — `setupFiles`, то есть исполняется перед КАЖДЫМ тестовым файлом, а
+// пул один на процесс (`global.__pgPool`). Без отметки обработчики копились бы по
+// штуке на файл — 84 подписки на одно событие, предупреждение о превышении лимита
+// слушателей и медленно растущая утечка.
+const pool = getPool() as ReturnType<typeof getPool> & { __sfTestErrorHandlers?: true }
+if (!pool.__sfTestErrorHandlers) {
+  pool.__sfTestErrorHandlers = true
+  // Два обработчика, потому что ошибка приходит в разные места:
+  // `pool.on('error')` — только для клиентов, ЛЕЖАЩИХ в пуле; клиент, выданный в
+  // работу (а брошенная транзакция держит именно такой), поднимает ошибку на себе.
+  // Без второго vitest считает её unhandled и краснит прогон — проверено пробой:
+  // снятие своего же бэкенда дало «Vitest caught 2 unhandled errors».
+  pool.on('error', note)
+  pool.on('connect', (client) => {
+    client.on('error', note)
+  })
+}
