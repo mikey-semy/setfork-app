@@ -1,28 +1,26 @@
 import 'server-only'
 import { generateText } from 'ai'
-import { getAiSettings, modelAllowed, parseModelAllowlist } from '@/shared/settings/ai'
+import { getAiSettings } from '@/shared/settings/ai'
 import { globalBudgetOk } from '@/shared/quota'
-import { envNumber } from '@/shared/env'
-import { fetchModelsFor } from './models'
-import { deriveCouncilPool } from './model-picker'
-import { getAiChatClient } from './provider'
-import { pickChatModel } from './credits'
-import { baseModelId, filterByQuarantine, quarantinedModels } from './health'
-import { gnomeMood, gnomeReputation, gnomeThanksCounts, repScore } from './gnome-reputation'
-import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
-import { spotlight, type Spotlight } from './spotlight'
-import { parseList, jsonShapeFor, type GeneratedList, type GenerateOptions } from './generate'
-import { classifyListKind, shapeFor, LIST_KINDS, type ListKind } from './list-kind'
-import { findPrecedents, type Precedent, type StepPrecedent } from './retrieval'
-import { getRoster, type Expert } from './roster'
-import { voiceLine, type VoiceKind } from './voice'
-import { gnomeCard, rivalryHints } from './gnome-character'
-import { pickPrecedents, pickPrecedentsDetailed } from './precedent-filter'
-import { pruneDrafts } from './prune'
-import { craftRules } from './triples'
-import { lawBlock } from './list-laws'
-import { pushMessage, type GenMessageKind } from './generation-messages'
+import { getAiChatClient } from '../provider'
+import { pickChatModel } from '../credits'
+import { gnomeMood, gnomeReputation, gnomeThanksCounts, repScore } from '../gnome-reputation'
+import { extractUsage, outcomeOf, recordUsage, type AiFeature } from '../usage'
+import { spotlight, type Spotlight } from '../spotlight'
+import { parseList, jsonShapeFor, type GeneratedList, type GenerateOptions } from '../generate'
+import { classifyListKind, shapeFor, LIST_KINDS, type ListKind } from '../list-kind'
+import { findPrecedents, type Precedent, type StepPrecedent } from '../retrieval'
+import { getRoster, type Expert } from '../roster'
+import { voiceLine, type VoiceKind } from '../voice'
+import { gnomeCard, rivalryHints } from '../gnome-character'
+import { pickPrecedents, pickPrecedentsDetailed } from '../precedent-filter'
+import { pruneDrafts } from '../prune'
+import { craftRules } from '../triples'
+import { lawBlock } from '../list-laws'
+import { pushMessage, type GenMessageKind } from '../generation-messages'
 import { t, langEnName, type Lang } from '@/shared/i18n'
+import { anonymizeDrafts, clip, draftLetter } from './text'
+import { resolveCouncilPool } from './pool'
 
 /**
  * «Совет гномов» — мультимодельная генерация списка (research 2026-07-13):
@@ -34,11 +32,6 @@ import { t, langEnName, type Lang } from '@/shared/i18n'
  * (pgvector), диалог/уточняющие вопросы, память сессии.
  */
 
-// Дефолтного пула СПИСКОМ здесь больше нет — по одному на провайдера они устаревали молча
-// (модель снимают с обслуживания, и совет получает 404 при исправном ключе). Пул выводится из
-// живого каталога тем же правилом для всех: самая дешёвая рабочая лошадка каждого вендора,
-// первая — самая дешёвая, она ведёт промежуточные шаги (model-picker.deriveCouncilPool).
-const COUNCIL_POOL_SIZE = envNumber('SETFORK_COUNCIL_POOL_SIZE', 3)
 const INNOVATOR_TEMP = 0.9
 // Потолок на ОДИН вызов: зависшая/медленная модель не должна вешать весь совет (6-7 вызовов).
 // Превышение → вызов падает → гном «выпадает», совет продолжает без него.
@@ -107,42 +100,6 @@ export interface CouncilDraft {
 
 
 /** Буква черновика в анонимном блоке: A, B, C… — единственное, чем он подписан. */
-export const draftLetter = (i: number) => String.fromCharCode(65 + i)
-
-/**
- * Обрезка реплики для ленты хода совета: по границе слова, с многоточием.
- *
- * Внутренние ярлыки черновиков (DRAFT A/B/C) заодно переводим на человеческий: пользователю
- * незачем знать нашу внутреннюю нумерацию, а латиница посреди русской реплики — это утечка
- * потрохов наружу, чем она и является.
- */
-export function clip(raw: string, max: number, ru = true): string {
-  // Подпись следует языку интерфейса: русское слово в английской ленте — та же утечка
-  // наизнанку, что и латинский ярлык в русской (находка ревью на #555). Берём её из
-  // словаря: пользовательский текст живёт там, а не картой рядом с кодом.
-  const label = t('council.draftWord', ru ? 'ru' : 'en')
-  const human = raw.replace(/DRAFT\s+([A-Z])/g, (_m, letter) => `${label} ${letter}`)
-  if (human.length <= max) return human
-  const cut = human.slice(0, max)
-  const at = cut.lastIndexOf(' ')
-  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).trimEnd()}…`
-}
-
-/**
- * Анонимный блок черновиков для критика и старейшины.
- *
- * ИНВАРИАНТ: в этот текст не попадает НИЧЕГО об авторстве — ни id гнома, ни имя, ни гильдия.
- * Это не стилистика, а защита от provenance paradox (arXiv 2603.18043): как только оценщик
- * видит, кто написал, оценка плывёт к репутации автора, и маршрутизация начинает выбирать
- * худших. Функция вынесена наружу именно затем, чтобы инвариант проверялся тестом, а не
- * держался на внимательности при следующей правке промпта.
- *
- * Черновики передаются СЫРЬЁМ (не через firstJson): они свободный текст, и обрезка по первой
- * JSON-скобке порезала бы шаги вида `awk '{print $1}'` или `${HOME}/bin`.
- */
-export function anonymizeDrafts(drafts: { text: string }[]): string {
-  return drafts.map((d, i) => `--- DRAFT ${draftLetter(i)} ---\n${d.text.trim()}`).join('\n\n')
-}
 
 /** Результат совета: готовый список (+провенанс), ИЛИ уточняющие вопросы (диалог), ИЛИ null (ошибка/выкл → фолбэк). */
 export type CouncilResult =
@@ -151,27 +108,6 @@ export type CouncilResult =
   | null
 
 /** Мультимодельный «совет гномов». null при ошибке/выкл — caller фолбэкает на generateListDraft. */
-/**
- * ПУЛ СОВЕТА из сырого списка моделей. Три правила, и все три нужны:
- *
- * 1. Провайдер и белый список — жёсткие. Модель чужого провайдера просто не ответит,
- *    а белый список — прямой запрет владельца стенда.
- * 2. Карантин — мягкий. Если просели ВСЕ модели, работаем на просевших: медленный совет
- *    лучше отсутствующего (так вёл себя filterByQuarantine и до белого списка).
- * 3. Пустым пул быть не может. Новатору достаётся pool[0], и на пустом пуле это
- *    undefined — вызов без модели вместо расходящегося черновика (P1 из авто-ревью).
- *    Когда жёсткие фильтры выметают всё, остаётся base: она уже прошла белый список
- *    при чтении настроек (shared/settings/ai.ts).
- */
-export function buildCouncilPool(
-  rawPool: string[],
-  permitted: (m: string) => boolean,
-  quarantined: ReadonlySet<string>,
-  base: string,
-): string[] {
-  const hard = rawPool.filter(permitted)
-  return hard.length ? filterByQuarantine(hard, quarantined) : [base]
-}
 
 export async function generateListCouncil(query: string, lang: Lang, opts: GenerateOptions = {}): Promise<CouncilResult> {
   const client = await getAiChatClient()
@@ -184,48 +120,9 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   if (!(await globalBudgetOk())) return null
   const langName = langEnName(lang)
   const base = await pickChatModel(settings) // конфигурируемая модель — для ФИНАЛЬНОГО списка (качество)
-  // Пул/ростер могли остаться с моделями другого провайдера (у Яндекса id строго
-  // gpt://…): несовместимые отсеиваем, пустой пул → база. У Selectel id в стиле
-  // OpenRouter — проходят как есть.
-  const forProvider = (m: string) =>
-    client.cfg.provider === 'yandex'
-      ? m.startsWith('gpt://')
-      : client.cfg.provider === 'gigachat'
-        ? !m.includes('/') // id GigaChat без слешей; чужие — vendor/model или gpt://
-        : true
-  const yandexFolder = client.cfg.headers?.['x-folder-id'] ?? ''
-  // Пул по умолчанию — из каталога АКТИВНОГО провайдера (каталог кеширован, сети на каждый
-  // совет нет). Каталог недоступен → пустой список, и buildCouncilPool честно откатится на
-  // базовую модель: лучше одномодельный совет, чем вызовы к снятым с обслуживания id.
-  const catalog = (await fetchModelsFor(client.cfg.provider)).chat
-  const defaultPool = deriveCouncilPool(catalog, COUNCIL_POOL_SIZE)
-  // Ручной пул тоже сверяем с каталогом: у одиночной модели такая сверка есть (liveModel), а
-  // здесь снятая с обслуживания модель обнаруживалась только после нескольких отказов подряд.
-  // Каталог пуст (сеть/ключ) — не трогаем выбор владельца.
-  // Множество вместо перебора: каталог до 336 моделей, и `some`/`includes` в цикле сканируют
-  // его целиком на каждую строку пула.
-  const catalogIds = new Set(catalog.map((c) => c.id))
-  const listed = settings.councilModels.filter((m) => !catalogIds.size || catalogIds.has(m))
-  if (settings.councilModels.length && listed.length !== settings.councilModels.length) {
-    const kept = new Set(listed)
-    const gone = settings.councilModels.filter((m) => !kept.has(m))
-    console.warn(`[council] моделей нет в каталоге ${client.cfg.provider}, исключены из пула: ${gone.join(', ')}`)
-  }
-  const rawPool = listed.length ? listed : defaultPool
-  // АВТОРОТАЦИЯ: модели с проседающим success-rate за сутки (журнал ai_usage)
-  // временно выпадают из ротации; окно скользящее — возврат автоматический.
-  const quarantined = await quarantinedModels()
-  const allowlist = parseModelAllowlist()
-  // Провайдер и белый список — ЖЁСТКИЕ: их обходить нельзя, ради этого список и заводят.
-  const permitted = (m: string) => forProvider(m) && modelAllowed(m, allowlist)
-  const usable = (m: string) => permitted(m) && !quarantined.has(baseModelId(m))
-  // Пул собираем тем же правилом, что и модели личных специалистов: раньше здесь стоял
-  // только фильтр провайдера, и при заданном AI_MODEL_ALLOWLIST ограничение обходилось
-  // самым дорогим путём — быстрой моделью, ротацией экспертов, критиком и старейшиной.
-  const pool = buildCouncilPool(rawPool, permitted, quarantined, base)
-  // Быстрая модель для ПРОМЕЖУТОЧНЫХ шагов (распорядитель-классификатор, критик, веб-поиск):
-  // reasoning-модель там не нужна, а совет из 6-7 вызовов на ней тормозит минутами. Финал — на base.
-  const fast = pool[0] || base
+  // Модели совета: пул, быстрая модель для промежуточных шагов и проверка «этой
+  // моделью можно» — всё в council/pool.ts (провайдер, каталог, белый список, карантин).
+  const { pool, fast, usable } = await resolveCouncilPool(client.cfg.provider, settings, base)
   // Ростер — из БД (админка); пустая таблица → сид исходным составом, ошибка → SEED.
   const EXPERTS = await getRoster()
   const maxGnomes = Math.max(1, Math.min(settings.councilMaxGnomes || 3, EXPERTS.length))
@@ -524,7 +421,7 @@ ${roster}`,
       // Содержимое чужих веб-страниц — тоже недоверенный текст: оборачиваем, не вставляем сырьём.
       if (webRes && webRes.text.trim()) webLore = `\n\n${sp.wrap('WEB_PRECEDENTS', webRes.text.trim())}\n(verify, don't copy blindly)`
     } else {
-      const { webSearch } = await import('./web-search')
+      const { webSearch } = await import('../web-search')
       const hits = await webSearch(query, lang, 5)
       if (hits && hits.length) {
         emit('seek', vl('seek-web', 'seek') ?? t('ai.searchingWebPrecedents', lang), 'seek-web', t('ai.webScout', lang))
