@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { CodeCard } from '@/shared/ui/CodeCard'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
+import { AUTHORED_DIALECT, dialectSpec } from '@/core/domain/script-dialect'
 import { t, type Lang } from '@/shared/i18n'
 
 type TabKey = 'clone' | 'run' | 'embed'
@@ -132,14 +133,20 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
 
           {tab === 'run' && (
             <div role="tabpanel" id="use-panel-run" aria-labelledby="use-tab-run">
-              {/* Run — исполняемый скрипт (gist-стиль): bash + PowerShell.
-                  Команда показывается КАРТОЧКОЙ КОДА с переносом: в однострочном поле
-                  было видно меньше трети команды, и `| bash` оставался за краем — то
-                  есть подсказка «сначала проверь» относилась к невидимому тексту. */}
+              {/* Run — исполняемый скрипт (gist-стиль). Команда показывается КАРТОЧКОЙ
+                  КОДА с переносом: в однострочном поле было видно меньше трети команды,
+                  и `| bash` оставался за краем — то есть подсказка «сначала проверь»
+                  относилась к невидимому тексту.
+
+                  Команда берётся ИЗ КАТАЛОГА ДИАЛЕКТОВ, а не пишется здесь руками:
+                  ровно эту же строку печатает шапка самого скрипта, и написанные в двух
+                  местах — они разъезжались. PowerShell-формы тут больше нет: обёртка
+                  диалекта не переводит авторские команды, и `/raw?lang=ps1` на списке с
+                  командами отвечает 406, а не скриптом (см. script-dialect.ts). */}
               {heading(<Terminal size={12} />, t('runHeading', lang))}
-              <CodeCard code={`curl -fsSL ${origin}${base}/raw | bash`} name="bash" lang={lang} />
-              <CodeCard code={`irm "${origin}${base}/raw?lang=ps1" | iex`} name="powershell" lang={lang} />
+              <CodeCard code={dialectSpec(AUTHORED_DIALECT).run(`${origin}${base}/raw`)} name="bash" lang={lang} />
               <p className="mt-1 text-[0.78125rem] text-ink-2">{t('runHint', lang)}</p>
+              <p className="mt-1 text-[0.78125rem] text-ink-2">{t('runShellOnlyHint', lang)}</p>
               <a href={`${base}/raw`} className={`${row} mt-1`}>
                 <FileCode size={14} className="text-muted" /> {t('viewRaw', lang)}
               </a>

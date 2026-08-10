@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { toHtml, embedHtml, toRunnableScript, normalizeDialect, type ExportList, type ExportStep } from '@/features/library/export'
+import { toHtml, embedHtml, toRunnableScript, type ExportList, type ExportStep } from '@/features/library/export'
+import { normalizeDialect } from '@/core/domain/script-dialect'
 
 const step = (over: Partial<ExportStep> = {}): ExportStep => ({
   n: 1,
@@ -47,7 +48,9 @@ describe('toRunnableScript — диалекты', () => {
     expect(out).toContain('set -euo pipefail')
     expect(out).toContain("echo '==> 1. Run it'")
     expect(out).toContain('echo hi')
-    expect(out).toContain('curl -fsSL https://x/raw | bash')
+    // Адрес в кавычках: с выборкой пунктов в нём появляется `&`, и голый адрес
+    // шелл разорвал бы пополам («в фон»).
+    expect(out).toContain('curl -fsSL "https://x/raw" | bash')
   })
 
   it('ps1: без shebang, ErrorActionPreference, Write-Host', () => {

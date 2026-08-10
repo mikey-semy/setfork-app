@@ -457,6 +457,7 @@ export const en = {
   shareVia: 'Share via',
   runHeading: 'Run in terminal',
   runHint: 'Pipes the list into your shell like a gist. Review it first.',
+  runShellOnlyHint: 'Step commands are written for the shell, so the script runs in bash. On Windows use WSL or Git Bash.',
   viewRaw: 'View raw script',
   signedInLabel: 'signed in',
   staleLabel: 'stale',

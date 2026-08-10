@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { DIALECT_CANNOT_CARRY } from '@/features/library/export'
 
 /**
  * Контрактная матрица машинной поверхности `/raw`. До неё у route не было НИ ОДНОГО
@@ -27,7 +28,7 @@ const params = (slug: string) => ({ params: Promise.resolve({ handle: OWNER, slu
 const get = (slug: string, init: RequestInit = {}, query = '') =>
   route.GET(new Request(`http://localhost/${OWNER}/${slug}/raw${query}`, init), params(slug))
 
-async function makeList(slug: string, over: Record<string, unknown> = {}) {
+async function makeList(slug: string, over: Record<string, unknown> = {}, command = 'echo hi') {
   const [t] = await db
     .insert(templates)
     .values({ ownerId: uid.owner, slug, title: { en: slug }, currentVersion: 1, ...over })
@@ -36,7 +37,7 @@ async function makeList(slug: string, over: Record<string, unknown> = {}) {
     .insert(templateVersions)
     .values({ templateId: t.id, version: 1, note: 'v1' })
     .returning({ id: templateVersions.id })
-  await db.insert(steps).values({ versionId: v.id, n: 1, title: { en: 'Step' }, command: 'echo hi' })
+  await db.insert(steps).values({ versionId: v.id, n: 1, title: { en: 'Step' }, command })
   return t.id
 }
 
@@ -49,6 +50,9 @@ beforeAll(async () => {
   await makeList('pub')
   await makeList('priv', { visibility: 'private' })
   await makeList('hidden', { moderation: 'hidden' })
+  // Список БЕЗ исполняемых команд: только на таком чужой диалект вообще даёт артефакт —
+  // авторские команды между языками не переводятся (core/domain/script-dialect).
+  await makeList('prose', {}, '')
 })
 
 describe('/raw: кто получает содержимое', () => {
@@ -124,9 +128,25 @@ describe('/raw: форма артефакта', () => {
     expect(sh.headers.get('content-type')).toContain('shellscript')
     expect(sh.headers.get('content-disposition')).toContain('.sh"')
 
-    const py = await get('pub', {}, '?lang=py')
+    const py = await get('prose', {}, '?lang=py')
+    expect(py.status).toBe(200)
     expect(py.headers.get('content-type')).toContain('python')
     expect(py.headers.get('content-disposition')).toContain('.py"')
+  })
+
+  it('чужой диалект на списке с командами — 406 с причиной, а не чужой скрипт', async () => {
+    // Обёртка меняет shebang и печать прогресса, но `command` вставляет как есть:
+    // `echo hi` в python-скрипте не компилируется, а часть команд в другом
+    // интерпретаторе значит другое. Отдавать такое нельзя — отвечаем отказом.
+    const py = await get('pub', {}, '?lang=py')
+    expect(py.status).toBe(406)
+    expect(py.headers.get('sf-reason')).toBe(DIALECT_CANNOT_CARRY)
+    expect(py.headers.get('content-type')).toContain('python')
+    const body = await py.text()
+    expect(body).not.toContain('echo hi')
+    // Заглушка обязана быть валидной для диалекта: интерпретатор читает её как
+    // комментарии и падает, а не исполняет текст ошибки.
+    expect(body.trimEnd().endsWith('raise SystemExit(1)')).toBe(true)
   })
 
   it('происхождение берётся из конфигурации, а не из адреса запроса', async () => {

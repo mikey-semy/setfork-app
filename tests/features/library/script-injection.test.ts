@@ -3,7 +3,8 @@
 // python3 и PowerShell так же трактуют одиночный \r (проверено их парсерами), поэтому
 // регулярка /\r?\n/ границу не держит — на этом были подтверждены две инъекции подряд.
 import { describe, it, expect } from 'vitest'
-import { toRunnableScript, type ExportList, type ExportStep, type ScriptDialect } from '@/features/library/export'
+import { toRunnableScript, type ExportList, type ExportStep } from '@/features/library/export'
+import type { ScriptDialect } from '@/core/domain/script-dialect'
 
 const DIALECTS: ScriptDialect[] = ['sh', 'ps1', 'py']
 const SEPARATORS: Record<string, string> = { LF: '\n', CR: '\r', CRLF: '\r\n' }
@@ -73,6 +74,10 @@ describe('данные не могут начать строку скрипта'
     }
   }
 
+  // Генератор диалект-агностичен: он одинаково соберёт скрипт для любого из трёх.
+  // Кому из них МОЖНО отдать авторские команды — решает не он, а политика поверхности
+  // (`scriptRefusal`, см. script-dialect.test.ts): здесь проверяется только то, что
+  // экранирование полей не съело саму команду.
   it('авторская команда остаётся исполняемой (контроль, что фикс не убил фичу)', () => {
     for (const dialect of DIALECTS) {
       const out = toRunnableScript(list({ steps: [step({ command: 'echo authored-command' })] }), 'en', 'u', dialect)
