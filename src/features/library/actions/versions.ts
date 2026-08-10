@@ -12,7 +12,7 @@ import { listQuota } from '@/shared/quota'
 import { rateLimit } from '@/shared/rate-limit'
 import { textLang } from '@/shared/i18n/detect-text-lang'
 import { toStepInput } from '@/shared/lib/step-input'
-import { canEditList } from '@/core'
+import { canEditList, editBlockReason } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { isCollaborator } from '@/features/collab/queries'
 import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
@@ -124,7 +124,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   if (!tpl) return
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
 
-  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
+  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${editBlockReason(tpl) ?? 'frozen'}`)
 
   const note = String(formData.get('note') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
@@ -195,7 +195,7 @@ async function upsertDraftFromForm(templateId: string, formData: FormData) {
   const [lang, tpl] = await Promise.all([getLang(), db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })])
   if (!tpl) redirect('/')
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) redirect('/')
-  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
+  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${editBlockReason(tpl) ?? 'frozen'}`)
 
   const items = toProposedItems(parseEditorItems(formData.get('items')), lang)
   const meta = {
@@ -246,7 +246,7 @@ export async function publishDraft(templateId: string): Promise<void> {
   if (!tpl) return
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
   const handle = await ownerHandle(tpl.ownerId)
-  if (!canEditList(tpl)) redirect(`/${handle}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
+  if (!canEditList(tpl)) redirect(`/${handle}/${tpl.slug}?e=${editBlockReason(tpl) ?? 'frozen'}`)
 
   // Теги черновика — в реестр (иначе новый тег не появится в каталоге и подсказках).
   const pending = await getDraft(tpl.id, session.userId)

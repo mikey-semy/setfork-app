@@ -1,7 +1,7 @@
 import 'server-only'
 import { eq } from 'drizzle-orm'
 import type { List, ListStore, Moderation } from '@/core'
-import { canEditList } from '@/core'
+import { canEditList, editBlockReason } from '@/core'
 import { db, templates } from '@/shared/db'
 import { initialModeration } from '@/shared/moderation/publication-state'
 import { captureError } from '@/shared/observability'
@@ -63,7 +63,7 @@ async function assertVersionAllowed(templateId: string): Promise<void> {
     .where(eq(templates.id, templateId))
     .limit(1)
   if (st && !canEditList(st)) {
-    throw new Error(`list ${st.archivedAt ? 'archived' : 'frozen'}: new versions are not allowed`)
+    throw new Error(`list ${editBlockReason(st) ?? 'frozen'}: new versions are not allowed`)
   }
 }
 
