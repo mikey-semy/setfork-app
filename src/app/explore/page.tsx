@@ -71,6 +71,10 @@ export default async function ExplorePage({
   const exploreCatalogs = active === 'explore' ? await getPublicCatalogs(6) : []
   const feedStarred = active === 'explore' && uid ? await getStarredIds(uid, feedTop.map((i) => i.id)) : new Set<string>()
   const sidePeople = active === 'explore' ? await searchPeople({ sort: 'followers', limit: 5 }) : []
+  // Виджет показывает ТО ЖЕ, куда ведёт его ссылка: тот же запрос и тот же период.
+  // Лента страницы ранжируется иначе (звёзды за всё время), и наполнять ею виджет с
+  // подписью «Trending» значило бы обещать одно, а по клику показывать другое.
+  const sideTrending = active === 'explore' ? await getTrendingFeed(SIDE_TREND_RANGE, uid, lang) : []
   const tags = active === 'topics' ? await getPopularTags(60) : []
   const trendLists = active === 'trending' && trendView === 'lists' ? await getTrendingFeed(trendRange, uid, lang) : []
   const trendPeople = active === 'trending' && trendView === 'people' ? await searchPeople({ sort: 'followers', limit: 30 }) : []
@@ -112,7 +116,7 @@ export default async function ExplorePage({
               moreHref={`/explore?tab=trending&view=lists&range=${SIDE_TREND_RANGE}`}
               moreLabel={t('trendingListsMore', lang)}
             >
-              {feed.slice(0, 5).map((l) => (
+              {sideTrending.slice(0, 5).map((l) => (
                 <Link
                   key={l.id}
                   href={`/${l.ownerHandle}/${l.slug}`}
