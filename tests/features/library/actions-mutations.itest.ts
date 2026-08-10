@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Мокаем ТОЛЬКО границу Next-рантайма: кто «текущий пользователь» и заглушки
 // redirect/revalidatePath. БД, проверки владения и анти-отмывки — настоящие.
@@ -45,14 +46,14 @@ const visOf = async (id: string) =>
 const exists = async (id: string) => !!(await db.query.templates.findFirst({ where: (t, { eq }) => eq(t.id, id) }))
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'owner1' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'other1' }).returning({ id: users.id })
   ownerId = o.id
   otherId = x.id
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
 })
 
 describe('setListVisibility — владение + анти-отмывка', () => {

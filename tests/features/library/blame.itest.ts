@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { db, steps, templateVersions, templates, users } from '@/shared/db'
 import { getListBlame } from '@/features/library/blame'
+import { resetTables } from '../../helpers/reset-db'
 
 // Страница «Авторство» отвечает на один вопрос: когда этот пункт трогали в последний
 // раз. Проверяется он только на реальной истории версий — здесь видно и правило
@@ -22,7 +23,7 @@ type Block = {
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${steps}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${steps}, ${templateVersions}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'blame-owner' }).returning({ id: users.id })
   const [t] = await db
     .insert(templates)

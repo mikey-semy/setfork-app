@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Git-транспорт — третья поверхность того же объекта рядом с `/raw` и `data.json`, и
 // анти-перечислительную политику он обязан соблюдать так же: «списка нет» и «список
@@ -75,7 +76,7 @@ const makeList = async (slug: string, over: Record<string, unknown> = {}) => {
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${collaborators}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${collaborators}, ${templates}, ${users}`)
   for (const k of ['owner', 'collab', 'stranger']) {
     const [u] = await db
       .insert(users)

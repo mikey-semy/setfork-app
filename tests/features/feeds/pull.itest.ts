@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Петля сбора потока на РЕАЛЬНОЙ БД. Сеть замокана: проверяем не интернет, а поведение —
 // дедуп между лентами, отметку использованного, отбор по домену и то, что мёртвый источник
@@ -29,7 +30,7 @@ const addSource = async (url: string, tags: string[], over: Partial<typeof feedS
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${feedItems}, ${feedSources}, ${agentActions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${feedItems}, ${feedSources}, ${agentActions}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'feed-owner' }).returning({ id: users.id })
   userId = u.id
 })

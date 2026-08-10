@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Выключенный раздел обязан отказывать ЗАПИСИ, а не только прятать страницу.
 // Сценарий отсюда — реальный: пользователь открыл форму при включённом разделе,
@@ -71,7 +72,7 @@ const setFeatures = (patch: { issuesEnabled?: boolean; discussionsEnabled?: bool
   db.update(templates).set(patch).where(eq(templates.id, tplId))
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${discussionComments}, ${discussions}, ${issueComments}, ${issues}, ${milestones}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${discussionComments}, ${discussions}, ${issueComments}, ${issues}, ${milestones}, ${templateVersions}, ${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: OWNER }).returning({ id: users.id })
   const [v] = await db.insert(users).values({ handle: VISITOR }).returning({ id: users.id })
   ownerId = o.id

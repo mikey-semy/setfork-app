@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * СУХОЙ ПРОГОН обязателен для КАЖДОЙ автономной петли.
@@ -26,7 +27,7 @@ const journalFor = async (loop: string) =>
   (await db.select().from(agentActions)).filter((a) => a.loop === loop)
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${agentActions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${agentActions}, ${templates}, ${users}`)
 })
 
 describe('сухой прогон уважает каждая петля', () => {

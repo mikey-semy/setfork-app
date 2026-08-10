@@ -8,7 +8,7 @@ import { recordRunCompletionIfDone } from '@/shared/completion'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии), mcpCanView стоит у каждого вызова
 import { getTemplateDetail } from '@/features/library/queries'
-import { mcpCanView } from './shared'
+import { detailByRefOrMoved, mcpCanView } from './shared'
 
 /**
  * Прогоны списка через MCP: запустить, посмотреть состояние, отметить шаг.
@@ -63,7 +63,7 @@ async function mcpRunState(userId: string, runId: string) {
 
 /** Запустить (или продолжить активный) прогон списка по текущей версии. */
 export async function mcpStartRun(userId: string, handle: string, slug: string) {
-  const detail = await getTemplateDetail(handle, slug)
+  const detail = await detailByRefOrMoved(handle, slug)
   if (!detail) return { error: 'list not found' }
   const { tpl, currentVersion } = detail
   if (!(await mcpCanView(tpl, userId))) return { error: 'forbidden' }

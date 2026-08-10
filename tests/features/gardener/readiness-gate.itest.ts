@@ -3,6 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { agentActions, appSettings, db, templates, users } from '@/shared/db'
 import { gateOwnDraft } from '@/features/gardener/service'
 import type { ReadinessInput } from '@/shared/ai/readiness-lenses'
+import { resetTables } from '../../helpers/reset-db'
 
 // Гейт готовности сквозняком, БЕЗ трат на модель: в тестовой среде ИИ-клиента нет, значит
 // линзы не отвечают — и это ровно тот случай, который обязан вести себя fail-closed.
@@ -27,7 +28,7 @@ const tpl = () => ({ id: tplId, slug: 'bread', tags: ['кулинария'], des
 const ctx = () => ({ tenderId: ownerId, agentId: 'cook', policyVersion: 1, lang: 'ru' as const })
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${agentActions}, ${appSettings}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${agentActions}, ${appSettings}, ${templates}, ${users}`)
   const [u] = await db
     .insert(users)
     .values({ handle: 'gate-agent', accountType: 'agent', profession: 'Cook' })

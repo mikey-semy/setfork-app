@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { COLUMN_DIM } from '@/shared/ai/embed-space'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * ЧЕКПОИНТ ПРИВАТНОСТИ №1, вторая половина: правило проверено на РЕАЛЬНОМ SQL.
@@ -38,7 +39,7 @@ const seedList = async (ownerId: string, slug: string, title: string, over: Part
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${embeddings}, ${councilExperts}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${embeddings}, ${councilExperts}, ${templates}, ${users}`)
   const [a] = await db.insert(users).values({ handle: 'alice' }).returning({ id: users.id })
   const [b] = await db.insert(users).values({ handle: 'bob' }).returning({ id: users.id })
   alice = a.id

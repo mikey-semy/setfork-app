@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Link-checker без сети: харвест по всем поверхностям (refs/product/inline-md)
 // против реального PG + свип с инжектированной пробой (эскалация broken).
@@ -12,7 +13,7 @@ const { clearLinkcheckCache } = await import('@/shared/settings/linkcheck')
 let templateId = ''
 
 const wipe = async () => {
-  await db.execute(sql`truncate table ${templates}, ${users}, ${linkChecks}, ${linkOccurrences}, ${appSettings} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}, ${linkChecks}, ${linkOccurrences}, ${appSettings}`)
 }
 
 beforeAll(async () => {

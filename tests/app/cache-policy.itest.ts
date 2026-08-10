@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../helpers/reset-db'
 
 // Кеш машинных поверхностей против РЕАЛЬНОЙ базы: маршрут вызывается целиком, как его
 // вызовет прокси. Проверяется главное свойство — у публичного ответа нет окна свежести,
@@ -38,7 +39,7 @@ const surfaces = async () => ({
 })
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${steps}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${steps}, ${templateVersions}, ${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: OWNER }).returning({ id: users.id })
   ownerId = o.id
   const [t] = await db

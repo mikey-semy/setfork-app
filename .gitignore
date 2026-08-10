@@ -27,3 +27,4 @@ coverage/
 # Артефакты прогонов Playwright (смок гоняется из setfork-sim, сюда попадают случайно)
 test-results/
 playwright-report/
+itest-run.log

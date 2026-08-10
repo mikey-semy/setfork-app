@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Отбор зеркал на повтор — на НАСТОЯЩЕЙ Postgres.
@@ -71,7 +72,7 @@ beforeEach(async () => {
   pushed.length = 0
   down = false
   delivered = null
-  await db.execute(sql`truncate table ${users}, ${templates}, ${jobs} restart identity cascade`)
+  await resetTables(sql`${users}, ${templates}, ${jobs}`)
   const [u] = await db.insert(users).values({ handle: 'mirror-owner' }).returning({ id: users.id })
   ownerId = u.id
 })

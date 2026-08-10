@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { agentActions, db } from '@/shared/db'
 import { hasActions, stallReport } from '@/shared/agents/stall'
+import { resetTables } from '../../helpers/reset-db'
 
 // ДЕТЕКТОР ХОЛОСТОГО ХОДА: «петля работает, деньги тратятся, а библиотека не меняется».
 // Ключевое различие, которое тесты и держат: «улучшать нечего» и «оставлено человеку» — это
@@ -9,7 +10,7 @@ import { hasActions, stallReport } from '@/shared/agents/stall'
 // Спутать их значит либо бить тревогу зря, либо не заметить настоящий холостой ход.
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${agentActions}`)
+  await resetTables(sql`${agentActions}`, { restartIdentity: false, cascade: false })
 })
 
 beforeEach(async () => {

@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../helpers/reset-db'
 
 // Контракт git smart-HTTP: маршрут вызывается целиком, как его вызовет git-клиент.
 // Своих тестов у этой поверхности не было вовсе (карточка 003 кластера K03), а именно
@@ -72,7 +73,7 @@ async function issueToken(userId: string, scope: 'read' | 'write'): Promise<stri
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${apiTokens}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${apiTokens}, ${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: OWNER }).returning({ id: users.id })
   const [s] = await db.insert(users).values({ handle: 'git-stranger' }).returning({ id: users.id })
   ownerId = o.id
@@ -87,7 +88,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await db.execute(sql`truncate table ${apiTokens}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${apiTokens}, ${templates}, ${users}`)
 })
 
 beforeEach(() => {

@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Две границы одного правила «ответ протокола не врёт про запись»:
 //
@@ -78,7 +79,7 @@ const service = (path: 'git-upload-pack' | 'git-receive-pack') =>
   })
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: OWNER }).returning({ id: users.id })
   ownerId = u.id
   await db.insert(templates).values({ ownerId, slug: SLUG, title: { en: 'bread' }, currentVersion: 1 })

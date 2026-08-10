@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * ПАРИТЕТ ЗАПИСИ через домен: что уезжает в ядро, то и ложится в БД.
@@ -24,7 +25,7 @@ let ownerId = ''
 
 beforeAll(async () => {
   if (!CORE) return
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'cat-owner' }).returning({ id: users.id })
   ownerId = u.id
 })

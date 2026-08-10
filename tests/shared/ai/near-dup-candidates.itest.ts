@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * ОТБОР КАНДИДАТОВ на «такой список уже есть».
@@ -27,7 +28,7 @@ async function makeList(slug: string, title: string, itemTitles: string[]) {
 }
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'dup-owner' }).returning({ id: users.id })
   ownerId = u.id
 })

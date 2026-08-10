@@ -9,7 +9,7 @@ import { recordAudit } from '@/shared/audit'
 import { toProposedItems } from '@/features/library/editor'
 import { assertNoDestructiveSteps, DestructiveCommandError } from '@/core/domain/destructive-command'
 import { isCollaborator } from '@/features/collab/queries'
-import { mcpCanView, SITE_URL, toProposed, type McpItemInput } from './shared'
+import { SITE_URL, mcpCanView, resolveListRefOrMoved, toProposed, type McpItemInput } from './shared'
 
 /**
  * Предложения правок через MCP: подать, отрецензировать, слить, откатить, применить,
@@ -55,13 +55,7 @@ export async function mcpReportCheck(
   const url = (input.url ?? '').trim()
   if (url && !/^https?:\/\//i.test(url)) return { error: 'url must be http(s)' }
 
-  const ref = input.list.includes('/') ? input.list.split('/') : [null, input.list]
-  const [tpl] = await db
-    .select({ id: templates.id, ownerId: templates.ownerId, slug: templates.slug })
-    .from(templates)
-    .innerJoin(users, eq(users.id, templates.ownerId))
-    .where(ref[0] ? and(eq(users.handle, ref[0]), eq(templates.slug, ref[1]!)) : eq(templates.slug, ref[1]!))
-    .limit(1)
+  const tpl = await resolveListRefOrMoved(input.list)
   if (!tpl) return { error: 'list not found' }
   if (tpl.ownerId !== userId && !(await isCollaborator(tpl.id, userId))) {
     return { error: 'only the list owner or a collaborator can report checks' }
@@ -105,7 +99,12 @@ export async function mcpReportCheck(
   return {
     reported: name,
     status: input.status,
-    url: `${SITE_URL}/${ref[0] ?? ''}/${tpl.slug}/suggestions/${input.number}?tab=checks`,
+    // Адрес берём У НАЙДЕННОГО списка, а не из запроса: ссылка должна вести на
+    // актуальное место, даже если пришли по прежнему.
+    url: `${SITE_URL}/${tpl.ownerHandle}/${tpl.slug}/suggestions/${input.number}?tab=checks`,
+    // Пришли по устаревшему адресу — сообщаем новый, чтобы агент обновил ссылки
+    // (в HTTP это сделал бы 301, здесь редиректа нет).
+    movedTo: tpl.movedTo ?? undefined,
     checks: all.map((c) => ({ name: c.title, status: c.status, summary: c.detail })),
   }
 }
@@ -168,17 +167,8 @@ export async function mcpRevertSuggestion(userId: string, input: { list: string;
   return { revertOf: input.number, opened: res.number, note: 'A revert suggestion was opened — it still needs review and merging.' }
 }
 
-/** Список по ссылке «handle/slug» или просто «slug». */
-async function resolveListRef(ref: string): Promise<{ id: string; slug: string; ownerHandle: string } | null> {
-  const parts = ref.includes('/') ? ref.split('/') : [null, ref]
-  const [row] = await db
-    .select({ id: templates.id, slug: templates.slug, ownerHandle: users.handle })
-    .from(templates)
-    .innerJoin(users, eq(users.id, templates.ownerId))
-    .where(parts[0] ? and(eq(users.handle, parts[0]), eq(templates.slug, parts[1]!)) : eq(templates.slug, parts[1]!))
-    .limit(1)
-  return row ?? null
-}
+/** Список по ссылке «handle/slug» или просто «slug» — включая прежние адреса. */
+const resolveListRef = resolveListRefOrMoved
 
 /** Предложение по паре «список + номер» — человеческий адрес, тот же, что в UI. */
 async function resolveSuggestionRef(ref: string, number: number): Promise<{ id: string } | { error: string }> {

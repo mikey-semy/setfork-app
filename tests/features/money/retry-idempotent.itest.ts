@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Линза 03 (деньги), №5: повтор дорогой задачи оплачивался заново. Задача 'generate'
 // ставится с maxAttempts: 2 и вдобавок переподхватывается reapStalledJobs, а самая
@@ -33,7 +34,7 @@ let userId = ''
 let genId = ''
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${users}, ${generations} restart identity cascade`)
+  await resetTables(sql`${users}, ${generations}`)
   const [u] = await db.insert(users).values({ handle: 'ret-user' }).returning({ id: users.id })
   userId = u.id
   const [g] = await db.insert(generations).values({ userId, query: 'как варить кофе' }).returning({ id: generations.id })

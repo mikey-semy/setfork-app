@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Окно выкатки Ф5: до неё ветку правки называло ядро по НИКУ, после — по
 // неизменному идентификатору. Магический пуш, сделанный в это окно, попадает в
@@ -65,7 +66,7 @@ const openCount = async (templateId: string) => {
 const ID_BRANCH = 'u/0d5a3f6e-6a1c-4a25-9f5f-2b0a1c9d7e11/main'
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'bowner' }).returning({ id: users.id })
   const [a] = await db.insert(users).values({ handle: 'bauthor' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'bother' }).returning({ id: users.id })
@@ -74,7 +75,7 @@ beforeEach(async () => {
   otherId = x.id
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
 })
 
 describe('ветка правки сменила имя в окно выкатки', () => {

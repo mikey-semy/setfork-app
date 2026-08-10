@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Чокпоинт чтения requireViewableMeta против реального Postgres: приватное/черновик —
 // только владельцу (даже НЕ админу), снятое модерацией — владельцу или админу,
@@ -33,7 +34,7 @@ async function canSee(session: ReturnType<typeof asViewer> | null, slug: string)
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: OWNER }).returning({ id: users.id })
   const [v] = await db.insert(users).values({ handle: 'gviewer' }).returning({ id: users.id })
   const [a] = await db.insert(users).values({ handle: 'theadmin' }).returning({ id: users.id })
@@ -46,7 +47,7 @@ beforeAll(async () => {
   await seed('flag', { moderation: 'flagged' })
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
 })
 
 describe('requireViewableMeta — чокпоинт чтения', () => {

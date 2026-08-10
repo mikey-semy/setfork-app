@@ -7,7 +7,7 @@ import { getDraft, getFeed, getTemplateDetail } from '@/features/library/queries
 import { buildScript, scriptRefusal, toExportList } from '@/features/library/export'
 import { AUTHORED_DIALECT, dialectExt, normalizeDialect } from '@/core/domain/script-dialect'
 import { getCourseCompletion } from '@/features/quizzes/queries'
-import { blockForMcp, mcpCanView, SITE_URL, type DetailStep } from './shared'
+import { SITE_URL, blockForMcp, detailByRefOrMoved, mcpCanView, type DetailStep } from './shared'
 import { isCollaborator } from '@/features/collab/queries'
 
 /**
@@ -40,7 +40,7 @@ export async function mcpSearch(userId: string, query: string, limit: number) {
 const blocksForMcp = (rows: DetailStep[]) => rows.map((s) => ({ ...blockForMcp(s), section: tr(s.section, 'en') || undefined }))
 
 export async function mcpGetList(userId: string, handle: string, slug: string) {
-  const detail = await getTemplateDetail(handle, slug)
+  const detail = await detailByRefOrMoved(handle, slug)
   if (!detail) return null
   const { tpl, currentVersion, steps } = detail
   // Тот же единый предикат приватности, что и на сайте (у MCP админа нет).
@@ -54,7 +54,12 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
   const canWrite = tpl.ownerId === userId || (await isCollaborator(tpl.id, userId))
   const pending = canWrite ? await getDraft(tpl.id, userId) : null
   return {
-    ref: `${handle}/${slug}`,
+    // Адрес АКТУАЛЬНЫЙ, а не тот, по которому пришли: иначе агент, обратившийся по
+    // прежней ссылке, получил бы её же в ответе и продолжил ходить по старому.
+    ref: detail.movedTo ?? `${handle}/${slug}`,
+    // Пришли по устаревшему адресу — пусть агент обновит свои ссылки (в HTTP это
+    // сделал бы 301; в MCP редиректа нет).
+    movedTo: detail.movedTo ?? undefined,
     title: tr(tpl.title, 'en'),
     desc: tr(tpl.desc, 'en'),
     tags: tpl.tags,
@@ -94,7 +99,7 @@ export async function mcpGetScript(
   dialectRaw?: string,
   bids?: string[],
 ) {
-  const detail = await getTemplateDetail(handle, slug)
+  const detail = await detailByRefOrMoved(handle, slug)
   if (!detail) return null
   const { tpl } = detail
   if (!(await mcpCanView(tpl, userId))) return null
