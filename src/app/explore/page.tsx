@@ -31,16 +31,20 @@ export default async function ExplorePage() {
   // с notFound() на профиле: страница «не найдено» уезжала с кодом 200).
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const uid = session?.userId
-  const feed = await getFeed({ sort: 'trending' }, uid, lang)
+  // Четыре независимых чтения — одной волной, а не в затылок друг другу.
+  // Каталоги идут в ОСНОВНОЙ ленте рядом со списками (не отдельной вкладкой), а виджет
+  // показывает ТО ЖЕ, куда ведёт его ссылка: тот же запрос и тот же период. Лента
+  // страницы ранжируется иначе (звёзды за всё время), и наполнять ею виджет с подписью
+  // «Trending» значило бы обещать одно, а по клику показывать другое.
+  const [feed, exploreCatalogs, sidePeople, sideTrending] = await Promise.all([
+    getFeed({ sort: 'trending' }, uid, lang),
+    getPublicCatalogs(6),
+    searchPeople({ sort: 'followers', limit: 5 }),
+    getTrendingFeed(SIDE_TREND_RANGE, uid, lang),
+  ])
   const feedTop = feed.slice(0, 12)
-  // Каталоги идут в ОСНОВНОЙ ленте рядом со списками (не отдельной вкладкой).
-  const exploreCatalogs = await getPublicCatalogs(6)
+  // Звёзды зависят от того, что попало в ленту, — только это чтение и ждёт её.
   const feedStarred = uid ? await getStarredIds(uid, feedTop.map((i) => i.id)) : new Set<string>()
-  const sidePeople = await searchPeople({ sort: 'followers', limit: 5 })
-  // Виджет показывает ТО ЖЕ, куда ведёт его ссылка: тот же запрос и тот же период.
-  // Лента страницы ранжируется иначе (звёзды за всё время), и наполнять ею виджет с
-  // подписью «Trending» значило бы обещать одно, а по клику показывать другое.
-  const sideTrending = await getTrendingFeed(SIDE_TREND_RANGE, uid, lang)
 
   return (
     <div className="w-full">

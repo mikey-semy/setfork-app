@@ -24,6 +24,7 @@ export default async function TrendingListsPage({
   const [{ range }, lang, session] = await Promise.all([searchParams, getLang(), getSession()])
   // Период остаётся ПАРАМЕТРОМ: это фильтр одной и той же страницы, а не разные
   // страницы. У GitHub ровно так же — `?since=weekly`.
+  // Сам список ждёт всех троих: без периода, языка и зрителя его не построить.
   const trendRange: TrendRange = readRange(range)
   const lists = await getTrendingFeed(trendRange, session?.userId, lang)
 

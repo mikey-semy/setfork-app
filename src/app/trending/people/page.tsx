@@ -15,8 +15,7 @@ export async function generateMetadata() {
 }
 
 export default async function TrendingPeoplePage() {
-  const lang = await getLang()
-  const people = await searchPeople({ sort: 'followers', limit: 30 })
+  const [lang, people] = await Promise.all([getLang(), searchPeople({ sort: 'followers', limit: 30 })])
 
   return (
     <div className="w-full">
