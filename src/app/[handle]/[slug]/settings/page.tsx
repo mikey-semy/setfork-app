@@ -141,6 +141,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
           templateId={meta.id}
           handle={owner}
           slug={meta.slug}
+          title={tr(meta.title, lang)}
           visibility={meta.visibility}
           moderation={meta.moderation}
           archived={meta.archivedAt != null}

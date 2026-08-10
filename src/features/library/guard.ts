@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { eq } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
+import { redirectIfListMoved } from '@/shared/db/moved-list'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { canEditList, canRunList, canViewList, editBlockReason } from '@/core'
@@ -38,7 +39,13 @@ async function collabIfNeeded(
  */
 export const requireViewableMeta = cache(async (owner: string, slug: string) => {
   const meta = await getListMeta(owner, slug)
-  if (!meta) return null
+  // Промах может означать не «нет списка», а «список переехал»: адрес меняли, а
+  // ссылка осталась старой. Перенаправление бросает исключение (как notFound), так
+  // что до `return null` доходят только по-настоящему несуществующие адреса.
+  if (!meta) {
+    await redirectIfListMoved(owner, slug)
+    return null
+  }
   const viewer = await getSession()
   const isOwner = meta.ownerId === viewer?.userId
   const ok = canViewList(meta, {
@@ -66,7 +73,10 @@ export async function requireViewableDetailFor(owner: string, slug: string, view
 
 async function viewableDetailFor(owner: string, slug: string, viewerId?: string, viewerHandle?: string | null) {
   const detail = await getTemplateDetail(owner, slug)
-  if (!detail) return null
+  if (!detail) {
+    await redirectIfListMoved(owner, slug)
+    return null
+  }
   const isOwner = detail.tpl.ownerId === viewerId
   const ok = canViewList(detail.tpl, {
     isOwner,

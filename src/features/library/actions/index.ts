@@ -8,6 +8,7 @@
  */
 export * from './canon'
 export * from './list-settings'
+export * from './rename'
 export * from './uploads'
 export * from './ai'
 export * from './suggestions'
