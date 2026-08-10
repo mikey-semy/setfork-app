@@ -181,7 +181,8 @@ function ReleaseCard({ e, lang, ru }: { e: FeedEvent; lang: Lang; ru: boolean })
       </div>
       {/* Тело: версия + заголовок + changelog */}
       <div className="px-4 py-3.5">
-        <div className="mb-1 flex flex-wrap items-center gap-2">
+        {/* mb как у прежней строки со слагом: без неё заголовок прижимался к заметке. */}
+        <div className="mb-2.5 flex flex-wrap items-center gap-2">
           <span className="rounded-md border border-(--accent)/40 bg-(--accent-soft) px-2 py-0.5 font-mono text-[0.78125rem] font-semibold text-accent">
             v{e.version}
           </span>
@@ -189,9 +190,9 @@ function ReleaseCard({ e, lang, ru }: { e: FeedEvent; lang: Lang; ru: boolean })
             {tr(e.title, lang) || `${e.ownerHandle}/${e.slug}`}
           </Link>
         </div>
-        <div className="mb-2.5 font-mono text-[0.6875rem] text-muted">
-          {e.ownerHandle}/{e.slug}
-        </div>
+        {/* Строки «owner/slug» здесь НЕТ намеренно: слаг — технический адрес, его
+            не показывают человеку (как и в строках событий выше). Список назван
+            заголовком в ссылке над этой врезкой, а сам адрес виден в браузере. */}
         {note ? (
           <Markdown className="border-l-2 border-border pl-3 text-[0.8125rem] text-ink-2">{note}</Markdown>
         ) : (
