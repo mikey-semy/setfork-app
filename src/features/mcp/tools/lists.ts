@@ -29,8 +29,8 @@ import { REPORTED_STATUSES, reportedChecks, type ReportedStatus } from '@/featur
 import { currentRevision } from '@/features/library/suggestion-core'
 import { recordRunCompletionIfDone } from '@/shared/completion'
 import { getCourseCompletion } from '@/features/quizzes/queries'
-import { mcpCanView } from './shared'
-import { SITE_URL, toProposed, type McpItemInput } from './shared'
+import { detailByRefOrMoved, mcpCanView } from './shared'
+import { SITE_URL, resolveListRefOrMoved, toProposed, type McpItemInput } from './shared'
 import { blockForMcp, type DetailStep } from './shared'
 
 
@@ -440,12 +440,17 @@ const destructiveError = (e: unknown): { error: string } | null =>
     ? { error: `refused: step ${e.stepIndex} has a destructive command (${e.reason}): ${e.fragment}` }
     : null
 
-/** Список во владении пользователя (для записи) + его версии. */
+/** Список во владении пользователя (для записи) + его версии.
+ *
+ *  Адрес резолвится с учётом ПРЕЖНИХ: у агента ссылка могла остаться со времён до
+ *  переименования, и запрещать по ней запись незачем — ведёт она на тот же список.
+ *  Так же поступает GitHub API: запросы по прежнему имени репозитория доезжают
+ *  через 301, а не отклоняются. */
 async function ownedList(userId: string, handle: string, slug: string) {
-  const owner = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
-  if (!owner[0]) return { error: 'list not found' as const }
+  const found = await resolveListRefOrMoved(`${handle}/${slug}`)
+  if (!found) return { error: 'list not found' as const }
   const tpl = await db.query.templates.findFirst({
-    where: (t) => and(eq(t.ownerId, owner[0].id), eq(t.slug, slug)),
+    where: (t) => eq(t.id, found.id),
     with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
   })
   if (!tpl) return { error: 'list not found' as const }
@@ -534,6 +539,9 @@ export interface McpUpdateInput {
  *  Снятый модерацией список владелец удалить не может: hard-delete стёр бы его
  *  contentFingerprint, то есть защиту от повторной заливки того же контента. */
 export async function mcpDeleteList(userId: string, handle: string, slug: string, confirm: boolean) {
+  // Адрес ТОЛЬКО актуальный — в отличие от чтений и правок, которые прежний адрес
+  // принимают. Удаление необратимо, и выполнять его по ссылке, устаревшей неизвестно
+  // когда, нельзя: агент должен назвать список тем именем, которое у него сейчас.
   const owner = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
   if (!owner[0]) return { error: 'list not found' as const }
   const tpl = await db.query.templates.findFirst({ where: (t) => and(eq(t.ownerId, owner[0].id), eq(t.slug, slug)) })
@@ -659,7 +667,7 @@ export async function mcpPatchList(
     }
   }
 
-  const detail = await getTemplateDetail(handle, slug)
+  const detail = await detailByRefOrMoved(handle, slug)
   if (!detail) return { error: 'list not found' }
   const current = detail.currentVersion?.version ?? tpl.currentVersion
 
