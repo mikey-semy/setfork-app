@@ -124,7 +124,11 @@ jobs:
             -e SETFORK_ALLOW_INSECURE=1 \
             "$IMAGE" >/dev/null
           for i in $(seq 1 60); do
-            docker logs "core-$CI_NET" 2>&1 | grep -q "слушает" && { echo "core up"; break; }
+            # Готовность — из healthcheck образа, а НЕ из строки в логе: строка
+            # зависит от языка сборки, и ядро давно пишет «listening». Проверка на
+            # «слушает» с тех пор не срабатывала ни разу — цикл просто спал все 60
+            # секунд и шёл дальше (замечено 10.08 при подъёме того же образа локально).
+            [ "$(docker inspect -f '{{.State.Health.Status}}' "core-$CI_NET" 2>/dev/null)" = healthy ] && { echo "core up"; break; }
             sleep 1
           done
           docker logs "core-$CI_NET" 2>&1 | tail -3
@@ -195,7 +199,11 @@ jobs:
             -e SETFORK_ALLOW_INSECURE=1 \
             "$IMAGE" >/dev/null
           for i in $(seq 1 60); do
-            docker logs "core-$CI_NET" 2>&1 | grep -q "слушает" && { echo "core up"; break; }
+            # Готовность — из healthcheck образа, а НЕ из строки в логе: строка
+            # зависит от языка сборки, и ядро давно пишет «listening». Проверка на
+            # «слушает» с тех пор не срабатывала ни разу — цикл просто спал все 60
+            # секунд и шёл дальше (замечено 10.08 при подъёме того же образа локально).
+            [ "$(docker inspect -f '{{.State.Health.Status}}' "core-$CI_NET" 2>/dev/null)" = healthy ] && { echo "core up"; break; }
             sleep 1
           done
           echo "SETFORK_CORE_URL=1" >> "$GITHUB_ENV"

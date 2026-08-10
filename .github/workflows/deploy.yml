@@ -1,4 +1,10 @@
-# Автодеплой на прод setfork (31.177.83.219, без Dokploy) на КАЖДЫЙ пуш в master.
+# Автодеплой на прод setfork.com (159.195.151.41, netcup) на КАЖДЫЙ пуш в master.
+#
+# ⚠️ ЦЕЛЬ СМЕНИЛАСЬ 09.08.2026. Канон вернулся на setfork.com ещё 04.08 (ADR-0017), а
+# выкатка всё это время ехала на 31.177.83.219 (.ru) — то есть уже не на прод. Сам .com
+# обновлялся вебхуком Dokploy, и после переезда на netcup вебхука в репозитории не стало:
+# с 07.08 16:04 на канон не выкатывалось НИЧЕГО, при том что каждый деплой был зелёный.
+# Теперь цель одна и та же, что и канон; .ru из выкатки убран (решение владельца 09.08).
 #
 # Триггер — ЗАВЕРШЕНИЕ воркфлоу CI на master (`workflow_run`), а не пуш. Перед
 # доставкой стоят два гейта (оба из авто-ревью, #468 и #321):
@@ -23,10 +29,11 @@
 # Сборка `--build` идёт НА СЕРВЕРЕ; `compose up` не заменит рабочий контейнер, если
 # сборка упала — прод остаётся на последней рабочей версии, а джоба краснеет.
 #
-# Исходники уезжают tar-ом по ssh в /opt/setfork/src/setfork-frontend, образ
+# Исходники уезжают tar-ом по ssh в /root/setfork/src/setfork-frontend, образ
 # собирается НА СЕРВЕРЕ (npm registry с RF-сервера работает; .env сервиса лежит
 # на сервере и tar-ом не затирается). Ключ деплоя приходит ro-mount'ом из
-# setfork-ci-runner/docker-compose.yml (/ssh/setfork) — GitHub Secrets не нужны.
+# setfork-ci-runner/docker-compose.yml (/ssh/setfork) — GitHub Secrets не нужны. Публичная
+# часть этого ключа заведена в /root/.ssh/authorized_keys на netcup 09.08.
 name: Deploy
 
 on:
@@ -46,8 +53,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DEPLOY: root@31.177.83.219
-  APP_DIR: /opt/setfork/src/setfork-frontend
+  DEPLOY: root@159.195.151.41
+  APP_DIR: /root/setfork/src/setfork-frontend
 
 # В контексте workflow_run `github.sha` — вершина master на момент события, а нужен
 # коммит, который проверял CI: он в github.event.workflow_run.head_sha. Отсюда эта
@@ -184,14 +191,17 @@ jobs:
                 if [ -d $APP_DIR ]; then mv $APP_DIR $APP_DIR.old; fi
                 mv $APP_DIR.new $APP_DIR
                 test -f $APP_DIR/.env || { echo '::error::на сервере нет $APP_DIR/.env — прежнее дерево в $APP_DIR.old'; exit 1; }"
-          # Серверный docker-compose.override.yml НЕ подключаем: конфигурация живёт в
-          # репозитории. Именно из-за него RU-мост к OpenRouter (extra_hosts, обход 403
-          # на российский IP) держался на честном слове — файла в репозитории нет,
-          # compose с явным -f его не читает, и работал мост лишь пока не пересоздавали
-          # контейнер. Мост переехал в docker-compose.dokploy.yml (RU_EGRESS_IP).
-          # Подключать override вдобавок нельзя: последний -f перекрывает предыдущие, и
-          # старый файл с прежним адресом молча вернул бы 403.
-          $SSH "cd $APP_DIR && docker compose -f docker-compose.dokploy.yml up -d --build --remove-orphans"
+          # ⚠️ ОБА -f ОБЯЗАТЕЛЬНЫ. На netcup маршрут живёт ТОЛЬКО в серверном
+          # docker-compose.override.yml (traefik-labels: Host(`setfork.com`)), в
+          # репозитории его нет. `up -d` с одним -f снимает ярлыки, Traefik теряет
+          # бэкенд — и весь сайт отдаёт 404 при «healthy» контейнере.
+          # Поэтому сначала убеждаемся, что файл на месте, и только потом поднимаем.
+          #
+          # --remove-orphans здесь НЕ используем: проектом setfork-frontend на этом
+          # сервере частично управляет Dokploy, и «лишним» он может счесть чужой
+          # контейнер.
+          $SSH "test -f $APP_DIR/docker-compose.override.yml || { echo '::error::на сервере нет docker-compose.override.yml — в нём весь traefik-роутинг .com; без него сайт уйдёт в 404. Прежнее дерево в $APP_DIR.old'; exit 1; }"
+          $SSH "cd $APP_DIR && docker compose -f docker-compose.dokploy.yml -f docker-compose.override.yml up -d --build"
           # Кэш сборки чистим СРАЗУ после сборки. Образ собирается на сервере, и кэш
           # растёт с каждым деплоем без потолка: 29.07 он занял 15 ГБ из 35 и вывел
           # диск на 80%, а авто-чистка мониторинга включается только с 90%.
@@ -227,7 +237,7 @@ jobs:
 
           Лог: $RUN_URL
 
-          Частая причина (уже ловили): VPN на self-hosted раннере → \`ssh: connect to host … port 22: Connection refused\`, сервер при этом жив. Проверка: \`Test-NetConnection 31.177.83.219 -Port 22\`. Лечение: выключить VPN и перезапустить джобу.
+          Частая причина (уже ловили): VPN на self-hosted раннере → \`ssh: connect to host … port 22: Connection refused\`, сервер при этом жив. Проверка: \`Test-NetConnection 159.195.151.41 -Port 22\`. Лечение: выключить VPN и перезапустить джобу.
           Эта тревога закроется сама при следующем зелёном деплое."
           EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number' 2>/dev/null || true)
           if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
@@ -246,7 +256,7 @@ jobs:
               ...context.repo,
               deployment_id: Number(process.env.DEP_ID),
               state: process.env.JOB_STATUS === 'success' ? 'success' : 'failure',
-              environment_url: 'https://setfork.ru',
+              environment_url: 'https://setfork.com',
               log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             })
         env:
