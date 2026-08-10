@@ -60,11 +60,16 @@ describe('resolveListRefOrMoved', () => {
   // Резолвер сам по себе бесполезен, если инструменты ходят мимо него — а именно так
   // и было: чтения звали строгий лукап по handle/slug и отвечали «не найдено» на
   // прежний адрес, то есть ровно в том случае, ради которого всё и затевалось.
-  it('get_list читает список по прежнему адресу', async () => {
+  it('get_list читает список по прежнему адресу и возвращает АКТУАЛЬНЫЙ', async () => {
     const byOld = await mcpGetList(ownerId, 'moved-owner-old', 'old-address')
-    expect(byOld).not.toBeNull()
     const byNew = await mcpGetList(ownerId, 'moved-owner', 'new-address')
-    expect(byOld?.slug).toBe(byNew?.slug)
+    expect(byOld).not.toBeNull()
+    // Один и тот же список — и один и тот же адрес в ответе: агент, пришедший по
+    // старой ссылке, должен получить новую, а не свою же.
+    expect(byOld?.ref).toBe('moved-owner/new-address')
+    expect(byOld?.ref).toBe(byNew?.ref)
+    expect(byOld?.movedTo).toBe('moved-owner/new-address')
+    expect(byNew?.movedTo).toBeUndefined()
   })
 
   it('несуществующий адрес остаётся ненайденным', async () => {

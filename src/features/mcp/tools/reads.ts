@@ -54,7 +54,12 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
   const canWrite = tpl.ownerId === userId || (await isCollaborator(tpl.id, userId))
   const pending = canWrite ? await getDraft(tpl.id, userId) : null
   return {
-    ref: `${handle}/${slug}`,
+    // Адрес АКТУАЛЬНЫЙ, а не тот, по которому пришли: иначе агент, обратившийся по
+    // прежней ссылке, получил бы её же в ответе и продолжил ходить по старому.
+    ref: detail.movedTo ?? `${handle}/${slug}`,
+    // Пришли по устаревшему адресу — пусть агент обновит свои ссылки (в HTTP это
+    // сделал бы 301; в MCP редиректа нет).
+    movedTo: detail.movedTo ?? undefined,
     title: tr(tpl.title, 'en'),
     desc: tr(tpl.desc, 'en'),
     tags: tpl.tags,
