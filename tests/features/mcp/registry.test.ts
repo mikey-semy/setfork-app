@@ -60,18 +60,47 @@ describe('реестр MCP: состав', () => {
   })
 })
 
+/**
+ * Кто именно только читает. Список задан НЕЗАВИСИМО от аннотаций самого
+ * инструмента, и это принципиально: выводить его из `readOnlyHint` — значит
+ * проверять код им же самим. Заведи кто-нибудь `delete_list` через `readTool`,
+ * вывод из аннотации назвал бы его читающим и проверять было бы нечего.
+ */
+const READ_ONLY = [
+  'search_lists', 'get_list', 'get_script', 'get_run',
+  'list_gnomes', 'get_council_draft',
+  'pending_suggestions', 'list_sources',
+]
+
+/**
+ * ТРАТИТ ДЕНЬГИ — значит не чтение, чем бы оно ни выглядело снаружи.
+ *
+ * `ask_gnome` и `gnome_review` спрашивают модель: проверяют `globalBudgetOk` и
+ * `aiQuota`, пишут `recordUsage`. Числились читающими — то есть утёкший read-токен
+ * жёг бюджет владельца и инстанса. `council_draft`, ровно такой же по природе, всё
+ * это время был пишущим: расхождение и выдало ошибку.
+ */
+const SPENDS_MONEY = ['ask_gnome', 'gnome_review', 'council_draft']
+
 describe('реестр MCP: вшитая авторизация', () => {
   const tools = collect()
-  const reads = tools.filter((t) => t.config.annotations?.readOnlyHint === true)
-  const writes = tools.filter((t) => t.config.annotations?.readOnlyHint === false)
 
-  it('поверхность делится на читающие и пишущие, и обе непусты', () => {
-    expect(reads.length).toBeGreaterThan(0)
-    expect(writes.length).toBeGreaterThan(0)
-    expect(reads.length + writes.length).toBe(tools.length)
+  it('читающие помечены readOnlyHint, пишущие — нет', () => {
+    for (const t of tools) {
+      expect(t.config.annotations?.readOnlyHint, t.name).toBe(READ_ONLY.includes(t.name))
+    }
+  })
+
+  it('ни один инструмент, тратящий деньги, не числится читающим', () => {
+    for (const name of SPENDS_MONEY) {
+      expect(READ_ONLY.includes(name), `${name} тратит квоту и не может быть читающим`).toBe(false)
+      expect(tools.find((t) => t.name === name)?.config.annotations?.readOnlyHint, name).toBe(false)
+    }
   })
 
   it('read-токен не доходит ни до одного мутирующего инструмента', async () => {
+    const writes = tools.filter((t) => !READ_ONLY.includes(t.name))
+    expect(writes.length).toBeGreaterThan(0)
     for (const t of writes) {
       const res = await t.cb({}, READ_TOKEN)
       expect(res.isError, `${t.name} впустил read-токен`).toBe(true)
