@@ -9,7 +9,7 @@
 // поведение конвейера, а его нельзя доказать чтением кода.
 import { execFile, execFileSync } from 'node:child_process'
 import { createServer, type Server } from 'node:http'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -17,6 +17,8 @@ import { AUTHORED_DIALECT, dialectSpec, errorScript, scriptFilename } from '@/co
 
 const SLUG = 'deploy-to-vps'
 const REFUSED = [503, 404, 429, 500]
+/** Содержимое ЧУЖОГО файла с тем же именем — он обязан пережить прогон. */
+const MINE = '# мой собственный скрипт, его нельзя терять\n'
 
 let server: Server
 let origin = ''
@@ -47,8 +49,8 @@ afterAll(() => new Promise<void>((done) => server.close(() => done())))
  * `execFileSync` держит событийный цикл — запрос curl просто некому обслужить, и
  * прогон виснет до таймаута.
  */
-function exitCode(command: string): Promise<number> {
-  const cwd = mkdtempSync(join(tmpdir(), 'sf-run-'))
+function exitCode(command: string, dir?: string): Promise<number> {
+  const cwd = dir ?? mkdtempSync(join(tmpdir(), 'sf-run-'))
   return new Promise((done) => {
     execFile('bash', ['-c', command], { cwd, timeout: 30_000 }, (err) => {
       if (!err) return done(0)
@@ -79,6 +81,16 @@ describe.skipIf(!canRun)('команда запуска не может тихо
 
   it('200: опубликованная команда по-прежнему отрабатывает успешно', async () => {
     expect(await exitCode(published(200))).toBe(0)
+  })
+
+  it('чужой файл с тем же именем не затирается', async () => {
+    // Скачивание по имени списка прямо в текущий каталог убило бы собственный
+    // `deploy-to-vps.sh` человека: `curl -o` перезаписывает молча. Находка авто-ревью.
+    const cwd = mkdtempSync(join(tmpdir(), 'sf-own-'))
+    const own = join(cwd, scriptFilename(SLUG, AUTHORED_DIALECT))
+    writeFileSync(own, MINE)
+    expect(await exitCode(published(200), cwd)).toBe(0)
+    expect(readFileSync(own, 'utf8')).toBe(MINE)
   })
 
   // Замер, ради которого форму команды и меняли: он обязан остаться в тесте, иначе
