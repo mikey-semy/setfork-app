@@ -30,7 +30,7 @@ const addSource = async (url: string, tags: string[], over: Partial<typeof feedS
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${feedItems}, ${feedSources}, ${agentActions}, ${templates}, ${users}`)
+  await resetTables([feedItems, feedSources, agentActions, templates, users])
   const [u] = await db.insert(users).values({ handle: 'feed-owner' }).returning({ id: users.id })
   userId = u.id
 })

@@ -39,7 +39,7 @@ const seedList = async (ownerId: string, slug: string, title: string, over: Part
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${embeddings}, ${councilExperts}, ${templates}, ${users}`)
+  await resetTables([embeddings, councilExperts, templates, users])
   const [a] = await db.insert(users).values({ handle: 'alice' }).returning({ id: users.id })
   const [b] = await db.insert(users).values({ handle: 'bob' }).returning({ id: users.id })
   alice = a.id

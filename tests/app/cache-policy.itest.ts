@@ -39,7 +39,7 @@ const surfaces = async () => ({
 })
 
 beforeAll(async () => {
-  await resetTables(sql`${steps}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([steps, templateVersions, templates, users])
   const [o] = await db.insert(users).values({ handle: OWNER }).returning({ id: users.id })
   ownerId = o.id
   const [t] = await db

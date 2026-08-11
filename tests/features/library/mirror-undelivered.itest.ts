@@ -34,7 +34,7 @@ const row = async () => (await db.select().from(templates).where(eq(templates.sl
 
 beforeEach(async () => {
   behave = async () => ({ ok: true, error: '' })
-  await resetTables(sql`${users}, ${templates}`)
+  await resetTables([users, templates])
   const [u] = await db.insert(users).values({ handle: 'owner' }).returning({ id: users.id })
   ownerId = u.id
   await db.insert(templates).values({

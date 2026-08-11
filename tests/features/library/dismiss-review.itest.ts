@@ -34,7 +34,7 @@ const asReviewer = () => Object.assign(session, { userId: reviewerId, handle: 'd
 const asStranger = () => Object.assign(session, { userId: strangerId, handle: 'dis-stranger' })
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const rows = await db
     .insert(users)
     .values([{ handle: 'dis-owner' }, { handle: 'dis-reviewer' }, { handle: 'dis-stranger' }, { handle: 'dis-author' }])

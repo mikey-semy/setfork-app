@@ -11,7 +11,7 @@ import { resetTables } from '../helpers/reset-db'
 let userId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${aiUsage}, ${templates}, ${users}`)
+  await resetTables([aiUsage, templates, users])
   const [u] = await db.insert(users).values({ handle: 'quota-env' }).returning({ id: users.id })
   userId = u.id
 })

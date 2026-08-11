@@ -42,7 +42,7 @@ async function seedList(slug: string, over: Record<string, unknown>): Promise<st
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   for (const k of ['owner', 'author', 'reviewer', 'stranger', 'collab']) {
     const [u] = await db.insert(users).values({ handle: `rv-${k}` }).returning({ id: users.id })
     uid[k] = u.id

@@ -18,7 +18,7 @@ const list = (title: string) => ({ title, items: [{ title: `${title}: подго
 const countMine = async () => (await db.select({ n: sql<number>`count(*)::int` }).from(templates).where(eq(templates.ownerId, ownerId)))[0].n
 
 beforeAll(async () => {
-  await resetTables(sql`${agentActions}, ${suggestions}, ${templates}, ${users}`)
+  await resetTables([agentActions, suggestions, templates, users])
   const [o] = await db.insert(users).values({ handle: 'bulk-owner' }).returning({ id: users.id })
   const [b] = await db.insert(users).values({ handle: 'bulk-bot', accountType: 'agent' }).returning({ id: users.id })
   ownerId = o.id

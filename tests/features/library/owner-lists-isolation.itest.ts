@@ -13,7 +13,7 @@ let alice = ''
 let bob = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [a] = await db.insert(users).values({ handle: 'alice-iso' }).returning({ id: users.id })
   const [b] = await db.insert(users).values({ handle: 'bob-iso' }).returning({ id: users.id })
   alice = a.id

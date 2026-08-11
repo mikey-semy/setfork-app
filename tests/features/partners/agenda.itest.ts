@@ -12,7 +12,7 @@ const { setLoopDryRun } = await import('@/shared/agents/policy')
 let ownerId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${agendaItems}, ${agentActions}, ${agentLoops}, ${councilExperts}, ${templates}, ${users}`)
+  await resetTables([agendaItems, agentActions, agentLoops, councilExperts, templates, users])
   const [u] = await db.insert(users).values({ handle: 'partners-owner' }).returning({ id: users.id })
   ownerId = u.id
   // Один профильный мастер с пустой темой — этого достаточно, чтобы появился повод расти.

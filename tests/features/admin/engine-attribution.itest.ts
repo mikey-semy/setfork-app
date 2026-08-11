@@ -27,7 +27,7 @@ const newGeneration = async (over: Record<string, unknown> = {}) => {
 const engines = async () => (await getDevelopmentMetrics()).engines
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [u] = await db.insert(users).values({ handle: 'eng-owner' }).returning({ id: users.id })
   userId = u.id
 })

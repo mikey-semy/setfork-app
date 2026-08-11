@@ -39,7 +39,7 @@ const clearLists = async () => {
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${steps}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([steps, templateVersions, templates, users])
   const [o] = await db.insert(users).values({ handle: 'nd-owner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'nd-other' }).returning({ id: users.id })
   ownerId = o.id

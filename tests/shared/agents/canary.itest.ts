@@ -12,7 +12,7 @@ import { resetTables } from '../../helpers/reset-db'
 let ownerId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${agentActions}, ${agentLoops}, ${templates}, ${users}`)
+  await resetTables([agentActions, agentLoops, templates, users])
   const [u] = await db.insert(users).values({ handle: 'canary-agent', accountType: 'agent' }).returning({ id: users.id })
   ownerId = u.id
 })

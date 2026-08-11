@@ -40,14 +40,14 @@ async function seedDraft(over: Partial<typeof templates.$inferInsert> = {}): Pro
 const row = async (id: string) => db.query.templates.findFirst({ where: (t, { eq }) => eq(t.id, id) })
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [o] = await db.insert(users).values({ handle: 'powner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'pother' }).returning({ id: users.id })
   ownerId = o.id
   otherId = x.id
 })
 afterAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
 })
 
 describe('publishList — владение + гейт', () => {

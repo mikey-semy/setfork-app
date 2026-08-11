@@ -25,7 +25,7 @@ let ownerId = ''
 
 beforeAll(async () => {
   if (!CORE) return
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [u] = await db.insert(users).values({ handle: 'cat-owner' }).returning({ id: users.id })
   ownerId = u.id
 })

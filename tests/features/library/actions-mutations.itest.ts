@@ -46,14 +46,14 @@ const visOf = async (id: string) =>
 const exists = async (id: string) => !!(await db.query.templates.findFirst({ where: (t, { eq }) => eq(t.id, id) }))
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [o] = await db.insert(users).values({ handle: 'owner1' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'other1' }).returning({ id: users.id })
   ownerId = o.id
   otherId = x.id
 })
 afterAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
 })
 
 describe('setListVisibility — владение + анти-отмывка', () => {

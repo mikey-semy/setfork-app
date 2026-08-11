@@ -22,7 +22,7 @@ async function isAdminInDb(githubId: number): Promise<{ handle: string; admin: b
 }
 
 beforeEach(async () => {
-  await resetTables(sql`${users}`)
+  await resetTables([users])
   process.env.ADMIN_HANDLES = 'bigboss,mikey-semy'
 })
 

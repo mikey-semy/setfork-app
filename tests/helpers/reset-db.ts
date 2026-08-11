@@ -1,4 +1,5 @@
 import { sql, type SQL } from 'drizzle-orm'
+import type { PgTable } from 'drizzle-orm/pg-core'
 import { db } from '@/shared/db'
 
 /**
@@ -42,13 +43,25 @@ async function blockers(): Promise<Blocker[]> {
 }
 
 /**
- * `resetTables(sql`${templates}, ${users}`)` — то же, что прежний
- * `truncate table … restart identity cascade`, но с потолком ожидания.
+ * `resetTables([templates, users])` — очистка между тестами.
+ *
+ * DELETE, а не TRUNCATE. Замер 11.08 на тех же пяти таблицах: **TRUNCATE …
+ * RESTART IDENTITY CASCADE — 3940 мс, DELETE в одной транзакции — 17 мс**, разница
+ * в 230 раз. Причина не в объёме данных (таблицы почти пусты), а в том, что
+ * CASCADE тянет по внешним ключам половину схемы и берёт на каждую ACCESS
+ * EXCLUSIVE. Отсюда и четыре секунды на файл, и сами блокировки: 75 файлов по
+ * четыре секунды — это пять минут прогона в чистом ожидании, а под нагрузкой CI
+ * хук выбивал 30-секундный потолок (fe#743, fe#745 — таймауты в разных файлах).
+ *
+ * Сброс последовательностей (RESTART IDENTITY) не нужен: идентификаторы в схеме —
+ * UUID, а номера (issue, suggestion) считает код и передаёт явно.
  */
-async function truncate(tables: SQL, restart: SQL, cascade: SQL) {
+async function wipe(tables: PgTable[]) {
   await db.transaction(async (tx) => {
     await tx.execute(sql.raw(`set local lock_timeout = '${LOCK_WAIT}'`))
-    await tx.execute(sql`truncate table ${tables}${restart}${cascade}`)
+    // По одной таблице в порядке, заданном вызывающим (дети → родители): DELETE
+    // не принимает список, а порядок и так обязан быть верным из-за внешних ключей.
+    for (const t of tables) await tx.execute(sql`delete from ${t}`)
   })
 }
 
@@ -64,11 +77,9 @@ async function dropStuckTransactions(): Promise<number> {
   return rows.length
 }
 
-export async function resetTables(tables: SQL, opts: { restartIdentity?: boolean; cascade?: boolean } = {}) {
-  const restart = opts.restartIdentity === false ? sql`` : sql` restart identity`
-  const cascade = opts.cascade === false ? sql`` : sql` cascade`
+export async function resetTables(tables: PgTable[]) {
   try {
-    await truncate(tables, restart, cascade)
+    await wipe(tables)
   } catch (e) {
     // drizzle заворачивает ошибку драйвера в свою: код лежит в cause, а не сверху.
     // Проверять только верхний уровень — значит никогда не увидеть 55P03.
@@ -93,7 +104,7 @@ export async function resetTables(tables: SQL, opts: { restartIdentity?: boolean
     if (killed > 0) {
       // В логе прогона должно остаться, что база чинилась сама.
       console.warn(`[reset-db] сняты ${killed} зависших соединений (idle in transaction), повтор очистки.\nДержали:\n${who}`)
-      await truncate(tables, restart, cascade)
+      await wipe(tables)
       return
     }
 

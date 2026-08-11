@@ -72,7 +72,7 @@ beforeEach(async () => {
   pushed.length = 0
   down = false
   delivered = null
-  await resetTables(sql`${users}, ${templates}, ${jobs}`)
+  await resetTables([users, templates, jobs])
   const [u] = await db.insert(users).values({ handle: 'mirror-owner' }).returning({ id: users.id })
   ownerId = u.id
 })

@@ -23,7 +23,7 @@ const add = (over: Partial<typeof jobs.$inferInsert> = {}) =>
     .returning({ id: jobs.id })
 
 beforeEach(async () => {
-  await resetTables(sql`${jobs}`)
+  await resetTables([jobs])
 })
 
 describe('незакрытые похороны', () => {

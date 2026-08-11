@@ -131,7 +131,7 @@ const newList = (over: Record<string, unknown> = {}) => ({
 })
 
 beforeEach(async () => {
-  await resetTables(sql`${jobs}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([jobs, templateVersions, templates, users])
   const [o] = await db.insert(users).values({ handle: 'ps-owner' }).returning({ id: users.id })
   const [c] = await db.insert(users).values({ handle: 'ps-curated', curated: true }).returning({ id: users.id })
   ownerId = o.id
@@ -143,7 +143,7 @@ beforeEach(async () => {
   h.visibleAtBirth = []
 })
 afterAll(async () => {
-  await resetTables(sql`${jobs}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([jobs, templateVersions, templates, users])
 })
 
 const modOf = async (id: string) =>

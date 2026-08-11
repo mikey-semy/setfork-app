@@ -27,7 +27,7 @@ const seedList = async (ownerId: string, slug: string, over: Partial<typeof temp
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${suggestions}, ${templates}, ${users}`)
+  await resetTables([suggestions, templates, users])
   const [agent] = await db
     .insert(users)
     .values({ handle: 'gc-agent', accountType: 'agent', profession: 'Cook' })

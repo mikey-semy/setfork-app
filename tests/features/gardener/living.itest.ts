@@ -41,7 +41,7 @@ const addItem = async (title: string, url: string, tags = ['devops']) => {
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${feedItems}, ${feedSources}, ${agentActions}, ${templates}, ${users}`)
+  await resetTables([feedItems, feedSources, agentActions, templates, users])
   const [u] = await db.insert(users).values({ handle: 'living-agent', accountType: 'agent' }).returning({ id: users.id })
   ownerId = u.id
   const [s] = await db.insert(feedSources).values({ url: 'https://a.example/rss', tags: ['devops'] }).returning({ id: feedSources.id })

@@ -15,7 +15,7 @@ const card = (all: Awaited<ReturnType<typeof getDomainScorecards>>, gnome: strin
   all.find((c) => c.gnomeId === gnome && c.domain === domain)
 
 beforeAll(async () => {
-  await resetTables(sql`${generationDrafts}, ${generationCandidates}, ${generationMessages}, ${generations}, ${templates}, ${users}`)
+  await resetTables([generationDrafts, generationCandidates, generationMessages, generations, templates, users])
   const [u] = await db.insert(users).values({ handle: 'sc-owner' }).returning({ id: users.id })
   userId = u.id
 })

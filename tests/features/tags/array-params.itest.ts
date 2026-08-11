@@ -12,7 +12,7 @@ import { resetTables } from '../../helpers/reset-db'
 // сломанной формой и не имели покрытия вовсе — падали на ЛЮБОМ непустом входе.
 
 beforeAll(async () => {
-  await resetTables(sql`${tags}, ${templates}, ${users}`)
+  await resetTables([tags, templates, users])
   const [owner] = await db.insert(users).values({ handle: 'tag-owner' }).returning({ id: users.id })
   await db.insert(tags).values([{ slug: 'cooking' }, { slug: 'deploy' }, { slug: 'unused' }])
   await db.insert(templates).values([

@@ -72,7 +72,7 @@ const setFeatures = (patch: { issuesEnabled?: boolean; discussionsEnabled?: bool
   db.update(templates).set(patch).where(eq(templates.id, tplId))
 
 beforeAll(async () => {
-  await resetTables(sql`${discussionComments}, ${discussions}, ${issueComments}, ${issues}, ${milestones}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([discussionComments, discussions, issueComments, issues, milestones, templateVersions, templates, users])
   const [o] = await db.insert(users).values({ handle: OWNER }).returning({ id: users.id })
   const [v] = await db.insert(users).values({ handle: VISITOR }).returning({ id: users.id })
   ownerId = o.id

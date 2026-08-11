@@ -10,7 +10,7 @@ import { resetTables } from '../../helpers/reset-db'
 // Спутать их значит либо бить тревогу зря, либо не заметить настоящий холостой ход.
 
 beforeAll(async () => {
-  await resetTables(sql`${agentActions}`, { restartIdentity: false, cascade: false })
+  await resetTables([agentActions])
 })
 
 beforeEach(async () => {
