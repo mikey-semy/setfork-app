@@ -24,7 +24,8 @@ type Props = Pick<ListPageData, 'tpl' | 'base' | 'viewer' | 'readOnlyView' | 'is
  * шага; блоки другого вида живут в [ListBlock.tsx](./ListBlock.tsx).
  */
 export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, isOwner, digSteps, stepImages, mon, lang }: Props) {
-  const subs = (step.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean)
+  // flatMap, а не map().filter(Boolean): один проход, пустой перевод отсеивается сразу.
+  const subs = (step.subtasks as LocaleText[]).flatMap((x) => tr(x, lang) || [])
   // href — через /api/go (журнал кликов), если трекинг включён в админке;
   // у веток snapshot-шаги без DB-id → прямой url. Экспорт/MD не трогаем.
   const refs = (step.refs as { label: LocaleText; url?: string }[]).map((x, ri) => ({
