@@ -40,6 +40,13 @@ const RECIPE: ListLaw = {
 
 const LAWS: ListLaw[] = [RECIPE]
 
+/**
+ * Типы списков, которые определяет ЗАКОН по словам запроса, а не модель. Их не предлагают
+ * распорядителю на выбор: закон дешевле, детерминированнее и всё равно сильнее — спрашивать
+ * модель о том, что уже решено, незачем.
+ */
+export const LAW_KINDS: ReadonlySet<string> = new Set(LAWS.map((l) => l.id))
+
 /** Закон для запроса, или null. Первое совпадение выигрывает — законы не комбинируем. */
 export function listLaw(query: string): ListLaw | null {
   const q = query.toLowerCase()
