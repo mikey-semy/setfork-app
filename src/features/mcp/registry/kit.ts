@@ -15,9 +15,9 @@ export const json = (data: unknown) => ({ content: [{ type: 'text' as const, tex
 export const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
 
 export type Extra = { authInfo?: AuthInfo }
-export const userIdOf = (extra: Extra) => extra.authInfo?.extra?.userId as string | undefined
-export const canWrite = (extra: Extra) => (extra.authInfo?.scopes ?? []).includes('write')
-export const READONLY = 'This token is read-only. Use an API token with write scope for this action.'
+const userIdOf = (extra: Extra) => extra.authInfo?.extra?.userId as string | undefined
+const canWrite = (extra: Extra) => (extra.authInfo?.scopes ?? []).includes('write')
+const READONLY = 'This token is read-only. Use an API token with write scope for this action.'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- args валидирует зод-схема инструмента в рантайме
 export type ToolFn = (userId: string, args: any, extra: Extra) => Promise<ReturnType<typeof json> | ReturnType<typeof err>>
