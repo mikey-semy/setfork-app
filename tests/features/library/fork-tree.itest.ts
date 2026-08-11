@@ -40,7 +40,7 @@ const ids = (nodes: { id: string; children: unknown[] }[]): string[] =>
   nodes.flatMap((n) => [n.id, ...ids(n.children as { id: string; children: unknown[] }[])])
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   seq = 0
   const [u] = await db.insert(users).values({ handle: 'ft-owner' }).returning({ id: users.id })
   ownerId = u.id
@@ -48,7 +48,7 @@ beforeEach(async () => {
 })
 
 afterAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
 })
 
 describe('ветви сохраняются (forks/001)', () => {

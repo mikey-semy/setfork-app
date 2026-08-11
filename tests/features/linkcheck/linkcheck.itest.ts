@@ -13,7 +13,7 @@ const { clearLinkcheckCache } = await import('@/shared/settings/linkcheck')
 let templateId = ''
 
 const wipe = async () => {
-  await resetTables(sql`${templates}, ${users}, ${linkChecks}, ${linkOccurrences}, ${appSettings}`)
+  await resetTables([templates, users, linkChecks, linkOccurrences, appSettings])
 }
 
 beforeAll(async () => {

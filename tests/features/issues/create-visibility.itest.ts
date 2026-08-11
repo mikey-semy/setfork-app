@@ -52,7 +52,7 @@ async function open(slug: string, title: string): Promise<void> {
 const issueCount = async (id: string) => (await db.select().from(issues).where(eq(issues.templateId, id))).length
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   for (const k of ['owner', 'stranger', 'collab']) {
     const [u] = await db.insert(users).values({ handle: k === 'owner' ? OWNER : `iv-${k}` }).returning({ id: users.id })
     uid[k] = u.id

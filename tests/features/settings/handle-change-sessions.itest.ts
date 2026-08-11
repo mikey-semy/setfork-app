@@ -29,7 +29,7 @@ const { db, sessions, users } = await import('@/shared/db')
 const { changeHandle } = await import('@/features/settings/actions')
 
 beforeEach(async () => {
-  await resetTables(sql`${users}`)
+  await resetTables([users])
   const [u] = await db.insert(users).values({ handle: 'old-name' }).returning({ id: users.id })
   const rows = await db
     .insert(sessions)

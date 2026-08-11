@@ -14,7 +14,7 @@ let tplId = ''
 let otherId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${agentActions}, ${templates}, ${users}`)
+  await resetTables([agentActions, templates, users])
   const [u] = await db.insert(users).values({ handle: 'sr-agent', accountType: 'agent' }).returning({ id: users.id })
   ownerId = u.id
   const [t] = await db.insert(templates).values({ ownerId, slug: 'stew', title: { ru: 'Рагу' } }).returning({ id: templates.id })

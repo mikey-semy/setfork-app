@@ -55,7 +55,7 @@ const versionCount = async (tplId: string) => {
 }
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [o] = await db.insert(users).values({ handle: 'aowner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'aother' }).returning({ id: users.id })
   const [a] = await db.insert(users).values({ handle: 'aauthor' }).returning({ id: users.id })
@@ -64,7 +64,7 @@ beforeEach(async () => {
   authorId = a.id
 })
 afterAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
 })
 
 describe('acceptSuggestion — владение + создание версии', () => {

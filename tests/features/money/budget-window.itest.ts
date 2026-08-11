@@ -22,7 +22,7 @@ async function spend(usd: number): Promise<void> {
 }
 
 beforeEach(async () => {
-  await resetTables(sql`${aiUsage}`, { restartIdentity: false, cascade: false })
+  await resetTables([aiUsage])
   clearBudgetCache()
 })
 
@@ -63,7 +63,7 @@ describe('окно пробитого дневного капа', () => {
     const t0 = 3_000_000
     await spend(50)
     expect(await globalBudgetOk(t0)).toBe(false)
-    await resetTables(sql`${aiUsage}`, { restartIdentity: false, cascade: false })
+    await resetTables([aiUsage])
     expect(await globalBudgetOk(t0 + 1_000)).toBe(false) // ещё в окне
     expect(await globalBudgetOk(t0 + 31_000)).toBe(true) // окно истекло → снова можно
   })

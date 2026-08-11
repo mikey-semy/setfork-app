@@ -58,7 +58,7 @@ const listRow = async (id: string) => {
 описание('черновик правок', () => {
   beforeAll(async () => {
     if (!CORE) return
-    await resetTables(sql`${templates}, ${users}`)
+    await resetTables([templates, users])
     const [u] = await db.insert(users).values({ handle: 'draft-owner' }).returning({ id: users.id })
     ownerId = u.id
     tplId = await freshList('draft-flow')

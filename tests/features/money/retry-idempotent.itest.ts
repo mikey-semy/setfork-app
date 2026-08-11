@@ -34,7 +34,7 @@ let userId = ''
 let genId = ''
 
 beforeEach(async () => {
-  await resetTables(sql`${users}, ${generations}`)
+  await resetTables([users, generations])
   const [u] = await db.insert(users).values({ handle: 'ret-user' }).returning({ id: users.id })
   userId = u.id
   const [g] = await db.insert(generations).values({ userId, query: 'как варить кофе' }).returning({ id: generations.id })

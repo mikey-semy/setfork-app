@@ -44,10 +44,10 @@ async function register(handle: string, email: string): Promise<{ error?: string
 const rowOf = async (handle: string) => db.query.users.findFirst({ where: (u, { eq }) => eq(u.handle, handle) })
 
 beforeAll(async () => {
-  await resetTables(sql`${users}`)
+  await resetTables([users])
 })
 afterAll(async () => {
-  await resetTables(sql`${users}`)
+  await resetTables([users])
 })
 
 describe('ник администратора нельзя занять НИ ОДНИМ путём', () => {

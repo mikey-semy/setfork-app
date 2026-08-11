@@ -73,7 +73,7 @@ async function issueToken(userId: string, scope: 'read' | 'write'): Promise<stri
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${apiTokens}, ${templates}, ${users}`)
+  await resetTables([apiTokens, templates, users])
   const [o] = await db.insert(users).values({ handle: OWNER }).returning({ id: users.id })
   const [s] = await db.insert(users).values({ handle: 'git-stranger' }).returning({ id: users.id })
   ownerId = o.id
@@ -88,7 +88,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await resetTables(sql`${apiTokens}, ${templates}, ${users}`)
+  await resetTables([apiTokens, templates, users])
 })
 
 beforeEach(() => {

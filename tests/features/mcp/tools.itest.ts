@@ -14,14 +14,14 @@ let otherId = ''
 const refSlug = (r: string) => r.split('/')[1]
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [o] = await db.insert(users).values({ handle: 'mowner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'mother' }).returning({ id: users.id })
   ownerId = o.id
   otherId = x.id
 })
 afterAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
 })
 
 describe('mcp create/get/update — владение и видимость по userId токена', () => {

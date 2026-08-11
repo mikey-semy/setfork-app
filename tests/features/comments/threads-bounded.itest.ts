@@ -48,7 +48,7 @@ async function threadWithComment(suggestionId: string, body: string) {
 }
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [u] = await db.insert(users).values({ handle: 'cm-author' }).returning({ id: users.id })
   authorId = u.id
   const [tpl] = await db

@@ -9,7 +9,7 @@ import { resetTables } from '../../helpers/reset-db'
 // порядка чтения и предупреждения соседей.
 
 beforeAll(async () => {
-  await resetTables(sql`${knowledgeTriples}`)
+  await resetTables([knowledgeTriples])
   await db.insert(knowledgeTriples).values([
     // Цепочка порядка чтения (ru).
     { subject: 'марсианские хроники', relation: 'precedes', object: 'солярис', domain: 'нф', lang: 'ru', confidence: 2 },
@@ -24,7 +24,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await resetTables(sql`${knowledgeTriples}`)
+  await resetTables([knowledgeTriples])
 })
 
 describe('craftRules — KAG-2 графовый обход', () => {

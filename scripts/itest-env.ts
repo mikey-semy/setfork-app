@@ -17,15 +17,19 @@
  */
 import { execFileSync, spawnSync } from 'node:child_process'
 
-const NET = 'sf-itest'
+// Имена ВЫВОДЯТСЯ ИЗ ПОРТОВ, а не фиксированы: иначе вторая сессия, поднимая своё
+// окружение на своём порту, сносила бы контейнеры первой — `up` начинается с
+// `docker rm -f` по имени. Ровно так 11.08 одна сессия увела базу у другой посреди
+// прогона, и падение выглядело как «ECONNREFUSED» на ровном месте.
+const PG_PORT = process.env.ITEST_PG_PORT ?? '55432'
+const CORE_PORT = process.env.ITEST_CORE_PORT ?? '55051'
+const NET = `sf-itest-${PG_PORT}`
 const PG = `pg-${NET}`
 const CORE = `core-${NET}`
 const IMAGE = process.env.SETFORK_CORE_IMAGE ?? 'ghcr.io/mikey-semy/setfork-core:latest'
 
 // Порты на хосте: НЕ 5432/50051, чтобы не столкнуться с прод-подобными стендами
 // и рабочей базой разработки, которые у людей уже заняты.
-const PG_PORT = process.env.ITEST_PG_PORT ?? '55432'
-const CORE_PORT = process.env.ITEST_CORE_PORT ?? '55051'
 
 const DATABASE_URL = `postgresql://ci:ci@127.0.0.1:${PG_PORT}/ci`
 const CORE_ADDR = `127.0.0.1:${CORE_PORT}`

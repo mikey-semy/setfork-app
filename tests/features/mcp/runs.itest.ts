@@ -12,7 +12,7 @@ let otherId = ''
 let slug = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [o] = await db.insert(users).values({ handle: 'mrowner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'mrother' }).returning({ id: users.id })
   ownerId = o.id
@@ -21,7 +21,7 @@ beforeAll(async () => {
   slug = (created as { ref: string }).ref.split('/')[1]
 })
 afterAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
 })
 
 describe('mcp runs — видимость на старте + приватность прогона', () => {

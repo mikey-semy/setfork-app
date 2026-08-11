@@ -24,7 +24,7 @@ let templateId = ''
 let fanSeq = 0
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const rows = await db
     .insert(users)
     .values([{ handle: 'flow-owner' }, { handle: 'flow-stranger' }])
@@ -37,7 +37,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   // truncate, а не delete: у списка есть зависимости, которые delete не уносит, и
   // остаток прошлого теста превращал следующий в загадку.
-  await resetTables(sql`${templates}`, { restartIdentity: false })
+  await resetTables([templates])
   const [fan] = await db.insert(users).values({ handle: `flow-fan-${++fanSeq}` }).returning({ id: users.id })
   fanId = fan.id
   const [tpl] = await db

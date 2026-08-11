@@ -16,7 +16,7 @@ let ownerId = ''
 const DEAD = 'https://ref.example.com/guide'
 
 const wipe = () =>
-  resetTables(sql`${templates}, ${users}, ${linkChecks}, ${linkOccurrences}, ${appSettings}, ${issues}, ${notifications}`)
+  resetTables([templates, users, linkChecks, linkOccurrences, appSettings, issues, notifications])
 
 const setDeadVerdict = async (verdict: 'broken' | 'unreachable') =>
   db.update(linkChecks).set({ verdict }).where(eq(linkChecks.urlNorm, DEAD))

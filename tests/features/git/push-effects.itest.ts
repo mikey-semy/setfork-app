@@ -61,7 +61,7 @@ const push = (over: Partial<Parameters<typeof runGitPushEffects>[0] & Record<str
 })
 
 beforeEach(async () => {
-  await resetTables(sql`${jobs}, ${notifications}, ${watches}, ${suggestions}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([jobs, notifications, watches, suggestions, templateVersions, templates, users])
   const [o] = await db.insert(users).values({ handle: 'pe-owner' }).returning({ id: users.id })
   const [w] = await db.insert(users).values({ handle: 'pe-watcher' }).returning({ id: users.id })
   ownerId = o.id
@@ -86,7 +86,7 @@ beforeEach(async () => {
 })
 
 afterAll(async () => {
-  await resetTables(sql`${jobs}, ${notifications}, ${watches}, ${suggestions}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([jobs, notifications, watches, suggestions, templateVersions, templates, users])
 })
 
 const notifOf = async (recipientId: string) =>

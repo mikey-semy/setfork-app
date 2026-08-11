@@ -16,7 +16,7 @@ const { mcpListSources, mcpRegisterSource } = await import('@/features/mcp/tools
 let userId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${agentActions}, ${knowledgeSources}, ${users}`)
+  await resetTables([agentActions, knowledgeSources, users])
   const [u] = await db.insert(users).values({ handle: 'src-owner' }).returning({ id: users.id })
   userId = u.id
 })

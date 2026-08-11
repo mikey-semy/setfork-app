@@ -23,7 +23,7 @@ async function seedList(ownerId: string, slug: string, over: Partial<typeof temp
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [owner] = await db.insert(users).values({ handle: 'itest-owner' }).returning({ id: users.id })
   const [other] = await db.insert(users).values({ handle: 'itest-other' }).returning({ id: users.id })
   ownerId = owner.id
@@ -36,7 +36,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
 })
 
 const feedIds = async (viewerId?: string) => new Set((await getFeed({}, viewerId)).map((r) => r.id))
