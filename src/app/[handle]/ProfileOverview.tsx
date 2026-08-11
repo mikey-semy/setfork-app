@@ -4,6 +4,7 @@ import { t, tr, type LocaleText } from '@/shared/i18n'
 import { ActivityGraph } from '@/features/profile/ActivityGraph'
 import { ContributionActivity } from '@/features/profile/ContributionActivity'
 import { PinsPicker } from '@/features/profile/PinsPicker'
+import { dayMonthYear } from '@/shared/lib/date'
 import type { ProfilePageData } from './load'
 
 type Props = Pick<
@@ -111,7 +112,7 @@ export function ProfileOverview({
                 <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[0.6875rem] text-muted">
                   <span className="inline-flex items-center gap-1 text-ok">
                     <GraduationCap size={11} />{' '}
-                    {new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(c.completedAt))}
+                    {dayMonthYear(c.completedAt, lang)}
                   </span>
                   {isOwner && (
                     <Link href={`/${c.ownerHandle}/${c.slug}/certificate`} className="inline-flex items-center gap-1 text-accent hover:underline">

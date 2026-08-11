@@ -6,6 +6,7 @@ import { AchievementsCard } from '@/features/profile/AchievementsCard'
 import { FollowButton } from '@/features/follows/FollowButton'
 import { SocialIcon, socialLabel } from '@/features/settings/socials'
 import { displayUrl } from '@/shared/lib/link-label'
+import { monthYear } from '@/shared/lib/date'
 import type { ProfilePageData } from './load'
 
 type Props = Pick<
@@ -67,8 +68,7 @@ export function ProfileAside({ handle, lang, user, viewer, isOwner, bigAvatar, c
       </div>
 
       <div className="mt-3 font-mono text-[0.78125rem] text-muted">
-        {t('joined', lang)}{' '}
-        {new Intl.DateTimeFormat(lang, { year: 'numeric', month: 'short' }).format(new Date(user.createdAt))}
+        {t('joined', lang)} {monthYear(user.createdAt, lang)}
       </div>
       <div className="mt-4 flex gap-4 text-[0.8125rem]">
         <span className="text-ink-2">

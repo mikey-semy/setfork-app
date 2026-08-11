@@ -128,7 +128,10 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   const sort: Sort = SORTS.find((s) => s === sp.sort) ?? 'recent'
   // Вкладка «Списки»: поиск + фильтр по типу + сортировка (тулбар как у репо GitHub).
   const listType: ListType = LIST_TYPES.find((t) => t === sp.type) ?? 'all'
-  const items = selectItems({ items: folderIds ? rawItems.filter((it) => folderIds.includes(it.id)) : rawItems, tab, query, sort, listType })
+  // Set, а не includes внутри фильтра: у активного пользователя и папка, и выдача —
+  // сотни строк, и поиск по массиву в цикле превращается в перебор на перебор.
+  const inFolder = folderIds ? new Set(folderIds) : null
+  const items = selectItems({ items: inFolder ? rawItems.filter((it) => inFolder.has(it.id)) : rawItems, tab, query, sort, listType })
 
   // Пагинация вкладок со списками (много списков = боль без страниц).
   const totalPages = Math.max(1, Math.ceil(items.length / PER_PAGE))
