@@ -1,63 +1,34 @@
 import 'server-only'
-import { Fragment, type ReactNode } from 'react'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, Eye, FileText, UserRound, GitBranch, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, PlayCircle, Rocket, Sparkles, Star, Tag, SquareCheckBig } from 'lucide-react'
-import { CloneDropdown } from '@/features/git/CloneDropdown'
-import { startRun } from '@/features/runs/actions'
-import { openBranchPr, revertToVersion, useTemplate } from '@/features/library/actions'
-import { Button } from '@/shared/ui/button'
+import { and as andOp, eq } from 'drizzle-orm'
+import { hasAffiliateLink, hasMarkedAffiliate, markedAdvertisers } from '@/core'
+import { quizContentHash } from '@/core/domain/quiz-fingerprint'
+import { isCollaborator } from '@/features/collab/queries'
+import { digStepsWithSession } from '@/features/dig/queries'
 import { gitCore } from '@/features/git/core'
 import { snapshotSteps } from '@/features/git/snapshot-steps'
-import { BranchPicker } from '@/features/git/BranchPicker'
-import { branchLabel } from '@/features/git/branch-label'
-import { isCollaborator } from '@/features/collab/queries'
-import { getSession } from '@/shared/auth/session'
-import { getLang } from '@/shared/i18n/server'
-import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
-import { detectTextLang } from '@/shared/i18n/detect-text-lang'
-import { UserLine } from '@/shared/ui/UserLine'
-import { Tooltip } from '@/shared/ui/Tooltip'
-import { SectionLabel } from '@/shared/ui/SectionLabel'
-import { AsideCard, PageAside } from '@/shared/ui/PageAside'
-import { DismissibleHint } from '@/shared/ui/DismissibleHint'
-import { CopyButton } from '@/shared/ui/CopyButton'
-import { SmartImage } from '@/shared/ui/SmartImage'
-import { Markdown } from '@/shared/ui/Markdown'
-import { DigChatHost, DigChatOpen } from '@/features/dig/DigChat'
-import { digStepsWithSession } from '@/features/dig/queries'
-import { getRoster } from '@/shared/ai/roster'
-import { StepDangerBadge, StepLevelBadge } from '@/shared/ui/StepLevelBadge'
-import { timeAgo } from '@/shared/ui/timeAgo'
-import { getContributors, getStepPreviews, getVersionAuthors, getVersionSteps, getDraft } from '@/features/library/queries'
-import { CommitBar } from '@/features/library/CommitBar'
-import { ListStats } from '@/features/library/ListStats'
-import { getWatchCount } from '@/features/watch/queries'
+import { type OutlineLesson } from '@/features/library/CourseOutline'
+import { productItems } from '@/features/library/blocks'
+import { requireViewableDetail } from '@/features/library/guard'
 import { getListLineage, isLineageExact } from '@/features/library/lineage'
-import { ListLineage } from '@/features/library/ListLineage'
+import { getContributors, getStepPreviews, getVersionAuthors, getVersionSteps, getDraft } from '@/features/library/queries'
 import { getPollResults } from '@/features/polls/queries'
-import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
-import { VideoEmbed } from '@/features/library/VideoEmbed'
-import { QuizBlock } from '@/features/quizzes/QuizBlock'
-import { hasAffiliateLink, hasMarkedAffiliate, markedAdvertisers, quizKind, stripQuizAnswers, type QuizBlockContent } from '@/core'
-import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { getCourseCompletion, getQuizState } from '@/features/quizzes/queries'
-import { quizContentHash } from '@/core/domain/quiz-fingerprint'
-import { CourseProgress } from '@/features/quizzes/CourseProgress'
-import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
-import { blockChatTitle, pollDeadlineMs, productItems } from '@/features/library/blocks'
-import { ProductBlock } from '@/shared/ui/ProductBlock'
-import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
+import { getWatchCount } from '@/features/watch/queries'
+import { getRoster } from '@/shared/ai/roster'
+import { getSession } from '@/shared/auth/session'
 import { db, listLinks, templates as templatesTable, users as usersTable, publiclyVisible } from '@/shared/db'
-import { and as andOp, eq } from 'drizzle-orm'
-import { SafeLink } from '@/shared/ui/SafeLink'
-import { renderWikiLinks } from '@/shared/lib/wiki-links'
-import { linkLabel } from '@/shared/lib/link-label'
-import { ViewBeacon } from '@/features/analytics/ViewBeacon'
-import { ListActionsMenu } from '@/features/library/ListActionsMenu'
-import { ReportButton } from '@/features/reports/ReportButton'
-import { publishList } from '@/features/library/actions'
-import { CONTROL_H, CONTROL_TEXT, PAGE, STACK } from '@/shared/ui/control'
+import { t, tr, type Lang } from '@/shared/i18n'
+import { detectTextLang } from '@/shared/i18n/detect-text-lang'
+import { getMonetizationSettings } from '@/shared/settings/monetization'
+
+/**
+ * Всё, что загрузчик собрал для страницы. Секции страницы объявляют свою часть
+ * через `Pick<ListPageData, …>`, а страница отдаёт им набор одним `{...loaded}`:
+ * так у каждой секции в типе видно ровно то, что она читает, а место вызова не
+ * превращается в перечисление двадцати пропов.
+ */
+export type ListPageData = Awaited<ReturnType<typeof loadListPage>>
 
 // Стабильный anchor-id для заголовка урока/секции (для оглавления курса).
 export function sectionAnchor(s: string): string {
@@ -127,6 +98,8 @@ export async function loadListPage({
   // Поиск ВНУТРИ списка (?find= из поиска в шапке): фильтр шагов по подстроке —
   // аналог поиска по файлам в GitHub-репо, для больших списков.
   const find = (sp.find ?? '').trim().toLowerCase()
+  // В плашке показываем ровно то, что набрал человек: find нормализован под сравнение.
+  const findRaw = (sp.find ?? '').trim()
   const matches = (s: (typeof allSteps)[number]) =>
     Object.values(s.title).some((v) => v?.toLowerCase().includes(find)) ||
     Object.values(s.desc ?? {}).some((v) => v?.toLowerCase().includes(find)) ||
@@ -171,6 +144,7 @@ export async function loadListPage({
     quizHashes.set(c.bid, quizContentHash(c))
   }
   const quizStates = quizBids.length ? await getQuizState(tpl.id, quizBids, viewer?.userId, quizHashes) : {}
+  const quizPassed = quizBids.filter((bid) => quizStates[bid]?.correct).length
   // Прохождение курса — ПОСТОЯННЫЙ факт: плашка с сертификатом видна и после
   // правок тестов автором (иначе вернувшемуся «проходи заново ради бумажки»).
   const completion = viewer ? await getCourseCompletion(tpl.id, viewer.userId) : null
@@ -283,8 +257,9 @@ export async function loadListPage({
   // предлагать «перевести на русский» — детектим по самому тексту (кириллица → ru).
   const titleIsForeign = !tpl.title[lang] && detectTextLang(tr(tpl.title, lang), lang) !== lang
   return {
+    owner,
+    slug,
     gatedFromLesson,
-    detail,
     tpl,
     currentVersion,
     steps,
@@ -299,6 +274,7 @@ export async function loadListPage({
     allSteps,
     readOnlyView,
     find,
+    findRaw,
     viewer,
     canInteract,
     isOwner,
@@ -311,6 +287,7 @@ export async function loadListPage({
     pollResults,
     quizBids,
     quizStates,
+    quizPassed,
     completion,
     digGnomes,
     backlinks,
