@@ -20,8 +20,8 @@ import { escapeHtml as esc } from '@/shared/lib/escape'
 export async function sendVerificationEmail(userId: string): Promise<boolean> {
   const [u] = await db.select({ email: users.email, handle: users.handle, verified: users.emailVerifiedAt }).from(users).where(eq(users.id, userId)).limit(1)
   if (!u?.email || u.verified) return false
-  const lang = await getLang()
-  const token = await signToken({ uid: userId, email: u.email, purpose: 'verify-email' }, '24h')
+  // Язык и подпись токена друг от друга не зависят — ждём их разом.
+  const [lang, token] = await Promise.all([getLang(), signToken({ uid: userId, email: u.email, purpose: 'verify-email' }, '24h')])
   const link = `${appOrigin()}/verify-email?token=${encodeURIComponent(token)}`
   return sendMail({
     to: u.email,

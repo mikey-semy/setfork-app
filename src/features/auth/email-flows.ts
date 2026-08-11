@@ -68,8 +68,11 @@ export async function requestEmailChange(_prev: EmailChangeResult | null, formDa
   const [taken] = await db.select({ id: users.id }).from(users).where(eq(users.email, newEmail)).limit(1)
   if (taken) return { ok: false, error: 'taken' }
 
-  const lang = await getLang()
-  const token = await signToken({ uid: session.userId, newEmail, cur: u.email, purpose: 'change-email' }, '1h')
+  // Язык и подпись токена друг от друга не зависят — ждём их разом.
+  const [lang, token] = await Promise.all([
+    getLang(),
+    signToken({ uid: session.userId, newEmail, cur: u.email, purpose: 'change-email' }, '1h'),
+  ])
   const link = `${appOrigin()}/change-email?token=${encodeURIComponent(token)}`
   const sent = await sendMail({
     to: newEmail,
@@ -125,8 +128,7 @@ export async function requestPasswordReset(_prev: { done?: boolean } | null, for
   const [u] = await db.select({ id: users.id, handle: users.handle, hash: users.passwordHash }).from(users).where(eq(users.email, email)).limit(1)
   // Ответ всегда одинаковый — не раскрываем существование почты.
   if (u && okIp && okEmail) {
-    const lang = await getLang()
-    const token = await signToken({ uid: u.id, purpose: 'reset-password', pw: pwTail(u.hash) }, '1h')
+    const [lang, token] = await Promise.all([getLang(), signToken({ uid: u.id, purpose: 'reset-password', pw: pwTail(u.hash) }, '1h')])
     const link = `${appOrigin()}/reset-password?token=${encodeURIComponent(token)}`
     await sendMail({
       to: email,
