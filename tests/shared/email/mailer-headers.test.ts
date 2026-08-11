@@ -50,4 +50,14 @@ describe('заголовки письма', () => {
     expect(String(sent[0].html)).toContain('SETFORK')
     expect(String(sent[0].text)).toContain('тело')
   })
+
+  it('сохраняет адреса ссылок в текстовой части — иначе отписаться из неё нельзя', async () => {
+    const { sendMail } = await import('@/shared/email/mailer')
+    const url = 'https://setfork.com/api/unsubscribe?token=abc&x=1'
+
+    await sendMail({ to: 'a@example.org', subject: 'Digest', body: '<p>x</p>', lang: 'ru', unsubscribeUrl: url })
+    const text = String(sent[0].text)
+    expect(text).toContain(url) // и целиком, без &amp;
+    expect(text).toContain(`Отписаться (${url})`)
+  })
 })

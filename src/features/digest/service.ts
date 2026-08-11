@@ -80,7 +80,7 @@ export async function runWeeklyDigestSweep(): Promise<{ sent: number; empty: num
       subject: digestSubject(digest, r.lang),
       body: renderDigestEmail(r.handle, digest, r.lang),
       note: t('emailFooter', r.lang),
-      unsubscribeUrl: await unsubscribeUrl(r.id),
+      unsubscribeUrl: await unsubscribeUrl(r.id, r.email!),
     })
     if (!ok) continue // SMTP не настроен/сбой — не двигаем точку отсчёта
     await db.insert(digests).values({ userId: r.id, items })

@@ -8,13 +8,36 @@ import type { Lang } from '@/shared/i18n'
 // Если host не задан — тихо no-op (dev без почты просто пропускает отправку).
 // Dev: docker-compose поднимает MailHog (SMTP :1025, UI :8025).
 
-/** Грубое html→text для текстовой части письма. */
+/** Обратно из html-экранирования: в тексте письма `&amp;` читается как ошибка. */
+function unescapeHtml(s: string): string {
+  return s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+}
+
+/**
+ * Грубое html→text для текстовой части письма.
+ * Ссылки разворачиваются в «текст (адрес)»: простое вырезание тегов уносило
+ * вместе с ними href, и в текстовой версии оставалось слово «Отписаться» без
+ * самого адреса — то есть без способа отписаться. Скобки именно круглые:
+ * угловые следующий же шаг принял бы за тег и вырезал вместе с адресом.
+ */
 function toText(html: string): string {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return unescapeHtml(
+    html
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<a\b[^>]*\bhref="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, href: string, label: string) => {
+        const text = label.replace(/<[^>]+>/g, '').trim()
+        // Кнопка письма и так печатает свой адрес отдельной строкой — не двоим.
+        return !text || text === href ? ` ${href} ` : ` ${text} (${href}) `
+      })
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(),
+  )
 }
 
 /**

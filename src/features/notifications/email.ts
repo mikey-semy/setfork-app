@@ -31,6 +31,6 @@ export async function sendNotificationEmail(p: {
     body,
     lang: p.lang,
     note: t('emailFooter', p.lang),
-    unsubscribeUrl: p.userId ? await unsubscribeUrl(p.userId) : undefined,
+    unsubscribeUrl: p.userId ? await unsubscribeUrl(p.userId, p.to) : undefined,
   })
 }

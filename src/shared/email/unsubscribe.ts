@@ -17,9 +17,15 @@ const TTL = '180d'
 /** Путь-приёмник. POST — one-click от почтового клиента, GET — человек в браузере. */
 export const UNSUBSCRIBE_PATH = '/api/unsubscribe'
 
-/** Адрес для заголовка List-Unsubscribe письма к этому получателю. */
-export async function unsubscribeUrl(userId: string): Promise<string> {
-  const token = await signToken({ uid: userId, purpose: PURPOSE }, TTL)
+/**
+ * Адрес для заголовка List-Unsubscribe письма к этому получателю.
+ * @param email Адрес, НА КОТОРЫЙ уходит это письмо. Он же едет в токен: ссылка
+ *              действует полгода, и после смены почты старое письмо (а значит и
+ *              тот, кому достался прежний ящик) не должно отключать доставку на
+ *              новый адрес.
+ */
+export async function unsubscribeUrl(userId: string, email: string): Promise<string> {
+  const token = await signToken({ uid: userId, em: email.toLowerCase(), purpose: PURPOSE }, TTL)
   return `${appOrigin()}${UNSUBSCRIBE_PATH}?token=${encodeURIComponent(token)}`
 }
 
@@ -29,9 +35,11 @@ export async function unsubscribeUrl(userId: string): Promise<string> {
  */
 export async function applyUnsubscribe(token: string): Promise<boolean> {
   const p = await readToken(token)
-  if (!p || p.purpose !== PURPOSE || !p.uid) return false
-  const [u] = await db.select({ prefs: users.notifyPrefs }).from(users).where(eq(users.id, p.uid)).limit(1)
+  if (!p || p.purpose !== PURPOSE || !p.uid || !p.em) return false
+  const [u] = await db.select({ prefs: users.notifyPrefs, email: users.email }).from(users).where(eq(users.id, p.uid)).limit(1)
   if (!u) return false
+  // Почта аккаунта уже другая — письмо с этой ссылкой ушло на прежний адрес.
+  if ((u.email ?? '').toLowerCase() !== p.em) return false
   // Гасим только почту: уведомления на сайте и в браузере — отдельные каналы,
   // отписка от рассылки не должна выключать их.
   await db
