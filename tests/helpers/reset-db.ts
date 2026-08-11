@@ -1,4 +1,4 @@
-import { sql, type SQL } from 'drizzle-orm'
+import { getTableName, sql } from 'drizzle-orm'
 import type { PgTable } from 'drizzle-orm/pg-core'
 import { db } from '@/shared/db'
 
@@ -56,11 +56,65 @@ async function blockers(): Promise<Blocker[]> {
  * Сброс последовательностей (RESTART IDENTITY) не нужен: идентификаторы в схеме —
  * UUID, а номера (issue, suggestion) считает код и передаёт явно.
  */
+/**
+ * Замыкание зависимостей: кто ссылается на эти таблицы, прямо или через цепочку.
+ *
+ * `TRUNCATE … CASCADE` уносил такие строки сам, `DELETE` — нет: при
+ * `ON DELETE SET NULL` (в схеме таких связей 29) строка остаётся, у неё лишь
+ * обнуляется ключ. Например `ai_usage.user_id` — записи пережили бы удаление
+ * автора и легли бы «системным» расходом в дневной кап следующего теста
+ * (`shared/quota.ts` суммирует таблицу целиком, без фильтра по автору).
+ * Так тесты начинают зависеть от порядка прогона — находка авто-ревью на fe#747.
+ *
+ * Карта строится из каталога Postgres один раз на процесс: она не меняется.
+ */
+let dependents: Map<string, string[]> | null = null
+
+async function dependentsOf(names: string[]): Promise<string[]> {
+  if (!dependents) {
+    // sql.raw, а не шаблон: drizzle спотыкается о `::` в приведении типов.
+    const res = await db.execute(
+      sql.raw(
+        "select c.conrelid::regclass::text as child, c.confrelid::regclass::text as parent " +
+          "from pg_constraint c join pg_class p on p.oid = c.confrelid " +
+          "where c.contype = 'f' and p.relnamespace = 'public'::regnamespace",
+      ),
+    )
+    const rows = ((res as unknown as { rows?: { child: string; parent: string }[] }).rows ??
+      (res as unknown as { child: string; parent: string }[])) as { child: string; parent: string }[]
+    dependents = new Map()
+    for (const { child, parent } of rows) {
+      const key = parent.replace(/^public\./, '')
+      const val = child.replace(/^public\./, '')
+      if (key === val) continue // самоссылка чистится тем же DELETE
+      dependents.set(key, [...(dependents.get(key) ?? []), val])
+    }
+  }
+  // Обход вширь: дети детей тоже уносятся, как это делал CASCADE.
+  const seen = new Set(names)
+  const order: string[] = []
+  const queue = [...names]
+  while (queue.length) {
+    const cur = queue.shift() as string
+    for (const child of dependents.get(cur) ?? []) {
+      if (seen.has(child)) continue
+      seen.add(child)
+      order.push(child)
+      queue.push(child)
+    }
+  }
+  // Дети — первыми: сначала уносим ссылающихся, потом тех, на кого ссылаются.
+  return order.reverse()
+}
+
 async function wipe(tables: PgTable[]) {
+  const names = tables.map(getTableName)
+  const extra = await dependentsOf(names)
   await db.transaction(async (tx) => {
     await tx.execute(sql.raw(`set local lock_timeout = '${LOCK_WAIT}'`))
-    // По одной таблице в порядке, заданном вызывающим (дети → родители): DELETE
-    // не принимает список, а порядок и так обязан быть верным из-за внешних ключей.
+    // Сначала зависимые (их принёс обход каталога), затем названные вызывающим в
+    // его порядке — дети перед родителями.
+    for (const name of extra) await tx.execute(sql.raw(`delete from "${name}"`))
     for (const t of tables) await tx.execute(sql`delete from ${t}`)
   })
 }
