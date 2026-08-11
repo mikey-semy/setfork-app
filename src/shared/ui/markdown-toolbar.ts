@@ -1,36 +1,34 @@
 import { Bold, Code, Heading, Italic, Link2, List, ListChecks, ListOrdered, Quote, Strikethrough } from 'lucide-react'
+import { t, type Lang } from '@/shared/i18n'
+import type { TextOps } from './use-text-ops'
 
 // Общие markdown-команды тулбара — единый набор для MarkdownEditor и
 // BubbleTextEditor (списки кнопок дрейфовали: разошёлся порядок 2-й группы).
 
-export interface MarkdownToolbarDeps {
-  /** L('по-русски', 'in English') — локализованная подпись. */
-  L(ru: string, en: string): string
-  /** Обернуть выделение (или вставить плейсхолдер): surround('**','**','текст'). */
-  surround(pre: string, post: string, placeholder: string): void
-  /** Префикс к каждой строке выделения; i — индекс строки (нумерация). */
-  linePrefix(prefix: (i: number) => string): void
-}
-
 export type ToolbarGroup = { icon: typeof Bold; t: string; run: () => void }[]
 
-export function markdownToolbarGroups({ L, surround, linePrefix }: MarkdownToolbarDeps): ToolbarGroup[] {
+/**
+ * Кнопки по группам: от частого к редкому. Подписи — из словаря, действия — из общей
+ * механики правки текста (`useTextOps`), поэтому обе панели делают ровно одно и то же.
+ */
+export function markdownToolbarGroups({ surround, linePrefix }: Pick<TextOps, 'surround' | 'linePrefix'>, lang: Lang): ToolbarGroup[] {
+  const ph = t('editor.textPlaceholder', lang)
   return [
     [
-      { icon: Heading, t: L('заголовок', 'heading'), run: () => linePrefix(() => '### ') },
-      { icon: Bold, t: `${L('жирный', 'bold')} (Ctrl+B)`, run: () => surround('**', '**', L('текст', 'text')) },
-      { icon: Italic, t: `${L('курсив', 'italic')} (Ctrl+I)`, run: () => surround('_', '_', L('текст', 'text')) },
-      { icon: Strikethrough, t: L('зачёркнутый', 'strikethrough'), run: () => surround('~~', '~~', L('текст', 'text')) },
+      { icon: Heading, t: t('editor.heading', lang), run: () => linePrefix(() => '### ') },
+      { icon: Bold, t: `${t('editor.bold', lang)} (Ctrl+B)`, run: () => surround('**', '**', ph) },
+      { icon: Italic, t: `${t('editor.italic', lang)} (Ctrl+I)`, run: () => surround('_', '_', ph) },
+      { icon: Strikethrough, t: t('editor.strikethrough', lang), run: () => surround('~~', '~~', ph) },
     ],
     [
-      { icon: Quote, t: L('цитата', 'quote'), run: () => linePrefix(() => '> ') },
-      { icon: Code, t: L('код', 'code'), run: () => surround('`', '`', 'code') },
-      { icon: Link2, t: `${L('ссылка', 'link')} (Ctrl+K)`, run: () => surround('[', '](url)', L('текст', 'text')) },
+      { icon: Quote, t: t('editor.quote', lang), run: () => linePrefix(() => '> ') },
+      { icon: Code, t: t('editor.code', lang), run: () => surround('`', '`', 'code') },
+      { icon: Link2, t: `${t('editor.link', lang)} (Ctrl+K)`, run: () => surround('[', '](url)', ph) },
     ],
     [
-      { icon: List, t: L('список', 'bulleted list'), run: () => linePrefix(() => '- ') },
-      { icon: ListOrdered, t: L('нумерованный', 'numbered list'), run: () => linePrefix((i) => `${i + 1}. `) },
-      { icon: ListChecks, t: L('список', 'task list'), run: () => linePrefix(() => '- [ ] ') },
+      { icon: List, t: t('editor.bulletedList', lang), run: () => linePrefix(() => '- ') },
+      { icon: ListOrdered, t: t('editor.numberedList', lang), run: () => linePrefix((i) => `${i + 1}. `) },
+      { icon: ListChecks, t: t('editor.taskList', lang), run: () => linePrefix(() => '- [ ] ') },
     ],
   ]
 }

@@ -7,6 +7,8 @@ import { markdownToolbarGroups } from './markdown-toolbar'
 import { MentionList } from './MentionList'
 import { TEXT } from './control'
 import { useMention } from './use-mention'
+import { useTextOps } from './use-text-ops'
+import { t } from '@/shared/i18n'
 
 // Редактор текста со ВСПЛЫВАЮЩЕЙ (bubble) панелью: появляется, пока работаешь с
 // текстом (фокус/выделение), плавает у курсора и НЕ перекрывает текст. Полный набор
@@ -52,7 +54,6 @@ export function BubbleTextEditor({
   // Пикер эмодзи и меню «⋯» живут в портале: фокус уходит из поля, но панель
   // закрывать нельзя — иначе выбранный смайлик вставлять уже некуда.
   const overlayOpen = useRef(false)
-  const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
 
   function apply(next: string, selStart: number, selEnd: number) {
     onChange(next)
@@ -85,32 +86,9 @@ export function BubbleTextEditor({
     })
   }
 
-  function surround(before: string, after = before, ph = '') {
-    const el = ref.current
-    if (!el) return
-    const s = el.selectionStart
-    const e = el.selectionEnd
-    const sel = value.slice(s, e) || ph
-    apply(value.slice(0, s) + before + sel + after + value.slice(e), s + before.length, s + before.length + sel.length)
-  }
-
-  function linePrefix(make: (i: number) => string) {
-    const el = ref.current
-    if (!el) return
-    const s = el.selectionStart
-    const e = el.selectionEnd
-    const start = value.lastIndexOf('\n', s - 1) + 1
-    const block = value.slice(start, e)
-    const replaced = block
-      .split('\n')
-      .map((l, i) => make(i) + l)
-      .join('\n')
-    apply(value.slice(0, start) + replaced + value.slice(e), start, start + replaced.length)
-  }
-
-  function insertAtRange(text: string, s: number, e: number) {
-    apply(value.slice(0, s) + text + value.slice(e), s + text.length, s + text.length)
-  }
+  // Правка текста — общая с MarkdownEditor механика (use-text-ops): раньше surround и
+  // linePrefix были здесь скопированы строка в строку.
+  const ops = useTextOps({ ref, read: () => value, apply, placeholder: t('editor.textPlaceholder', lang) })
 
   function onChangeText(v: string) {
     onChange(v)
@@ -123,23 +101,12 @@ export function BubbleTextEditor({
       e.preventDefault()
       return
     } // одно-строчное поле
-    if (!(e.metaKey || e.ctrlKey)) return
-    const k = e.key.toLowerCase()
-    if (k === 'b') {
-      e.preventDefault()
-      surround('**', '**', L('текст', 'text'))
-    } else if (k === 'i') {
-      e.preventDefault()
-      surround('_', '_', L('текст', 'text'))
-    } else if (k === 'k') {
-      e.preventDefault()
-      surround('[', '](url)', L('текст', 'text'))
-    }
+    ops.hotkey(e)
   }
 
   // Все инструменты одним рядом: что не влезло — уходит в «⋯». Порядок групп
   // сохраняем, он от частого к редкому.
-  const tools = markdownToolbarGroups({ L, surround, linePrefix }).flat()
+  const tools = markdownToolbarGroups(ops, lang).flat()
 
   return (
     <div className={`relative ${className ?? ''}`}>
@@ -179,8 +146,8 @@ export function BubbleTextEditor({
           tools={tools}
           caret={caret}
           lang={lang}
-          onMention={() => insertAtRange('@', savedSel.current[0], savedSel.current[1])}
-          onEmoji={(native) => insertAtRange(native, savedSel.current[0], savedSel.current[1])}
+          onMention={() => ops.insertAtRange('@', savedSel.current[0], savedSel.current[1])}
+          onEmoji={(native) => ops.insertAtRange(native, savedSel.current[0], savedSel.current[1])}
           onOverlay={(open) => {
             overlayOpen.current = open
           }}
