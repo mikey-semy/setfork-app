@@ -1913,6 +1913,11 @@ export const ru: Record<DictKey, string> = {
   'editor.optionN': 'Вариант {n}',
   'editor.removeOption': 'Удалить вариант',
   'editor.addOption': 'вариант',
+  // Страница предложения: сравнение версий и судьба ветки
+  'pr.basedOnV': 'на основе v{v}',
+  'pr.baseToSuggestion': 'v{v} → предложение',
+  'pr.becomesV': 'станет v{v}',
+  'pr.branchDeletedStale': 'Ветка «{branch}» удалена — предложение неактуально, можно только отклонить.',
   'poll.questionPh': 'Вопрос опроса',
   'poll.multi': 'Мультивыбор',
   'poll.deadline': 'Дедлайн',
