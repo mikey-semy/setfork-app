@@ -260,7 +260,6 @@ export async function loadListPage({
     owner,
     slug,
     gatedFromLesson,
-    detail,
     tpl,
     currentVersion,
     steps,
