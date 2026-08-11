@@ -5,6 +5,9 @@ import { enqueueJob } from '@/shared/jobs/queue'
 import { sendMail } from '@/shared/email/mailer'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { escapeHtml as esc } from '@/shared/lib/escape'
+import { EMAIL_COLOR } from '@/shared/email/layout'
+import { unsubscribeUrl } from '@/shared/email/unsubscribe'
+import { fill, plural, t, type Lang } from '@/shared/i18n'
 import { log } from '@/shared/observability'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { buildDigest, digestSize, type Digest } from './queries'
@@ -43,7 +46,7 @@ export async function runWeeklyDigestSweep(): Promise<{ sent: number; empty: num
     return { sent: 0, empty: 0 }
   }
   const recipients = await db
-    .select({ id: users.id, handle: users.handle, email: users.email })
+    .select({ id: users.id, handle: users.handle, email: users.email, lang: users.lang })
     .from(users)
     .where(
       and(
@@ -73,8 +76,11 @@ export async function runWeeklyDigestSweep(): Promise<{ sent: number; empty: num
 
     const ok = await sendMail({
       to: r.email!,
-      subject: digestSubject(digest),
-      html: renderDigestEmail(r.handle, digest),
+      lang: r.lang,
+      subject: digestSubject(digest, r.lang),
+      body: renderDigestEmail(r.handle, digest, r.lang),
+      note: t('emailFooter', r.lang),
+      unsubscribeUrl: await unsubscribeUrl(r.id),
     })
     if (!ok) continue // SMTP не настроен/сбой — не двигаем точку отсчёта
     await db.insert(digests).values({ userId: r.id, items })
@@ -84,48 +90,47 @@ export async function runWeeklyDigestSweep(): Promise<{ sent: number; empty: num
   return { sent, empty }
 }
 
-function digestSubject(d: Digest): string {
+function digestSubject(d: Digest, lang: Lang): string {
   if (d.starred.length) {
     const n = d.starred.length
-    return `${n} of your saved ${n === 1 ? 'list' : 'lists'} got better while you were away`
+    return fill('digest.subjectStarred', lang, { n, lists: plural(n, 'lists', lang) })
   }
-  if (d.ownLists.length) return 'Your lists got attention this week'
-  return 'Your forks have upstream updates'
+  if (d.ownLists.length) return t('digest.subjectOwn', lang)
+  return t('digest.subjectUpstream', lang)
 }
 
 
-function renderDigestEmail(recipientHandle: string, d: Digest): string {
+function renderDigestEmail(recipientHandle: string, d: Digest, lang: Lang): string {
   const origin = appOrigin()
   const link = (owner: string, slug: string) =>
-    `<a href="${esc(`${origin}/${owner}/${slug}`)}" style="color:#2159d6;text-decoration:none;font-weight:600">${esc(`${owner}/${slug}`)}</a>`
+    `<a href="${esc(`${origin}/${owner}/${slug}`)}" style="color:${EMAIL_COLOR.accent};text-decoration:none;font-weight:600">${esc(`${owner}/${slug}`)}</a>`
 
   const section = (title: string, rows: string[]): string =>
     rows.length
-      ? `<p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b6b66;margin:18px 0 6px">${esc(title)}</p>
+      ? `<p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:${EMAIL_COLOR.muted};margin:18px 0 6px">${esc(title)}</p>
          <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.7">${rows.join('')}</ul>`
       : ''
 
+  const versions = (n: number) => fill('digest.newVersions', lang, { n, versions: plural(n, 'versions', lang) })
+
   const starred = d.starred.map((i) => {
-    const by = i.improvedBy.length ? ` — improved by ${esc(i.improvedBy.join(', '))}` : ''
-    return `<li>${link(i.owner, i.slug)}: +${i.newVersions} ${i.newVersions === 1 ? 'version' : 'versions'}${by}</li>`
+    const by = i.improvedBy.length ? ` — ${esc(fill('digest.improvedBy', lang, { authors: i.improvedBy.join(', ') }))}` : ''
+    return `<li>${link(i.owner, i.slug)}: ${esc(versions(i.newVersions))}${by}</li>`
   })
-  const upstream = d.upstream.map(
-    (i) => `<li>${link(i.owner, i.slug)}: +${i.newVersions} upstream ${i.newVersions === 1 ? 'version' : 'versions'} since your fork</li>`,
-  )
+  const upstream = d.upstream.map((i) => {
+    const n = i.newVersions
+    return `<li>${link(i.owner, i.slug)}: ${esc(fill('digest.upstreamSince', lang, { n, versions: plural(n, 'versions', lang) }))}</li>`
+  })
   const own = d.ownLists.map((i) => {
-    const open = i.open ? ` — <b>${i.open} awaiting your review</b>` : ''
+    const open = i.open ? ` — <b>${esc(fill('digest.awaitingReview', lang, { n: i.open }))}</b>` : ''
     const total = i.accepted + i.open
-    return `<li>${link(recipientHandle, i.slug)}: ${total} ${total === 1 ? 'edit' : 'edits'} from ${esc(i.authors.join(', '))}${open}</li>`
+    const edits = fill('digest.editsFrom', lang, { n: total, edits: plural(total, 'edits', lang), authors: i.authors.join(', ') })
+    return `<li>${link(recipientHandle, i.slug)}: ${esc(edits)}${open}</li>`
   })
 
-  return `<!doctype html><html><body style="margin:0;background:#f4f4f1;font-family:Helvetica,Arial,sans-serif;color:#1c1c1a">
-  <div style="max-width:520px;margin:0 auto;padding:24px">
-    <div style="font-weight:800;font-size:20px;letter-spacing:-.02em">S<span style="color:#2159d6">F</span></div>
-    <div style="background:#fff;border:1px solid #e7e6e0;border-radius:12px;padding:20px;margin-top:14px">
-      ${section('Your saves got better', starred)}
-      ${section('Upstream moved ahead of your fork', upstream)}
-      ${section('Attention on your lists', own)}
-    </div>
-    <p style="color:#a3a39c;font-size:12px;margin-top:16px">Weekly digest · manage emails in Settings → Notifications</p>
-  </div></body></html>`
+  // Только СОДЕРЖИМОЕ письма: шапку, подвал сайта и «почему это письмо пришло»
+  // добавляет общая обёртка в sendMail.
+  return `${section(t('digest.sectionStarred', lang), starred)}
+      ${section(t('digest.sectionUpstream', lang), upstream)}
+      ${section(t('digest.sectionOwn', lang), own)}`
 }

@@ -8,6 +8,7 @@ import { getSession } from '@/shared/auth/session'
 import { requireAdmin } from '@/shared/auth/admin'
 import { rateLimit } from '@/shared/rate-limit'
 import { notifyAdmins } from '@/shared/email/admin-notify'
+import { appOrigin } from '@/shared/auth/app-origin'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -62,7 +63,7 @@ async function notifyFeedback(category: string, body: string, fromHandle: string
     `<p style="font:14px/1.5 sans-serif"><b>${esc(category)}</b>` +
       ` — ${fromHandle ? esc(fromHandle) : 'anonymous'}</p>` +
       `<p style="font:14px/1.5 sans-serif;white-space:pre-wrap">${esc(excerpt)}</p>` +
-      `<p style="font:12px/1.5 sans-serif;color:#888">setfork.com/admin/feedback</p>`,
+      `<p style="font:12px/1.5 sans-serif;color:#888">${esc(`${appOrigin()}/admin/feedback`)}</p>`,
   )
 }
 

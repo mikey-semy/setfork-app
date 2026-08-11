@@ -71,6 +71,12 @@ export function t(key: TKey, lang: Lang): string {
   return DICTS[lang]?.[key] || DICTS.en[key] || ''
 }
 
+/** Строка словаря с подстановкой: `fill('digest.newVersions', lang, { n: 3, versions: … })`.
+ *  Плейсхолдеры в словаре — `{имя}`; подставляются ВСЕ вхождения. */
+export function fill(key: TKey, lang: Lang, vars: Record<string, string | number>): string {
+  return Object.entries(vars).reduce((s, [name, value]) => s.split(`{${name}}`).join(String(value)), t(key, lang))
+}
+
 // ── Склонения при числах ────────────────────────────────────────────────
 // «1 веток» — брак, который видно сразу. У русского три формы (1 ветка,
 // 2 ветки, 5 веток) и свои правила для 11–14; у английского две. Отдельный
@@ -82,6 +88,7 @@ const PLURALS = {
   watchers: { ru: ['наблюдатель', 'наблюдателя', 'наблюдателей'], en: ['watcher', 'watchers'] },
   branches: { ru: ['ветка', 'ветки', 'веток'], en: ['branch', 'branches'] },
   versions: { ru: ['версия', 'версии', 'версий'], en: ['version', 'versions'] },
+  edits: { ru: ['правка', 'правки', 'правок'], en: ['edit', 'edits'] },
   runs: { ru: ['прогон', 'прогона', 'прогонов'], en: ['run', 'runs'] },
   lists: { ru: ['список', 'списка', 'списков'], en: ['list', 'lists'] },
   suggestions: { ru: ['предложение', 'предложения', 'предложений'], en: ['suggestion', 'suggestions'] },

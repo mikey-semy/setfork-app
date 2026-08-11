@@ -30,5 +30,6 @@ export const RESERVED_TOP = new Set([
   'settings',
   'tags',
   'terms',
+  'unsubscribe',
   'verify-email',
 ])

@@ -10,7 +10,7 @@ export { translitRu }
 export const HANDLE_RE = /^[a-z0-9-]{3,30}$/
 export const RESERVED_HANDLES = new Set([
   'explore', 'new', 'settings', 'admin', 'login', 'register', 'notifications', 'my-lists', 'api',
-  'generate', 'ghost', 'verify-email', 'forgot-password', 'reset-password', 'changelog',
+  'generate', 'ghost', 'verify-email', 'forgot-password', 'reset-password', 'changelog', 'unsubscribe',
   // 'demo' зарезервирован: getOrCreateDemoUser ищет по handle — регистрация ника
   // «demo» отдала бы чужой аккаунт публичному demo-входу.
   'demo',

@@ -12,6 +12,16 @@ export function docsUrl(path: string, lang: Lang): string {
   return `${DOCS_URL}${lang === 'en' ? '/en' : ''}${path}`
 }
 
+// «О проекте» — отдельный маркетинг-лендинг (проект setfork-about). Живёт по ПУТИ
+// /about основного домена (basePath, не поддомен — лучше для SEO). Домен задаётся
+// env-переменной; дефолт — прод на RU-домене (ADR-0008).
+const ABOUT_URL = process.env.NEXT_PUBLIC_ABOUT_URL ?? 'https://setfork.ru/about'
+
+/** Ссылка на лендинг «О проекте». Одна на подвал сайта и на подвал писем. */
+export function aboutUrl(): string {
+  return ABOUT_URL
+}
+
 export type LegalPage = 'terms' | 'privacy' | 'copyright' | 'acceptable-use'
 
 /** Ссылка на юридическую страницу доков на языке пользователя. */

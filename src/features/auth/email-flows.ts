@@ -9,9 +9,13 @@ import { hashPassword } from '@/shared/auth/password'
 import { appOrigin, clientIpFromHeaders } from '@/shared/auth/app-origin'
 import { rateLimit } from '@/shared/rate-limit'
 import { sendMail } from '@/shared/email/mailer'
+import { emailButton, emailHint } from '@/shared/email/layout'
 import { recordAudit } from '@/shared/audit'
 import { getLang } from '@/shared/i18n/server'
-import { button, readToken, sendVerificationEmail, signToken } from './token-helpers'
+import { fill, t } from '@/shared/i18n'
+import { escapeHtml as esc } from '@/shared/lib/escape'
+import { readToken, signToken } from '@/shared/auth/tokens'
+import { sendVerificationEmail } from './token-helpers'
 
 // Верификация почты и сброс пароля. Токены — подписанные JWT в ссылке
 // (БД-токены не нужны): verify 24ч; reset 1ч + хвост password_hash в
@@ -65,20 +69,24 @@ export async function requestEmailChange(_prev: EmailChangeResult | null, formDa
   if (taken) return { ok: false, error: 'taken' }
 
   const lang = await getLang()
-  const ru = lang === 'ru'
   const token = await signToken({ uid: session.userId, newEmail, cur: u.email, purpose: 'change-email' }, '1h')
   const link = `${appOrigin()}/change-email?token=${encodeURIComponent(token)}`
   const sent = await sendMail({
     to: newEmail,
-    subject: ru ? 'Подтверди новый адрес — SetFork' : 'Confirm your new email — SetFork',
-    html: `<p>${ru ? `Привет, ${u.handle}! Подтверди этот адрес как новую почту аккаунта SetFork.` : `Hi ${u.handle}! Confirm this address as the new email for your SetFork account.`}</p>${button(link, ru ? 'Подтвердить новый адрес' : 'Confirm new email')}<p style="color:#6b6b66;font-size:13px">${ru ? 'Ссылка действует 1 час. Пока не подтвердишь — вход остаётся на старом адресе.' : 'The link is valid for 1 hour. Until you confirm, sign-in keeps using your old address.'}</p>`,
+    lang,
+    subject: t('email.changeSubject', lang),
+    body:
+      `<p style="margin:0">${esc(fill('email.changeBody', lang, { handle: u.handle }))}</p>` +
+      emailButton(link, t('email.changeAction', lang)) +
+      emailHint(t('email.changeHint', lang)),
   })
   if (!sent) return { ok: false, error: 'smtp' }
   // Уведомляем СТАРЫЙ адрес — на случай, если запрос инициирован не владельцем (best-effort).
   await sendMail({
     to: u.email,
-    subject: ru ? 'Запрошена смена почты — SetFork' : 'Email change requested — SetFork',
-    html: `<p>${ru ? `Для аккаунта ${u.handle} запрошена смена почты на <b>${newEmail}</b>. Если это не ты — смени пароль, адрес не изменится без подтверждения по ссылке из другого письма.` : `An email change to <b>${newEmail}</b> was requested for ${u.handle}. If this wasn’t you, change your password — the address won’t change without confirming the link in the other email.`}</p>`,
+    lang,
+    subject: t('email.changeNoticeSubject', lang),
+    body: `<p style="margin:0">${esc(fill('email.changeNoticeBody', lang, { handle: u.handle, email: newEmail }))}</p>`,
   }).catch(() => {})
   await recordAudit('email.change-request', { actorId: session.userId, meta: { to: newEmail } })
   return { ok: true }
@@ -118,13 +126,16 @@ export async function requestPasswordReset(_prev: { done?: boolean } | null, for
   // Ответ всегда одинаковый — не раскрываем существование почты.
   if (u && okIp && okEmail) {
     const lang = await getLang()
-    const ru = lang === 'ru'
     const token = await signToken({ uid: u.id, purpose: 'reset-password', pw: pwTail(u.hash) }, '1h')
     const link = `${appOrigin()}/reset-password?token=${encodeURIComponent(token)}`
     await sendMail({
       to: email,
-      subject: ru ? 'Сброс пароля — SetFork' : 'Reset your password — SetFork',
-      html: `<p>${ru ? `Запрошен сброс пароля для аккаунта ${u.handle}.` : `A password reset was requested for ${u.handle}.`}</p>${button(link, ru ? 'Задать новый пароль' : 'Set a new password')}<p style="color:#6b6b66;font-size:13px">${ru ? 'Ссылка действует 1 час. Если это не ты — проигнорируй письмо, пароль не изменится.' : 'The link is valid for 1 hour. If this wasn’t you, ignore this email — your password stays the same.'}</p>`,
+      lang,
+      subject: t('email.resetSubject', lang),
+      body:
+        `<p style="margin:0">${esc(fill('email.resetBody', lang, { handle: u.handle }))}</p>` +
+        emailButton(link, t('email.resetAction', lang)) +
+        emailHint(t('email.resetHint', lang)),
     })
   }
   return { done: true }
