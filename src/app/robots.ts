@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
+import { SITE_ORIGIN } from '@/shared/site'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://setfork.com'
+const SITE_URL = SITE_ORIGIN
 
 // Явно разрешаем обход — favicon в результатах поиска показывается только для
 // индексируемой главной. Приватные/служебные пути закрываем.

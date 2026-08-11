@@ -5,9 +5,10 @@ import { createHash, randomBytes } from 'crypto'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { oauthEnabled } from '@/shared/auth/oauth'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 export async function GET() {
-  const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+  const appUrl = appOrigin()
   if (!oauthEnabled().vk) {
     return NextResponse.redirect(`${appUrl}/login?e=oauth_off`)
   }

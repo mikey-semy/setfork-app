@@ -8,13 +8,13 @@ import { eq } from 'drizzle-orm'
 import { db, telegramLoginTokens } from '@/shared/db'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { parseConfirmToken, parseStartToken, telegramLoginCode, tgApi, telegramConfigured, type TgUpdate } from '@/shared/telegram'
+import { appHost } from '@/shared/auth/app-origin'
 
-const site = () => (process.env.APP_URL ?? 'http://localhost:3000').replace(/^https?:\/\//, '')
 
 /** Язык ответа бота — из language_code отправителя (телеграмный, не наша кука). */
 const langOf = (code: string | undefined): Lang => (code?.toLowerCase().startsWith('ru') ? 'ru' : 'en')
 
-const msg = (key: TKey, lang: Lang) => t(key, lang).replace('{site}', site())
+const msg = (key: TKey, lang: Lang) => t(key, lang).replace('{site}', appHost())
 
 export async function POST(req: NextRequest) {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET

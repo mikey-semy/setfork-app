@@ -3,6 +3,7 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { type AiProviderConfig } from '@/shared/settings/ai'
 import { generationProviderConfig } from './provider-failover'
 import { getGigaChatToken } from './gigachat-token'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 // Единая точка создания chat-модели для generateText/generateObject.
 // Все провайдеры (OpenRouter / Selectel ИИ-роутер / YandexGPT / GigaChat)
@@ -70,7 +71,7 @@ export async function getAiChatClient(): Promise<AiChatClient | null> {
     baseURL: cfg.baseUrl,
     headers: cfg.headers,
     appName: 'SetFork',
-    appUrl: process.env.APP_URL || 'http://localhost:3000',
+    appUrl: appOrigin(),
   })
   const isOpenRouter = cfg.provider === 'openrouter'
   const isGigaChat = cfg.provider === 'gigachat'

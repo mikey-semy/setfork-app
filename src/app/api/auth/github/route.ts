@@ -2,10 +2,11 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { oauthEnabled } from '@/shared/auth/oauth'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 export async function GET() {
   const clientId = process.env.GITHUB_CLIENT_ID
-  const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+  const appUrl = appOrigin()
   if (!clientId || !oauthEnabled().github) {
     // Провайдер не настроен или выключен → на /login, где остальные способы входа.
     return NextResponse.redirect(`${appUrl}/login?e=oauth_off`)

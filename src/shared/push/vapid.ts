@@ -1,6 +1,7 @@
 import 'server-only'
 import { inArray } from 'drizzle-orm'
 import { appSettings, db } from '@/shared/db'
+import { SITE_HOST } from '@/shared/site'
 
 // VAPID-ключи для Web Push (свой сервер, без сторонних сервисов). Значения из БД
 // (app_settings, редактируются в админке) перекрывают env; ключи генерируются локально
@@ -30,7 +31,7 @@ export async function getVapid(): Promise<VapidConfig> {
   cache = {
     publicKey: val(VAPID_KEYS.public, 'VAPID_PUBLIC_KEY'),
     privateKey: val(VAPID_KEYS.private, 'VAPID_PRIVATE_KEY'),
-    subject: val(VAPID_KEYS.subject, 'VAPID_SUBJECT') || 'mailto:admin@setfork.com',
+    subject: val(VAPID_KEYS.subject, 'VAPID_SUBJECT') || `mailto:admin@${SITE_HOST}`,
   }
   return cache
 }
