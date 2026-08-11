@@ -33,7 +33,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { collabStore, suggestionCommenterIds } from '@/features/collab-store/store'
 // eslint-disable-next-line boundaries/dependencies -- гейт «нерешённые обсуждения» живёт с комментариями
 import { countUnresolvedThreads } from '@/features/comments/queries'
-import { canEditList, canViewList } from '@/core'
+import { canEditList, canViewList, editBlockReason } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { parseEditorItems, toProposedItems } from '../editor'
 import { toListContent } from '../list-content'
@@ -69,7 +69,7 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   // (иначе — запись в чужую очередь + пинг владельцу + оракул существования).
   if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return
   // Архив/заморозка: предложения запрещены в обоих состояниях (список только-чтение).
-  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
+  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${editBlockReason(tpl) ?? 'frozen'}`)
   // Настройка списка «кто может предлагать»: аналог Creation allowed by у GitHub.
   // Владелец может предлагать всегда — иначе он запирал бы сам себя.
   const prs = withPrDefaults(tpl.prSettings)

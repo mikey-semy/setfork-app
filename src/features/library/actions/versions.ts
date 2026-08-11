@@ -12,7 +12,7 @@ import { listQuota } from '@/shared/quota'
 import { rateLimit } from '@/shared/rate-limit'
 import { textLang } from '@/shared/i18n/detect-text-lang'
 import { toStepInput } from '@/shared/lib/step-input'
-import { canEditList } from '@/core'
+import { canEditList, editBlockReason } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { isCollaborator } from '@/features/collab/queries'
 import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
@@ -118,50 +118,6 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
 }
 
 // ── Владелец: сохранить как новую версию ─────────────────────────────
-export async function saveNewVersion(templateId: string, formData: FormData): Promise<void> {
-  const session = await requireSession()
-  const [lang, tpl] = await Promise.all([getLang(), db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })])
-  if (!tpl) return
-  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-
-  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
-
-  const note = String(formData.get('note') ?? '').trim()
-  const tags = parseTags(formData.get('tags'))
-  const ordered = formData.get('ordered') !== 'unordered'
-  const gated = formData.get('gated') === 'on'
-  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
-
-  // gated — не канон (надстройка Postgres), обновляется отдельно; а tags/ordered
-  // едут ВНУТРИ addVersion (Ф2a-довесок): ядро применяет мету той же транзакцией,
-  // что и версию, и канон коммита сразу несёт свежие значения. Отдельный апдейт
-  // до RPC оставлял бы мету записанной без версии при сбое вызова.
-  await db.update(templates).set({ gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-  await registerTags(tags)
-  // Создание версии = git-коммит + проекция в ядре (доменный порт ListStore).
-  // Страж исполняемого выхода стоит в фасаде записи (одна точка на все пути), а
-  // здесь — показ причины автору: молчаливый отказ читается как «кнопка не
-  // работает», а необработанное исключение — как поломка сайта.
-  try {
-    await listStore.addVersion(tpl.id, {
-      note: note || 'edit',
-      steps: toStepInput(proposed),
-      authorId: session.userId,
-      meta: { tags, ordered },
-    })
-  } catch (e) {
-    if (e instanceof DestructiveCommandError) {
-      redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/edit?blocked=${e.reason}&step=${e.stepIndex}`)
-    }
-    throw e
-  }
-  // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер) — здесь не дублируем.
-  await notifyWatchersNewVersion(tpl.id, session.userId)
-  await enqueueReindex(tpl.id)
-
-  redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
-}
-
 // ── Черновик правок к опубликованному списку ──────────────────────────
 /**
  * РАБОЧАЯ КОПИЯ вместо версии на каждую правку (решение владельца 04.08.2026:
@@ -195,7 +151,7 @@ async function upsertDraftFromForm(templateId: string, formData: FormData) {
   const [lang, tpl] = await Promise.all([getLang(), db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })])
   if (!tpl) redirect('/')
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) redirect('/')
-  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
+  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${editBlockReason(tpl) ?? 'frozen'}`)
 
   const items = toProposedItems(parseEditorItems(formData.get('items')), lang)
   const meta = {
@@ -240,13 +196,13 @@ export async function discardDraft(templateId: string): Promise<void> {
  * черновике), публикацию не делаем: молча перезаписать чужую работу хуже, чем
  * попросить перечитать. Автор увидит это на странице редактора.
  */
-export async function publishDraft(templateId: string): Promise<void> {
+async function publishDraft(templateId: string): Promise<void> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
   const handle = await ownerHandle(tpl.ownerId)
-  if (!canEditList(tpl)) redirect(`/${handle}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
+  if (!canEditList(tpl)) redirect(`/${handle}/${tpl.slug}?e=${editBlockReason(tpl) ?? 'frozen'}`)
 
   // Теги черновика — в реестр (иначе новый тег не появится в каталоге и подсказках).
   const pending = await getDraft(tpl.id, session.userId)

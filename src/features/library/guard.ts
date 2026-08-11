@@ -6,7 +6,7 @@ import { permanentRedirectTo } from '@/shared/db/moved-list'
 import { resolveListOrMoved } from '@/shared/db/resolve-list'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
-import { canEditList, canRunList, canViewList, editBlockReason } from '@/core'
+import { canViewList } from '@/core'
 import { isCollaborator } from '@/features/collab/queries'
 import { getListMeta, getTemplateDetail } from './queries'
 
@@ -109,33 +109,4 @@ async function viewableDetailFor(owner: string, slug: string, viewerId?: string,
     isAdmin: isAdminHandle(viewerHandle),
   })
   return ok ? detail : null
-}
-
-// ── Guard записи по состоянию (архив/заморозка) ──────────────────────
-// Владение проверяют сами actions (owner/collaborator); ЗДЕСЬ — только «можно ли
-// вообще менять этот список в его текущем состоянии». Возвращает reason
-// ('archived'|'frozen') если писать нельзя, иначе null — вызывающий редиректит/выходит.
-// Дешёвая точечная загрузка двух полей (не весь detail).
-
-async function loadState(templateId: string): Promise<{ archivedAt: Date | null; frozenAt: Date | null } | null> {
-  const [row] = await db
-    .select({ archivedAt: templates.archivedAt, frozenAt: templates.frozenAt })
-    .from(templates)
-    .where(eq(templates.id, templateId))
-    .limit(1)
-  return row ?? null
-}
-
-/** null — редактировать МОЖНО; иначе причина запрета. */
-export async function editBlock(templateId: string): Promise<'archived' | 'frozen' | null> {
-  const st = await loadState(templateId)
-  if (!st) return null // нет списка — пусть решает вызывающий (обычно и так упадёт)
-  return canEditList(st) ? null : editBlockReason(st)
-}
-
-/** null — начать прогон МОЖНО; иначе причина (только 'archived'). */
-export async function runBlock(templateId: string): Promise<'archived' | null> {
-  const st = await loadState(templateId)
-  if (!st) return null
-  return canRunList(st) ? null : 'archived'
 }

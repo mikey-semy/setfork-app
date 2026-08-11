@@ -1,7 +1,7 @@
 import 'server-only'
 // eslint-disable-next-line no-restricted-imports -- git smart-HTTP: своя авторизация (токен/коллаборатор), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
-import { canEditList, canViewList, isPubliclyVisible } from '@/core'
+import { canEditList, canViewList, editBlockReason, isPubliclyVisible } from '@/core'
 import { contributorsEnabled, openForContributions, type PushRole } from '@/features/library/push-role'
 import { coreEnforcesPushRoles } from '@/features/git/capabilities'
 import { isCollaborator } from '@/features/collab/queries'
@@ -112,7 +112,7 @@ export async function authorizeGitRead(
 /** Запись запрещена состоянием списка — причину домен знает, и она едет в ответ. */
 export const writeDisabled = (meta: Meta): GitHttpFailure => ({
   code: 'write_disabled',
-  reason: meta.archivedAt ? 'archived' : 'frozen',
+  reason: editBlockReason(meta) ?? 'frozen',
 })
 
 /**
