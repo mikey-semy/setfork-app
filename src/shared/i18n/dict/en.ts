@@ -464,6 +464,7 @@ export const en = {
   copyLink: 'Copy link',
   qrHint: 'Scan to open',
   catalogsTab: 'Catalogs',
+  collectionsEmpty: 'No collections yet.',
   catalogHeading: 'Catalog',
   catalogHint: 'Group related lists into a catalog (a repository of lists).',
   noCatalogOpt: 'No catalog (solo)',

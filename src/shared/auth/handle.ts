@@ -4,19 +4,26 @@ import { and, ne, sql } from 'drizzle-orm'
 import { db, userRedirects, users } from '@/shared/db'
 import { handleHoldAlive } from '@/shared/db/resolve-list'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
+import { RESERVED_TOP } from '@/shared/nav/reserved-top'
 import { translitRu } from '@/shared/lib/translit'
 
 export { translitRu }
 export const HANDLE_RE = /^[a-z0-9-]{3,30}$/
 export const RESERVED_HANDLES = new Set([
-  'explore', 'new', 'settings', 'admin', 'login', 'register', 'notifications', 'my-lists', 'api',
-  'generate', 'ghost', 'verify-email', 'forgot-password', 'reset-password', 'changelog', 'unsubscribe',
+  // ВСЕ корневые сегменты приложения: адрес профиля — это `/<ник>`, поэтому ник,
+  // совпавший с разделом, делает профиль недоступным (раздел выигрывает). Список
+  // берётся из одного источника с шапкой, а не переписывается рядом: рукописная
+  // копия уже отставала — `tags` и `collections` можно было занять, хотя страницы
+  // с такими адресами существуют.
+  ...RESERVED_TOP,
   // 'demo' зарезервирован: getOrCreateDemoUser ищет по handle — регистрация ника
   // «demo» отдала бы чужой аккаунт публичному demo-входу.
   'demo',
   // 'gardener' — по тому же правилу: сервисный аккаунт садовника ищется по нику
   // (features/gardener/service.ts, admin/development-queries.ts).
   'gardener',
+  // 'ghost' — владелец списков удалённого аккаунта.
+  'ghost',
 ])
 
 /** Сырую строку (login/имя/local-part email) → кандидат handle; '' если ничего не осталось. */

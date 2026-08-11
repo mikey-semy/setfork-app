@@ -79,11 +79,6 @@
       "count": 4
     }
   },
-  "src/app/explore/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/app/forgot-password/page.tsx": {
     "no-restricted-syntax": {
       "count": 2

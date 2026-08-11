@@ -71,7 +71,34 @@ function pass(req: NextRequest): NextResponse {
   return NextResponse.next({ request: { headers } })
 }
 
+/**
+ * Прежние адреса раздела «открытие» → их нынешние страницы.
+ *
+ * Вкладки жили параметрами одной страницы (`/explore?tab=trending&view=people`), а
+ * теперь у каждой свой адрес. Разосланные ссылки обязаны продолжать работать.
+ *
+ * Перенаправление живёт ЗДЕСЬ, а не в самой странице, по обязательной причине: у
+ * `/explore` есть loading.tsx, то есть потоковая отдача — заголовки уходят клиенту ДО
+ * рендера, и `redirect()` из компонента уже не может сменить статус (проверено:
+ * ответ оставался 200 со старой страницей). Тем же образом когда-то «не найдено»
+ * уезжало с кодом 200. Маршрутизации здесь и место: ни базы, ни сессии не нужно.
+ */
+function legacyExploreTarget(url: NextRequest['nextUrl']): string | null {
+  if (url.pathname !== '/explore') return null
+  const tab = url.searchParams.get('tab')
+  if (tab === 'topics') return '/tags'
+  if (tab === 'collections') return '/collections'
+  if (tab !== 'trending') return null
+  if (url.searchParams.get('view') === 'people') return '/trending/people'
+  const range = url.searchParams.get('range')
+  // Неделя — состояние по умолчанию, её в адресе не оставляем.
+  return range && range !== 'week' ? `/trending?range=${range}` : '/trending'
+}
+
 export async function middleware(req: NextRequest) {
+  const legacy = legacyExploreTarget(req.nextUrl)
+  if (legacy) return NextResponse.redirect(new URL(legacy, req.url), 308)
+
   if (!(await maintenanceEnabled())) return pass(req)
 
   const { pathname } = req.nextUrl
