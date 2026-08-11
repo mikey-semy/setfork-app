@@ -2,6 +2,8 @@
 import { type KeyboardEvent, useRef, useState } from 'react'
 import { AtSign, ImageIcon, Paperclip, SmilePlus } from 'lucide-react'
 import { markdownToolbarGroups } from './markdown-toolbar'
+import { MentionList } from './MentionList'
+import { useMention, type MentionUser } from './use-mention'
 import { Markdown } from './Markdown'
 import { caretCoords } from './caret-coords'
 import { Tooltip } from './Tooltip'
@@ -25,7 +27,6 @@ type Props = {
   onValueChange?: (value: string) => void
 }
 
-type MentionUser = { handle: string; avatarUrl: string | null }
 type IssueHit = { number: number; title: string; status: string }
 const btn = 'inline-flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-ink'
 
@@ -40,9 +41,6 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
   }
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const [busy, setBusy] = useState(0)
-  const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
-  const [users, setUsers] = useState<MentionUser[]>([])
-  const [mIdx, setMIdx] = useState(0)
   const [iref, setIref] = useState<{ start: number; query: string } | null>(null)
   const [issueHits, setIssueHits] = useState<IssueHit[]>([])
   const [iIdx, setIIdx] = useState(0)
@@ -51,7 +49,12 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
   const ref = useRef<HTMLTextAreaElement>(null)
   const imgInput = useRef<HTMLInputElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
-  const searchSeq = useRef(0)
+  const mention = useMention({
+    value: val,
+    ref,
+    apply: (next, selStart, selEnd) => apply(next, [selStart, selEnd]),
+    people,
+  })
   const irefSeq = useRef(0)
   const valRef = useRef(defaultValue) // «живое» значение (без задержки setState) для расчётов
   const hist = useRef({ stack: [defaultValue], idx: 0, at: 0, typing: false }) // история undo/redo
@@ -163,33 +166,6 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
     }
   }
 
-  // ── @mention ──
-  function detectMention(value: string, caret: number) {
-    const m = /(?:^|\s)@([\w-]{0,30})$/.exec(value.slice(0, caret))
-    if (!m) return null
-    return { start: caret - m[1].length - 1, query: m[1] }
-  }
-  async function runMentionSearch(query: string) {
-    const seq = ++searchSeq.current
-    const q = query.toLowerCase()
-    // участники — мгновенно (в т.ч. при пустом query сразу после '@')
-    const seeded = people.filter((p) => !q || p.handle.toLowerCase().startsWith(q))
-    setUsers(seeded.slice(0, 8))
-    setMIdx(0)
-    if (!query) return
-    try {
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
-      const data = (await res.json()) as MentionUser[]
-      if (seq === searchSeq.current) {
-        const seen = new Set(seeded.map((p) => p.handle))
-        setUsers([...seeded, ...(Array.isArray(data) ? data : []).filter((u) => !seen.has(u.handle))].slice(0, 8))
-        setMIdx(0)
-      }
-    } catch {
-      /* игнор */
-    }
-  }
-
   function computeAnchor(caret: number): { top: number; left: number } | null {
     const el = ref.current
     if (!el) return null
@@ -232,14 +208,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
     emit(value)
     record(value, true)
     const caret = ref.current?.selectionStart ?? value.length
-    const m = detectMention(value, caret)
-    setMention(m)
-    if (m) {
-      setAnchor(computeAnchor(caret))
-      void runMentionSearch(m.query)
-    } else {
-      setUsers([])
-    }
+    mention.onText(value)
     const r = detectIssueRef(value, caret)
     setIref(r)
     if (r) {
@@ -249,39 +218,10 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
       setIssueHits([])
     }
   }
-  function pickMention(u: MentionUser) {
-    if (!mention) return
-    const end = mention.start + 1 + mention.query.length
-    const caret = mention.start + u.handle.length + 2
-    apply(valRef.current.slice(0, mention.start) + `@${u.handle} ` + valRef.current.slice(end), [caret, caret])
-    setMention(null)
-    setUsers([])
-  }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // 1) навигация по @mention
-    if (mention && users.length) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setMIdx((i) => (i + 1) % users.length)
-        return
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setMIdx((i) => (i - 1 + users.length) % users.length)
-        return
-      }
-      if (e.key === 'Enter' || e.key === 'Tab') {
-        e.preventDefault()
-        pickMention(users[mIdx])
-        return
-      }
-      if (e.key === 'Escape') {
-        setMention(null)
-        setUsers([])
-        return
-      }
-    }
+    // 1) навигация по @mention — общая механика (use-mention)
+    if (mention.onKeyDown(e)) return
     // 1b) навигация по #-reference
     if (iref && issueHits.length) {
       if (e.key === 'ArrowDown') {
@@ -427,7 +367,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
           value={val}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
-          onBlur={() => setTimeout(() => { setMention(null); setIref(null) }, 150)}
+          onBlur={() => setTimeout(() => { mention.close(); setIref(null) }, 150)}
           aria-label={placeholder || L('Текст в разметке Markdown', 'Markdown text')}
           placeholder={placeholder}
           rows={rows}
@@ -450,28 +390,9 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
           className="w-full resize-y bg-surface px-3 py-2.5 text-[0.875rem] text-ink outline-hidden placeholder:text-muted"
         />
 
-        {mention && users.length > 0 && (
-          <div className="absolute z-20 max-h-52 w-64 overflow-y-auto rounded-md border border-border bg-surface shadow-lg" style={{ top: anchor?.top ?? 8, left: anchor?.left ?? 8 }}>
-            {users.map((u, i) => (
-              <button
-                key={u.handle}
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  pickMention(u)
-                }}
-                onMouseEnter={() => setMIdx(i)}
-                className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[0.8125rem] ${i === mIdx ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="h-5 w-5 rounded-full" /> : <span className="h-5 w-5 rounded-full bg-surface-2" />}
-                <span className="font-medium">@{u.handle}</span>
-              </button>
-            ))}
-          </div>
+        {mention.mention && mention.users.length > 0 && (
+          <MentionList users={mention.users} index={mention.index} onHover={mention.setIndex} onPick={mention.pick} at={mention.anchor} />
         )}
-
-        {/* #-reference автодополнение */}
         {iref && issueHits.length > 0 && (
           <div className="absolute z-20 max-h-52 w-72 overflow-y-auto rounded-md border border-border bg-surface shadow-lg" style={{ top: anchor?.top ?? 8, left: anchor?.left ?? 8 }}>
             {issueHits.map((h, i) => (
