@@ -16,6 +16,17 @@ const strip = (url: string) => url.replace(/\/$/, '')
 /** Публичный адрес сервиса: схема + хост, без завершающего слэша. */
 export const SITE_ORIGIN = strip(process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://setfork.com')
 
+/**
+ * Адрес задан явно, а не взят из дефолта.
+ *
+ * Нужен там, где ошибиться доменом дороже, чем взять адрес из запроса: `NEXT_PUBLIC_*`
+ * вшиваются при СБОРКЕ, а `Dockerfile` не объявляет для них build-arg — на демо-стенде
+ * (`docker-compose.demo.yml`) переменная приходит только в окружение контейнера, то есть
+ * уже после сборки. Там дефолт молча указал бы на канон, и ленты чужого стенда ссылались
+ * бы на setfork.com (находка авто-ревью на fe#761).
+ */
+export const SITE_ORIGIN_FROM_ENV = Boolean(process.env.NEXT_PUBLIC_SITE_URL?.trim())
+
 /** Хост без схемы — для писем, идентификаторов и мест, где схема не нужна. */
 export const SITE_HOST = SITE_ORIGIN.replace(/^https?:\/\//, '')
 

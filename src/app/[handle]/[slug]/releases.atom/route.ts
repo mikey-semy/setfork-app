@@ -3,7 +3,7 @@ import { getListMeta } from '@/features/library/queries'
 import { getReleases } from '@/features/releases/queries'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 import { isPubliclyVisible } from '@/core'
-import { SITE_ORIGIN } from '@/shared/site'
+import { SITE_ORIGIN, SITE_ORIGIN_FROM_ENV } from '@/shared/site'
 
 // GET /{handle}/{slug}/releases.atom — Atom-фид релизов (как у GitHub).
 // Только для публичных списков: фид анонимный, приватное не отдаём.
@@ -21,8 +21,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // видимость → release notes flagged/hidden/pending и публичных черновиков утекали.
   if (!meta || !isPubliclyVisible(meta)) return new Response('Not found', { status: 404 })
 
-  // Публичный канонический адрес, а не bind-origin запроса (за прокси req.url = 0.0.0.0:3000).
-  const origin = SITE_ORIGIN
+  // Публичный адрес, а не bind-origin запроса (за прокси req.url = 0.0.0.0:3000) — но
+  // ТОЛЬКО если он задан явно. `NEXT_PUBLIC_*` вшиваются при сборке, а демо-стенд подаёт
+  // переменную лишь в окружение контейнера: с дефолтом ленты чужого стенда ссылались бы
+  // на канон. Пусть уж лучше адрес придёт из запроса, чем уведёт читателя на другой сайт.
+  const origin = SITE_ORIGIN_FROM_ENV ? SITE_ORIGIN : new URL(req.url).origin.replace(/\/$/, '')
   const base = `${origin}/${handle}/${slug}`
   const rels = await getReleases(meta.id)
   // Нет релизов → берём время списка (обновление/создание), НЕ эпоху 0: пустой фид
