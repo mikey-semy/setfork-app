@@ -9,6 +9,7 @@ import { requireAdmin } from '@/shared/auth/admin'
 import { rateLimit } from '@/shared/rate-limit'
 import { recordAudit } from '@/shared/audit'
 import { notifyAdmins } from '@/shared/email/admin-notify'
+import { appOrigin } from '@/shared/auth/app-origin'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 // Та же кросс-фичевая связка, что в library/actions.ts (перепроверка после
 // события с контентом); распутывание слоёв — docs/boundaries-todo.md.
@@ -94,7 +95,7 @@ async function notifyReport(reason: string, body: string, fromHandle: string | n
     `<p style="font:14px/1.5 sans-serif"><b>${esc(reason)}</b>` +
       ` — ${fromHandle ? esc(fromHandle) : 'anonymous'}</p>` +
       `<p style="font:14px/1.5 sans-serif;white-space:pre-wrap">${esc(excerpt)}</p>` +
-      `<p style="font:12px/1.5 sans-serif;color:#888">setfork.com/admin/reports</p>`,
+      `<p style="font:12px/1.5 sans-serif;color:#888">${esc(`${appOrigin()}/admin/reports`)}</p>`,
   )
 }
 

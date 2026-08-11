@@ -169,16 +169,6 @@
       "count": 4
     }
   },
-  "src/features/auth/email-flows.ts": {
-    "no-restricted-syntax": {
-      "count": 7
-    }
-  },
-  "src/features/auth/token-helpers.ts": {
-    "no-restricted-syntax": {
-      "count": 3
-    }
-  },
   "src/features/badges/BadgesCard.tsx": {
     "no-restricted-syntax": {
       "count": 4

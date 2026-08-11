@@ -87,7 +87,8 @@ export async function notify(params: {
     // Дублируем на почту через очередь (durable + ретраи), если получатель включил
     // email-уведомления и SMTP настроен. Отправка уходит из request-пути к воркеру.
     if (prefs.email === true && u?.email && (await emailEnabled())) {
-      await enqueueJob('email', { to: u.email, ...refPayload })
+      // userId нужен письму для ссылки отписки (List-Unsubscribe).
+      await enqueueJob('email', { to: u.email, userId: params.recipientId, ...refPayload })
     }
 
     // Фоновый web-push, если включён browser-pref, есть подписка и VAPID настроен.

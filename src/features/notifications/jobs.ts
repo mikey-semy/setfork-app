@@ -7,6 +7,9 @@ import type { NotificationType } from './queries'
 
 export interface EmailJobPayload {
   to: string
+  /** Получатель — для ссылки отписки. Необязателен: задачи, поставленные до
+   *  появления List-Unsubscribe, лежат в очереди без него и должны дойти. */
+  userId?: string
   lang: Lang
   actorId?: string | null
   type: NotificationType
