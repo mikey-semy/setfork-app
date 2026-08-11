@@ -334,7 +334,7 @@
       "count": 1
     }
   },
-  "src/features/library/actions/suggestions.ts": {
+  "src/features/library/actions/suggestion-submit.ts": {
     "boundaries/dependencies": {
       "count": 4
     }
