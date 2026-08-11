@@ -28,7 +28,7 @@ const tpl = () => ({ id: tplId, slug: 'bread', tags: ['кулинария'], des
 const ctx = () => ({ tenderId: ownerId, agentId: 'cook', policyVersion: 1, lang: 'ru' as const })
 
 beforeAll(async () => {
-  await resetTables(sql`${agentActions}, ${appSettings}, ${templates}, ${users}`)
+  await resetTables([agentActions, appSettings, templates, users])
   const [u] = await db
     .insert(users)
     .values({ handle: 'gate-agent', accountType: 'agent', profession: 'Cook' })

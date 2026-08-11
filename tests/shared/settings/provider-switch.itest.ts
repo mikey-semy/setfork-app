@@ -17,7 +17,7 @@ const set = async (key: string, value: string) => {
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${appSettings}`, { restartIdentity: false, cascade: false })
+  await resetTables([appSettings])
 })
 
 beforeEach(async () => {

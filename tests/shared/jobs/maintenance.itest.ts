@@ -22,7 +22,7 @@ const add = (over: Partial<typeof jobs.$inferInsert> = {}) =>
 const ago = (interval: string) => sql`now() - interval '${sql.raw(interval)}'`
 
 beforeEach(async () => {
-  await resetTables(sql`${jobs}`)
+  await resetTables([jobs])
 })
 
 describe('reaper: пульс против таймаута', () => {

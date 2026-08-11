@@ -17,7 +17,7 @@ let templateId = ''
 let suggestionId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const rows = await db
     .insert(users)
     .values([{ handle: 'chk-owner' }, { handle: 'chk-author' }, { handle: 'chk-stranger' }])

@@ -22,7 +22,7 @@ const put = async (over: Partial<typeof agentActions.$inferInsert> & { daysAgo?:
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${agentActions}`, { restartIdentity: false, cascade: false })
+  await resetTables([agentActions])
 })
 
 beforeEach(async () => {

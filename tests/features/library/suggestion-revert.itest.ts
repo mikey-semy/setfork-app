@@ -71,13 +71,13 @@ const editItem = (i: number, title: string) =>
   mergeEdit(build(editorFromState().map((b, k) => (k === i ? { ...b, title } : b))))
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [owner] = await db.insert(users).values({ handle: 'rev-owner' }).returning({ id: users.id })
   ownerId = owner.id
 })
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}`, { restartIdentity: false })
+  await resetTables([templates])
   const [tpl] = await db
     .insert(templates)
     .values({ ownerId, slug: 'rev-list', title: { en: 'Revert list' }, visibility: 'public', status: 'published' })

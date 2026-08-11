@@ -47,13 +47,13 @@ const setChecksGate = (on: boolean) =>
 const report = (status: string) => mcpReportCheck(ownerId, { list: 'gate-owner/gate-list', number: 1, name: 'tests', status })
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [owner] = await db.insert(users).values({ handle: 'gate-owner' }).returning({ id: users.id })
   ownerId = owner.id
 })
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}`, { restartIdentity: false })
+  await resetTables([templates])
   const [tpl] = await db
     .insert(templates)
     .values({ ownerId, slug: 'gate-list', title: { en: 'Gate list' }, visibility: 'public', status: 'published' })

@@ -12,7 +12,7 @@ let ownerId = ''
 let versionId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${steps}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([steps, templateVersions, templates, users])
   const [u] = await db.insert(users).values({ handle: 'snap-owner' }).returning({ id: users.id })
   ownerId = u.id
   const [tpl] = await db

@@ -54,7 +54,7 @@ async function makeList(slug: string, over: Record<string, unknown> = {}): Promi
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   for (const k of ['owner', 'collab', 'stranger']) {
     const [u] = await db.insert(users).values({ handle: k === 'owner' ? OWNER : `gw-${k}` }).returning({ id: users.id })
     uid[k] = u.id

@@ -56,7 +56,7 @@ const markedItem: ProposedItem = {
 }
 
 beforeEach(async () => {
-  await resetTables(sql`${suggestions}, ${steps}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([suggestions, steps, templateVersions, templates, users])
   const [o] = await db.insert(users).values({ handle: 'nh-owner' }).returning({ id: users.id })
   const [a] = await db.insert(users).values({ handle: 'nh-author' }).returning({ id: users.id })
   ownerId = o.id
@@ -77,7 +77,7 @@ beforeEach(async () => {
   h.session = { userId: ownerId, handle: 'nh-owner' }
 })
 afterAll(async () => {
-  await resetTables(sql`${suggestions}, ${steps}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([suggestions, steps, templateVersions, templates, users])
 })
 
 const stepsOfVersion = async (version: number) => {

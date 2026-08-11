@@ -32,12 +32,12 @@ const jobCount = async (id: string) => {
 }
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}, ${users}, ${jobs}`)
+  await resetTables([templates, users, jobs])
   const [o] = await db.insert(users).values({ handle: 'gowner' }).returning({ id: users.id })
   ownerId = o.id
 })
 afterAll(async () => {
-  await resetTables(sql`${templates}, ${users}, ${jobs}`)
+  await resetTables([templates, users, jobs])
 })
 
 describe('gateListPublication — гейт публикации', () => {

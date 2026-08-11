@@ -23,7 +23,7 @@ let adminId = ''
 
 beforeAll(async () => {
   process.env.ADMIN_HANDLES = 'boss'
-  await resetTables(sql`${agentActions}, ${agentLoops}, ${aiUsage}, ${jobs}, ${users}`)
+  await resetTables([agentActions, agentLoops, aiUsage, jobs, users])
   const [u] = await db.insert(users).values({ handle: 'boss', email: 'boss@example.com' }).returning({ id: users.id })
   adminId = u.id
   // Не-админ с почтой: письма компании ему уходить не должны.

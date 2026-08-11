@@ -20,7 +20,7 @@ let pubId = ''
 let privId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${embeddings}, ${templates}, ${users}`)
+  await resetTables([embeddings, templates, users])
   const [o] = await db.insert(users).values({ handle: 'ep-owner' }).returning({ id: users.id })
   ownerId = o.id
   const [pub] = await db
@@ -37,7 +37,7 @@ beforeAll(async () => {
   await reindexList(privId)
 })
 afterAll(async () => {
-  await resetTables(sql`${embeddings}, ${templates}, ${users}`)
+  await resetTables([embeddings, templates, users])
   vi.restoreAllMocks()
 })
 

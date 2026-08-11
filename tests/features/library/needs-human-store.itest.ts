@@ -12,7 +12,7 @@ import { resetTables } from '../../helpers/reset-db'
 let ownerId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [u] = await db.insert(users).values({ handle: 'nh-owner' }).returning({ id: users.id })
   ownerId = u.id
 })

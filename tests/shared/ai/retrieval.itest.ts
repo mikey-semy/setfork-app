@@ -23,7 +23,7 @@ const axis = (i: number) => {
 let ownerId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${embeddings}, ${templates}, ${users}`)
+  await resetTables([embeddings, templates, users])
   const [owner] = await db.insert(users).values({ handle: 'ret-owner' }).returning({ id: users.id })
   ownerId = owner.id
 
@@ -53,7 +53,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await resetTables(sql`${embeddings}, ${templates}, ${users}`)
+  await resetTables([embeddings, templates, users])
   vi.restoreAllMocks()
 })
 
