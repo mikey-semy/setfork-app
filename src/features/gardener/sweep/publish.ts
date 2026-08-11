@@ -21,13 +21,21 @@ import type { ProposedItem } from '@/shared/db'
  *
  * `note` приходит снаружи: он описывает ПРИЧИНУ правки (полировка, рост ленты,
  * авто-мёрдж), а её знает вызывающий, не этот модуль.
+ *
+ * `afterVersion` — то, что обязано быть записано ДО того, как о версии узнают.
+ * Порядок здесь нагружен, и это выяснилось дорого: авто-мёрдж на кураторском
+ * списке помечает предложение принятым, и если делать это ПОСЛЕ уведомлений,
+ * то сбой `getWatcherIds`/`enqueueReindex` оставит предложение открытым при уже
+ * записанной версии — а следующий проход смёржит его повторно, второй такой же
+ * версией. Обратный порядок в худшем случае теряет уведомление, и только.
  */
 export async function publishGardenerVersion(
   templateId: string,
   items: ProposedItem[],
-  opts: { note: string; authorId: string },
+  opts: { note: string; authorId: string; afterVersion?: () => Promise<void> },
 ): Promise<void> {
   await listStore.addVersion(templateId, { note: opts.note, steps: toStepInput(items), authorId: opts.authorId })
+  await opts.afterVersion?.()
   await notifyMany(await getWatcherIds(templateId, 'versions'), { actorId: opts.authorId, type: 'new_version', templateId })
   await enqueueReindex(templateId)
 }
