@@ -11,6 +11,8 @@ import { withPrDefaults } from '../pr-settings'
 import { closeLinkedIssues, notifyWatchersNewVersion } from '../suggestion-side-effects'
 // eslint-disable-next-line boundaries/dependencies -- уведомления автору и наблюдателям: тот же кросс-фич-паттерн, что в actions.ts
 import { notify } from '@/features/notifications/notify'
+// eslint-disable-next-line boundaries/dependencies -- права соавтора живут в collab
+import { isCollaborator } from '@/features/collab/queries'
 import { reviewGates } from './gates'
 import { currentRevision } from './revision'
 
@@ -33,7 +35,15 @@ export async function applySuggestion(
   const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
   if (!sug) return { ok: false, reason: 'not found' }
   if (sug.status !== 'open') return { ok: false, reason: `already ${sug.status}` }
-  if (sug.template.ownerId !== actorUserId) return { ok: false, reason: 'not your list' }
+  // Право ТО ЖЕ, что у слияния ветки: владелец или соавтор. Раньше здесь стоял
+  // только владелец, и одно и то же действие защищали два разных правила — соавтор
+  // мог влить предложение из ветки и не мог принять предложение из пунктов, хотя
+  // форму правки выбирал не он, а её автор. Так это устроено у других: у GitHub
+  // collaborator умеет и «merge pull requests», и «apply suggested changes» одной
+  // строкой прав; у Gitea `IsUserAllowedToMerge` спрашивает ровно
+  // `CanWrite(unit.TypeCode)` и вида предложения не различает.
+  if (sug.template.ownerId !== actorUserId && !(await isCollaborator(sug.templateId, actorUserId)))
+    return { ok: false, reason: 'not a maintainer' }
 
   // Ворота — те же, что у слияния ветки, и проверяются ЗДЕСЬ, а не в экшене: через
   // MCP правку принимают тем же ядром, и правила не должны зависеть от того, пришёл

@@ -156,7 +156,9 @@ describe('разбор правок из ассистента', () => {
       .values({ templateId: t.id, authorId: botId, baseVersion: 1, note: 'улучшение', items: [{ title: { ru: 'Новый шаг' }, desc: {}, command: '', hasImage: false, level: 'required', why: {}, section: {}, subtasks: [], refs: [] }] })
       .returning({ id: suggestions.id })
 
-    expect(await mcpApplySuggestion(botId, sug.id)).toMatchObject({ error: 'not your list' })
+    // «not a maintainer», а не «not your list»: право принять правку одно на оба вида
+    // предложения — владелец или соавтор (см. maintainer-parity.itest.ts).
+    expect(await mcpApplySuggestion(botId, sug.id)).toMatchObject({ error: 'not a maintainer' })
     expect(await mcpApplySuggestion(ownerId, sug.id)).toMatchObject({ version: 2 })
     // Повторный приём — уже принято, а не «ещё одна версия».
     expect(await mcpApplySuggestion(ownerId, sug.id)).toMatchObject({ error: 'already accepted' })
