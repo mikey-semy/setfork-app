@@ -16,7 +16,7 @@ describe('docsUrl', () => {
   it('домен берётся из DOCS_URL, лишнего слэша после хоста нет', () => {
     const url = docsUrl('/docs', 'ru')
     expect(url.startsWith(DOCS_URL)).toBe(true)
-    // после хоста ровно один слэш: ...setfork.ru/docs, не ...setfork.ru//docs
+    // после хоста ровно один слэш: ...setfork.com/docs, не ...setfork.com//docs
     expect(url.slice(DOCS_URL.length)).toBe('/docs')
   })
 })
