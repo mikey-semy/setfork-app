@@ -26,6 +26,7 @@ import { NotifyPrefsForm } from '@/features/notifications/NotifyPrefsForm'
 import { getUserSessions } from '@/features/sessions/queries'
 import { SessionsList } from '@/features/sessions/SessionsList'
 import { PAGE_X } from '@/shared/ui/control'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -50,9 +51,7 @@ export default async function SettingsPage() {
     getIncomingTransfers(session.userId),
     headers(),
   ])
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
-  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
-  const mcpUrl = `${proto}://${host}/api/mcp`
+  const mcpUrl = `${appOrigin()}/api/mcp`
 
   const sections: ShellSection[] = [
     // Секция появляется только при наличии входящих передач списков.

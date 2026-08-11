@@ -6,9 +6,10 @@ import { NextResponse } from 'next/server'
 import { lt } from 'drizzle-orm'
 import { db, telegramLoginTokens } from '@/shared/db'
 import { oauthEnabled } from '@/shared/auth/oauth'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 export async function GET() {
-  const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+  const appUrl = appOrigin()
   if (!oauthEnabled().telegram) {
     return NextResponse.redirect(`${appUrl}/login?e=oauth_off`)
   }

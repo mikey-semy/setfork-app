@@ -50,6 +50,7 @@ import { enqueueReindex } from '../jobs'
 import { recheckList } from '@/features/moderation/moderate-list'
 import { gitPort, ownerHandle } from './shared'
 import { withPrDefaults } from '../pr-settings'
+import { NOREPLY_DOMAIN } from '@/shared/site'
 
 /**
  * Предложения правок: подача, ветка-PR, обновление из main, слияние (в том числе с
@@ -483,7 +484,7 @@ export async function applySuggestedEdit(commentId: string): Promise<void> {
  * осознанная настройка, а не поведение по умолчанию.
  */
 function gitEmail(handle: string): string {
-  return `${handle}@users.noreply.setfork.com`
+  return `${handle}@${NOREPLY_DOMAIN}`
 }
 
 /**

@@ -10,6 +10,7 @@ import { enqueueJob } from '@/shared/jobs/queue'
 import { eq } from 'drizzle-orm'
 import { getGeneration } from '@/features/generation/queries'
 import { db as _db, users } from '@/shared/db'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 /**
  * Совет гномов через MCP (HQ §1, этап 2): council_draft ставит генерацию в ТУ ЖЕ
@@ -18,7 +19,7 @@ import { db as _db, users } from '@/shared/db'
  * Бонус: беседа сохраняется в истории и открывается на сайте по ссылке.
  */
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://setfork.com').replace(/\/$/, '')
+const SITE_URL = appOrigin()
 
 export async function mcpCouncilDraft(userId: string, rawQuery: string): Promise<{ draftId: string; status: string; url: string; note: string } | { error: string }> {
   const query = (rawQuery ?? '').trim().slice(0, 300)

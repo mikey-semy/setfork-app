@@ -5,10 +5,9 @@ import { db, issues, templates, users } from '@/shared/db'
 import { t, tr, type Lang, type TKey } from '@/shared/i18n'
 import type { NotificationType } from './queries'
 import { NOTIF_VERB } from './verbs'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 // Тип события → ключ глагола (тот же набор, что в колокольчике).
-
-const appUrl = () => (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '')
 
 export interface NotificationDisplay {
   actorHandle: string
@@ -57,14 +56,14 @@ export async function resolveNotificationDisplay(p: NotificationRef): Promise<No
   const listTitle = tpl ? tr(tpl.title, p.lang) : ''
   const verb = t(NOTIF_VERB[p.type], p.lang)
 
-  const base = tpl ? `${appUrl()}/${tpl.owner}/${tpl.slug}` : appUrl()
+  const base = tpl ? `${appOrigin()}/${tpl.owner}/${tpl.slug}` : appOrigin()
   const url =
     p.type === 'follow'
-      ? `${appUrl()}/${actorHandle}`
+      ? `${appOrigin()}/${actorHandle}`
       : // Приглашение принять владение — на страницу настроек (список может быть
         // приватным, получатель его ещё не видит; принять/отклонить — там).
         p.type === 'transfer_incoming'
-        ? `${appUrl()}/settings`
+        ? `${appOrigin()}/settings`
         : iss
           ? `${base}/issues/${iss.number}`
           : p.suggestionId && tpl

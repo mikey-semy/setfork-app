@@ -1,10 +1,9 @@
 import type { Lang } from '@/shared/i18n'
+import { ABOUT_URL, DOCS_ORIGIN } from '@/shared/site'
 
-// Документация — отдельный сайт (репо setfork-docs). Домен задаётся env
-// (для стендов), дефолт — канон: `setfork.ru` списан 11.08.2026. На этом дефолте
-// висят ссылки на политику и условия, а они обязаны открываться с того домена,
-// где работает сервис.
-export const DOCS_URL = process.env.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.setfork.com'
+// Документация — отдельный сайт (репо setfork-docs). Сам адрес и его дефолт живут
+// в `shared/site.ts`: здесь только сборка ссылок по языку и разделам.
+export const DOCS_URL = DOCS_ORIGIN
 
 /**
  * Ссылка на страницу доков с учётом языка. В доках язык по умолчанию —
@@ -14,13 +13,8 @@ export function docsUrl(path: string, lang: Lang): string {
   return `${DOCS_URL}${lang === 'en' ? '/en' : ''}${path}`
 }
 
-// «О проекте» — отдельный маркетинг-лендинг (проект setfork-about). Живёт по ПУТИ
-// /about основного домена (basePath, не поддомен — лучше для SEO). Домен задаётся
-// env-переменной; дефолт — канон (`setfork.ru` списан 11.08.2026). Ссылка стоит в
-// подвале КАЖДОЙ страницы и, с #748, в подвале каждого письма.
-const ABOUT_URL = process.env.NEXT_PUBLIC_ABOUT_URL ?? 'https://setfork.com/about'
-
-/** Ссылка на лендинг «О проекте». Одна на подвал сайта и на подвал писем. */
+/** Ссылка на лендинг «О проекте» (проект setfork-about, по ПУТИ канона — SEO).
+ *  Одна на подвал сайта и на подвал писем; адрес — из `shared/site.ts`. */
 export function aboutUrl(): string {
   return ABOUT_URL
 }

@@ -2,6 +2,7 @@ import 'server-only'
 import { getSettings, saveSettings } from '@/shared/settings/kv'
 import { prettyModelName } from './model-names'
 import seed from './price-book.seed.json'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 /**
  * ПРАЙС-КНИГА — цены как ДАННЫЕ, а не как таблица в коде.
@@ -104,8 +105,7 @@ async function priceBookFromSource(refs: string | undefined, base: PriceBook): P
     .map((r) => r.trim().replace(/^\/+|\/+$/g, ''))
     .filter((p) => /^[^/]+\/[^/]+$/.test(p))
   if (!paths.length) return null
-  const origin = (process.env.APP_URL || process.env.SETFORK_APP_URL || '').replace(/\/$/, '')
-  if (!origin) return null
+  const origin = appOrigin()
   // Списки независимы — тянем ОДНОВРЕМЕННО, а складываем строго в порядке ссылок: порядок
   // задаёт приоритет строк, и терять его из-за того, кто первым ответил, нельзя.
   const loaded = await Promise.all(

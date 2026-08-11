@@ -4,6 +4,7 @@ import { COLUMN_DIM, fitToColumn, getIndexSpace, type EmbedProvider, type EmbedS
 import { rememberCapability } from './embed-capability'
 import { recordUsage } from './usage'
 import { dataCollectionPolicy } from './provider'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 // Эмбеддинги идут по ПРОСТРАНСТВУ ИНДЕКСА (embed-space): и документы при
 // индексации, и поисковые запросы — одним провайдером/моделью/мерностью, иначе
@@ -60,7 +61,7 @@ async function endpointFor(
     headers: {
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
+      'HTTP-Referer': appOrigin(),
       'X-Title': 'SetFork',
     },
     body: { provider: { data_collection: dataCollectionPolicy() } },

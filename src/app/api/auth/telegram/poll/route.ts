@@ -14,9 +14,10 @@ import { upsertOauthUser } from '@/shared/auth/users'
 import { finishOauthLogin } from '@/features/auth/oauth-finish'
 import { rateLimit } from '@/shared/rate-limit'
 import { telegramLoginCode } from '@/shared/telegram'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 export async function POST(req: Request) {
-  const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+  const appUrl = appOrigin()
   const c = await cookies()
   const token = c.get('tg_login')?.value
   if (!token) return NextResponse.json({ error: 'expired' })
