@@ -306,12 +306,12 @@
   },
   "src/features/library/actions/forks.ts": {
     "boundaries/dependencies": {
-      "count": 4
+      "count": 1
     }
   },
   "src/features/library/actions/list-settings.ts": {
     "boundaries/dependencies": {
-      "count": 8
+      "count": 3
     }
   },
   "src/features/library/actions/shared.ts": {
@@ -319,9 +319,24 @@
       "count": 1
     }
   },
+  "src/features/library/actions/suggestion-branch.ts": {
+    "boundaries/dependencies": {
+      "count": 5
+    }
+  },
+  "src/features/library/actions/suggestion-comments.ts": {
+    "boundaries/dependencies": {
+      "count": 4
+    }
+  },
+  "src/features/library/actions/suggestion-items.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
   "src/features/library/actions/suggestions.ts": {
     "boundaries/dependencies": {
-      "count": 8
+      "count": 4
     }
   },
   "src/features/library/actions/versions.ts": {
