@@ -27,7 +27,7 @@ const journalFor = async (loop: string) =>
   (await db.select().from(agentActions)).filter((a) => a.loop === loop)
 
 beforeEach(async () => {
-  await resetTables(sql`${agentActions}, ${templates}, ${users}`)
+  await resetTables([agentActions, templates, users])
 })
 
 describe('сухой прогон уважает каждая петля', () => {

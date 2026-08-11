@@ -5,6 +5,9 @@ import { caretCoords } from './caret-coords'
 
 export type MentionUser = { handle: string; avatarUrl: string | null }
 
+/** Сколько подсказок показываем: больше в узкий список всё равно не помещается. */
+const LIMIT = 8
+
 /**
  * Упоминания «@handle» в текстовом поле: распознавание по каретке, поиск людей,
  * выбор стрелками и вставка.
@@ -18,11 +21,15 @@ export function useMention({
   value,
   ref,
   apply,
+  people = [],
 }: {
   value: string
   ref: RefObject<HTMLTextAreaElement | null>
   /** Замена текста с установкой каретки — общая с редактором. */
   apply: (next: string, selStart: number, selEnd: number) => void
+  /** Причастные к этому месту (автор, исполнители, комментаторы): их показываем
+   *  СРАЗУ после «@», не дожидаясь сети — почти всегда упоминают именно их. */
+  people?: MentionUser[]
 }) {
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
   const [users, setUsers] = useState<MentionUser[]>([])
@@ -41,15 +48,25 @@ export function useMention({
 
   async function search(query: string) {
     const my = ++seq.current
+    const q = query.toLowerCase()
+    // Причастные — мгновенно, ещё до сети (в том числе при пустом запросе сразу
+    // после «@»): чаще всего упоминают именно их, и ждать ответа незачем.
+    const near = people.filter((p) => !q || p.handle.toLowerCase().startsWith(q)).slice(0, LIMIT)
+    setUsers(near)
+    setIndex(0)
+    if (!query) return
     try {
       const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
       const data = (await res.json()) as MentionUser[]
       if (my === seq.current) {
-        setUsers(Array.isArray(data) ? data.slice(0, 8) : [])
+        // Причастные остаются первыми, сетевые — следом и без повторов.
+        const seen = new Set(near.map((p) => p.handle))
+        const rest = (Array.isArray(data) ? data : []).filter((u) => !seen.has(u.handle))
+        setUsers([...near, ...rest].slice(0, LIMIT))
         setIndex(0)
       }
     } catch {
-      /* сеть отвалилась — списка просто не будет */
+      /* сеть отвалилась — останутся причастные, список не опустеет */
     }
   }
 

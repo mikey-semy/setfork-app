@@ -23,7 +23,7 @@ type Block = {
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${steps}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([steps, templateVersions, templates, users])
   const [u] = await db.insert(users).values({ handle: 'blame-owner' }).returning({ id: users.id })
   const [t] = await db
     .insert(templates)

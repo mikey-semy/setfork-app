@@ -1,4 +1,5 @@
-import { sql, type SQL } from 'drizzle-orm'
+import { getTableName, sql } from 'drizzle-orm'
+import type { PgTable } from 'drizzle-orm/pg-core'
 import { db } from '@/shared/db'
 
 /**
@@ -42,13 +43,91 @@ async function blockers(): Promise<Blocker[]> {
 }
 
 /**
- * `resetTables(sql`${templates}, ${users}`)` — то же, что прежний
- * `truncate table … restart identity cascade`, но с потолком ожидания.
+ * `resetTables([templates, users])` — очистка между тестами.
+ *
+ * DELETE, а не TRUNCATE. Замер 11.08 на тех же пяти таблицах: **TRUNCATE …
+ * RESTART IDENTITY CASCADE — 3940 мс, DELETE в одной транзакции — 17 мс**, разница
+ * в 230 раз. Причина не в объёме данных (таблицы почти пусты), а в том, что
+ * CASCADE тянет по внешним ключам половину схемы и берёт на каждую ACCESS
+ * EXCLUSIVE. Отсюда и четыре секунды на файл, и сами блокировки: 75 файлов по
+ * четыре секунды — это пять минут прогона в чистом ожидании, а под нагрузкой CI
+ * хук выбивал 30-секундный потолок (fe#743, fe#745 — таймауты в разных файлах).
+ *
+ * Сброс последовательностей (RESTART IDENTITY) не нужен: идентификаторы в схеме —
+ * UUID, а номера (issue, suggestion) считает код и передаёт явно.
  */
-async function truncate(tables: SQL, restart: SQL, cascade: SQL) {
+/**
+ * Замыкание зависимостей: кто ссылается на эти таблицы, прямо или через цепочку.
+ *
+ * `TRUNCATE … CASCADE` уносил такие строки сам, `DELETE` — нет: при
+ * `ON DELETE SET NULL` (в схеме таких связей 29) строка остаётся, у неё лишь
+ * обнуляется ключ. Например `ai_usage.user_id` — записи пережили бы удаление
+ * автора и легли бы «системным» расходом в дневной кап следующего теста
+ * (`shared/quota.ts` суммирует таблицу целиком, без фильтра по автору).
+ * Так тесты начинают зависеть от порядка прогона — находка авто-ревью на fe#747.
+ *
+ * Карта строится из каталога Postgres один раз на процесс: она не меняется.
+ */
+let dependents: Map<string, string[]> | null = null
+
+async function dependentsOf(names: string[]): Promise<string[]> {
+  if (!dependents) {
+    // sql.raw, а не шаблон: drizzle спотыкается о `::` в приведении типов.
+    const res = await db.execute(
+      sql.raw(
+        "select c.conrelid::regclass::text as child, c.confrelid::regclass::text as parent " +
+          "from pg_constraint c join pg_class p on p.oid = c.confrelid " +
+          "where c.contype = 'f' and p.relnamespace = 'public'::regnamespace",
+      ),
+    )
+    const rows = ((res as unknown as { rows?: { child: string; parent: string }[] }).rows ??
+      (res as unknown as { child: string; parent: string }[])) as { child: string; parent: string }[]
+    dependents = new Map()
+    for (const { child, parent } of rows) {
+      const key = parent.replace(/^public\./, '')
+      const val = child.replace(/^public\./, '')
+      if (key === val) continue // самоссылка чистится тем же DELETE
+      dependents.set(key, [...(dependents.get(key) ?? []), val])
+    }
+  }
+  // Обход вширь: дети детей тоже уносятся, как это делал CASCADE.
+  const seen = new Set(names)
+  const order: string[] = []
+  const queue = [...names]
+  while (queue.length) {
+    const cur = queue.shift() as string
+    for (const child of dependents.get(cur) ?? []) {
+      if (seen.has(child)) continue
+      seen.add(child)
+      order.push(child)
+      queue.push(child)
+    }
+  }
+  // Дети — первыми: сначала уносим ссылающихся, потом тех, на кого ссылаются.
+  return order.reverse()
+}
+
+async function wipe(tables: PgTable[]) {
+  const names = tables.map(getTableName)
+  const extra = await dependentsOf(names)
+  // Брошенных писателей снимаем ДО удаления, а не по факту отказа.
+  //
+  // `DELETE` берёт ROW EXCLUSIVE, а он совместим с чужим писателем: прерванный
+  // тест с незакоммиченным INSERT не помешает удалению (его строки нам не видны),
+  // очистка отчитается успехом — и следующий тест с тем же уникальным значением
+  // встанет на индексе. Раньше висяк вскрывал сам TRUNCATE своей ACCESS EXCLUSIVE.
+  //
+  // Пробовал вернуть детектор явной блокировкой (SHARE ROW EXCLUSIVE перед
+  // удалением) — стало хуже: полный прогон 575 с против 306 и два падения, потому
+  // что блокировка конфликтует и с фоновой записью внутри самих тестов. Поэтому
+  // не блокируем, а убираем именно брошенных: один дешёвый запрос к каталогу.
+  await dropStuckTransactions()
   await db.transaction(async (tx) => {
     await tx.execute(sql.raw(`set local lock_timeout = '${LOCK_WAIT}'`))
-    await tx.execute(sql`truncate table ${tables}${restart}${cascade}`)
+    // Сначала зависимые (их принёс обход каталога), затем названные вызывающим в
+    // его порядке — дети перед родителями.
+    for (const name of extra) await tx.execute(sql.raw(`delete from "${name}"`))
+    for (const t of tables) await tx.execute(sql`delete from ${t}`)
   })
 }
 
@@ -64,11 +143,9 @@ async function dropStuckTransactions(): Promise<number> {
   return rows.length
 }
 
-export async function resetTables(tables: SQL, opts: { restartIdentity?: boolean; cascade?: boolean } = {}) {
-  const restart = opts.restartIdentity === false ? sql`` : sql` restart identity`
-  const cascade = opts.cascade === false ? sql`` : sql` cascade`
+export async function resetTables(tables: PgTable[]) {
   try {
-    await truncate(tables, restart, cascade)
+    await wipe(tables)
   } catch (e) {
     // drizzle заворачивает ошибку драйвера в свою: код лежит в cause, а не сверху.
     // Проверять только верхний уровень — значит никогда не увидеть 55P03.
@@ -93,7 +170,7 @@ export async function resetTables(tables: SQL, opts: { restartIdentity?: boolean
     if (killed > 0) {
       // В логе прогона должно остаться, что база чинилась сама.
       console.warn(`[reset-db] сняты ${killed} зависших соединений (idle in transaction), повтор очистки.\nДержали:\n${who}`)
-      await truncate(tables, restart, cascade)
+      await wipe(tables)
       return
     }
 

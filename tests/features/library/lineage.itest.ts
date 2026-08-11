@@ -13,7 +13,7 @@ let userId = ''
 let tplId = ''
 
 beforeAll(async () => {
-  await resetTables(sql`${generationCandidates}, ${generations}, ${templates}, ${users}`)
+  await resetTables([generationCandidates, generations, templates, users])
   const [u] = await db.insert(users).values({ handle: 'lin-owner' }).returning({ id: users.id })
   userId = u.id
   const [t] = await db.insert(templates).values({ ownerId: userId, slug: 'bread', title: { ru: 'Хлеб' } }).returning({ id: templates.id })

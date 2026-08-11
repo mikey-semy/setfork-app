@@ -79,7 +79,7 @@ const service = (path: 'git-upload-pack' | 'git-receive-pack') =>
   })
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [u] = await db.insert(users).values({ handle: OWNER }).returning({ id: users.id })
   ownerId = u.id
   await db.insert(templates).values({ ownerId, slug: SLUG, title: { en: 'bread' }, currentVersion: 1 })

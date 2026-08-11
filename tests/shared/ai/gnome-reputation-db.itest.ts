@@ -25,7 +25,7 @@ const genWith = async (drafters: string[], accepted: boolean, extra: { kind?: st
 }
 
 beforeEach(async () => {
-  await resetTables(sql`${gnomeThanks}, ${generationMessages}, ${generations}, ${templates}, ${users}`)
+  await resetTables([gnomeThanks, generationMessages, generations, templates, users])
   const [u] = await db.insert(users).values({ handle: 'rep-user' }).returning({ id: users.id })
   userId = u.id
   const [t] = await db.insert(templates).values({ ownerId: userId, slug: 'rep-list', title: { ru: 'Список' } }).returning({ id: templates.id })
@@ -34,7 +34,7 @@ beforeEach(async () => {
   await new Promise((r) => setTimeout(r, 0))
 })
 afterAll(async () => {
-  await resetTables(sql`${gnomeThanks}, ${generationMessages}, ${generations}, ${templates}, ${users}`)
+  await resetTables([gnomeThanks, generationMessages, generations, templates, users])
 })
 
 /** Свежая репутация без кэша: кэш живёт внутри модуля, поэтому перечитываем модуль. */

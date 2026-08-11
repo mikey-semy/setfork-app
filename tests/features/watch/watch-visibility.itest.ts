@@ -52,7 +52,7 @@ const watchRows = (listId: string, userId: string) =>
   db.select().from(watches).where(and(eq(watches.templateId, listId), eq(watches.userId, userId)))
 
 beforeAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   for (const k of ['owner', 'stranger', 'collab']) {
     const [u] = await db.insert(users).values({ handle: `w-${k}`, name: k }).returning({ id: users.id })
     uid[k] = u.id

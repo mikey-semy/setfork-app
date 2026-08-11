@@ -12,7 +12,7 @@ let listId = ''
 const ids: Record<string, string> = {}
 
 beforeAll(async () => {
-  await resetTables(sql`${watches}, ${templates}, ${users}`)
+  await resetTables([watches, templates, users])
   const [owner] = await db.insert(users).values({ handle: 'wowner' }).returning({ id: users.id })
   const [tpl] = await db
     .insert(templates)
@@ -30,7 +30,7 @@ beforeAll(async () => {
   await curationStore.setWatch(listId, ids.ue, 'custom', { versions: true })
 })
 afterAll(async () => {
-  await resetTables(sql`${watches}, ${templates}, ${users}`)
+  await resetTables([watches, templates, users])
 })
 
 describe('watch-уровни: доставка watcherIds', () => {

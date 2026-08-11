@@ -66,7 +66,7 @@ const openCount = async (templateId: string) => {
 const ID_BRANCH = 'u/0d5a3f6e-6a1c-4a25-9f5f-2b0a1c9d7e11/main'
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [o] = await db.insert(users).values({ handle: 'bowner' }).returning({ id: users.id })
   const [a] = await db.insert(users).values({ handle: 'bauthor' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'bother' }).returning({ id: users.id })
@@ -75,7 +75,7 @@ beforeEach(async () => {
   otherId = x.id
 })
 afterAll(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
 })
 
 describe('ветка правки сменила имя в окно выкатки', () => {

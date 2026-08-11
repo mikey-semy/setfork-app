@@ -26,7 +26,7 @@ async function tokenWithScope(scope: string): Promise<string> {
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${users}`)
+  await resetTables([users])
   const [u] = await db.insert(users).values({ handle: 'tok-owner' }).returning({ id: users.id })
   userId = u.id
 })

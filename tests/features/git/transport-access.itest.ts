@@ -76,7 +76,7 @@ const makeList = async (slug: string, over: Record<string, unknown> = {}) => {
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${collaborators}, ${templates}, ${users}`)
+  await resetTables([collaborators, templates, users])
   for (const k of ['owner', 'collab', 'stranger']) {
     const [u] = await db
       .insert(users)

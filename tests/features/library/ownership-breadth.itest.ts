@@ -33,7 +33,7 @@ const isStarred = async (userId: string, templateId: string) =>
   !!(await db.select({ id: stars.id }).from(stars).where(and(eq(stars.userId, userId), eq(stars.templateId, templateId))).limit(1)).length
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [o] = await db.insert(users).values({ handle: 'bowner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'bother' }).returning({ id: users.id })
   ownerId = o.id

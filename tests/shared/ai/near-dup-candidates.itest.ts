@@ -28,7 +28,7 @@ async function makeList(slug: string, title: string, itemTitles: string[]) {
 }
 
 beforeEach(async () => {
-  await resetTables(sql`${templates}, ${users}`)
+  await resetTables([templates, users])
   const [u] = await db.insert(users).values({ handle: 'dup-owner' }).returning({ id: users.id })
   ownerId = u.id
 })

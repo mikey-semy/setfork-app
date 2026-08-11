@@ -6,6 +6,7 @@ import { TagChip } from '@/shared/ui/TagChip'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE } from '@/shared/ui/control'
+import { ExploreNav } from '@/widgets/explore/ExploreNav'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -18,7 +19,11 @@ export default async function TagsIndexPage() {
   const [lang, tags] = await Promise.all([getLang(), listTags({ limit: 300 })])
 
   return (
-    <div className={PAGE}>
+    // Навигация раздела «открытие» — та же, что на /explore, /trending и /collections:
+    // страница теперь одна из его вкладок, и уходить с неё человек должен так же.
+    <div className="w-full">
+      <ExploreNav active="tags" lang={lang} />
+      <div className={PAGE}>
       {/* «Теги» уже написаны в шапке приложения — на странице остаётся пояснение. */}
       <PageHeader hideTitle title={t('tags', lang)} subtitle={t('tags.browseListsByTag', lang)} />
       {tags.length ? (
@@ -37,6 +42,7 @@ export default async function TagsIndexPage() {
       ) : (
         <EmptyState icon={<Tag size={28} />} title={t('tags.noTagsYet', lang)} />
       )}
+      </div>
     </div>
   )
 }

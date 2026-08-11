@@ -35,7 +35,7 @@ const countFor = async (idx: number) => {
 }
 
 beforeAll(async () => {
-  await resetTables(sql`${generations}, ${users}`)
+  await resetTables([generations, users])
   const [u] = await db.insert(users).values({ handle: 'gen-owner' }).returning({ id: users.id })
   userId = u.id
 })

@@ -17,7 +17,7 @@ const SLUG = 'server-maintenance'
 const BIDS = { disk: randomUUID(), logs: randomUUID(), prune: randomUUID(), restart: randomUUID() }
 
 beforeAll(async () => {
-  await resetTables(sql`${steps}, ${templateVersions}, ${templates}, ${users}`)
+  await resetTables([steps, templateVersions, templates, users])
   const [u] = await db.insert(users).values({ handle: 'ops' }).returning({ id: users.id })
   ownerId = u.id
   const [t] = await db
