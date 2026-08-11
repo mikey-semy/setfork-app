@@ -1,9 +1,7 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm'
-import { agentActions, db, suggestions, templates, templateVersions, users } from '@/shared/db'
-
-/** Ритм обычного прохода — он же задаёт окно «недавно предлагали». */
-const GARDENER_EVERY_DAYS = 2
+import { and, asc, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm'
+import { agentActions, db, suggestions, templates, users } from '@/shared/db'
+import { GARDENER_EVERY_DAYS } from './schedule'
 
 /**
  * Кого садовник трогает в этом проходе: выбор списков-кандидатов и две проверки,

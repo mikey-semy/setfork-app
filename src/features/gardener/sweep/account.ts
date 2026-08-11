@@ -1,18 +1,13 @@
 import 'server-only'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db, jobs, templates, users } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { HOME_REALM } from '@/shared/ai/gnome-names'
 import { log } from '@/shared/observability'
+import { GARDENER_EVERY_DAYS, LIVING_EVERY_HOURS } from './schedule'
 
-/** Ник сервисного аккаунта и ритм прохода — здесь же, где он заводится. */
+/** Ник сервисного аккаунта — здесь же, где он заводится. Ритм — в schedule. */
 const GARDENER_HANDLE = 'gardener'
-const GARDENER_EVERY_DAYS = 2
-/**
- * Ритм для живых списков. Шесть часов, а не час: материал в поток приходит по своему
- * расписанию, и чаще будить проход значит платить за refine там, где новостей ещё нет.
- */
-const LIVING_EVERY_HOURS = 6
 
 /**
  * Сервисный аккаунт садовника и его расписание.
