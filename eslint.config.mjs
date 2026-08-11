@@ -126,6 +126,19 @@ export default [
         // оркестрировать фичи. Идут ДО features/* — первый матч выигрывает.
         { type: 'mcp', pattern: 'src/features/mcp' },
         { type: 'admin', pattern: 'src/features/admin' },
+        // Садовник — АВТОНОМНАЯ ПЕТЛЯ над библиотекой: своей предметной области у
+        // него нет, есть только работа над чужой (пишет версии через list-store,
+        // извещает через notifications, читает подписки через watch). Это тот же
+        // слой оркестрации, что mcp и admin, только запускает его расписание, а не
+        // запрос: у Gitea фоновые задачи живут в `services/cron` — рядом с тем, что
+        // обслуживает HTTP, а не в слое домена; у Feature-Sliced Design оркестрация
+        // нескольких фич принадлежит app (бывший слой processes), а не features.
+        //
+        // ПРИЗНАК, по которому сюда попадают (проверяемый, а не на вкус): каталог
+        // никто не импортирует СНИЗУ — только реестр петель и instrumentation.
+        // По этому же признаку кандидаты на следующий заход: linkcheck, digest,
+        // backoffice, knowledge (замер 11.08: ноль импортёров у каждого).
+        { type: 'gardener', pattern: 'src/features/gardener' },
         { type: 'features', pattern: 'src/features/*', capture: ['feature'] },
         { type: 'widgets', pattern: 'src/widgets' },
         { type: 'app', pattern: 'src/app' },
@@ -148,9 +161,10 @@ export default [
             { from: { type: 'widgets' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
             { from: { type: 'mcp' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
             { from: { type: 'admin' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
+            { from: { type: 'gardener' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
             {
               from: { type: 'app' },
-              allow: { to: [{ type: 'mcp' }, { type: 'admin' }, { type: 'widgets' }, { type: 'features' }, { type: 'shared' }, { type: 'core' }] },
+              allow: { to: [{ type: 'mcp' }, { type: 'admin' }, { type: 'gardener' }, { type: 'widgets' }, { type: 'features' }, { type: 'shared' }, { type: 'core' }] },
             },
           ],
         },

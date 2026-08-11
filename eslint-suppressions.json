@@ -234,31 +234,6 @@
       "count": 1
     }
   },
-  "src/features/gardener/service.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/features/gardener/sweep/diverge.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/features/gardener/sweep/living.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/features/gardener/sweep/publish.ts": {
-    "boundaries/dependencies": {
-      "count": 4
-    }
-  },
-  "src/features/gardener/sweep/readiness-gate.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/features/generation/actions.ts": {
     "boundaries/dependencies": {
       "count": 4
