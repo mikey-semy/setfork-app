@@ -1920,6 +1920,11 @@ export const en = {
   'editor.optionN': 'Option {n}',
   'editor.removeOption': 'Remove option',
   'editor.addOption': 'option',
+  // Страница предложения: сравнение версий и судьба ветки
+  'pr.basedOnV': 'based on v{v}',
+  'pr.baseToSuggestion': 'v{v} → suggestion',
+  'pr.becomesV': 'becomes v{v}',
+  'pr.branchDeletedStale': 'Branch “{branch}” was deleted — this PR is stale and can only be closed.',
   'poll.questionPh': 'Poll question',
   'poll.multi': 'Multi-select',
   'poll.deadline': 'Deadline',
