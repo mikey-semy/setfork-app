@@ -110,6 +110,18 @@ async function dependentsOf(names: string[]): Promise<string[]> {
 async function wipe(tables: PgTable[]) {
   const names = tables.map(getTableName)
   const extra = await dependentsOf(names)
+  // Брошенных писателей снимаем ДО удаления, а не по факту отказа.
+  //
+  // `DELETE` берёт ROW EXCLUSIVE, а он совместим с чужим писателем: прерванный
+  // тест с незакоммиченным INSERT не помешает удалению (его строки нам не видны),
+  // очистка отчитается успехом — и следующий тест с тем же уникальным значением
+  // встанет на индексе. Раньше висяк вскрывал сам TRUNCATE своей ACCESS EXCLUSIVE.
+  //
+  // Пробовал вернуть детектор явной блокировкой (SHARE ROW EXCLUSIVE перед
+  // удалением) — стало хуже: полный прогон 575 с против 306 и два падения, потому
+  // что блокировка конфликтует и с фоновой записью внутри самих тестов. Поэтому
+  // не блокируем, а убираем именно брошенных: один дешёвый запрос к каталогу.
+  await dropStuckTransactions()
   await db.transaction(async (tx) => {
     await tx.execute(sql.raw(`set local lock_timeout = '${LOCK_WAIT}'`))
     // Сначала зависимые (их принёс обход каталога), затем названные вызывающим в
