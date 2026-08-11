@@ -44,6 +44,9 @@ export function useIssueRef(ctx: {
     const my = ++seq.current
     try {
       const res = await fetch(`/api/issues/search?owner=${encodeURIComponent(scope.owner)}&slug=${encodeURIComponent(scope.slug)}&q=${encodeURIComponent(query)}`)
+      // Ответ с ошибкой — это не список задач: разбирать его как список значит выдать
+      // тело ошибки за выдачу (Array.isArray спасал молча и не всегда).
+      if (!res.ok) return
       const data = (await res.json()) as IssueHit[]
       if (my === seq.current) {
         setHits(Array.isArray(data) ? data : [])
