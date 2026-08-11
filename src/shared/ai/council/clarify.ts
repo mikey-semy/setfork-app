@@ -52,8 +52,9 @@ ${spotlightRule}`,
   try {
     const g = JSON.parse(firstJson(gate.text)) as { ask?: boolean; questions?: string[] }
     if (g.ask !== true) return []
+    // flatMap, а не filter().map(): один проход, пустые и не-строки отсеиваются сразу.
     const questions = Array.isArray(g.questions)
-      ? g.questions.filter((q) => typeof q === 'string' && q.trim()).map((q) => q.trim()).slice(0, MAX_QUESTIONS)
+      ? g.questions.flatMap((q) => (typeof q === 'string' && q.trim() ? [q.trim()] : [])).slice(0, MAX_QUESTIONS)
       : []
     return questions.length && !wrongLanguage(questions, lang) ? questions : []
   } catch {
