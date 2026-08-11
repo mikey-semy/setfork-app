@@ -35,7 +35,9 @@ export async function checkUrl(url: string): Promise<LinkVerdict> {
     const r = await fetchPublicUrlDetailed(url, {
       method,
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { 'user-agent': 'SetForkLinkCheck/1.0 (+https://setfork.ru)' },
+      // Домен в user-agent — визитка обходчика для владельцев сайтов: он обязан вести
+      // на живой сервис, `setfork.ru` списан 11.08.2026.
+      headers: { 'user-agent': 'SetForkLinkCheck/1.0 (+https://setfork.com)' },
     })
     r.res?.body?.cancel().catch(() => {}) // тело не нужно — освобождаем сокет
     return r.res ? r.res.status : null // null = SSRF-отказ/сеть → 'unknown'
