@@ -89,6 +89,10 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
   let skipped = 0
   let published = 0
   let diverged = 0
+  // Списки обрабатываются ПОСЛЕДОВАТЕЛЬНО намеренно, и распараллелить их нельзя:
+  // каждая итерация зовёт платную модель, а глобальный бюджет и суточная квота
+  // автопубликаций проверяются ПО ХОДУ. Запустив партию разом, мы бы узнавали об
+  // исчерпании бюджета уже после того, как заплатили за всю партию.
   for (const tpl of candidates) {
     const { lang, kind, current } = await snapshotOf(tpl)
 
