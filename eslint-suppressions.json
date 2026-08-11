@@ -29,11 +29,6 @@
       "count": 3
     }
   },
-  "src/app/[handle]/[slug]/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 9
-    }
-  },
   "src/app/[handle]/[slug]/releases/new/page.tsx": {
     "no-restricted-syntax": {
       "count": 9
