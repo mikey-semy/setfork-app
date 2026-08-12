@@ -536,7 +536,6 @@ export const en = {
   unorderedLabel: 'Unordered',
   unorderedHint: 'A set/list — order doesn’t matter.',
   clear: 'Clear',
-  contributions: 'contributions',
   inLastYear: 'in the last year',
   less: 'Less',
   more: 'More',

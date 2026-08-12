@@ -13,8 +13,8 @@ import { dayKey, parseDayKey, type DayKey } from './types'
 /** Стрелки двигают фокус: вверх/вниз — соседний день, влево/вправо — соседняя неделя. */
 const STEP: Record<string, number> = { ArrowUp: -1, ArrowDown: 1, ArrowLeft: -7, ArrowRight: 7 }
 
-/** Подпись дня: «5 вкладов 12 августа 2026» — и в тултипе, и для скринридера. */
-export function dayLabel(cell: { date: string; count: number }, lang: Lang): string {
+/** Подпись дня: «5 вкладов 12 августа 2026» — и в подсказке, и для скринридера. */
+function dayLabel(cell: { date: string; count: number }, lang: Lang): string {
   const date = fullDate(parseDayKey(cell.date) ?? cell.date, lang)
   return cell.count === 0
     ? fill('profile.activity.noContributionsOn', lang, { date })

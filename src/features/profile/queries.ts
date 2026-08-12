@@ -42,6 +42,7 @@ export async function getActivityTopics(userId: string, from: Date, to: Date, vi
     // остаётся честной, хотя перечисляем мы только топ.
     db.execute(sql`
       select t.slug, t.title, count(*)::int as count, max(tv.created_at) as at,
+             max(max(tv.created_at)) over () as topic_at,
              (count(*) over ())::int as lists_total, (sum(count(*)) over ())::int as versions_total
       from template_versions tv join templates t on t.id = tv.template_id
       where t.owner_id = ${userId} and tv.created_at >= ${from} and tv.created_at < ${to} ${visV}
@@ -62,18 +63,19 @@ export async function getActivityTopics(userId: string, from: Date, to: Date, vi
       where s.author_id = ${userId} and s.created_at >= ${from} and s.created_at < ${to} ${visV}`),
   ])
 
-  const versions = (verRows.rows ?? []) as { slug: string; title: LocaleText; count: number; at: string; lists_total: number; versions_total: number }[]
+  const versions = (verRows.rows ?? []) as { slug: string; title: LocaleText; count: number; at: string; topic_at: string; lists_total: number; versions_total: number }[]
   const lists = (created.rows ?? []) as { slug: string; title: LocaleText; at: string; total: number }[]
   const issues = issuesAgg.rows[0] as { n: number; lists: number; at: string | null } | undefined
   const suggs = suggAgg.rows[0] as { n: number; at: string | null } | undefined
 
   const topics: ActivityTopic[] = []
-  const versionsAt = at(versions[0])
+  // Время темы берём оконным максимумом: перечисляем мы топ по числу версий, а
+  // самая поздняя правка легко может оказаться в списке, который в топ не попал.
+  const versionsAt = versions[0] ? at({ at: versions[0].topic_at }) : null
   if (versionsAt) {
     topics.push({
       kind: 'versions',
-      // Топ отсортирован по числу версий, а время темы — самое позднее из всех.
-      at: versions.reduce((max, v) => (at(v)! > max ? at(v)! : max), versionsAt),
+      at: versionsAt,
       total: Number(versions[0].versions_total),
       listsTotal: Number(versions[0].lists_total),
       lists: versions.map((v) => ({ slug: v.slug, title: v.title, count: Number(v.count) })),

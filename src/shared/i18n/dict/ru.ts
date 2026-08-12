@@ -528,7 +528,6 @@ export const ru: Record<DictKey, string> = {
   unorderedLabel: 'Без порядка',
   unorderedHint: 'Набор/список — порядок неважен.',
   clear: 'Очистить',
-  contributions: 'вкладов',
   inLastYear: 'за последний год',
   less: 'меньше',
   more: 'больше',
