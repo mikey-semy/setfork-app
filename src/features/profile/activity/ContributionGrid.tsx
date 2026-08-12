@@ -65,18 +65,24 @@ export function ContributionGrid({
     }
   }, [tip])
 
+  // Клавиши ходят по дням С ВКЛАДАМИ: пустые клетки выбирать нечего, поэтому они
+  // и не кнопки — шагаем дальше в ту же сторону, пока не найдём следующую живую.
   const moveFocus = (from: DayKey, days: number) => {
     const at = parseDayKey(from)
     if (!at) return
-    at.setDate(at.getDate() + days)
-    const next = gridRef.current?.querySelector<HTMLButtonElement>(`[data-date="${dayKey(at)}"]`)
-    if (!next) return // край сетки или день без квадратика — фокус остаётся на месте
-    setRoving(dayKey(at))
-    next.focus()
+    for (let i = 0; i < calendar.weeks.length * 7; i++) {
+      at.setDate(at.getDate() + days)
+      const next = gridRef.current?.querySelector<HTMLButtonElement>(`[data-date="${dayKey(at)}"]`)
+      if (next) {
+        setRoving(dayKey(at))
+        next.focus()
+        return
+      }
+    }
   }
 
   return (
-    <div className="relative inline-flex flex-col gap-1" style={{ direction: 'ltr' }} ref={gridRef}>
+    <div className="relative inline-flex flex-col gap-1 p-0.5" style={{ direction: 'ltr' }} ref={gridRef}>
       {/* key по дню: новая клетка = новая подсказка, и переворот вниз считается заново. */}
       {tip && <DayTip key={tip.text} anchor={tip} />}
       {/* Строка месяцев ровно h-[0.8125rem] (= spacer колонки дней), текст прижат вниз к клеткам. */}
@@ -93,6 +99,14 @@ export function ContributionGrid({
             {week.map((cell, di) =>
               cell.blank ? (
                 <div key={di} className="h-[0.6875rem] w-[0.6875rem]" />
+              ) : cell.count === 0 ? (
+                // День без вкладов фильтровать нечем: подсказку показываем, кнопкой не делаем.
+                <div
+                  key={di}
+                  className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] transition-opacity ${LEVEL[0]} ${selected ? 'opacity-30' : 'opacity-100'}`}
+                  onMouseEnter={(e) => showTip(e.currentTarget, cell)}
+                  onMouseLeave={() => setTip(null)}
+                />
               ) : (
                 <button
                   key={di}
@@ -114,12 +128,10 @@ export function ContributionGrid({
                   onBlur={() => setTip(null)}
                   // Выбранный день остаётся в полную силу и с кольцом, остальные
                   // уходят в фон — видно, какой срез сейчас показывает лента.
+                  // Кольцо БЕЗ offset: с зазором оно у крайних клеток вылезало за
+                  // окно прокрутки и срезалось. Место под сами 2px даёт p-0.5 сетки.
                   className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] touch-manipulation transition-opacity ${LEVEL[level(cell.count)]} ${
-                    selected === cell.date
-                      ? 'opacity-100 ring-2 ring-accent ring-offset-1 ring-offset-surface'
-                      : selected
-                        ? 'opacity-30 hover:opacity-60'
-                        : 'opacity-100'
+                    selected === cell.date ? 'opacity-100 ring-2 ring-accent' : selected ? 'opacity-30 hover:opacity-60' : 'opacity-100'
                   }`}
                 />
               ),

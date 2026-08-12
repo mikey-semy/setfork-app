@@ -85,7 +85,9 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   const regY = new Date(user.createdAt).getFullYear()
   const graphYears = Array.from({ length: nowY - regY + 1 }, (_, i) => nowY - i) // новые сверху
   const rawYear = sp.year ? Number(sp.year) : NaN
-  const graphYear = graphYears.includes(rawYear) ? rawYear : undefined
+  // Без параметра показываем текущий год: пилюли «Последний год» больше нет, и
+  // «2026» — это он и есть (решение владельца 12.08).
+  const graphYear = graphYears.includes(rawYear) ? rawYear : nowY
 
   const [counts, followCounts, following, bigAvatar, contributions, received, rawItems, pinned, catalogs, achDisplay] = await Promise.all([
     getProfileCounts(user.id),

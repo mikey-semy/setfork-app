@@ -35,12 +35,17 @@ export function ContributionActivity({
   onReset: () => void
   onRetry: () => void
 }) {
-  const navBtn = 'grid h-6 w-6 place-items-center rounded-md border border-border text-muted hover:text-ink'
+  // Стрелки и кнопка сброса — одна тач-цель: на телефоне кнопка дорастает до 44px,
+  // и без этого ряд менял высоту при выборе дня, дёргая заголовок ленты.
+  const navBtn = 'grid size-6 place-items-center rounded-md border border-border text-muted hover:text-ink pointer-coarse:size-11'
 
   return (
     <section className="mt-6">
       <div className="mb-3 text-[1rem] font-semibold text-ink">{t('profile.activity.title', lang)}</div>
-      <div className="mb-4 flex items-center justify-between gap-2 border-b border-border pb-1">
+      {/* Высота ряда одна в обоих состояниях: месяц со стрелками и день с «Весь
+          месяц». Резерв на телефоне — 48px: тач-цель 44 плюс отступ до линии,
+          иначе ряд вырастал на выборе дня и заголовок ленты дёргался. */}
+      <div className="mb-4 flex h-7 items-center justify-between gap-2 border-b border-border pb-1 pointer-coarse:h-12">
         <span className="min-w-0 truncate text-[0.78125rem] font-semibold uppercase tracking-wide text-muted">
           {day ? fullDate(parseDayKey(day) ?? day, lang) : monthYearLong(parseDayKey(`${month}-01`) ?? `${month}-01`, lang)}
         </span>
