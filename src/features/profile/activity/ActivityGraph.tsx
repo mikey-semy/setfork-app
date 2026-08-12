@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { GitFork, Star } from 'lucide-react'
 import { fill, plural, t, type Lang } from '@/shared/i18n'
 import { weekdayShort } from '@/shared/lib/date'
+import { fmtCount, fmtNumber } from '@/shared/lib/count'
 import { buildCalendar, LEVEL } from './grid'
 import { ContributionGrid } from './ContributionGrid'
 import { parseDayKey, type DayKey } from './types'
@@ -46,16 +47,16 @@ export function ActivityGraph({
 
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
-      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-ink-2">
+      <div key={year} className="sf-fade-in mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-ink-2">
         <span>
-          <b className="text-ink">{calendar.total}</b> {plural(calendar.total, 'contributions', lang)}{' '}
+          <b className="text-ink">{fmtNumber(calendar.total, lang)}</b> {plural(calendar.total, 'contributions', lang)}{' '}
           {fill('profile.activity.inYear', lang, { year: year ?? now?.getFullYear() ?? '' })}
         </span>
         <span className="inline-flex items-center gap-1">
-          <Star size={13} className="text-muted" /> <b className="text-ink">{starsReceived}</b> {t('starsReceived', lang)}
+          <Star size={13} className="text-muted" /> <b className="text-ink">{fmtCount(starsReceived)}</b> {t('starsReceived', lang)}
         </span>
         <span className="inline-flex items-center gap-1">
-          <GitFork size={13} className="text-muted" /> <b className="text-ink">{forksReceived}</b> {t('forksReceived', lang)}
+          <GitFork size={13} className="text-muted" /> <b className="text-ink">{fmtCount(forksReceived)}</b> {t('forksReceived', lang)}
         </span>
       </div>
 
@@ -63,13 +64,13 @@ export function ActivityGraph({
           «Последний год» нет — текущий год и есть последний (решение владельца
           12.08). Прячем селектор целиком, если переключать не на что. */}
       {years.length > 1 && base && (
-        <div className="mb-3 flex flex-wrap gap-1.5">
+        <div className="scroll-thin -mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
           {years.map((y) => (
             <Link
               key={y}
               // Текущий год адресуется базой профиля: у «сейчас» один канонический адрес.
               href={y === years[0] ? base : `${base}?year=${y}`}
-              className={`rounded-md border px-2 py-0.5 font-mono text-[0.78125rem] ${year === y ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+              className={`shrink-0 rounded-md border px-2 py-0.5 font-mono text-[0.78125rem] ${year === y ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
             >
               {y}
             </Link>

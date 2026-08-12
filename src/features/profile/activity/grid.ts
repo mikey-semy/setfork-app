@@ -8,12 +8,29 @@ import { dayKey, parseDayKey, type DayKey } from './types'
 /** Ступени густоты клетки: 0 вкладов → пусто, дальше четыре уровня зелёного. */
 export const LEVEL = ['bg-border', 'bg-ok/25', 'bg-ok/50', 'bg-ok/75', 'bg-ok']
 
-/** Порог вкладов за день для каждой ступени (кроме нулевой). */
-const LEVEL_UP_TO = [2, 4, 6]
+/** Границы ступеней: значение попадает в ступень, если не больше её порога. */
+export type LevelScale = number[]
 
-export function level(count: number): number {
+/**
+ * Пороги густоты — по РАСПРЕДЕЛЕНИЮ дней самого человека, а не по трём числам из
+ * кода. У активного участника 40 вкладов в день — обычный вторник, и на жёсткой
+ * шкале «7 и больше» вся его сетка заливается максимумом, переставая что-либо
+ * показывать; у новичка наоборот. Берём квартили ненулевых дней (так же строит
+ * шкалу GitHub), поэтому график читается и на первой неделе, и на десятом году.
+ */
+export function levelScale(contributions: { count: number }[]): LevelScale {
+  const live: number[] = []
+  for (const c of contributions) if (c.count > 0) live.push(c.count)
+  live.sort((a, b) => a - b)
+  if (live.length === 0) return [1, 2, 3]
+  const at = (q: number) => live[Math.min(live.length - 1, Math.floor(live.length * q))]
+  // Пороги обязаны расти: на бедных данных квартили схлопываются в одно число.
+  return [at(0.25), at(0.5), at(0.75)].reduce<number[]>((acc, v) => [...acc, Math.max(v, (acc.at(-1) ?? 0) + 1)], [])
+}
+
+export function level(count: number, scale: LevelScale): number {
   if (count === 0) return 0
-  const step = LEVEL_UP_TO.findIndex((max) => count <= max)
+  const step = scale.findIndex((max) => count <= max)
   return step === -1 ? LEVEL.length - 1 : step + 1
 }
 
@@ -26,6 +43,8 @@ export interface Cell {
 
 export interface Calendar {
   weeks: Cell[][]
+  /** Пороги густоты этого профиля — по его же распределению дней. */
+  scale: LevelScale
   /** Подпись месяца над колонкой недели (null — без подписи). */
   months: (string | null)[]
   total: number
@@ -98,5 +117,5 @@ export function buildCalendar({
     return monthShort(dt, lang)
   })
 
-  return { weeks, months, total }
+  return { weeks, months, total, scale: levelScale(contributions) }
 }

@@ -51,9 +51,11 @@ describe('видимый фокус в примитивах', () => {
     expect(FIELD_BOX).toMatch(/focus-visible:ring/)
   })
 
+  // Вид кнопки живёт в button-style.ts — оттуда его берут и <button>, и
+  // ссылка-кнопка, поэтому гейт стоит на общем рецепте, а не на одном из тегов.
   it('кнопка несёт контрастное фокус-кольцо (не border-strong 1.39:1)', () => {
-    const button = readFileSync(join(__dirname, '../../../src/shared/ui/button.tsx'), 'utf8')
-    expect(button).toMatch(/focus-visible:ring-accent/)
-    expect(button).not.toMatch(/focus-visible:ring-border-strong/)
+    const style = readFileSync(join(__dirname, '../../../src/shared/ui/button-style.ts'), 'utf8')
+    expect(style).toMatch(/focus-visible:ring-accent/)
+    expect(style).not.toMatch(/focus-visible:ring-border-strong/)
   })
 })
