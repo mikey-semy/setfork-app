@@ -38,6 +38,10 @@ export function parseDayKey(key: string): Date | null {
 
 /** Строка второго уровня: список, в котором шла работа по теме. */
 export interface TopicList {
+  /** ID списка: slug уникален только внутри владельца, адресоваться по нему нельзя. */
+  id: string
+  /** Ник ВЛАДЕЛЬЦА списка: задачу и правку человек мог оставить в чужом. */
+  ownerHandle: string
   slug: string
   title: LocaleText
   count: number
@@ -60,7 +64,7 @@ export interface DetailsRequest {
   /** Окно ленты: день `YYYY-MM-DD` или месяц `YYYY-MM`. */
   windowKey: string
   /** Задан — нужны события ЭТОГО списка (третий уровень). */
-  slug?: string
+  listId?: string
 }
 
 /** Ответ подгрузки: сколько всего и что показываем (перечень обрезан лимитом). */

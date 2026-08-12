@@ -17,7 +17,7 @@ export interface Details<T> {
 /** Ответы переживают сворачивание: второй раз тот же уровень открывается мгновенно. */
 const cache = new Map<string, DetailsPage<TopicList | ListEvent>>()
 
-const keyOf = (handle: string, req: DetailsRequest) => `${handle}:${req.kind}:${req.windowKey}:${req.slug ?? ''}`
+const keyOf = (handle: string, req: DetailsRequest) => `${handle}:${req.kind}:${req.windowKey}:${req.listId ?? ''}`
 
 export function useDetails<T extends TopicList | ListEvent>(handle: string, req: DetailsRequest): Details<T> {
   const key = keyOf(handle, req)

@@ -24,10 +24,10 @@ function windowOf(key: string): { from: Date; to: Date } | null {
 }
 
 /**
- * Раскрытие темы: без `slug` — списки, в которых шла работа, со `slug` — сами
+ * Раскрытие темы: без `listId` — списки, в которых шла работа, с ним — сами
  * события внутри одного списка.
  *
- * Права проверяются заново (ник, окно и slug приходят от клиента): чужой
+ * Права проверяются заново (ник, окно и ID приходят от клиента): чужой
  * приватный профиль молчит, а видимость самих списков гейтит запрос.
  */
 export async function loadActivityDetails(handle: string, req: DetailsRequest): Promise<DetailsPage<TopicList | ListEvent>> {
@@ -40,7 +40,7 @@ export async function loadActivityDetails(handle: string, req: DetailsRequest): 
   if (user.profilePrivate && viewer?.userId !== user.id) return empty
 
   const { from, to } = window
-  return req.slug
-    ? getListEvents(user.id, req.kind, req.slug, from, to, viewer?.userId)
+  return req.listId
+    ? getListEvents(user.id, req.kind, req.listId, from, to, viewer?.userId)
     : getTopicLists(user.id, req.kind, from, to, viewer?.userId)
 }

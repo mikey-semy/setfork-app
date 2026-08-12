@@ -279,21 +279,31 @@ export async function getTopicLists(
   const rows =
     kind === 'lists'
       ? await db.execute(sql`
-          select t.slug, t.title, 1::int as count, t.created_at as at, (count(*) over ())::int as total
-          from ${templates} t
+          select t.id, u.handle as owner_handle, t.slug, t.title, 1::int as count, t.created_at as at, (count(*) over ())::int as total
+          from ${templates} t join ${users} u on u.id = t.owner_id
           where t.owner_id = ${userId} and t.created_at >= ${from} and t.created_at < ${to} ${vis}
           order by t.created_at desc limit ${DETAILS_LIMIT}`)
       : await db.execute(sql`
-          select t.slug, t.title, count(*)::int as count, max(e.created_at) as at, (count(*) over ())::int as total
-          from ${SOURCE[kind].table} e join ${templates} t on t.id = e.template_id
+          select t.id, u.handle as owner_handle, t.slug, t.title, count(*)::int as count, max(e.created_at) as at,
+                 (count(*) over ())::int as total
+          from ${SOURCE[kind].table} e
+          join ${templates} t on t.id = e.template_id
+          join ${users} u on u.id = t.owner_id
           where ${SOURCE[kind].byOwner ? sql`t.owner_id` : sql`e.author_id`} = ${userId}
             and e.created_at >= ${from} and e.created_at < ${to} ${vis}
-          group by t.slug, t.title
+          group by t.id, u.handle, t.slug, t.title
           order by count desc, at desc limit ${DETAILS_LIMIT}`)
 
-  const raw = (rows.rows ?? []) as { slug: string; title: LocaleText; count: number; at: string; total: number }[]
+  const raw = (rows.rows ?? []) as { id: string; owner_handle: string; slug: string; title: LocaleText; count: number; at: string; total: number }[]
   return {
-    items: raw.map((r) => ({ slug: r.slug, title: r.title, count: Number(r.count), at: new Date(r.at).toISOString() })),
+    items: raw.map((r) => ({
+      id: r.id,
+      ownerHandle: r.owner_handle,
+      slug: r.slug,
+      title: r.title,
+      count: Number(r.count),
+      at: new Date(r.at).toISOString(),
+    })),
     total: Number(raw[0]?.total ?? 0),
   }
 }
@@ -305,7 +315,7 @@ export async function getTopicLists(
 export async function getListEvents(
   userId: string,
   kind: ActivityKind,
-  slug: string,
+  listId: string,
   from: Date,
   to: Date,
   viewerId?: string,
@@ -317,7 +327,7 @@ export async function getListEvents(
   const rows = await db.execute(sql`
     select ${ref} as ref, ${text} as text, e.created_at as at, (count(*) over ())::int as total
     from ${SOURCE[kind].table} e join ${templates} t on t.id = e.template_id
-    where ${SOURCE[kind].byOwner ? sql`t.owner_id` : sql`e.author_id`} = ${userId} and t.slug = ${slug}
+    where ${SOURCE[kind].byOwner ? sql`t.owner_id` : sql`e.author_id`} = ${userId} and t.id = ${listId}
       and e.created_at >= ${from} and e.created_at < ${to} ${vis}
     order by e.created_at desc limit ${DETAILS_LIMIT}`)
 

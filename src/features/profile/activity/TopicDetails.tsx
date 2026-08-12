@@ -28,7 +28,7 @@ export function TopicLists({ handle, kind, windowKey, lang }: { handle: string; 
     <Body details={details} lang={lang}>
       <ul className="mt-2 flex flex-col gap-2">
         {items.map((it) => (
-          <li key={it.slug}>
+          <li key={it.id}>
             <ListRow item={it} share={top > 0 ? it.count / top : 0} handle={handle} kind={kind} windowKey={windowKey} lang={lang} />
           </li>
         ))}
@@ -82,7 +82,10 @@ function ListRow({
         {/* Полоска стоит рядом со счётчиком короткой колонкой, как у GitHub: во всю
             ширину строки она читается как прогресс-бар загрузки, а не как доля. */}
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <Link href={`/${handle}/${item.slug}`} className="min-w-0 flex-1 truncate text-[0.8125rem] text-accent hover:underline">
+          {/* Ссылка ведёт к ВЛАДЕЛЬЦУ списка: задачу и правку человек мог оставить
+              в чужом, и адрес по нику профиля упирался бы в 404 или чужой список
+              с тем же slug (slug уникален только внутри владельца). */}
+          <Link href={`/${item.ownerHandle}/${item.slug}`} className="min-w-0 flex-1 truncate text-[0.8125rem] text-accent hover:underline">
             {title}
           </Link>
           {/* Счётчики держат колонку: без фиксированной ширины они гуляют и полоски
@@ -94,7 +97,7 @@ function ListRow({
         </div>
       </div>
 
-      {deep && open && <ListEvents handle={handle} kind={kind} windowKey={windowKey} slug={item.slug} lang={lang} />}
+      {deep && open && <ListEvents handle={handle} kind={kind} windowKey={windowKey} listId={item.id} lang={lang} />}
     </>
   )
 }
@@ -104,21 +107,21 @@ function ListEvents({
   handle,
   kind,
   windowKey,
-  slug,
+  listId,
   lang,
 }: {
   handle: string
   kind: ActivityKind
   windowKey: string
-  slug: string
+  listId: string
   lang: Lang
 }) {
-  const details = useDetails<ListEvent>(handle, { kind, windowKey, slug })
+  const details = useDetails<ListEvent>(handle, { kind, windowKey, listId })
   return (
     <Body details={details} lang={lang} className="ml-7">
       <ul className="mt-1 flex flex-col gap-1 border-l border-border pl-3">
-        {(details.page?.items ?? []).map((e, i) => (
-          <li key={`${e.ref}:${i}`} className="flex items-baseline justify-between gap-3 text-[0.78125rem]">
+        {(details.page?.items ?? []).map((e) => (
+          <li key={`${e.ref}:${e.at}`} className="flex items-baseline justify-between gap-3 text-[0.78125rem]">
             <span className="min-w-0 truncate text-ink-2">
               <span className="font-mono text-muted">{kind === 'versions' ? `v${e.ref}` : `#${e.ref}`}</span>
               {e.text ? ` ${e.text}` : ''}
