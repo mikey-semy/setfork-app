@@ -43,7 +43,7 @@ export function ContributionActivity({
           месяц». Резерв на телефоне — 48px: тач-цель 44 плюс отступ до линии,
           иначе ряд вырастал на выборе дня и заголовок ленты дёргался. */}
       <div className="mb-4 flex h-7 items-center justify-between gap-2 border-b border-border pb-1 pointer-coarse:h-12">
-        <span key={day ?? month} className="sf-fade-in min-w-0 truncate text-[0.78125rem] font-semibold uppercase tracking-wide text-muted">
+        <span key={day ?? month} className="sf-fade-in sf-slow min-w-0 truncate text-[0.78125rem] font-semibold uppercase tracking-wide text-muted">
           {day ? fullDate(parseDayKey(day) ?? day, lang) : monthYearLong(parseDayKey(`${month}-01`) ?? `${month}-01`, lang)}
         </span>
         {/* Пока лента сужена до дня, стрелки месяцев уводили бы не туда: на их
@@ -72,7 +72,7 @@ export function ContributionActivity({
           и приехавшие темы, и сообщение об ошибке остались бы непрочитанными.
           Ключ с анимацией висит на вложенном блоке. */}
       <div aria-busy={loading} aria-live="polite">
-        <div key={`${day ?? month}:${loading}:${failed}`} className="sf-rise-in">
+        <div key={`${day ?? month}:${loading}:${failed}`} className="sf-rise-in sf-slow">
           {failed ? (
             <div className="flex flex-wrap items-center gap-3">
               <p className="text-[0.8125rem] text-danger">{t('profile.activity.loadFailed', lang)}</p>

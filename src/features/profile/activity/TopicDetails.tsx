@@ -74,7 +74,7 @@ function ListRow({
             variant="ghost"
             onClick={() => setOpen((was) => !was)}
           >
-            <ChevronRight size={13} className={`transition-transform duration-(--dur-fast) ${open ? 'rotate-90' : ''}`} />
+            <ChevronRight size={13} className={`transition-transform duration-(--dur-base) ${open ? 'rotate-90' : ''}`} />
           </IconButton>
         ) : (
           <span className="w-6 shrink-0" aria-hidden />
@@ -144,7 +144,7 @@ function Body<T extends TopicList | ListEvent>({
   className?: string
 }) {
   return (
-    <div className={`sf-rise-in ${className}`}>
+    <div className={`sf-rise-in sf-slow ${className}`}>
       {details.failed ? (
         <div className="flex flex-wrap items-center gap-3 py-1">
           <p className="text-[0.78125rem] text-danger">{t('profile.activity.loadFailed', lang)}</p>

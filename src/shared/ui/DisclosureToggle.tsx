@@ -43,7 +43,7 @@ export function DisclosureToggle({
     >
       <ChevronRight
         size={icon}
-        className={cn('shrink-0 text-muted transition-transform duration-(--dur-fast)', open && 'rotate-90', iconClassName)}
+        className={cn('shrink-0 text-muted transition-transform duration-(--dur-base)', open && 'rotate-90', iconClassName)}
       />
       {children}
     </button>

@@ -47,7 +47,7 @@ export function ActivityGraph({
 
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
-      <div key={year} className="sf-fade-in mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-ink-2">
+      <div key={year} className="sf-fade-in sf-slow mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-ink-2">
         <span>
           <b className="text-ink">{fmtNumber(calendar.total, lang)}</b> {plural(calendar.total, 'contributions', lang)}{' '}
           {fill('profile.activity.inYear', lang, { year: year ?? now?.getFullYear() ?? '' })}
