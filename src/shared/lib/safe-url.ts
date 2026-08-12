@@ -15,3 +15,23 @@ export function safeHref(raw: string | null | undefined): string {
   if (scheme) return SAFE_SCHEMES.has(scheme[1].toLowerCase()) ? u : ''
   return u // относительная / якорь / без схемы — безопасно
 }
+
+/**
+ * Тот же URL, но пригодный для заголовка `Location`.
+ *
+ * Значения заголовков — ByteString (один байт на символ), поэтому `new Response`
+ * бросает TypeError на любом не-ASCII символе в адресе. Ссылка шага на статью с
+ * кириллицей в пути роняла исходящий редирект `/api/go` пятисотой — вместо перехода
+ * пользователь получал ошибку, а клик не засчитывался.
+ *
+ * Кодируем ровно как браузер в адресной строке: путь и запрос — процентами, домен —
+ * punycode. Уже закодированное не портится (`%20` остаётся `%20`). Разобрать не
+ * удалось → пустая строка, и вызывающий отвечает 404, а не падает.
+ */
+export function redirectLocation(raw: string): string {
+  try {
+    return new URL(raw).href
+  } catch {
+    return ''
+  }
+}
