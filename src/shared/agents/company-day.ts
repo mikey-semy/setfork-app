@@ -30,7 +30,9 @@ export interface CompanyDay {
   events: { at: Date; action: string; status: string; ref: string; who: string; note: string }[]
 }
 
-const ACTION_LABEL: Record<string, keyof Pick<CompanyDay, 'created' | 'improved' | 'proposed' | 'published' | 'held' | 'forked' | 'stable'>> = {
+type DayBucket = keyof Pick<CompanyDay, 'created' | 'improved' | 'proposed' | 'published' | 'held' | 'forked' | 'stable'>
+
+const ACTION_LABEL: Record<string, DayBucket> = {
   'list.draft': 'created',
   'list.improve': 'improved',
   'list.suggest': 'proposed',
@@ -38,6 +40,21 @@ const ACTION_LABEL: Record<string, keyof Pick<CompanyDay, 'created' | 'improved'
   'list.hold': 'held',
   'list.fork': 'forked',
   'list.stable': 'stable',
+}
+
+/**
+ * В какую цифру дня идёт действие.
+ *
+ * `list.grow` (рост живой ленты) — единственное, что таблицей не решается: у него ДВА
+ * исхода. Своей ленте компания пишет версию напрямую, чужой — предложение, и режим
+ * записан в решении. Судить по имени действия значило бы засчитывать предложение как
+ * сделанную правку. Имя при этом трогать нельзя: по нему считают рост лент на дашборде
+ * и прогресс в детекторе холостого хода.
+ */
+function bucketOf(action: string, decision: unknown): DayBucket | undefined {
+  if (action !== 'list.grow') return ACTION_LABEL[action]
+  const mode = String((decision as { mode?: unknown })?.mode ?? '')
+  return mode.includes('suggestion') ? 'proposed' : 'improved'
 }
 
 /** Первая строка-причина из решения гейта (их может быть несколько — берём главную). */
@@ -77,7 +94,7 @@ export async function getCompanyDay(daysAgo = 0): Promise<CompanyDay> {
   for (const r of rows) {
     if (r.status === 'dry-run') day.dryRun++
     if (r.status === 'error') day.errors++
-    const key = ACTION_LABEL[r.action]
+    const key = bucketOf(r.action, r.decision)
     if (key && r.status !== 'dry-run') day[key]++
     if (r.action === 'list.hold') {
       const reason = mainBlocker(r.decision)

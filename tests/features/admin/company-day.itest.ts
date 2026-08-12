@@ -58,6 +58,17 @@ describe('день компании', () => {
     expect(d.improved).toBe(0)
   })
 
+  // Рост живой ленты — единственное действие с двумя исходами: своей ленте компания пишет
+  // версию, чужой открывает предложение. Имя действия у обоих одно (по нему считают рост
+  // лент на дашборде), поэтому колонку выбирает режим из решения.
+  it('рост чужой ленты — предложение, своей — сделанная правка', async () => {
+    await put({ action: 'list.grow', decision: { mode: 'grow-feed-suggestion' } })
+    await put({ action: 'list.grow', decision: { mode: 'grow-feed' } })
+    const d = await getCompanyDay(0)
+    expect(d.proposed).toBe(1)
+    expect(d.improved).toBe(1)
+  })
+
   it('сухой прогон считается ОТДЕЛЬНО и не идёт в «сделано»', async () => {
     await put({ action: 'list.draft', resultStatus: 'dry-run' })
     const d = await getCompanyDay(0)

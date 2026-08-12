@@ -115,7 +115,9 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     const tender = await tenderForTags(tpl.tags, roster)
     const tenderId = tender?.userId ?? gardener.id
     const ownedByCompany = tpl.ownerAccountType === 'agent'
-    const gateCtx = { tenderId, agentId: tender?.expert.id ?? '', policyVersion: loop.policyVersion, lang }
+    // Кто взял список: id — для журнала и gateCtx, профессия — для решения. Читаем один раз.
+    const expertId = tender?.expert.id ?? ''
+    const gateCtx = { tenderId, agentId: expertId, policyVersion: loop.policyVersion, lang }
 
     /**
      * Запись в журнал по ЭТОМУ списку. Обвязка (кто, по какому списку, какой политикой)
@@ -134,7 +136,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         loop: 'gardener',
         action,
         resultStatus,
-        agentId: tender?.expert.id ?? '',
+        agentId: expertId,
         actorUserId: tenderId,
         signal: { templateId: tpl.id, slug: tpl.slug, ...signal },
         decision,
@@ -268,7 +270,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         { trigger: 'schedule', deadLinks: deadUrls.length },
       )
       proposed++
-      log.info('gardener: own list improved directly', { slug: tpl.slug, tender: tender?.expert.id ?? 'generic' })
+      log.info('gardener: own list improved directly', { slug: tpl.slug, tender: expertId || 'generic' })
       // Улучшили свой черновик → сразу спрашиваем планку по НОВОМУ содержимому.
       if (tpl.status === 'draft') {
         const res = await gateOwnDraft(tpl, { title: current.title, desc: current.desc, tags: current.tags, items: refined.items }, gateCtx)
@@ -318,7 +320,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       // компании» и правило остановки. Самая частая ветка прохода не писала в него
       // НИЧЕГО, и владелец видел пустой день при работающей компании.
       await journal('list.suggest', 'ok', { mode: 'suggestion', profession: byWhom }, { trigger: 'schedule', deadLinks: deadUrls.length })
-      log.info('gardener: suggestion opened', { slug: tpl.slug, suggestionId: created.id, tender: tender?.expert.id ?? 'generic' })
+      log.info('gardener: suggestion opened', { slug: tpl.slug, suggestionId: created.id, tender: expertId || 'generic' })
     }
     proposed++
   }
