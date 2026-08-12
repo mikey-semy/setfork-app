@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, ne, or, sql } from 'drizzle-orm'
 import { agentActions, db, suggestions, templates, users } from '@/shared/db'
 import { GARDENER_EVERY_DAYS } from './schedule'
 
@@ -73,12 +73,24 @@ export async function pickCandidates(agentIds: string[], limit: number, only?: '
     .limit(limit)
 }
 
-/** Сколько раз ПОДРЯД список признан устоявшимся (refine не нашёл, что менять). */
+/**
+ * Сколько раз ПОДРЯД список признан устоявшимся (refine не нашёл, что менять).
+ *
+ * Сухой прогон в счёт не идёт: он записывает РЕШЕНИЕ, которое не исполнялось, а счётчик
+ * считает то, что случилось со списком. Иначе включённое наблюдение обнуляло бы историю
+ * устойчивости — то есть смотреть на компанию значило бы менять её поведение.
+ */
 export async function stablePasses(templateId: string): Promise<number> {
   const rows = await db
     .select({ action: agentActions.action })
     .from(agentActions)
-    .where(and(eq(agentActions.loop, 'gardener'), sql`${agentActions.signal}->>'templateId' = ${templateId}`))
+    .where(
+      and(
+        eq(agentActions.loop, 'gardener'),
+        ne(agentActions.resultStatus, 'dry-run'),
+        sql`${agentActions.signal}->>'templateId' = ${templateId}`,
+      ),
+    )
     .orderBy(desc(agentActions.occurredAt))
     .limit(6)
   let n = 0

@@ -52,6 +52,17 @@ describe('правило остановки', () => {
     expect(await stablePasses(tplId)).toBe(1)
   })
 
+  // Сухой прогон пишет решение, которое НЕ исполнялось. Считать его действием значит
+  // обнулять историю устойчивости самим фактом наблюдения — включил «посмотреть», и
+  // расхождение форком откладывается.
+  it('сухой прогон историю не обнуляет: наблюдение не меняет наблюдаемое', async () => {
+    await act('list.stable')
+    await db.insert(agentActions).values({ loop: 'gardener', action: 'list.suggest', resultStatus: 'dry-run', signal: { templateId: tplId } })
+    await db.execute(sql`update ${agentActions} set occurred_at = now() + (ctid::text::point)[1] * interval '1 millisecond'`)
+    await act('list.stable')
+    expect(await stablePasses(tplId)).toBe(2)
+  })
+
   it('чужие списки в счёт не идут', async () => {
     await act('list.stable', otherId)
     await act('list.stable', otherId)
