@@ -1466,6 +1466,7 @@ export const en = {
   'admin.priority': 'Priority',
   'admin.professionEn': 'Profession (EN)',
   'admin.professionRu': 'Profession (RU)',
+  'admin.proposedEdits': 'Edits proposed',
   'admin.providerEndpointUnavailable': 'provider endpoint unavailable',
   'admin.publicLists': 'Public lists',
   'admin.publicListsHisDomains': 'public lists in his domains',

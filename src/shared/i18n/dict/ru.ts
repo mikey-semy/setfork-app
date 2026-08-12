@@ -1457,6 +1457,7 @@ export const ru: Record<DictKey, string> = {
   'admin.priority': 'Приоритет',
   'admin.professionEn': 'Профессия (EN)',
   'admin.professionRu': 'Профессия (RU)',
+  'admin.proposedEdits': 'Предложено правок',
   'admin.providerEndpointUnavailable': 'эндпоинт провайдера недоступен',
   'admin.publicLists': 'Публичных списков',
   'admin.publicListsHisDomains': 'публичных списков его доменов',
