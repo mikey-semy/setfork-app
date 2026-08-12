@@ -1,5 +1,6 @@
 import type { Lang } from '@/shared/i18n'
-import { dayKey, type DayKey } from './types'
+import { monthShort } from '@/shared/lib/date'
+import { dayKey, parseDayKey, type DayKey } from './types'
 
 // Раскладка календаря вкладов (GitHub-стайл хитмап) — чистый расчёт без разметки:
 // какие недели рисуем, где подписи месяцев и насколько густа каждая клетка.
@@ -84,18 +85,17 @@ export function buildCalendar({
     weeks.push(week)
   }
 
-  const fmtMonth = new Intl.DateTimeFormat(lang, { month: 'short' })
   let lastLabel = -MONTH_LABEL_GAP
   const months = weeks.map((w, i) => {
     // Метку месяца ставим над колонкой, в которую попало 1-е число месяца — тогда
     // ведущий огрызок недели из декабря прошлого года не подписывается «Dec».
-    const first = w.find((c) => new Date(c.date).getDate() === 1)
+    const first = w.find((c) => parseDayKey(c.date)?.getDate() === 1)
     if (!first) return null
-    const dt = new Date(first.date)
+    const dt = parseDayKey(first.date)!
     if (year != null && dt.getFullYear() !== year) return null // хвост соседнего года
     if (i - lastLabel < MONTH_LABEL_GAP) return null // не впритык к предыдущей метке
     lastLabel = i
-    return fmtMonth.format(dt)
+    return monthShort(dt, lang)
   })
 
   return { weeks, months, total }

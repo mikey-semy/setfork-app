@@ -1,6 +1,6 @@
 'use client'
 
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 // Подсказка над клеткой календаря. Живёт в портале и позиционируется от окна:
@@ -32,7 +32,12 @@ export function DayTip({ anchor }: { anchor: TipAnchor }) {
   // Первый проход — измерительный: подсказку надо отрисовать, чтобы узнать её
   // размер, поэтому до расчёта она прозрачна и в бой идёт уже с готовым местом.
   const [place, setPlace] = useState<Place | null>(null)
+  // Узел портала берём в эффекте, а не прямо в разметке: document на сервере нет,
+  // и чтение его при рендере — мина, даже если сейчас сюда попадают только с клика.
+  const [host, setHost] = useState<HTMLElement | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => setHost(document.body), [])
 
   useLayoutEffect(() => {
     const el = ref.current
@@ -44,7 +49,10 @@ export function DayTip({ anchor }: { anchor: TipAnchor }) {
     // страница) — тогда переворачиваем под клетку, как все всплывашки.
     const below = box.top < EDGE
     setPlace({ left: anchor.x + shift, top: below ? anchor.bottom + GAP : anchor.top - GAP, below })
-  }, [anchor])
+    // host в зависимостях: до него измерять нечего, портала ещё нет.
+  }, [anchor, host])
+
+  if (!host) return null
 
   return createPortal(
     <div
@@ -59,6 +67,6 @@ export function DayTip({ anchor }: { anchor: TipAnchor }) {
     >
       {anchor.text}
     </div>,
-    document.body,
+    host,
   )
 }

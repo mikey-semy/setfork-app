@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { GitFork, Star } from 'lucide-react'
 import { fill, plural, t, type Lang } from '@/shared/i18n'
+import { weekdayShort } from '@/shared/lib/date'
 import { buildCalendar, LEVEL } from './grid'
 import { ContributionGrid } from './ContributionGrid'
-import type { DayKey } from './types'
+import { parseDayKey, type DayKey } from './types'
 
 // GitHub-стайл граф активности (contribution-хитмап). Без year — скользящее
 // окно ~год; с year — календарный год (Jan–Dec) + селектор годов.
@@ -40,7 +41,6 @@ export function ActivityGraph({
   onSelect: (day: DayKey) => void
 }) {
   const calendar = buildCalendar({ contributions, year, lang })
-  const weekday = new Intl.DateTimeFormat(lang, { weekday: 'short' })
   const firstWeek = calendar.weeks[0]
 
   return (
@@ -95,7 +95,7 @@ export function ActivityGraph({
               <div key={d} className="flex h-[0.6875rem] items-center leading-none">
                 {/* Название дня даёт Intl по языку профиля, а не наш словарь: так
                     третий язык получает свои «пн/ср/пт» без единой правки кода. */}
-                {LABELED_WEEKDAYS.includes(d) && firstWeek ? weekday.format(new Date(firstWeek[d].date)) : ''}
+                {LABELED_WEEKDAYS.includes(d) && firstWeek ? weekdayShort(parseDayKey(firstWeek[d].date) ?? firstWeek[d].date, lang) : ''}
               </div>
             ))}
           </div>

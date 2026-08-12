@@ -36,3 +36,13 @@ export function fullDate(value: Date | string | number, lang: Lang): string {
 export function monthYearLong(value: Date | string | number, lang: Lang): string {
   return formatter(lang, { month: 'long', year: 'numeric' }).format(new Date(value))
 }
+
+/** «авг.» — короткий месяц (подписи над колонками календаря вкладов). */
+export function monthShort(value: Date | string | number, lang: Lang): string {
+  return formatter(lang, { month: 'short' }).format(new Date(value))
+}
+
+/** «пн» — короткий день недели (колонка слева от календаря вкладов). */
+export function weekdayShort(value: Date | string | number, lang: Lang): string {
+  return formatter(lang, { weekday: 'short' }).format(new Date(value))
+}
