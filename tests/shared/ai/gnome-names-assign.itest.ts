@@ -81,6 +81,20 @@ describe('раздача имён', () => {
     expect((await expertRow('coach')).nameEn).toBe('Gunnarr')
   })
 
+  it('правку админа, сделанную по ходу раздачи, не затираем', async () => {
+    await addExpert({ id: 'devops', nameEn: 'Devops', nameRu: 'Девопсер' })
+    // Владелец успел дать имя сам между чтением состава и записью: строка больше не та,
+    // что мы прочитали, и раздача обязана её пропустить, а не перебить своим именем.
+    const rows = await db.select().from(councilExperts)
+    await db.update(councilExperts).set({ nameEn: 'Gunnarr', professionEn: 'Devops' }).where(eq(councilExperts.id, 'devops'))
+    expect(rows[0].nameEn).toBe('Devops') // прочитанное состояние — устаревшее
+
+    const res = await assignMythicNames()
+
+    expect(res.renamed).toBe(0)
+    expect((await expertRow('devops')).nameEn).toBe('Gunnarr')
+  })
+
   it('канон не выдаётся дважды', async () => {
     await addExpert({ id: 'devops', nameEn: 'Devops', nameRu: 'Девопсер' })
     await addExpert({ id: 'smith', nameEn: 'Smith', nameRu: 'Кузнец' })

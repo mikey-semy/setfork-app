@@ -207,25 +207,37 @@ export async function assignMythicNames(): Promise<{ renamed: number; names: Rec
   // Занятые имена: у кого имя уже своё — его не выдаём повторно.
   const taken = new Set(rows.filter((r) => !pending.includes(r)).map((r) => r.nameEn))
   const names: Record<string, string> = {}
+  // Специалисты идут ПО ОЧЕРЕДИ намеренно: `taken` копится по ходу, и канон не должен
+  // достаться двоим. Параллельный проход выдал бы одно имя дважды — здесь очередь и есть
+  // условие правильности, а не недосмотр.
   for (const r of pending) {
     // Роль читается из ИМЕНИ, пока колонка пуста, — это и есть то состояние, которое
     // раздача имён закрывает.
     const professionEn = r.professionEn.trim() || r.nameEn.trim()
     const professionRu = r.professionRu.trim() || r.nameRu.trim()
     const n = mythicName(r.id, professionEn, taken)
+    // Обе записи — в одной транзакции, и обе под условием «строка всё ещё та, что мы
+    // прочитали». Иначе: правка админа, сделанная между чтением и записью, была бы молча
+    // затёрта; а упади вторая запись после первой — состав звался бы Brokkr, профиль
+    // остался бы Devops, и кнопка чинить это отказалась бы (профессия уже заполнена, то
+    // есть строка считается названной).
+    const renamed = await db.transaction(async (tx) => {
+      const done = await tx
+        .update(councilExperts)
+        .set({ nameEn: n.name, nameRu: n.nameRu, professionEn, professionRu, updatedAt: new Date() })
+        .where(and(eq(councilExperts.id, r.id), eq(councilExperts.nameEn, r.nameEn), eq(councilExperts.professionEn, r.professionEn)))
+        .returning({ id: councilExperts.id })
+      if (!done.length) return false
+      // Аккаунт заведён раньше и держит СВОЮ копию имени: не обновить его значит развести
+      // состав и публичный профиль — в ростере Brokkr, в профиле по-прежнему Devops.
+      if (r.userId) await tx.update(users).set({ name: n.name, profession: professionEn }).where(eq(users.id, r.userId))
+      return true
+    })
+    if (!renamed) continue // строку успели поправить руками — её имя теперь дело владельца
     taken.add(n.name)
-    await db
-      .update(councilExperts)
-      .set({ nameEn: n.name, nameRu: n.nameRu, professionEn, professionRu, updatedAt: new Date() })
-      .where(eq(councilExperts.id, r.id))
-    // Аккаунт заведён раньше и держит СВОЮ копию имени: не обновить его значит развести
-    // состав и публичный профиль — в ростере Brokkr, в профиле по-прежнему Devops.
-    if (r.userId) {
-      await db.update(users).set({ name: n.name, profession: professionEn }).where(eq(users.id, r.userId))
-    }
     names[r.id] = `${n.name} / ${n.nameRu} (${n.source}: ${n.meaning})`
   }
-  return { renamed: pending.length, names }
+  return { renamed: Object.keys(names).length, names }
 }
 
 /** Сколько специалистов уже имеют аккаунт (для админки/дашборда). */
