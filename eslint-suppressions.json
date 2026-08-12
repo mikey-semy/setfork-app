@@ -214,11 +214,6 @@
       "count": 1
     }
   },
-  "src/features/gardener/service.ts": {
-    "boundaries/dependencies": {
-      "count": 5
-    }
-  },
   "src/features/generation/actions.ts": {
     "boundaries/dependencies": {
       "count": 4
