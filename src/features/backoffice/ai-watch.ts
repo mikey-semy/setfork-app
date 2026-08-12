@@ -1,0 +1,63 @@
+import 'server-only'
+import { and, desc, gte, ne, sql } from 'drizzle-orm'
+import { aiUsage, db } from '@/shared/db'
+import { ERROR_STREAK_TRIP } from '@/shared/agents/canary'
+
+/**
+ * СТОРОЖ КАНАЛА К МОДЕЛИ — та часть работы аналитика моделей, которую нельзя делать
+ * страницей.
+ *
+ * Повод — два инцидента подряд, и оба обнаружились случайно. 29–31.07: провайдер
+ * переключили на снятую модель, все вызовы падали двое суток, ни одного сигнала.
+ * 05–12.08: контейнер канона поднялся со списанным egress-мостом в /etc/hosts, неделю
+ * подряд `error`, компания не сделала ничего — и снова ни одного сигнала. Оба раза
+ * поломка была видна в `ai_usage` с первой минуты, но смотреть туда некому.
+ *
+ * Считается КОДОМ по журналу вызовов: ни одного обращения к модели (сторож, который сам
+ * зовёт модель, замолкает ровно тогда, когда нужен). Порог — тот же `ERROR_STREAK_TRIP`,
+ * что у предохранителя петель: одна величина «серия отказов» на весь проект.
+ */
+
+/** Что именно видно в журнале вызовов на данный момент. */
+export interface ChannelState {
+  /** Сколько последних вызовов подряд закончились неудачей (ok обрывает счёт). */
+  failStreak: number
+  /** Модель последнего вызова — по ней видно, куда именно перестало ходить. */
+  lastModel: string
+  /** Исходы серии: error/timeout/invalid различают «не пустили» и «не дождались». */
+  outcomes: string[]
+}
+
+/**
+ * Хвост журнала вызовов: подряд идущие неудачи с конца.
+ *
+ * Эмбеддинги исключены намеренно — они ходят другим маршрутом (у OpenRouter это отдельный
+ * эндпоинт) и в инциденте 12.08 проходили, пока чат-вызовы падали. Считать их вместе
+ * значило бы прятать поломку за успехами соседнего канала.
+ */
+export async function channelState(): Promise<ChannelState> {
+  const rows = await db
+    .select({ outcome: aiUsage.outcome, model: aiUsage.model })
+    .from(aiUsage)
+    .where(ne(aiUsage.feature, 'embed'))
+    .orderBy(desc(aiUsage.createdAt))
+    .limit(ERROR_STREAK_TRIP)
+  const outcomes: string[] = []
+  for (const r of rows) {
+    if (r.outcome === 'ok') break
+    outcomes.push(r.outcome)
+  }
+  return { failStreak: outcomes.length, lastModel: rows[0]?.model ?? '', outcomes }
+}
+
+/** Канал считается лежащим: серия отказов достигла общей планки. */
+export const channelDown = (s: ChannelState): boolean => s.failStreak >= ERROR_STREAK_TRIP
+
+/** Сколько вызовов было за сутки — отличает «сломано» от «никто не звал». */
+export async function callsLastDay(): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(aiUsage)
+    .where(and(gte(aiUsage.createdAt, new Date(Date.now() - 86_400_000)), ne(aiUsage.feature, 'embed')))
+  return row?.n ?? 0
+}

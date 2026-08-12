@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, eq, gte, inArray, sql } from 'drizzle-orm'
-import { aiUsage, db, jobs, users } from '@/shared/db'
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
+import { agentActions, aiUsage, db, jobs, users } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { autonomyHealthy } from '@/shared/agents/canary'
@@ -38,9 +38,17 @@ const QUIET_DAY = 'день без событий — писать не о че�
 const NO_EVENTS = 'нет событий'
 const DRY_RUN = 'сухой прогон'
 const ALREADY_SENT = 'за этот день уже отправлено'
+// Заголовки писем сторожа. Как и тревоги бухгалтера, это сообщения ВЛАДЕЛЬЦУ инстанса,
+// а не интерфейс: словарь тут не при чём, а тернарник из двух строк линт принимает за
+// двуязычный текст.
+const CHANNEL_DOWN_SUBJECT = 'канал к модели не отвечает'
+const CHANNEL_UP_SUBJECT = 'канал к модели восстановлен'
 
 const FINANCE_EVERY_HOURS = 6
 const CHRONICLE_EVERY_HOURS = 24
+// Сторож канала ходит ЧАЩЕ прочих: неделя молчания (инцидент 05–12.08) стоила компании
+// всей её работы, а сама проверка бесплатна — это один запрос к журналу вызовов.
+const AI_WATCH_EVERY_HOURS = 1
 
 export async function ensureFinanceScheduled(): Promise<void> {
   await ensureLoop('finance', FINANCE_EVERY_HOURS)
@@ -50,7 +58,11 @@ export async function ensureChronicleScheduled(): Promise<void> {
   await ensureLoop('chronicle', CHRONICLE_EVERY_HOURS)
 }
 
-async function ensureLoop(type: 'finance' | 'chronicle', everyHours: number): Promise<void> {
+export async function ensureAiWatchScheduled(): Promise<void> {
+  await ensureLoop('aiwatch', AI_WATCH_EVERY_HOURS)
+}
+
+async function ensureLoop(type: 'finance' | 'chronicle' | 'aiwatch', everyHours: number): Promise<void> {
   const [pending] = await db
     .select({ id: jobs.id })
     .from(jobs)
@@ -202,8 +214,14 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
     ['расхождений форком', day.forked],
     ['ошибок', day.errors],
   ]
-  // Молчим, когда молчать честно: день без единого события — это не новость, а тишина.
-  const quiet = rows.every(([, n]) => n === 0)
+  // Молчим, когда молчать честно. Но «ничего не сделано» и «ничего не происходило» — разные
+  // вещи: в инциденте 05–12.08 компания каждый день просыпалась, звала модель, получала отказ
+  // и снова засыпала, а летописец видел нули и считал это тихим днём. Сломанная неделя
+  // выглядела чередой выходных. Поэтому нули — тишина ТОЛЬКО если модель никто не звал.
+  const { callsLastDay } = await import('./ai-watch')
+  const calls = await callsLastDay()
+  const nothingDone = rows.every(([, n]) => n === 0)
+  const quiet = nothingDone && calls === 0
 
   if (policy.dryRun || quiet) {
     await recordAgentAction({
@@ -219,6 +237,9 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   }
 
   const html = `<p>День компании, ${date}:</p><ul>${rows.map(([k, n]) => `<li>${k}: ${n}</li>`).join('')}</ul>` +
+    // День, в котором модель звали, а библиотека не изменилась ни на строку, — это не отчёт,
+    // а тревога. Называем её вслух прямо в сводке, иначе нули читаются как «спокойно».
+    (nothingDone ? `<p><b>Компания не сделала ничего, хотя вызовов модели за сутки: ${calls}.</b> Похоже на поломку канала или на исчерпанный бюджет.</p>` : '') +
     (day.holdReasons.length ? `<p>Почему не пропустила планка: ${day.holdReasons.map((r) => `${r.reason} (${r.times})`).join('; ')}</p>` : '') +
     developmentDashboardLink()
   // Ключ на дату — ДО отправки: две задачи на один день (рестарт, второй инстанс) иначе
@@ -254,6 +275,100 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   return out
 }
 
+export interface AiWatchResult {
+  /** Что сторож увидел: канал лежит, канал вернулся или всё как было. */
+  verdict: 'down' | 'recovered' | 'ok'
+  sent: number
+  skipped: string
+}
+
+/**
+ * Проход сторожа канала. Смотрит хвост журнала вызовов и говорит вслух, когда модель
+ * перестала отвечать, — и когда снова начала.
+ *
+ * «Вернулся» отправляется не для симметрии: без него владелец, получив тревогу, обязан
+ * ходить и проверять сам, а это возвращает нас к «тревоге, на которую нужно смотреть».
+ * Оба сообщения — с ключом на сутки: беда, повторяемая каждый час, перестаёт читаться.
+ */
+export async function runAiWatchSweep(): Promise<AiWatchResult> {
+  await ensureAiWatchScheduled()
+  const out: AiWatchResult = { verdict: 'ok', sent: 0, skipped: '' }
+  if (!(await autonomyHealthy('aiwatch'))) return out
+  const policy = await loopPolicy('aiwatch')
+  const { channelState, channelDown, callsLastDay } = await import('./ai-watch')
+  const state = await channelState()
+  const down = channelDown(state)
+  // «Канал вернулся» имеет смысл только после отправленной тревоги — иначе первое же
+  // включение стенда слало бы поздравление ни с чем.
+  const alarmed = await lastAiWatchAlarm()
+  out.verdict = down ? 'down' : alarmed ? 'recovered' : 'ok'
+
+  if (policy.dryRun || out.verdict === 'ok') {
+    await recordAgentAction({
+      loop: 'aiwatch',
+      action: 'ai.watch',
+      resultStatus: policy.dryRun ? 'dry-run' : 'ok',
+      signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes },
+      decision: { verdict: out.verdict },
+      policyVersion: policy.policyVersion,
+    })
+    return out
+  }
+
+  const day = new Date().toISOString().slice(0, 10)
+  const calls = await callsLastDay()
+  const subject = down ? CHANNEL_DOWN_SUBJECT : CHANNEL_UP_SUBJECT
+  const body = down
+    ? `<p>Подряд ${state.failStreak} вызова модели закончились неудачей (${state.outcomes.join(', ')}).</p>` +
+      `<p>Последняя модель: ${state.lastModel || '—'}. Вызовов за сутки: ${calls}.</p>` +
+      '<p>Компания продолжает просыпаться по расписанию, но думать не может: черновики, уход и разбор фактов остановлены.</p>'
+    : `<p>Вызовы модели снова проходят. Последняя модель: ${state.lastModel || '—'}, вызовов за сутки: ${calls}.</p>`
+
+  // Ключ заявляем ДО отправки — та же механика, что у бухгалтера: запись с уникальным
+  // ключом и есть право отправить, иначе второй инстанс продублирует письмо.
+  const claimed = await recordAgentAction({
+    loop: 'aiwatch',
+    action: down ? 'ai.down' : 'ai.recovered',
+    resultStatus: 'ok',
+    signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes, calls },
+    decision: { verdict: out.verdict },
+    idempotencyKey: `aiwatch:${out.verdict}:${day}`,
+    policyVersion: policy.policyVersion,
+  })
+  if (!claimed) {
+    out.skipped = ALREADY_SENT
+    return out
+  }
+  const delivery = await tellOwner(`SetFork: ${subject}`, `${body}${developmentDashboardLink()}`)
+  out.sent = delivery.sent
+  out.skipped = delivery.skipped
+  if (!delivery.sent) {
+    await recordAgentAction({
+      loop: 'aiwatch',
+      action: down ? 'ai.down' : 'ai.recovered',
+      resultStatus: 'skipped',
+      signal: { failStreak: state.failStreak, model: state.lastModel },
+      decision: { verdict: out.verdict },
+      error: delivery.skipped,
+      policyVersion: policy.policyVersion,
+    })
+  }
+  log.info('aiwatch sweep done', { ...out, failStreak: state.failStreak })
+  return out
+}
+
+/** Была ли тревога о лежащем канале — по журналу, а не по памяти процесса
+ *  (проход может достаться другому инстансу). Смотрим сутки: столько живёт ключ. */
+async function lastAiWatchAlarm(): Promise<boolean> {
+  const [row] = await db
+    .select({ action: agentActions.action })
+    .from(agentActions)
+    .where(and(eq(agentActions.loop, 'aiwatch'), inArray(agentActions.action, ['ai.down', 'ai.recovered'])))
+    .orderBy(desc(agentActions.occurredAt))
+    .limit(1)
+  return row?.action === 'ai.down'
+}
+
 export async function runFinanceJob(): Promise<void> {
   try {
     await runFinanceSweep()
@@ -267,5 +382,13 @@ export async function runChronicleJob(): Promise<void> {
     await runChronicleSweep()
   } finally {
     await ensureChronicleScheduled()
+  }
+}
+
+export async function runAiWatchJob(): Promise<void> {
+  try {
+    await runAiWatchSweep()
+  } finally {
+    await ensureAiWatchScheduled()
   }
 }

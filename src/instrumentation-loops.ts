@@ -30,6 +30,10 @@ export const LOOP_WIRING: Record<LoopName, LoopWiring> = {
     handler: () => import('@/features/backoffice/jobs').then((m) => m.runChronicleJob),
     schedule: () => import('@/features/backoffice/service').then((m) => m.ensureChronicleScheduled()),
   },
+  aiwatch: {
+    handler: () => import('@/features/backoffice/jobs').then((m) => m.runAiWatchJob),
+    schedule: () => import('@/features/backoffice/service').then((m) => m.ensureAiWatchScheduled()),
+  },
   partners: {
     handler: () => import('@/features/partners/jobs').then((m) => m.runPartnersJob),
     schedule: () => import('@/features/partners/service').then((m) => m.ensurePartnersScheduled()),

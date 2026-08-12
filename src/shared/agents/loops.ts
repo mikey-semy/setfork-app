@@ -56,6 +56,16 @@ export const LOOPS: LoopSpec[] = [
     what: { en: 'sends the company day summary to the owner', ru: 'отправляет владельцу сводку дня компании' },
   },
   {
+    name: 'aiwatch',
+    jobType: 'aiwatch',
+    jobsModule: '@/features/backoffice/jobs',
+    handler: 'runAiWatchJob',
+    serviceModule: '@/features/backoffice/service',
+    ensure: 'ensureAiWatchScheduled',
+    paid: false,
+    what: { en: 'tells the owner when the model channel goes down and when it is back', ru: 'сообщает владельцу, когда канал к модели лёг и когда вернулся' },
+  },
+  {
     name: 'partners',
     jobType: 'partners',
     jobsModule: '@/features/partners/jobs',
