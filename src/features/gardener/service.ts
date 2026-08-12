@@ -12,7 +12,7 @@ import { isAiAvailable } from '@/shared/settings/ai'
 import { log } from '@/shared/observability'
 import { toProposed } from '@/shared/lib/step-input'
 import { agentUserIds, professionOf, tenderForTags } from '@/shared/ai/gnome-account'
-import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
+import { loopPolicy, recordAgentAction, type AgentActionInput } from '@/shared/agents/policy'
 import { autonomyHealthy } from '@/shared/agents/canary'
 import { getRoster } from '@/shared/ai/roster'
 import { t } from '@/shared/i18n'
@@ -117,20 +117,43 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     const ownedByCompany = tpl.ownerAccountType === 'agent'
     const gateCtx = { tenderId, agentId: tender?.expert.id ?? '', policyVersion: loop.policyVersion, lang }
 
+    /**
+     * Запись в журнал по ЭТОМУ списку. Обвязка (кто, по какому списку, какой политикой)
+     * у всех веток прохода одна, а собиралась руками в каждой — и разъехалась дважды:
+     * две самые частые ветки не писали НИЧЕГО, а три клали сигнал без `templateId`.
+     * По нему правило остановки ищет прошлые действия, так что «правка» не обнуляла
+     * счётчик «устоялся» — список уходил в форк раньше времени. Теперь забыть нельзя.
+     */
+    const journal = (
+      action: string,
+      resultStatus: AgentActionInput['resultStatus'],
+      decision: Record<string, unknown>,
+      signal: Record<string, unknown> = {},
+    ) =>
+      recordAgentAction({
+        loop: 'gardener',
+        action,
+        resultStatus,
+        agentId: tender?.expert.id ?? '',
+        actorUserId: tenderId,
+        signal: { templateId: tpl.id, slug: tpl.slug, ...signal },
+        decision,
+        resultRef: tpl.slug,
+        policyVersion: loop.policyVersion,
+      })
+    /** Профиль мастера, взявшего список, — «кто именно» в решении. */
+    const byWhom = tender ? professionOf(tender.expert, 'en') : 'generic'
+
     // СУХОЙ ПРОГОН: кого выбрали и что нашли — в журнал, refine НЕ зовём (он платный).
     // Проверка стоит до вызова модели и после выбора мастера, чтобы в журнале было
     // видно настоящее решение петли, а не заготовку.
     if (loop.dryRun) {
-      await recordAgentAction({
-        loop: 'gardener',
-        action: ownedByCompany ? 'list.improve' : 'list.suggest',
-        resultStatus: 'dry-run',
-        agentId: tender?.expert.id ?? '',
-        actorUserId: tenderId,
-        signal: { trigger: 'schedule', slug: tpl.slug, deadLinks: deadUrls.length },
-        decision: { mode: ownedByCompany ? 'direct-edit' : 'suggestion', profession: tender ? professionOf(tender.expert, 'en') : 'generic' },
-        policyVersion: loop.policyVersion,
-      })
+      await journal(
+        ownedByCompany ? 'list.improve' : 'list.suggest',
+        'dry-run',
+        { mode: ownedByCompany ? 'direct-edit' : 'suggestion', profession: byWhom },
+        { trigger: 'schedule', deadLinks: deadUrls.length },
+      )
       skipped++
       continue
     }
@@ -162,17 +185,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         }
       } else {
         if (res.result === 'nothing-new') {
-          await recordAgentAction({
-            loop: 'gardener',
-            action: 'list.fresh-none',
-            resultStatus: 'skipped',
-            agentId: tender?.expert.id ?? '',
-            actorUserId: tenderId,
-            signal: { templateId: tpl.id, slug: tpl.slug },
-            decision: { reason: 'living list: the stream had nothing new' },
-            resultRef: tpl.slug,
-            policyVersion: loop.policyVersion,
-          })
+          await journal('list.fresh-none', 'skipped', { reason: 'living list: the stream had nothing new' })
         }
         skipped++
       }
@@ -200,17 +213,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         if (res === 'published') published++
       }
       // «Устоялся» пишем в журнал — по нему и считается правило остановки.
-      await recordAgentAction({
-        loop: 'gardener',
-        action: 'list.stable',
-        resultStatus: 'skipped',
-        agentId: tender?.expert.id ?? '',
-        actorUserId: tenderId,
-        signal: { templateId: tpl.id, slug: tpl.slug },
-        decision: { reason: 'refine returned the same content' },
-        resultRef: tpl.slug,
-        policyVersion: loop.policyVersion,
-      })
+      await journal('list.stable', 'skipped', { reason: 'refine returned the same content' })
       // Два прохода подряд без изменений → хватит полировать. РАСХОДИМСЯ форком: другой
       // мастер уводит список в другой контекст. Один форк на источник.
       if ((await stablePasses(tpl.id)) >= STABLE_PASSES_BEFORE_FORK && !(await alreadyForked(tpl.id, agents))) {
@@ -245,17 +248,12 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
           number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${tpl.id})`,
         })
         .returning({ id: suggestions.id })
-      await recordAgentAction({
-        loop: 'gardener',
-        action: 'list.suggest',
-        resultStatus: 'ok',
-        agentId: tender?.expert.id ?? '',
-        actorUserId: tenderId,
-        signal: { trigger: 'schedule', slug: tpl.slug, deadLinks: deadUrls.length },
-        decision: { mode: 'suggestion', reason: 'recipe — правку количеств смотрит человек' },
-        resultRef: tpl.slug,
-        policyVersion: loop.policyVersion,
-      })
+      await journal(
+        'list.suggest',
+        'ok',
+        { mode: 'suggestion', reason: 'recipe — правку количеств смотрит человек', profession: byWhom },
+        { trigger: 'schedule', deadLinks: deadUrls.length },
+      )
       proposed++
       log.info('gardener: recipe suggestion opened on own list', { slug: tpl.slug, suggestionId: rec.id })
       continue
@@ -263,17 +261,12 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
 
     if (ownedByCompany) {
       await publishGardenerVersion(tpl.id, items, { note, authorId: tenderId })
-      await recordAgentAction({
-        loop: 'gardener',
-        action: 'list.improve',
-        resultStatus: 'ok',
-        agentId: tender?.expert.id ?? '',
-        actorUserId: tenderId,
-        signal: { trigger: 'schedule', slug: tpl.slug, deadLinks: deadUrls.length },
-        decision: { mode: 'direct-edit', reason: 'company-owned list — no receiver for a suggestion' },
-        resultRef: tpl.slug,
-        policyVersion: loop.policyVersion,
-      })
+      await journal(
+        'list.improve',
+        'ok',
+        { mode: 'direct-edit', reason: 'company-owned list — no receiver for a suggestion', profession: byWhom },
+        { trigger: 'schedule', deadLinks: deadUrls.length },
+      )
       proposed++
       log.info('gardener: own list improved directly', { slug: tpl.slug, tender: tender?.expert.id ?? 'generic' })
       // Улучшили свой черновик → сразу спрашиваем планку по НОВОМУ содержимому.
@@ -312,9 +305,19 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
           await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, created.id))
         },
       })
+      await journal(
+        'list.improve',
+        'ok',
+        { mode: 'auto-merge', reason: 'curated library — the gardener edit is the site content', profession: byWhom },
+        { trigger: 'schedule', deadLinks: deadUrls.length },
+      )
       log.info('gardener: auto-merged on curated list', { slug: tpl.slug })
     } else {
       await notify({ recipientId: tpl.ownerId, actorId: tenderId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+      // Запись в журнал — не отчётность ради отчётности: по нему считается «День
+      // компании» и правило остановки. Самая частая ветка прохода не писала в него
+      // НИЧЕГО, и владелец видел пустой день при работающей компании.
+      await journal('list.suggest', 'ok', { mode: 'suggestion', profession: byWhom }, { trigger: 'schedule', deadLinks: deadUrls.length })
       log.info('gardener: suggestion opened', { slug: tpl.slug, suggestionId: created.id, tender: tender?.expert.id ?? 'generic' })
     }
     proposed++

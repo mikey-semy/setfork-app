@@ -105,6 +105,10 @@ export default async function AdminDevelopmentPage() {
             hint={t('admin.yesterdayN', lang).replace('{n}', num(yesterday.created))}
           />
           <StatTile label={t('admin.improved', lang)} value={num(today.improved)} hint={t('admin.yesterdayN', lang).replace('{n}', num(yesterday.improved))} />
+          {/* Предложено: для компании это самый частый исход прохода — в чужой список она
+              пишет предложением. Своей плитки у него не было, и работающая компания
+              выглядела бездельницей. */}
+          <StatTile label={t('admin.proposedEdits', lang)} value={num(today.proposed)} hint={t('admin.yesterdayN', lang).replace('{n}', num(yesterday.proposed))} />
           <StatTile label={t('admin.publishedByBar', lang)} value={num(today.published)} tone={today.published > 0 ? 'ok' : undefined} />
           <StatTile label={t('admin.heldYou', lang)} value={num(today.held)} />
           <StatTile label={t('admin.divergedForks', lang)} value={num(today.forked)} />

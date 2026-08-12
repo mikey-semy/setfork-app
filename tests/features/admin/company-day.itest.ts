@@ -39,11 +39,23 @@ describe('день компании', () => {
   it('разбирает действия по видам', async () => {
     await put({ action: 'list.draft', loop: 'selfgen' })
     await put({ action: 'list.improve' })
+    await put({ action: 'list.suggest' })
     await put({ action: 'list.publish' })
     await put({ action: 'list.fork' })
     await put({ action: 'list.stable', resultStatus: 'skipped' })
     const d = await getCompanyDay(0)
-    expect(d).toMatchObject({ created: 1, improved: 1, published: 1, forked: 1, stable: 1 })
+    expect(d).toMatchObject({ created: 1, improved: 1, proposed: 1, published: 1, forked: 1, stable: 1 })
+  })
+
+  // Предложение к ЧУЖОМУ списку — самый частый исход прохода садовника: своих списков у
+  // компании почти нет. Своей колонки у него не было, и три открытых правки на проде
+  // 12.08 не попали в отчёт ни одной цифрой.
+  it('предложенная правка считается своей колонкой, а не теряется', async () => {
+    await put({ action: 'list.suggest' })
+    await put({ action: 'list.suggest' })
+    const d = await getCompanyDay(0)
+    expect(d.proposed).toBe(2)
+    expect(d.improved).toBe(0)
   })
 
   it('сухой прогон считается ОТДЕЛЬНО и не идёт в «сделано»', async () => {

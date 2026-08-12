@@ -15,6 +15,9 @@ export interface CompanyDay {
   daysAgo: number
   created: number
   improved: number
+  /** Правок ПРЕДЛОЖЕНО чужим спискам — для компании это самый частый исход прохода:
+   *  своих списков у неё почти нет, а в чужой она пишет предложением, не версией. */
+  proposed: number
   published: number
   held: number
   forked: number
@@ -27,9 +30,10 @@ export interface CompanyDay {
   events: { at: Date; action: string; status: string; ref: string; who: string; note: string }[]
 }
 
-const ACTION_LABEL: Record<string, keyof Pick<CompanyDay, 'created' | 'improved' | 'published' | 'held' | 'forked' | 'stable'>> = {
+const ACTION_LABEL: Record<string, keyof Pick<CompanyDay, 'created' | 'improved' | 'proposed' | 'published' | 'held' | 'forked' | 'stable'>> = {
   'list.draft': 'created',
   'list.improve': 'improved',
+  'list.suggest': 'proposed',
   'list.publish': 'published',
   'list.hold': 'held',
   'list.fork': 'forked',
@@ -65,7 +69,7 @@ export async function getCompanyDay(daysAgo = 0): Promise<CompanyDay> {
 
   const day: CompanyDay = {
     daysAgo,
-    created: 0, improved: 0, published: 0, held: 0, forked: 0, stable: 0, dryRun: 0, errors: 0,
+    created: 0, improved: 0, proposed: 0, published: 0, held: 0, forked: 0, stable: 0, dryRun: 0, errors: 0,
     holdReasons: [],
     events: [],
   }
