@@ -23,7 +23,7 @@ export function ActivitySection({
   received,
   graphYear,
   graphYears,
-  monthStart,
+  month,
   monthTopics,
   activityNav,
 }: {
@@ -33,7 +33,8 @@ export function ActivitySection({
   received: { stars: number; forks: number }
   graphYear?: number
   graphYears: number[]
-  monthStart: Date
+  /** Месяц ленты ключом `YYYY-MM`: дата ушла бы на клиент мгновением времени. */
+  month: string
   monthTopics: ActivityTopic[]
   activityNav?: { prev: string | null; next: string | null }
 }) {
@@ -92,12 +93,14 @@ export function ActivitySection({
       />
       <ContributionActivity
         topics={day ? (dayTopics ?? []) : monthTopics}
-        monthStart={monthStart}
+        month={month}
         day={day}
         handle={handle}
         lang={lang}
         nav={activityNav}
-        loading={pending && dayTopics === null && !failed}
+        // day в условии обязателен: сброс фильтра не может отменить уже
+        // летящий запрос, и без него месячная лента пряталась под скелетон.
+        loading={day !== null && pending && dayTopics === null && !failed}
         failed={failed}
         onReset={reset}
         onRetry={() => day && load(day)}

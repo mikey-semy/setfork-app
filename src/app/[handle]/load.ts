@@ -109,7 +109,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   // лишнего запроса не делаем.
   const agent = tab === 'overview' && user.accountType === 'agent' ? await agentProfile(user.id) : null
 
-  const { monthStart, monthTopics, activityNav } = await loadMonth({
+  const { monthKey, monthTopics, activityNav } = await loadMonth({
     month: sp.month,
     handle,
     userId: user.id,
@@ -172,7 +172,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     agent,
     graphYear,
     graphYears,
-    monthStart,
+    monthKey,
     monthTopics,
     activityNav,
     starFolders,
@@ -253,6 +253,9 @@ async function loadMonth(ctx: {
 
   return {
     monthStart,
+    // Наружу месяц едет КЛЮЧОМ, а не датой: Date уходит на клиент мгновением времени,
+    // и у зрителя западнее UTC 1 августа по серверным часам стало бы июлем в заголовке.
+    monthKey: key(monthStart),
     monthTopics: enabled ? await getActivityTopics(userId, monthStart, monthEnd, viewerId) : null,
     activityNav: {
       prev: prev >= firstMonth ? `/${handle}?month=${key(prev)}` : null,

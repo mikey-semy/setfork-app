@@ -4,14 +4,14 @@ import { t, type Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { fullDate, monthYearLong } from '@/shared/lib/date'
 import { ActivityTopicItem } from './ActivityTopicItem'
-import type { ActivityTopic, DayKey } from './types'
+import { parseDayKey, type ActivityTopic, type DayKey } from './types'
 
 /** Лента активности (Contribution activity, как GitHub): темы работ с иконками
  *  на полоске таймлайна — версии, созданные списки, задачи, предложения.
  *  Окно ленты — месяц, а клик по клетке календаря сужает его до одного дня. */
 export function ContributionActivity({
   topics,
-  monthStart,
+  month,
   day,
   handle,
   lang,
@@ -22,7 +22,8 @@ export function ContributionActivity({
   onRetry,
 }: {
   topics: ActivityTopic[]
-  monthStart: Date
+  /** Месяц ленты ключом `YYYY-MM`. */
+  month: string
   /** Выбранный день или null — тогда показываем месяц целиком. */
   day: DayKey | null
   handle: string
@@ -41,7 +42,7 @@ export function ContributionActivity({
       <div className="mb-3 text-[1rem] font-semibold text-ink">{t('profile.activity.title', lang)}</div>
       <div className="mb-4 flex items-center justify-between gap-2 border-b border-border pb-1">
         <span className="min-w-0 truncate text-[0.78125rem] font-semibold uppercase tracking-wide text-muted">
-          {day ? fullDate(day, lang) : monthYearLong(monthStart, lang)}
+          {day ? fullDate(parseDayKey(day) ?? day, lang) : monthYearLong(parseDayKey(`${month}-01`) ?? `${month}-01`, lang)}
         </span>
         {/* Пока лента сужена до дня, стрелки месяцев уводили бы не туда: на их
             месте — выход из фильтра, как и открывает его календарь. */}
