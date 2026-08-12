@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChevronRight, Eye, GitCompare, Loader2 } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Button } from '@/shared/ui/button'
 import { DiffStat } from '@/shared/ui/DiffStat'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
@@ -27,6 +28,8 @@ interface Labels {
   authorNotRecorded: string
   loading: string
   noChanges: string
+  loadFailed: string
+  retry: string
   fullCompare: string
   viewVersion: string
   expandHint: string
@@ -68,19 +71,36 @@ export function CommitRow({
     if (window.location.hash === `#v${version}`) void toggle()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- один раз на монтировании
   }, [])
-  const [diff, setDiff] = useState<CommitDiff | null>(null)
-  const [loading, setLoading] = useState(false)
+  // Загрузка диффа держится ОДНИМ состоянием вместе с номером запроса: флаг
+  // снимался только после успеха, и сорвавшийся запрос оставлял разворот вечно
+  // «загружающимся», а ответ прежнего открытия мог погасить спиннер нового.
+  const [state, setState] = useState<{ req: number; loading: boolean; diff: CommitDiff | null; failed: boolean }>({
+    req: 0,
+    loading: false,
+    diff: null,
+    failed: false,
+  })
+  const { loading, diff, failed } = state
   const createdAt = new Date(createdAtMs)
 
   const toggle = async () => {
     const next = !open
     setOpen(next)
-    if (next && !diff && !loading) {
-      setLoading(true)
-      const d = await getCommitDiff(owner, slug, version, lang)
-      setDiff(d)
-      setLoading(false)
-    }
+    if (!next || diff || loading) return
+    void load()
+  }
+
+  const load = async () => {
+    const req = state.req + 1
+    setState((s) => ({ ...s, req, loading: true, failed: false }))
+    // Сбой ОТДЕЛЬНО от пустого диффа: превращать ошибку в null значило бы сказать
+    // «изменений нет» там, где мы просто не смогли их получить.
+    const got = await getCommitDiff(owner, slug, version, lang).then(
+      (d) => ({ ok: true as const, d }),
+      () => ({ ok: false as const, d: null }),
+    )
+    // Ответ применяет только СВОЙ запрос: чужой уже не владеет этим состоянием.
+    setState((s) => (s.req !== req ? s : { ...s, loading: false, failed: !got.ok, diff: got.d ?? s.diff }))
   }
 
   return (
@@ -125,6 +145,13 @@ export function CommitRow({
           {loading ? (
             <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
               <Loader2 size={13} className="animate-spin" /> {labels.loading}
+            </div>
+          ) : failed ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[0.78125rem] text-danger">{labels.loadFailed}</span>
+              <Button size="xs" onClick={() => void load()}>
+                {labels.retry}
+              </Button>
             </div>
           ) : !diff || diff.entries.length === 0 ? (
             <div className="text-[0.78125rem] text-muted">{labels.noChanges}</div>

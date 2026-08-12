@@ -147,6 +147,8 @@ export default async function CommitsPage({
                       authorNotRecorded: t('authorNotRecorded', lang),
                       loading: t('loadingChanges', lang),
                       noChanges: t('diffNothing', lang),
+                      loadFailed: t('list.diffLoadFailed', lang),
+                      retry: t('tryAgain', lang),
                       fullCompare: t('compareTitle', lang),
                       viewVersion: t('viewVersion', lang),
                       expandHint: t('expandCommit', lang),

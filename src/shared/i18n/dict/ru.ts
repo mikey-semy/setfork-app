@@ -1685,6 +1685,7 @@ export const ru: Record<DictKey, string> = {
   'list.forkTree': 'Дерево форков',
   'list.forkTreeTruncated': 'Показаны не все ветви — дерево слишком большое.',
   'list.hideMessage': 'Свернуть сообщение',
+  'list.diffLoadFailed': 'Не удалось загрузить изменения.',
   'list.linkedFrom': 'Ссылаются на этот список',
   'list.lockedUntilPassed': 'Дальше откроется, когда сдадите тесты урока',
   'list.noPublicForksYet': 'Публичных форков пока нет — стань первой ветвью.',

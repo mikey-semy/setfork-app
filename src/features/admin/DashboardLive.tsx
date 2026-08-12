@@ -1,18 +1,16 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { StatTile } from '@/shared/ui/StatTile'
 import type { LiveMetrics } from './dashboard-types'
-
-const POLL_MS = 15_000
-const REFRESH_EVERY = 4 // раз в ~минуту освежаем и серверную часть (тренды/инбокс) через router.refresh()
+import { useLiveMetrics } from './use-live-metrics'
 
 function money(n: number): string {
   return '$' + n.toFixed(n < 1 ? 4 : 2)
 }
+const NUM_FMT = new Intl.NumberFormat('en') // модульный уровень: пересборка форматтера на каждый вызов дорога
 function num(n: number): string {
-  return new Intl.NumberFormat('en').format(n)
+  return NUM_FMT.format(n)
 }
 
 /**
@@ -21,36 +19,8 @@ function num(n: number): string {
  * серверные графики трендов и счётчики инбокса на странице.
  */
 export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: Lang }) {
-  const [m, setM] = useState<LiveMetrics>(initial)
-  const [stale, setStale] = useState(false)
   const router = useRouter()
-  const ticks = useRef(0)
-
-  useEffect(() => {
-    let alive = true
-    let timer: ReturnType<typeof setTimeout>
-    const tick = async () => {
-      try {
-        const res = await fetch('/api/admin/metrics', { cache: 'no-store' })
-        if (res.ok) {
-          const data = (await res.json()) as LiveMetrics
-          if (alive) {
-            setM(data)
-            setStale(false)
-          }
-          if (alive && ++ticks.current % REFRESH_EVERY === 0) router.refresh()
-        } else if (alive) setStale(true)
-      } catch {
-        if (alive) setStale(true)
-      }
-      if (alive) timer = setTimeout(tick, POLL_MS)
-    }
-    timer = setTimeout(tick, POLL_MS)
-    return () => {
-      alive = false
-      clearTimeout(timer)
-    }
-  }, [router])
+  const { m, stale } = useLiveMetrics(initial, router)
 
   const online = m.umamiConfigured ? m.onlineAll : m.onlineAuth
   const onlineSub = m.umamiConfigured
