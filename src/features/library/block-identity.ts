@@ -110,6 +110,11 @@ export function blockMatchKey(b: BlockContent): string {
   return type === 'step' ? `step:${stableJson(b.title)}` : `${type}:${stableJson(b.content)}`
 }
 
+// Идентичность блока — доменное знание (её спрашивают и `git`, и `library`),
+// поэтому определение живёт в `@/core`. Реэкспорт оставлен для потребителей,
+// которые уже импортируют сопоставление отсюда.
+export { blockIdentity } from '@/core'
+
 /** Найденное соответствие блока в предыдущем наборе. */
 export interface BlockMatch {
   i: number

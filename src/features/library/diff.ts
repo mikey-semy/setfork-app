@@ -1,6 +1,6 @@
 import type { StepLevel } from '@/shared/db'
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
-import { matchBlocks } from './block-identity'
+import { blockIdentity, matchBlocks } from './block-identity'
 
 // Дифф двух версий списка построчно, но нумерация — по ПУНКТАМ (не «строки кода»):
 // номер пункта показывается у его заголовка, продолжения (описание/команда/подпункты)
@@ -293,7 +293,7 @@ export function diffSteps(from: CmpStep[], to: CmpStep[]): {
 } {
   // Сопоставление — общее с blame (block-identity): одна строка from достаётся
   // не более чем одному блоку to, иначе дубли подписей врут в счётчиках.
-  const matches = matchBlocks(from, to, (s) => s.blockId, skey)
+  const matches = matchBlocks(from, to, blockIdentity, skey)
   const taken = new Set(matches.filter((m) => m !== null).map((m) => m.i))
 
   const entries: DiffEntry[] = []

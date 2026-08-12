@@ -14,6 +14,8 @@
 // Порядок результата: ours-порядок; добавленное в theirs — после его
 // theirs-предшественника (или в конец).
 
+import { blockIdentity } from '@/core/domain/block-identity'
+
 export interface TwStep {
   // Не-step блоки несут type/content; у шага — undefined (byte-compat).
   type?: string
@@ -72,10 +74,14 @@ const stepEq = (a: TwStep | null, b: TwStep | null): boolean => JSON.stringify(a
  *  выдумывать конфликты там, где просто поправили заголовок. Дальше — легаси
  *  content.bid не-step блоков, затем фолбэк по title/контенту (старые данные). */
 function blockKey(s: TwStep): string {
-  if (s.blockId) return `id#${s.blockId}`
+  // Идентичность — одна функция на приложение (`@/core`): колонка сильнее,
+  // затем легаси content.bid. Здесь она лишь оборачивается в префикс, чтобы
+  // ключ блока с идентичностью нельзя было спутать с фолбэком по тексту.
+  const id = blockIdentity(s)
+  if (s.blockId && id) return `id#${id}`
   if (!s.type || s.type === 'step') return norm(s.title)
+  if (id) return `${s.type}#${id}`
   const c = s.content ?? {}
-  if (typeof c.bid === 'string' && c.bid) return `${s.type}#${c.bid}`
   if (s.type === 'text') return `text:${norm(String(c.md ?? ''))}`
   if (s.type === 'image') return `image:${String(c.ref ?? '')}:${norm(String(c.caption ?? ''))}`
   return `${s.type}:${norm(JSON.stringify(c))}`
