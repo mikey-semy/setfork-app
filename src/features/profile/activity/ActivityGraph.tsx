@@ -19,7 +19,7 @@ export function ActivityGraph({
   lang,
   year,
   years = [],
-  showRolling = true,
+  today,
   base,
   selected,
   onSelect,
@@ -28,19 +28,20 @@ export function ActivityGraph({
   starsReceived: number
   forksReceived: number
   lang: Lang
-  /** Выбранный календарный год; undefined = скользящее окно (последний год). */
+  /** Показанный календарный год; по умолчанию текущий. */
   year?: number
   /** Доступные годы (регистрация…сейчас), новые сверху; пусто = без селектора. */
   years?: number[]
-  /** Показывать пилюлю «Последний год» (скользящее окно). Ложь → только годы. */
-  showRolling?: boolean
+  /** «Сегодня» по часам сервера: правый край сетки и год заголовка. */
+  today: DayKey
   /** База профиля для ссылок селектора (например `/mike`). */
   base?: string
   /** День, по которому отфильтрована лента под графом. */
   selected: DayKey | null
   onSelect: (day: DayKey) => void
 }) {
-  const calendar = buildCalendar({ contributions, year, lang })
+  const now = parseDayKey(today) ?? undefined
+  const calendar = buildCalendar({ contributions, year, lang, now })
   const firstWeek = calendar.weeks[0]
 
   return (
@@ -48,7 +49,7 @@ export function ActivityGraph({
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-ink-2">
         <span>
           <b className="text-ink">{calendar.total}</b> {plural(calendar.total, 'contributions', lang)}{' '}
-          {year != null ? fill('profile.activity.inYear', lang, { year }) : t('inLastYear', lang)}
+          {fill('profile.activity.inYear', lang, { year: year ?? now?.getFullYear() ?? '' })}
         </span>
         <span className="inline-flex items-center gap-1">
           <Star size={13} className="text-muted" /> <b className="text-ink">{starsReceived}</b> {t('starsReceived', lang)}
@@ -58,22 +59,16 @@ export function ActivityGraph({
         </span>
       </div>
 
-      {/* Селектор года (как GitHub): «Последний год» + годы регистрации…сейчас.
-          Прячем целиком, если переключать не на что (нет rolling и один год). */}
-      {years.length > 0 && base && (showRolling || years.length > 1) && (
+      {/* Селектор года: только годы регистрации…сейчас, новые слева. Пилюли
+          «Последний год» нет — текущий год и есть последний (решение владельца
+          12.08). Прячем селектор целиком, если переключать не на что. */}
+      {years.length > 1 && base && (
         <div className="mb-3 flex flex-wrap gap-1.5">
-          {showRolling && (
-            <Link
-              href={base}
-              className={`rounded-md border px-2 py-0.5 text-[0.78125rem] ${year == null ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
-            >
-              {t('profile.activity.lastYear', lang)}
-            </Link>
-          )}
           {years.map((y) => (
             <Link
               key={y}
-              href={`${base}?year=${y}`}
+              // Текущий год адресуется базой профиля: у «сейчас» один канонический адрес.
+              href={y === years[0] ? base : `${base}?year=${y}`}
               className={`rounded-md border px-2 py-0.5 font-mono text-[0.78125rem] ${year === y ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
             >
               {y}

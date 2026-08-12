@@ -23,6 +23,7 @@ export function ActivitySection({
   received,
   graphYear,
   graphYears,
+  todayKey,
   month,
   monthTopics,
   activityNav,
@@ -33,6 +34,8 @@ export function ActivitySection({
   received: { stars: number; forks: number }
   graphYear?: number
   graphYears: number[]
+  /** «Сегодня» по часам сервера — правый край календаря. */
+  todayKey: DayKey
   /** Месяц ленты ключом `YYYY-MM`: дата ушла бы на клиент мгновением времени. */
   month: string
   monthTopics: ActivityTopic[]
@@ -87,6 +90,7 @@ export function ActivitySection({
         lang={lang}
         year={graphYear}
         years={graphYears}
+        today={todayKey}
         base={`/${handle}`}
         selected={day}
         onSelect={select}
