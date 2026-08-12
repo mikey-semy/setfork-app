@@ -217,9 +217,13 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   // Молчим, когда молчать честно. Но «ничего не сделано» и «ничего не происходило» — разные
   // вещи: в инциденте 05–12.08 компания каждый день просыпалась, звала модель, получала отказ
   // и снова засыпала, а летописец видел нули и считал это тихим днём. Сломанная неделя
-  // выглядела чередой выходных. Поэтому нули — тишина ТОЛЬКО если модель никто не звал.
-  const { callsLastDay } = await import('./ai-watch')
-  const calls = await callsLastDay()
+  // выглядела чередой выходных.
+  //
+  // Право на тревогу дают именно НЕУДАЧНЫЕ вызовы того же дня: успешные могли быть
+  // пользовательскими, и «компания не сделала ничего, пока человек генерил списки» —
+  // это тихий день у петель, а не поломка.
+  const { callsOnDay } = await import('./ai-watch')
+  const { calls, failed } = await callsOnDay(1)
   const nothingDone = rows.every(([, n]) => n === 0)
   const quiet = nothingDone && calls === 0
 
@@ -237,9 +241,11 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   }
 
   const html = `<p>День компании, ${date}:</p><ul>${rows.map(([k, n]) => `<li>${k}: ${n}</li>`).join('')}</ul>` +
-    // День, в котором модель звали, а библиотека не изменилась ни на строку, — это не отчёт,
-    // а тревога. Называем её вслух прямо в сводке, иначе нули читаются как «спокойно».
-    (nothingDone ? `<p><b>Компания не сделала ничего, хотя вызовов модели за сутки: ${calls}.</b> Похоже на поломку канала или на исчерпанный бюджет.</p>` : '') +
+    // День, в котором вызовы модели ПАДАЛИ, а библиотека не изменилась ни на строку, — это
+    // не отчёт, а тревога. Называем её вслух прямо в сводке, иначе нули читаются как «спокойно».
+    (nothingDone && failed > 0
+      ? `<p><b>Компания не сделала ничего, а вызовов модели с отказом за день: ${failed} из ${calls}.</b> Похоже на поломку канала или на исчерпанный бюджет.</p>`
+      : '') +
     (day.holdReasons.length ? `<p>Почему не пропустила планка: ${day.holdReasons.map((r) => `${r.reason} (${r.times})`).join('; ')}</p>` : '') +
     developmentDashboardLink()
   // Ключ на дату — ДО отправки: две задачи на один день (рестарт, второй инстанс) иначе
@@ -296,11 +302,11 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   if (!(await autonomyHealthy('aiwatch'))) return out
   const policy = await loopPolicy('aiwatch')
   const { channelState, channelDown, callsLastDay } = await import('./ai-watch')
-  const state = await channelState()
-  const down = channelDown(state)
-  // «Канал вернулся» имеет смысл только после отправленной тревоги — иначе первое же
+  // Хвост журнала и «была ли тревога» друг от друга не зависят — читаем разом.
+  // «Канал вернулся» имеет смысл только после отправленной тревоги: иначе первое же
   // включение стенда слало бы поздравление ни с чем.
-  const alarmed = await lastAiWatchAlarm()
+  const [state, alarmed] = await Promise.all([channelState(), lastAiWatchAlarm()])
+  const down = channelDown(state)
   out.verdict = down ? 'down' : alarmed ? 'recovered' : 'ok'
 
   if (policy.dryRun || out.verdict === 'ok') {

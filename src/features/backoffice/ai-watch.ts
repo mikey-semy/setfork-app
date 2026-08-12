@@ -53,11 +53,41 @@ export async function channelState(): Promise<ChannelState> {
 /** Канал считается лежащим: серия отказов достигла общей планки. */
 export const channelDown = (s: ChannelState): boolean => s.failStreak >= ERROR_STREAK_TRIP
 
-/** Сколько вызовов было за сутки — отличает «сломано» от «никто не звал». */
+/** Сколько вызовов было за последние сутки — цифра для письма сторожа: отличает
+ *  «канал сломан» от «сегодня никто не звал». Окно скользящее, как и сама проверка. */
 export async function callsLastDay(): Promise<number> {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(aiUsage)
     .where(and(gte(aiUsage.createdAt, new Date(Date.now() - 86_400_000)), ne(aiUsage.feature, 'embed')))
   return row?.n ?? 0
+}
+
+/**
+ * Вызовы за КАЛЕНДАРНЫЙ день — для сводки летописца.
+ *
+ * Границы те же, что у «Дня компании» (`date_trunc('day', now())` со сдвигом): проход
+ * летописца встаёт раз в сутки от старта процесса, поэтому скользящее окно относило бы
+ * сегодняшние вызовы во вчерашний отчёт и наоборот.
+ *
+ * Неудачи считаются отдельно, и именно они дают право на тревогу: «компания ничего не
+ * сделала, а пользователь при этом успешно генерил списки» — это не поломка, а тихий
+ * день у петель. Отделить вызовы компании от пользовательских по журналу нельзя:
+ * `gnome_id` не проставляется, а у трети фоновых `refine` пуст и `user_id`.
+ */
+export async function callsOnDay(daysAgo: number): Promise<{ calls: number; failed: number }> {
+  const [row] = await db
+    .select({
+      calls: sql<number>`count(*)::int`,
+      failed: sql<number>`(count(*) filter (where ${aiUsage.outcome} <> 'ok'))::int`,
+    })
+    .from(aiUsage)
+    .where(
+      and(
+        ne(aiUsage.feature, 'embed'),
+        sql`${aiUsage.createdAt} >= date_trunc('day', now()) - (${daysAgo}::int * interval '1 day')`,
+        sql`${aiUsage.createdAt} < date_trunc('day', now()) - ((${daysAgo}::int - 1) * interval '1 day')`,
+      ),
+    )
+  return { calls: row?.calls ?? 0, failed: row?.failed ?? 0 }
 }

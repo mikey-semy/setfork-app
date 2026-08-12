@@ -103,6 +103,18 @@ describe('сторож канала к модели', () => {
     expect(mail.sent).toHaveLength(0)
   })
 
+  it('счёт за календарный день отделяет неудачи от успешных вызовов', async () => {
+    const { callsOnDay } = await import('@/features/backoffice/ai-watch')
+    await call('error', { minutesAgo: 5 })
+    await call('ok', { minutesAgo: 5 })
+    await call('timeout', { minutesAgo: 60 * 30 }) // позавчерашний — в счёт дня не идёт
+
+    const today = await callsOnDay(0)
+
+    expect(today.calls).toBe(2)
+    expect(today.failed).toBe(1)
+  })
+
   it('эмбеддинги в счёт не идут: они ходят своим маршрутом и в инциденте 12.08 проходили', async () => {
     for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 20 - i })
     await call('ok', { minutesAgo: 1, feature: 'embed', model: 'openai/text-embedding-3-small' })
