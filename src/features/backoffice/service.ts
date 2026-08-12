@@ -366,16 +366,23 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   return out
 }
 
-/** Была ли тревога о лежащем канале — по журналу, а не по памяти процесса
- *  (проход может достаться другому инстансу). Смотрим сутки: столько живёт ключ. */
+/**
+ * Была ли ДОСТАВЛЕННАЯ тревога о лежащем канале — по журналу, а не по памяти процесса
+ * (проход может достаться другому инстансу).
+ *
+ * Статус важен наравне с действием: при неудачной отправке рядом с заявкой ложится строка
+ * `skipped` с причиной, и она оказывается последней. Считать её тревогой значит однажды
+ * прислать владельцу «канал восстановлен» без предшествующего «канал лёг» — сообщение,
+ * которое непонятно как читать.
+ */
 async function lastAiWatchAlarm(): Promise<boolean> {
   const [row] = await db
-    .select({ action: agentActions.action })
+    .select({ action: agentActions.action, status: agentActions.resultStatus })
     .from(agentActions)
     .where(and(eq(agentActions.loop, 'aiwatch'), inArray(agentActions.action, ['ai.down', 'ai.recovered'])))
     .orderBy(desc(agentActions.occurredAt))
     .limit(1)
-  return row?.action === 'ai.down'
+  return row?.action === 'ai.down' && row.status === 'ok'
 }
 
 export async function runFinanceJob(): Promise<void> {

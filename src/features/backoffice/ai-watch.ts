@@ -29,7 +29,15 @@ export interface ChannelState {
 }
 
 /**
- * Хвост журнала вызовов: подряд идущие неудачи с конца.
+ * Окно свежести хвоста. Без него серия отказов «застывает»: упали последние пять вызовов,
+ * трафик прекратился — и сторож считал бы канал лежащим бесконечно, хотя проверить это
+ * стало нечем. Сутки выбраны по ритму петель: у самой редкой из платных (садовник) проход
+ * раз в двое суток, но за сутки его успевают разбудить и ручные действия.
+ */
+const FRESH_WINDOW_MS = 24 * 3_600_000
+
+/**
+ * Хвост журнала вызовов: подряд идущие неудачи с конца, в пределах свежего окна.
  *
  * Эмбеддинги исключены намеренно — они ходят другим маршрутом (у OpenRouter это отдельный
  * эндпоинт) и в инциденте 12.08 проходили, пока чат-вызовы падали. Считать их вместе
@@ -39,7 +47,7 @@ export async function channelState(): Promise<ChannelState> {
   const rows = await db
     .select({ outcome: aiUsage.outcome, model: aiUsage.model })
     .from(aiUsage)
-    .where(ne(aiUsage.feature, 'embed'))
+    .where(and(ne(aiUsage.feature, 'embed'), gte(aiUsage.createdAt, new Date(Date.now() - FRESH_WINDOW_MS))))
     .orderBy(desc(aiUsage.createdAt))
     .limit(ERROR_STREAK_TRIP)
   const outcomes: string[] = []

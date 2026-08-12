@@ -103,6 +103,23 @@ describe('сторож канала к модели', () => {
     expect(mail.sent).toHaveLength(0)
   })
 
+  // Недоставленная тревога тревогой не была: иначе владелец однажды получит «канал
+  // восстановлен» без предшествующего «канал лёг» — сообщение, которое непонятно как читать.
+  it('тревога не дошла — «восстановлен» потом не шлём', async () => {
+    await db.delete(users) // адресата нет: письмо уйти не может
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 30 - i })
+    const alarm = await runAiWatchSweep()
+    expect(alarm.verdict).toBe('down')
+    expect(alarm.sent).toBe(0)
+
+    await seedOwner() // почту починили
+    await call('ok', { minutesAgo: 1 })
+    const res = await runAiWatchSweep()
+
+    expect(res.verdict).toBe('ok')
+    expect(mail.sent).toHaveLength(0)
+  })
+
   it('счёт за календарный день отделяет неудачи от успешных вызовов', async () => {
     const { callsOnDay } = await import('@/features/backoffice/ai-watch')
     await call('error', { minutesAgo: 5 })
@@ -124,6 +141,17 @@ describe('сторож канала к модели', () => {
     expect(channelBrokenAllDay({ calls: 10, failed: 1 })).toBe(false) // человек разок не дождался
     expect(channelBrokenAllDay({ calls: 2, failed: 2 })).toBe(false) // мало вызовов — это не картина
     expect(channelBrokenAllDay({ calls: 0, failed: 0 })).toBe(false) // никто не звал
+  })
+
+  // Без окна свежести серия «застывает»: упали последние пять вызовов, трафик прекратился —
+  // и канал числился бы лежащим бесконечно, хотя проверять это стало нечем.
+  it('вчерашние отказы каналом не считаются: проверять уже нечего', async () => {
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 60 * 26 + i })
+
+    const state = await channelState()
+
+    expect(state.failStreak).toBe(0)
+    expect(channelDown(state)).toBe(false)
   })
 
   it('эмбеддинги в счёт не идут: они ходят своим маршрутом и в инциденте 12.08 проходили', async () => {
