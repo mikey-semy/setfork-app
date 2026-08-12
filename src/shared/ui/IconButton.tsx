@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import { cn } from '@/shared/lib/cn'
 import { Button, type ButtonProps } from './button'
+import { buttonClass } from './button-style'
 import { TOUCH_BOX, type ControlSize } from './control'
 
 /**
@@ -19,9 +21,29 @@ const BOX: Record<ControlSize, string> = {
   md: 'size-8',
 }
 
-export function IconButton({ size = 'md', label, className, children, ...props }: Omit<ButtonProps, 'aria-label'> & { label: string }) {
+export function IconButton({
+  size = 'md',
+  label,
+  className,
+  href,
+  children,
+  ...props
+}: Omit<ButtonProps, 'aria-label'> & {
+  label: string
+  /** Задан — это НАВИГАЦИЯ: рендерим ссылку тем же видом (открывается в новой
+   *  вкладке, копируется, читается как переход), а не кнопку с router.push. */
+  href?: string
+}) {
+  const box = cn('shrink-0 p-0', BOX[size], TOUCH_BOX, className)
+  if (href) {
+    return (
+      <Link href={href} aria-label={label} className={buttonClass({ variant: props.variant, size, className: box })}>
+        {children}
+      </Link>
+    )
+  }
   return (
-    <Button size={size} aria-label={label} className={cn('shrink-0 p-0', BOX[size], TOUCH_BOX, className)} {...props}>
+    <Button size={size} aria-label={label} className={box} {...props}>
       {children}
     </Button>
   )

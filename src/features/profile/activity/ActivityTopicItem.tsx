@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { CircleDot, GitCommitHorizontal, GitPullRequest, Rocket, type LucideIcon } from 'lucide-react'
 import { fill, plural, tr, type Lang } from '@/shared/i18n'
+import { fmtNumber } from '@/shared/lib/count'
 import type { ActivityKind, ActivityTopic } from './types'
 
 // Одна тема ленты активности: кружок с иконкой на полоске таймлайна, сводка и —
@@ -34,7 +35,7 @@ export function ActivityTopicItem({ topic, handle, lang }: { topic: ActivityTopi
                   {tr(v.title, lang)}
                 </Link>
                 <span className="shrink-0 font-mono text-[0.6875rem] text-muted">
-                  {v.count} {plural(v.count, 'versions', lang)}
+                  {fmtNumber(v.count, lang)} {plural(v.count, 'versions', lang)}
                 </span>
               </li>
             ))}
@@ -66,27 +67,27 @@ function Summary({ topic, lang }: { topic: ActivityTopic; lang: Lang }) {
       return (
         <>
           {fill('profile.activity.publishedVersions', lang, {
-            n: topic.total,
+            n: fmtNumber(topic.total, lang),
             versions: plural(topic.total, 'versions', lang),
-            m: topic.listsTotal,
+            m: fmtNumber(topic.listsTotal, lang),
             lists: plural(topic.listsTotal, 'listsIn', lang),
           })}
         </>
       )
     case 'lists':
-      return <>{fill('profile.activity.createdLists', lang, { n: topic.total, lists: plural(topic.total, 'lists', lang) })}</>
+      return <>{fill('profile.activity.createdLists', lang, { n: fmtNumber(topic.total, lang), lists: plural(topic.total, 'lists', lang) })}</>
     case 'issues':
       return (
         <>
           {fill('profile.activity.openedIssues', lang, {
-            n: topic.total,
+            n: fmtNumber(topic.total, lang),
             issues: plural(topic.total, 'issues', lang),
-            m: topic.listsTotal,
+            m: fmtNumber(topic.listsTotal, lang),
             lists: plural(topic.listsTotal, 'listsIn', lang),
           })}
         </>
       )
     case 'suggestions':
-      return <>{fill('profile.activity.proposedSuggestions', lang, { n: topic.total, suggestions: plural(topic.total, 'suggestions', lang) })}</>
+      return <>{fill('profile.activity.proposedSuggestions', lang, { n: fmtNumber(topic.total, lang), suggestions: plural(topic.total, 'suggestions', lang) })}</>
   }
 }

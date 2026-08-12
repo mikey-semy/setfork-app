@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCalendar, level } from '@/features/profile/activity/grid'
+import { buildCalendar, level, levelScale } from '@/features/profile/activity/grid'
 import { dayKey, parseDayKey } from '@/features/profile/activity/types'
 
 // Клетка календаря — это фильтр ленты, поэтому её ключ (YYYY-MM-DD) ездит между
@@ -20,15 +20,39 @@ describe('dayKey / parseDayKey', () => {
   })
 })
 
-describe('level', () => {
-  it('раскладывает вклады по ступеням густоты', () => {
-    expect(level(0)).toBe(0)
-    expect(level(1)).toBe(1)
-    expect(level(2)).toBe(1)
-    expect(level(3)).toBe(2)
-    expect(level(5)).toBe(3)
-    expect(level(7)).toBe(4)
-    expect(level(120)).toBe(4)
+describe('levelScale / level', () => {
+  it('строит пороги по распределению дней, а не по числам из кода', () => {
+    // Активный участник: 40 вкладов в день для него — обычный вторник.
+    const busy = [4, 8, 12, 20, 30, 40, 60, 90].map((count) => ({ count }))
+    const scale = levelScale(busy)
+
+    expect(scale).toEqual([...scale].sort((a, b) => a - b)) // пороги растут
+    expect(level(0, scale)).toBe(0)
+    expect(level(4, scale)).toBe(1) // слабый день остаётся слабым
+    expect(level(90, scale)).toBe(4)
+    // Сетка не заливается максимумом целиком: у ступеней есть населённость.
+    expect(new Set(busy.map((c) => level(c.count, scale))).size).toBeGreaterThan(2)
+  })
+
+  it('у новичка с единичными днями ступени тоже различимы', () => {
+    const scale = levelScale([{ count: 1 }, { count: 1 }, { count: 2 }, { count: 3 }])
+    expect(level(1, scale)).toBeLessThan(level(3, scale))
+  })
+
+  it('самый густой день всегда в верхней ступени, даже если он один', () => {
+    // Редкая история: квартили схлопываются в сам максимум, и без поправки
+    // единственный активный день оказывался в самой бледной ступени.
+    for (const days of [[{ count: 20 }], [{ count: 3 }, { count: 40 }], [{ count: 1 }, { count: 1 }, { count: 9 }]]) {
+      const scale = levelScale(days)
+      const max = Math.max(...days.map((d) => d.count))
+      expect(level(max, scale), `максимум ${max} при шкале ${scale}`).toBe(4)
+    }
+  })
+
+  it('пустая история не ломает шкалу', () => {
+    const scale = levelScale([])
+    expect(level(0, scale)).toBe(0)
+    expect(level(1, scale)).toBe(1)
   })
 })
 

@@ -311,6 +311,9 @@ textarea::placeholder {
   from { opacity: 0; transform: translateY(8px); }
 }
 .sf-overlay-in { animation: sf-fade var(--dur-base) var(--ease-out); }
+/* Смена текста/контента НА МЕСТЕ (заголовок ленты активности, счётчики): без него
+   подмена читается как рывок, а подъём тут лишний — блок никуда не приезжает. */
+.sf-fade-in { animation: sf-fade var(--dur-base) var(--ease-out); }
 .sf-pop-in { animation: sf-pop var(--dur-base) var(--ease-out); }
 .sf-rise-in { animation: sf-rise var(--dur-base) var(--ease-out); }
 
