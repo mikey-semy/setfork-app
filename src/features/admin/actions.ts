@@ -16,6 +16,9 @@ import { parseAffiliateRules } from '@/core'
 import { clearVapidCache, VAPID_KEYS } from '@/shared/push/vapid'
 import { removeImageFile, uploadImageFile } from '@/shared/media'
 import { sendMail } from '@/shared/email/mailer'
+import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
+import { escapeHtml as esc } from '@/shared/lib/escape'
 import { councilExperts, db, users } from '@/shared/db'
 import { eq } from 'drizzle-orm'
 
@@ -198,10 +201,12 @@ export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: 
     recipient = u?.email ?? ''
   }
   if (!recipient) return { ok: false, error: 'Нет адреса получателя.' }
+  const lang = await getLang()
   const ok = await sendMail({
     to: recipient,
-    subject: 'SetFork — test email',
-    html: '<p style="font-family:sans-serif;font-size:15px">SMTP works ✅ — SetFork может отправлять почту.</p>',
+    lang,
+    subject: t('email.testSubject', lang),
+    body: `<p style="margin:0">${esc(t('email.testBody', lang))}</p>`,
   })
   return ok ? { ok: true } : { ok: false, error: 'Отправка не удалась — проверьте host/port/креды.' }
 }

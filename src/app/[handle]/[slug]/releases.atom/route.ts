@@ -3,9 +3,16 @@ import { getListMeta } from '@/features/library/queries'
 import { getReleases } from '@/features/releases/queries'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 import { isPubliclyVisible } from '@/core'
+import { SITE_ORIGIN, SITE_ORIGIN_FROM_ENV } from '@/shared/site'
 
 // GET /{handle}/{slug}/releases.atom — Atom-фид релизов (как у GitHub).
 // Только для публичных списков: фид анонимный, приватное не отдаём.
+
+// Авторитет tag: URI (RFC 4151) — ЕДИНСТВЕННОЕ место, где домен намеренно НЕ берётся
+// из `shared/site.ts`. Это вечный идентификатор записи, а не адрес: смени его вместе с
+// доменом — и читалки посчитают все прошлые релизы новыми и покажут их заново. Домен
+// с датой здесь и означают «выдано этим сервисом тогда-то», даже если сервис переехал.
+const TAG_AUTHORITY = 'setfork.com,2026'
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
@@ -14,8 +21,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // видимость → release notes flagged/hidden/pending и публичных черновиков утекали.
   if (!meta || !isPubliclyVisible(meta)) return new Response('Not found', { status: 404 })
 
-  // Публичный канонический адрес, а не bind-origin запроса (за прокси req.url = 0.0.0.0:3000).
-  const origin = (process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin).replace(/\/$/, '')
+  // Публичный адрес, а не bind-origin запроса (за прокси req.url = 0.0.0.0:3000) — но
+  // ТОЛЬКО если он задан явно. `NEXT_PUBLIC_*` вшиваются при сборке, а демо-стенд подаёт
+  // переменную лишь в окружение контейнера: с дефолтом ленты чужого стенда ссылались бы
+  // на канон. Пусть уж лучше адрес придёт из запроса, чем уведёт читателя на другой сайт.
+  const origin = SITE_ORIGIN_FROM_ENV ? SITE_ORIGIN : new URL(req.url).origin.replace(/\/$/, '')
   const base = `${origin}/${handle}/${slug}`
   const rels = await getReleases(meta.id)
   // Нет релизов → берём время списка (обновление/создание), НЕ эпоху 0: пустой фид
@@ -25,7 +35,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const entries = rels
     .map(
       (r) => `  <entry>
-    <id>tag:setfork.com,2026:${meta.id}/releases/${esc(r.tag)}</id>
+    <id>tag:${TAG_AUTHORITY}:${meta.id}/releases/${esc(r.tag)}</id>
     <title>${esc(r.title || r.tag)}</title>
     <link rel="alternate" type="text/html" href="${base}/releases"/>
     <updated>${r.createdAt.toISOString()}</updated>
@@ -37,7 +47,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
 
   const xml = `<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <id>tag:setfork.com,2026:${meta.id}/releases</id>
+  <id>tag:${TAG_AUTHORITY}:${meta.id}/releases</id>
   <title>${esc(`${handle}/${slug}`)} — releases</title>
   <link rel="self" type="application/atom+xml" href="${base}/releases.atom"/>
   <link rel="alternate" type="text/html" href="${base}/releases"/>

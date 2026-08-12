@@ -1,5 +1,6 @@
 import 'server-only'
 import { fetchPublicUrlDetailed } from './safe-fetch'
+import { botUserAgent } from '@/shared/site'
 
 /**
  * Здоровье ссылок (HQ §9): проверка — работа КОДА, не LLM (модель по URL не
@@ -35,7 +36,7 @@ export async function checkUrl(url: string): Promise<LinkVerdict> {
     const r = await fetchPublicUrlDetailed(url, {
       method,
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { 'user-agent': 'SetForkLinkCheck/1.0 (+https://setfork.ru)' },
+      headers: { 'user-agent': botUserAgent('link-check') },
     })
     r.res?.body?.cancel().catch(() => {}) // тело не нужно — освобождаем сокет
     return r.res ? r.res.status : null // null = SSRF-отказ/сеть → 'unknown'

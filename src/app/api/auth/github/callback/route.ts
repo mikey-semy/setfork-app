@@ -4,9 +4,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { oauthEnabled } from '@/shared/auth/oauth'
 import { upsertGithubUser } from '@/shared/auth/users'
 import { finishOauthLogin } from '@/features/auth/oauth-finish'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 export async function GET(req: NextRequest) {
-  const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+  const appUrl = appOrigin()
   // Провайдер обязан проверяться на ОБОИХ концах: стартовый роут — не гейт, а удобство.
   // Иначе при AUTH_DISABLED_PROVIDERS=github обмен кода на сессию остаётся рабочим, и
   // «выключенный» вход держится только на побочном эффекте — куке state (линза 02, F6).

@@ -11,6 +11,7 @@ import { detectTextLang } from '@/shared/lib/translit'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
 import { isCollaborator } from '@/features/collab/queries'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 /**
  * Общее для инструментов MCP. Пока это одна проверка доступа, но именно она нужна
@@ -26,7 +27,7 @@ export async function mcpCanView(tpl: { id: string; ownerId: string; visibility:
   return canViewList(tpl, { isOwner, isCollaborator: isCollab })
 }
 
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://setfork.com').replace(/\/$/, '')
+export const SITE_URL = appOrigin()
 
 export interface McpBlockOption {
   id?: string // стабильный id варианта: к нему привязаны голоса опроса и попытки теста

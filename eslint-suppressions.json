@@ -44,11 +44,6 @@
       "count": 1
     }
   },
-  "src/app/[handle]/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 3
-    }
-  },
   "src/app/admin/collections/[id]/page.tsx": {
     "no-restricted-syntax": {
       "count": 17
@@ -172,16 +167,6 @@
   "src/features/auth/TwoFaLoginForm.tsx": {
     "no-restricted-syntax": {
       "count": 4
-    }
-  },
-  "src/features/auth/email-flows.ts": {
-    "no-restricted-syntax": {
-      "count": 7
-    }
-  },
-  "src/features/auth/token-helpers.ts": {
-    "no-restricted-syntax": {
-      "count": 3
     }
   },
   "src/features/badges/BadgesCard.tsx": {

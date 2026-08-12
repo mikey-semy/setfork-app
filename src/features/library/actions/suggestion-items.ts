@@ -15,6 +15,7 @@ import { canEditSuggestionItems } from '../suggestion-perms'
 import { suggestionBlocks } from '../suggestion-blocks'
 import { applyFieldValue } from '../suggestion-apply'
 import { gitPort, ownerHandle } from './shared'
+import { NOREPLY_DOMAIN } from '@/shared/site'
 
 /**
  * ПУНКТЫ предложения: правка редактором и применение предложенной правки одной
@@ -208,5 +209,5 @@ export async function applySuggestedEdit(commentId: string): Promise<void> {
  * осознанная настройка, а не поведение по умолчанию.
  */
 function gitEmail(handle: string): string {
-  return `${handle}@users.noreply.setfork.com`
+  return `${handle}@${NOREPLY_DOMAIN}`
 }

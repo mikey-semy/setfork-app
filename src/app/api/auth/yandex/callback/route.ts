@@ -3,9 +3,10 @@ import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 import { upsertOauthUser } from '@/shared/auth/users'
 import { finishOauthLogin } from '@/features/auth/oauth-finish'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 export async function GET(req: NextRequest) {
-  const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+  const appUrl = appOrigin()
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
   const state = searchParams.get('state')

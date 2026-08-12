@@ -8,6 +8,8 @@ import { AI_DAILY_USD } from '@/shared/quota'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { sendMail } from '@/shared/email/mailer'
+import { appOrigin } from '@/shared/auth/app-origin'
+import type { Lang } from '@/shared/i18n'
 import { budgetAlerts, type Money } from '@/shared/agents/budget'
 import { log } from '@/shared/observability'
 
@@ -58,18 +60,22 @@ async function ensureLoop(type: 'finance' | 'chronicle', everyHours: number): Pr
   await enqueueJob(type, {}, { delayMs: everyHours * 60 * 60 * 1000, maxAttempts: 1 })
 }
 
+/** Ссылка на дашборд в письмах владельцу. Хост — из appOrigin(), иначе письма
+ *  со стенда зовут на прод, а после смены домена — на старый. */
+const developmentDashboardLink = (): string => `<p><a href="${appOrigin()}/admin/development">Дашборд развития</a></p>`
+
 /** Кому писать: владелец инстанса. Ищем по тем же правилам, что и права админа. */
-async function ownerEmails(): Promise<string[]> {
-  const rows = await db.select({ handle: users.handle, email: users.email }).from(users).where(sql`${users.email} is not null and ${users.email} <> ''`)
-  return rows.filter((r) => isAdminHandle(r.handle) && r.email).map((r) => r.email as string)
+async function ownerEmails(): Promise<Array<{ email: string; lang: Lang }>> {
+  const rows = await db.select({ handle: users.handle, email: users.email, lang: users.lang }).from(users).where(sql`${users.email} is not null and ${users.email} <> ''`)
+  return rows.filter((r) => isAdminHandle(r.handle) && r.email).map((r) => ({ email: r.email as string, lang: r.lang }))
 }
 
 /** Отправка владельцу. Возвращает, дошло ли: «почта не настроена» — тоже результат. */
-async function tellOwner(subject: string, html: string): Promise<{ sent: number; skipped: string }> {
+async function tellOwner(subject: string, body: string): Promise<{ sent: number; skipped: string }> {
   const to = await ownerEmails()
   if (!to.length) return { sent: 0, skipped: NO_ADDRESS }
   let sent = 0
-  for (const addr of to) if (await sendMail({ to: addr, subject, html })) sent++
+  for (const r of to) if (await sendMail({ to: r.email, lang: r.lang, subject, body })) sent++
   return { sent, skipped: sent ? '' : MAIL_OFF }
 }
 
@@ -138,7 +144,7 @@ export async function runFinanceSweep(): Promise<FinanceResult> {
     })
     if (!claimed) continue // ключ уже занят: эту тревогу сегодня уже отправляли
     out.alerts++
-    const delivery = await tellOwner(`SetFork: ${a.subject}`, `<p>${a.text}</p><p><a href="https://setfork.ru/admin/development">Дашборд развития</a></p>`)
+    const delivery = await tellOwner(`SetFork: ${a.subject}`, `<p>${a.text}</p>${developmentDashboardLink()}`)
     out.sent += delivery.sent
     // Не дошло — записываем ОТДЕЛЬНОЙ строкой без ключа: заявка уже занята, но факт «тревога
     // не доставлена» обязан быть виден, иначе журнал врал бы бодрым 'ok'.
@@ -214,7 +220,7 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
 
   const html = `<p>День компании, ${date}:</p><ul>${rows.map(([k, n]) => `<li>${k}: ${n}</li>`).join('')}</ul>` +
     (day.holdReasons.length ? `<p>Почему не пропустила планка: ${day.holdReasons.map((r) => `${r.reason} (${r.times})`).join('; ')}</p>` : '') +
-    `<p><a href="https://setfork.ru/admin/development">Дашборд развития</a></p>`
+    developmentDashboardLink()
   // Ключ на дату — ДО отправки: две задачи на один день (рестарт, второй инстанс) иначе
   // прислали бы сводку дважды.
   const claimed = await recordAgentAction({

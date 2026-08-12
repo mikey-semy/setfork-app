@@ -7,6 +7,7 @@ import { enqueueJob } from '@/shared/jobs/queue'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { autonomyHealthy } from '@/shared/agents/canary'
 import { log } from '@/shared/observability'
+import { botUserAgent } from '@/shared/site'
 
 /**
  * ПЕТЛЯ СБОРА ПОТОКА — источник свежего материала для живых списков.
@@ -119,7 +120,7 @@ export async function pullSource(src: typeof feedSources.$inferSelect): Promise<
   let body = ''
   try {
     const res = await fetchPublicUrl(src.url, {
-      headers: { 'user-agent': 'SetForkBot/1.0 (+https://setfork.com)', accept: 'application/rss+xml, application/atom+xml, application/json, text/xml, */*' },
+      headers: { 'user-agent': botUserAgent(), accept: 'application/rss+xml, application/atom+xml, application/json, text/xml, */*' },
       signal: AbortSignal.timeout(15_000),
     })
     if (!res) throw new Error('источник недоступен или адрес запрещён')

@@ -8,6 +8,7 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { completionHolderMeta, getCourseCompletion } from '@/features/quizzes/queries'
 import { CertificatePrintButton } from '@/features/quizzes/CertificatePrintButton'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { SITE_HOST } from '@/shared/site'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -87,7 +88,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
                   {t('certRestoredNote', lang)}
                 </div>
               )}
-              <div className="mt-8 font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-muted">SetFork · setfork.com/{owner}/{slug}</div>
+              <div className="mt-8 font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-muted">SetFork · {SITE_HOST}/{owner}/{slug}</div>
             </div>
             <div className="flex items-center gap-3 print:hidden">
               <CertificatePrintButton label={t('certPrintPdf', lang)} />

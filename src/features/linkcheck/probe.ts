@@ -1,6 +1,7 @@
 import 'server-only'
 import { fetchPublicUrlDetailed } from '@/shared/lib/safe-fetch'
 import { looksSoft404, type ProbeOutcome } from './classify'
+import { botUserAgent } from '@/shared/site'
 
 // Одна вежливая проба URL: HEAD → фолбэк GET (многие сайты не умеют HEAD),
 // жёсткий таймаут, честный UA, тело читается ограниченно и только когда нужно
@@ -8,7 +9,7 @@ import { looksSoft404, type ProbeOutcome } from './classify'
 
 const PROBE_TIMEOUT_MS = 8_000
 const BODY_CAP = 200_000
-const UA = 'SetForkBot/1.0 (+https://setfork.com; link-check)'
+const UA = botUserAgent('link-check')
 
 async function attempt(url: string, method: 'HEAD' | 'GET'): Promise<{ out: ProbeOutcome; res: Response | null }> {
   const r = await fetchPublicUrlDetailed(url, {

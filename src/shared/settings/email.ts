@@ -1,6 +1,7 @@
 import 'server-only'
 import { inArray } from 'drizzle-orm'
 import { appSettings, db } from '@/shared/db'
+import { SITE_HOST } from '@/shared/site'
 
 // Настройки SMTP. Значения из БД (app_settings, редактируются в админке) перекрывают env;
 // пустое поле в БД → берётся env. Пароль не отдаём на клиент (только маска).
@@ -42,7 +43,7 @@ export async function getEmailSettings(): Promise<EmailSettings> {
     secure: (m[EMAIL_KEYS.secure] ?? (process.env.SMTP_SECURE === 'true' ? 'true' : 'false')) === 'true',
     user: val(EMAIL_KEYS.user, 'SMTP_USER'),
     pass: val(EMAIL_KEYS.pass, 'SMTP_PASS'),
-    from: val(EMAIL_KEYS.from, 'SMTP_FROM') || 'SetFork <no-reply@setfork.com>',
+    from: val(EMAIL_KEYS.from, 'SMTP_FROM') || `SetFork <no-reply@${SITE_HOST}>`,
     notifyTo: val(EMAIL_KEYS.notifyTo, 'NOTIFY_EMAIL'),
   }
   return cache

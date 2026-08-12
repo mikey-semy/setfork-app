@@ -13,6 +13,7 @@ import {
 } from '@simplewebauthn/server'
 import { db, passkeys, users } from '@/shared/db'
 import { requireSession, startSession } from '@/shared/auth/session'
+import { secretKey } from '@/shared/auth/tokens'
 import { clientIpFromHeaders } from '@/shared/auth/app-origin'
 import { b64uFromBytes, bytesFromB64u, expectedOrigin, RP_NAME, rpID } from '@/shared/auth/webauthn'
 import { rateLimit } from '@/shared/rate-limit'
@@ -26,11 +27,6 @@ import { avatarSrc } from '@/shared/media'
 const CHALLENGE_COOKIE = 'sf-pk-challenge'
 const TTL_SEC = 5 * 60
 
-function secretKey(): Uint8Array {
-  const s = process.env.AUTH_SECRET
-  if (!s) throw new Error('AUTH_SECRET is not set')
-  return new TextEncoder().encode(s)
-}
 async function setChallenge(purpose: 'reg' | 'auth', challenge: string): Promise<void> {
   const token = await new SignJWT({ challenge, purpose }).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime(`${TTL_SEC}s`).sign(secretKey())
   const c = await cookies()

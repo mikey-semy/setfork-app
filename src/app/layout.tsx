@@ -21,6 +21,7 @@ import { SidebarProvider } from '@/widgets/sidebar-context'
 import { Footer } from '@/widgets/Footer'
 import { ScrollToTop } from '@/shared/ui/ScrollToTop'
 import './globals.css'
+import { SITE_ORIGIN } from '@/shared/site'
 
 const sans = Hanken_Grotesk({
   subsets: ['latin'],
@@ -43,7 +44,7 @@ const logoFont = Chakra_Petch({
 const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-inter' })
 const manrope = Manrope({ subsets: ['latin', 'cyrillic'], variable: '--font-manrope' })
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://setfork.com'
+const SITE_URL = SITE_ORIGIN
 const DESCRIPTION = 'Canonical, runnable, versioned reference lists — run them, check off steps, and fork from the library.'
 
 export const metadata: Metadata = {

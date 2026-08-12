@@ -12,6 +12,7 @@ import { headers } from 'next/headers'
 import { getInsightTotals, getWeeklySeries, WEEKS } from '@/features/insights/queries'
 import { BadgesCard } from '@/features/badges/BadgesCard'
 import { PAGE } from '@/shared/ui/control'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -25,10 +26,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  const h = await headers()
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
-  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
-  const origin = `${proto}://${host}`
+  const origin = appOrigin()
   const [series, totals, contributors] = await Promise.all([
     getWeeklySeries(meta.id),
     getInsightTotals(meta.id),

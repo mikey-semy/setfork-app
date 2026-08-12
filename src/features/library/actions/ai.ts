@@ -20,6 +20,7 @@ import { listStore } from '../list-store'
 import { hasChanges, summarizeDiffForNote } from '../change-summary'
 import { diffSteps, rowsToCmp } from '../diff'
 import { notifyWatchersNewVersion } from '../suggestion-side-effects'
+import { botUserAgent } from '@/shared/site'
 
 /**
  * ИИ поверх списка: доработка пунктов по инструкции, перевод на другой язык,
@@ -321,7 +322,7 @@ export async function fetchLinkTitleAction(url: string): Promise<{ label: string
   try {
     const res = await fetchPublicUrl(u, {
       signal: AbortSignal.timeout(6000),
-      headers: { 'user-agent': 'SetForkBot/1.0 (+https://setfork.com)', accept: 'text/html,application/xhtml+xml' },
+      headers: { 'user-agent': botUserAgent(), accept: 'text/html,application/xhtml+xml' },
     })
     if (!res) return { error: 'badurl' }
     if (!res.ok || !(res.headers.get('content-type') ?? '').includes('html')) return { error: 'fetchfail' }
