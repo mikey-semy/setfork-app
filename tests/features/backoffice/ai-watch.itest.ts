@@ -115,6 +115,17 @@ describe('сторож канала к модели', () => {
     expect(today.failed).toBe(1)
   })
 
+  // Летописец судит по КАРТИНЕ дня: иначе одна упавшая генерация человека объявляла бы
+  // поломку компании, а одна успешная — будила бы нулевую сводку в тихий день.
+  it('поломка дня — это когда не прошёл ни один вызов, а не «был хоть один отказ»', async () => {
+    const { channelBrokenAllDay } = await import('@/features/backoffice/ai-watch')
+
+    expect(channelBrokenAllDay({ calls: ERROR_STREAK_TRIP, failed: ERROR_STREAK_TRIP })).toBe(true)
+    expect(channelBrokenAllDay({ calls: 10, failed: 1 })).toBe(false) // человек разок не дождался
+    expect(channelBrokenAllDay({ calls: 2, failed: 2 })).toBe(false) // мало вызовов — это не картина
+    expect(channelBrokenAllDay({ calls: 0, failed: 0 })).toBe(false) // никто не звал
+  })
+
   it('эмбеддинги в счёт не идут: они ходят своим маршрутом и в инциденте 12.08 проходили', async () => {
     for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 20 - i })
     await call('ok', { minutesAgo: 1, feature: 'embed', model: 'openai/text-embedding-3-small' })
