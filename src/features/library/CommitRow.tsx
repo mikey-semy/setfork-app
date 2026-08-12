@@ -68,19 +68,23 @@ export function CommitRow({
     if (window.location.hash === `#v${version}`) void toggle()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- один раз на монтировании
   }, [])
-  const [diff, setDiff] = useState<CommitDiff | null>(null)
-  const [loading, setLoading] = useState(false)
+  // Загрузка диффа держится ОДНИМ состоянием вместе с номером запроса: флаг
+  // снимался только после успеха, и сорвавшийся запрос оставлял разворот вечно
+  // «загружающимся», а ответ прежнего открытия мог погасить спиннер нового.
+  const [state, setState] = useState<{ req: number; loading: boolean; diff: CommitDiff | null }>({ req: 0, loading: false, diff: null })
+  const { loading, diff } = state
   const createdAt = new Date(createdAtMs)
 
   const toggle = async () => {
     const next = !open
     setOpen(next)
-    if (next && !diff && !loading) {
-      setLoading(true)
-      const d = await getCommitDiff(owner, slug, version, lang)
-      setDiff(d)
-      setLoading(false)
-    }
+    if (!next || diff || loading) return
+
+    const req = state.req + 1
+    setState((s) => ({ ...s, req, loading: true }))
+    const got = await getCommitDiff(owner, slug, version, lang).catch(() => null)
+    // Ответ применяет только СВОЙ запрос: чужой уже не владеет этим состоянием.
+    setState((s) => (s.req !== req ? s : { ...s, loading: false, diff: got ?? s.diff }))
   }
 
   return (
