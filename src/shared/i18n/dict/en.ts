@@ -1695,6 +1695,7 @@ export const en = {
   'list.forkTree': 'Fork tree',
   'list.forkTreeTruncated': 'Some branches are hidden — the tree is too large.',
   'list.hideMessage': 'Hide message',
+  'list.diffLoadFailed': 'Could not load the changes.',
   'list.linkedFrom': 'Linked from',
   'list.lockedUntilPassed': 'Unlocks once you pass the tests of',
   'list.noPublicForksYet': 'No public forks yet — be the first to grow a branch.',

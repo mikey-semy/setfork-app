@@ -20,32 +20,35 @@ export function useLiveMetrics(initial: LiveMetrics, router: AppRouterInstance):
   const ticks = useRef(0)
 
   useEffect(() => {
-    // alive гасит ответы, пришедшие после ухода со страницы, а clearTimeout —
+    // alive гасит ответы, пришедшие после ухода со страницы, а clearInterval —
     // сам цикл: без обоих поллинг переживал бы размонтирование.
     let alive = true
-    let timer: ReturnType<typeof setTimeout>
+    // Пока ответ в пути, следующий тик пропускаем: иначе на медленной сети
+    // запросы наложатся друг на друга и потянут за собой лишние router.refresh().
+    let inFlight = false
 
     const tick = async () => {
+      if (inFlight) return
+      inFlight = true
       try {
         const res = await fetch('/api/admin/metrics', { cache: 'no-store' })
+        if (!alive) return
         if (res.ok) {
-          const data = (await res.json()) as LiveMetrics
-          if (alive) {
-            setM(data)
-            setStale(false)
-          }
-          if (alive && ++ticks.current % REFRESH_EVERY === 0) router.refresh()
-        } else if (alive) setStale(true)
+          setM((await res.json()) as LiveMetrics)
+          setStale(false)
+          if (++ticks.current % REFRESH_EVERY === 0) router.refresh()
+        } else setStale(true)
       } catch {
         if (alive) setStale(true)
+      } finally {
+        inFlight = false
       }
-      if (alive) timer = setTimeout(tick, POLL_MS)
     }
 
-    timer = setTimeout(tick, POLL_MS)
+    const id = setInterval(tick, POLL_MS)
     return () => {
       alive = false
-      clearTimeout(timer)
+      clearInterval(id)
     }
   }, [router])
 
