@@ -60,6 +60,11 @@ function toStep(s: StepRow): Step {
     why: loc(s.why),
     needsHuman: s.needsHuman,
     needsHumanAsk: loc(s.needsHumanAsk),
+    // Пометка «разрушительный пункт»: без неё команда вроде
+    // `docker system prune -a --volumes` приедет в собранный скрипт
+    // исполняемой вместо закомментированной — второй уровень защиты
+    // исполняемого выхода исчезает молча. Линза 05, D2.
+    danger: s.danger,
     section: loc(s.section),
     subtasks: (s.subtasks ?? []) as LocaleText[],
     refs: (s.refs ?? []) as StepRef[],
