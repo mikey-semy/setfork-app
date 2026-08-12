@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { Award, GraduationCap, Pin } from 'lucide-react'
 import { t, tr, type LocaleText } from '@/shared/i18n'
-import { ActivityGraph } from '@/features/profile/ActivityGraph'
-import { ContributionActivity } from '@/features/profile/ContributionActivity'
+import { ActivitySection } from '@/features/profile/activity/ActivitySection'
 import { PinsPicker } from '@/features/profile/PinsPicker'
 import { dayMonthYear } from '@/shared/lib/date'
 import type { ProfilePageData } from './load'
@@ -20,8 +19,8 @@ type Props = Pick<
   | 'received'
   | 'graphYear'
   | 'graphYears'
-  | 'monthStart'
-  | 'monthActivity'
+  | 'monthKey'
+  | 'monthTopics'
   | 'activityNav'
 >
 
@@ -41,8 +40,8 @@ export function ProfileOverview({
   received,
   graphYear,
   graphYears,
-  monthStart,
-  monthActivity,
+  monthKey,
+  monthTopics,
   activityNav,
 }: Props) {
   return (
@@ -126,16 +125,20 @@ export function ProfileOverview({
         </div>
       )}
 
-      <ActivityGraph
-        contributions={contributions}
-        starsReceived={received.stars}
-        forksReceived={received.forks}
+      {/* key по году: смена года — это другой календарь, и выбранный в прежнем
+          день фильтром больше не годится. */}
+      <ActivitySection
+        key={graphYear ?? 'rolling'}
+        handle={handle}
         lang={lang}
-        year={graphYear}
-        years={graphYears}
-        base={`/${handle}`}
+        contributions={contributions}
+        received={received}
+        graphYear={graphYear}
+        graphYears={graphYears}
+        month={monthKey}
+        monthTopics={monthTopics ?? []}
+        activityNav={activityNav}
       />
-      {monthActivity && <ContributionActivity activity={monthActivity} monthStart={monthStart} handle={handle} lang={lang} nav={activityNav} />}
     </>
   )
 }

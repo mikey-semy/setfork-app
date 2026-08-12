@@ -1,10 +1,11 @@
 import 'server-only'
 import { cache } from 'react'
 import { and, desc, eq, or, sql } from 'drizzle-orm'
-import { courseCompletions, db, runs, stars, suggestions, templateVersions, templates, users, publiclyVisible } from '@/shared/db'
+import { courseCompletions, db, issues, runs, stars, suggestions, templateVersions, templates, users, publiclyVisible } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import type { FeedItem } from '@/features/library/queries'
 import { avatarSrc } from '@/shared/media'
+import type { ActivityTopic } from './activity/types'
 
 // cache() — дедуп в рамках одного запроса (generateMetadata + сама страница
 // зовут его на профиле → один SQL вместо двух).
@@ -14,18 +15,22 @@ export const getUserByHandle = cache(async (handle: string) => {
 })
 
 // ── Лента активности (Contribution activity, как GitHub) ─────────────
-export interface MonthActivity {
-  versions: { slug: string; title: LocaleText; count: number }[] // версии по спискам (top-N)
-  versionsTotal: number
-  listsCreated: { slug: string; title: LocaleText }[]
-  issuesOpened: number
-  issuesLists: number
-  suggestionsCreated: number
+
+/** Сколько списков перечисляем внутри темы: дальше это стена ссылок, а не сводка. */
+const TOP_LISTS = 5
+
+/** Время последнего события темы в ISO; null — темы за окно не было. */
+function at(row: { at?: string | Date | null } | undefined): string | null {
+  const v = row?.at
+  return v ? new Date(v).toISOString() : null
 }
 
-/** Агрегаты активности пользователя за месяц [from, to) — по типам работ. */
-export async function getMonthActivity(userId: string, from: Date, to: Date, viewerId?: string): Promise<MonthActivity> {
-  // Секции versions/listsCreated отдают slug'и списков владельца. Публично видимые
+/**
+ * Активность пользователя за окно [from, to) темами, новые сверху. Одно и то же
+ * окно закрывает и месяц ленты, и один день (фильтр по клетке календаря).
+ */
+export async function getActivityTopics(userId: string, from: Date, to: Date, viewerId?: string): Promise<ActivityTopic[]> {
+  // Темы отдают наружу slug'и и счётчики по спискам. Публично видимые
   // (public+published+active) видит любой; черновики/приватные/снятые — только сам
   // владелец. Иначе аноним узнавал существование и slug чужого черновика по его версиям
   // (та же утечка, что #193 закрыл в ленте/дайджесте/Starred, но профильную активность минула).
@@ -33,32 +38,62 @@ export async function getMonthActivity(userId: string, from: Date, to: Date, vie
   const visV = sql`and (t.visibility = 'public' and t.status = 'published' and t.moderation = 'active' or t.owner_id = ${vid})`
   const visC = sql`and (visibility = 'public' and status = 'published' and moderation = 'active' or owner_id = ${vid})`
   const [verRows, created, issuesAgg, suggAgg] = await Promise.all([
+    // Оконные счётчики (count(*) over ()) считаются ДО limit — сводка «в N списках»
+    // остаётся честной, хотя перечисляем мы только топ.
     db.execute(sql`
-      select t.slug, t.title, count(*)::int as count
+      select t.slug, t.title, count(*)::int as count, max(tv.created_at) as at,
+             max(max(tv.created_at)) over () as topic_at,
+             (count(*) over ())::int as lists_total, (sum(count(*)) over ())::int as versions_total
       from template_versions tv join templates t on t.id = tv.template_id
       where t.owner_id = ${userId} and tv.created_at >= ${from} and tv.created_at < ${to} ${visV}
-      group by t.slug, t.title order by count desc, t.slug asc`),
+      group by t.slug, t.title order by count desc, t.slug asc limit ${TOP_LISTS}`),
     db.execute(sql`
-      select slug, title from templates
+      select slug, title, created_at as at, (count(*) over ())::int as total from templates
       where owner_id = ${userId} and created_at >= ${from} and created_at < ${to} ${visC}
-      order by created_at desc limit 10`),
+      order by created_at desc limit ${TOP_LISTS}`),
+    // Задачи и правки к ЧУЖИМ спискам гейтим тем же правилом: счётчик активности не
+    // должен подтверждать существование приватного списка, в котором человек работал.
     db.execute(sql`
-      select count(*)::int as n, count(distinct template_id)::int as lists
-      from issues where author_id = ${userId} and created_at >= ${from} and created_at < ${to}`),
+      select count(*)::int as n, count(distinct i.template_id)::int as lists, max(i.created_at) as at
+      from issues i join templates t on t.id = i.template_id
+      where i.author_id = ${userId} and i.created_at >= ${from} and i.created_at < ${to} ${visV}`),
     db.execute(sql`
-      select count(*)::int as n from suggestions
-      where author_id = ${userId} and created_at >= ${from} and created_at < ${to}`),
+      select count(*)::int as n, max(s.created_at) as at
+      from suggestions s join templates t on t.id = s.template_id
+      where s.author_id = ${userId} and s.created_at >= ${from} and s.created_at < ${to} ${visV}`),
   ])
-  const versions = (verRows.rows as { slug: string; title: LocaleText; count: number }[]) ?? []
-  const ia = (issuesAgg.rows[0] ?? { n: 0, lists: 0 }) as { n: number; lists: number }
-  return {
-    versions: versions.slice(0, 5),
-    versionsTotal: versions.reduce((s, v) => s + Number(v.count), 0),
-    listsCreated: (created.rows as { slug: string; title: LocaleText }[]) ?? [],
-    issuesOpened: Number(ia.n),
-    issuesLists: Number(ia.lists),
-    suggestionsCreated: Number((suggAgg.rows[0] as { n: number } | undefined)?.n ?? 0),
+
+  const versions = (verRows.rows ?? []) as { slug: string; title: LocaleText; count: number; at: string; topic_at: string; lists_total: number; versions_total: number }[]
+  const lists = (created.rows ?? []) as { slug: string; title: LocaleText; at: string; total: number }[]
+  const issues = issuesAgg.rows[0] as { n: number; lists: number; at: string | null } | undefined
+  const suggs = suggAgg.rows[0] as { n: number; at: string | null } | undefined
+
+  const topics: ActivityTopic[] = []
+  // Время темы берём оконным максимумом: перечисляем мы топ по числу версий, а
+  // самая поздняя правка легко может оказаться в списке, который в топ не попал.
+  const versionsAt = versions[0] ? at({ at: versions[0].topic_at }) : null
+  if (versionsAt) {
+    topics.push({
+      kind: 'versions',
+      at: versionsAt,
+      total: Number(versions[0].versions_total),
+      listsTotal: Number(versions[0].lists_total),
+      lists: versions.map((v) => ({ slug: v.slug, title: v.title, count: Number(v.count) })),
+    })
   }
+  const listsAt = at(lists[0])
+  if (listsAt) {
+    topics.push({ kind: 'lists', at: listsAt, total: Number(lists[0].total), lists: lists.map((l) => ({ slug: l.slug, title: l.title })) })
+  }
+  const issuesAt = at(issues)
+  if (issuesAt && Number(issues?.n) > 0) {
+    topics.push({ kind: 'issues', at: issuesAt, total: Number(issues!.n), listsTotal: Number(issues!.lists) })
+  }
+  const suggsAt = at(suggs)
+  if (suggsAt && Number(suggs?.n) > 0) {
+    topics.push({ kind: 'suggestions', at: suggsAt, total: Number(suggs!.n) })
+  }
+  return topics.sort((a, b) => b.at.localeCompare(a.at))
 }
 
 /** Лёгкий список своих списков для пикера пинов («Customize your pins»). */
@@ -71,7 +106,7 @@ export async function getOwnListsLight(userId: string): Promise<{ id: string; sl
     .limit(100)
 }
 
-/** Активность по дням за ~год: версии списков (правки) + предложения правок. */
+/** Активность по дням за ~год: версии списков, задачи и предложения правок. */
 // Вклад по дням: без year — скользящее окно ~год (дефолтный граф);
 // с year — весь календарный год (для выбора года, как GitHub).
 export async function getContributions(userId: string, year?: number, viewerId?: string): Promise<{ date: string; count: number }[]> {
@@ -81,8 +116,11 @@ export async function getContributions(userId: string, year?: number, viewerId?:
       : sql`day >= now() - interval '371 days'`
   // Версии приватных/черновиков/снятых списков светились в графе-квадратиках ВСЕМ —
   // чужой видел «в этот день была активность» по недоступному ему списку. Гейтим по
-  // видимости с учётом зрителя (владелец видит всё), как getMonthActivity.
+  // видимости с учётом зрителя (владелец видит всё), как getActivityTopics.
   const vis = sql`and (t.visibility = 'public' and t.status = 'published' and t.moderation = 'active' or t.owner_id = ${viewerId ?? null})`
+  // Клетка календаря — это фильтр ленты, поэтому считает ровно те же события, что
+  // лента показывает: версии, задачи, предложения. Создание списка (как заведение
+  // репозитория у GitHub) в клетку не идёт — оно только в ленте.
   const res = await db.execute(sql`
     select (day::date)::text as date, count(*)::int as count
     from (
@@ -91,7 +129,15 @@ export async function getContributions(userId: string, year?: number, viewerId?:
         join ${templates} t on t.id = tv.template_id
         where t.owner_id = ${userId} ${vis}
       union all
-      select s.created_at from ${suggestions} s where s.author_id = ${userId}
+      select s.created_at
+        from ${suggestions} s
+        join ${templates} t on t.id = s.template_id
+        where s.author_id = ${userId} ${vis}
+      union all
+      select i.created_at
+        from ${issues} i
+        join ${templates} t on t.id = i.template_id
+        where i.author_id = ${userId} ${vis}
     ) x
     where ${range}
     group by 1
