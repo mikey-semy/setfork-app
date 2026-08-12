@@ -72,6 +72,11 @@ export async function autonomyHealthy(loop: string): Promise<boolean> {
 
   // 2. Автономно опубликованное, которое модерация сняла. Ищем по id списка из журнала:
   // именно поэтому в сигнал публикации пишется templateId, а не только слаг.
+  //
+  // Граница по снятию предохранителя здесь ОБЯЗАТЕЛЬНА — та же, что у серии ошибок выше.
+  // Без неё один список, когда-либо снятый модерацией, рвал цепь навсегда: человек жал
+  // «сбросить», первый же проход находил ту же старую публикацию и срывал снова.
+  // Предохранитель, который невозможно снять, — это выключенная петля с лишним шагом.
   const flagged = await db
     .select({ slug: templates.slug, moderation: templates.moderation })
     .from(agentActions)
@@ -82,6 +87,7 @@ export async function autonomyHealthy(loop: string): Promise<boolean> {
         eq(agentActions.action, 'list.publish'),
         eq(agentActions.resultStatus, 'ok'),
         sql`${templates.moderation} in ('flagged', 'hidden')`,
+        ...(since ? [gt(agentActions.occurredAt, since)] : []),
       ),
     )
     .limit(1)

@@ -124,6 +124,21 @@ describe('проход петли', () => {
     const [row] = await db.select().from(agentActions)
     expect(row).toMatchObject({ loop: 'feedpull', action: 'feed.pull', resultStatus: 'ok' })
   })
+
+  // Недоступный чужой сервер — не отказ НАШЕЙ петли. Пока это писалось как 'error',
+  // предохранитель считал пять мёртвых лент подряд поводом погасить сбор при исправном
+  // коде, а при восьми подписках за проход такой круг набирался за один заход.
+  it('недоступный источник — пропуск с причиной, а не ошибка петли', async () => {
+    await addSource('https://dead.example/rss', ['devops'])
+    fetchMock.ok = false
+    fetchMock.status = 503
+
+    await runFeedPullSweep()
+
+    const [row] = await db.select().from(agentActions)
+    expect(row.resultStatus).toBe('skipped')
+    expect(row.error).not.toBe('') // причина не теряется — она там, где её чинят
+  })
 })
 
 describe('материал для специалиста', () => {

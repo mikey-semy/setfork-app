@@ -100,7 +100,12 @@ export async function runFeedPullSweep(): Promise<PullResult> {
     await recordAgentAction({
       loop: 'feedpull',
       action: 'feed.pull',
-      resultStatus: res.error ? 'error' : 'ok',
+      // Недоступный источник — не отказ ПЕТЛИ: это чужой сервер лёг, отдал 404 или молчит.
+      // Писалось как 'error', а предохранитель считает пять ошибок подряд отказом и гасит
+      // петлю — при восьми подписках за проход хватало одного круга мёртвых лент, чтобы
+      // сбор встал целиком при исправном коде. Причина не теряется: она в поле error этой
+      // записи и в `lastError` самого источника, то есть видна там, где её чинят.
+      resultStatus: res.error ? 'skipped' : 'ok',
       signal: { url: src.url },
       decision: { fetched: res.fetched, fresh: res.fresh },
       resultRef: src.url.slice(0, 300),
