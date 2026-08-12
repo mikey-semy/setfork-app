@@ -19,6 +19,7 @@ type Props = Pick<
   | 'received'
   | 'graphYear'
   | 'graphYears'
+  | 'todayKey'
   | 'monthKey'
   | 'monthTopics'
   | 'activityNav'
@@ -40,6 +41,7 @@ export function ProfileOverview({
   received,
   graphYear,
   graphYears,
+  todayKey,
   monthKey,
   monthTopics,
   activityNav,
@@ -135,6 +137,7 @@ export function ProfileOverview({
         received={received}
         graphYear={graphYear}
         graphYears={graphYears}
+        todayKey={todayKey}
         month={monthKey}
         monthTopics={monthTopics ?? []}
         activityNav={activityNav}

@@ -21,6 +21,7 @@ import { getFollowers, getFollowing } from '@/features/profile/search'
 import { getFolderTemplateIds, getUserFolders } from '@/features/star-folders/queries'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
+import { dayKey } from '@/features/profile/activity/types'
 
 export type ProfileTab = 'overview' | 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
 
@@ -81,7 +82,11 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   const isOwner = viewer?.userId === user.id
 
   // Год графа активности (?year=YYYY): валиден в диапазоне регистрация…сейчас.
-  const nowY = new Date().getFullYear()
+  // «Сегодня» считаем ЗДЕСЬ и отдаём ключом: год по умолчанию и правый край
+  // календаря обязаны идти от одних часов. Иначе в новогоднюю ночь сервер отдаёт
+  // уже следующий год, браузер зрителя — ещё прежний, и календарь выходит пустым.
+  const today = new Date()
+  const nowY = today.getFullYear()
   const regY = new Date(user.createdAt).getFullYear()
   const graphYears = Array.from({ length: nowY - regY + 1 }, (_, i) => nowY - i) // новые сверху
   const rawYear = sp.year ? Number(sp.year) : NaN
@@ -174,6 +179,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     agent,
     graphYear,
     graphYears,
+    todayKey: dayKey(today),
     monthKey,
     monthTopics,
     activityNav,

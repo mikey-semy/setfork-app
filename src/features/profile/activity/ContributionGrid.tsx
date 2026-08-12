@@ -43,7 +43,9 @@ export function ContributionGrid({
   const [roving, setRoving] = useState<DayKey | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
-  const last = calendar.weeks.flat().filter((c) => !c.blank).at(-1)
+  // Табстоп ищем среди клеток С ВКЛАДАМИ: пустые больше не кнопки, и указывать
+  // на сегодняшний пустой день значило бы, что в календарь вообще не войти табом.
+  const last = calendar.weeks.flat().filter((c) => !c.blank && c.count > 0).at(-1)
   const tabStop = roving ?? selected ?? last?.date ?? null
 
   const showTip = (el: HTMLElement, cell: Cell) => {

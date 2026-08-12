@@ -19,6 +19,7 @@ export function ActivityGraph({
   lang,
   year,
   years = [],
+  today,
   base,
   selected,
   onSelect,
@@ -31,13 +32,16 @@ export function ActivityGraph({
   year?: number
   /** Доступные годы (регистрация…сейчас), новые сверху; пусто = без селектора. */
   years?: number[]
+  /** «Сегодня» по часам сервера: правый край сетки и год заголовка. */
+  today: DayKey
   /** База профиля для ссылок селектора (например `/mike`). */
   base?: string
   /** День, по которому отфильтрована лента под графом. */
   selected: DayKey | null
   onSelect: (day: DayKey) => void
 }) {
-  const calendar = buildCalendar({ contributions, year, lang })
+  const now = parseDayKey(today) ?? undefined
+  const calendar = buildCalendar({ contributions, year, lang, now })
   const firstWeek = calendar.weeks[0]
 
   return (
@@ -45,7 +49,7 @@ export function ActivityGraph({
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-ink-2">
         <span>
           <b className="text-ink">{calendar.total}</b> {plural(calendar.total, 'contributions', lang)}{' '}
-          {fill('profile.activity.inYear', lang, { year: year ?? new Date().getFullYear() })}
+          {fill('profile.activity.inYear', lang, { year: year ?? now?.getFullYear() ?? '' })}
         </span>
         <span className="inline-flex items-center gap-1">
           <Star size={13} className="text-muted" /> <b className="text-ink">{starsReceived}</b> {t('starsReceived', lang)}
