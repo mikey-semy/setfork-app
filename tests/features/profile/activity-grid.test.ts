@@ -39,6 +39,16 @@ describe('levelScale / level', () => {
     expect(level(1, scale)).toBeLessThan(level(3, scale))
   })
 
+  it('самый густой день всегда в верхней ступени, даже если он один', () => {
+    // Редкая история: квартили схлопываются в сам максимум, и без поправки
+    // единственный активный день оказывался в самой бледной ступени.
+    for (const days of [[{ count: 20 }], [{ count: 3 }, { count: 40 }], [{ count: 1 }, { count: 1 }, { count: 9 }]]) {
+      const scale = levelScale(days)
+      const max = Math.max(...days.map((d) => d.count))
+      expect(level(max, scale), `максимум ${max} при шкале ${scale}`).toBe(4)
+    }
+  })
+
   it('пустая история не ломает шкалу', () => {
     const scale = levelScale([])
     expect(level(0, scale)).toBe(0)

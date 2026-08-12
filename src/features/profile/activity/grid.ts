@@ -22,10 +22,22 @@ export function levelScale(contributions: { count: number }[]): LevelScale {
   const live: number[] = []
   for (const c of contributions) if (c.count > 0) live.push(c.count)
   live.sort((a, b) => a - b)
-  if (live.length === 0) return [1, 2, 3]
-  const at = (q: number) => live[Math.min(live.length - 1, Math.floor(live.length * q))]
-  // Пороги обязаны расти: на бедных данных квартили схлопываются в одно число.
-  return [at(0.25), at(0.5), at(0.75)].reduce<number[]>((acc, v) => [...acc, Math.max(v, (acc.at(-1) ?? 0) + 1)], [])
+
+  const steps = LEVEL.length - 2 // порогов на один меньше, чем цветных ступеней
+  const max = live.at(-1) ?? 0
+  // Мало вкладов — шкала по единицам: делить нечего, а квартили дали бы 1/1/1.
+  if (max <= steps + 1) return Array.from({ length: steps }, (_, i) => i + 1)
+
+  const at = (q: number) => live[Math.floor((live.length - 1) * q)]
+  const scale: number[] = []
+  for (let i = 0; i < steps; i++) {
+    // Пороги строго растут и НЕ дотягиваются до максимума: иначе на редкой
+    // истории (один день с 20 вкладами) квартили схлопывались в сам максимум,
+    // самый густой день попадал в бледную ступень, а тёмная пустовала.
+    const floor = i === 0 ? 1 : scale[i - 1] + 1
+    scale.push(Math.min(Math.max(at((i + 1) / (steps + 1)), floor), max - (steps - i)))
+  }
+  return scale
 }
 
 export function level(count: number, scale: LevelScale): number {

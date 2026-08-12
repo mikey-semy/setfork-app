@@ -67,29 +67,33 @@ export function ContributionActivity({
         )}
       </div>
 
-      {/* key по окну: смена месяца или дня — это новая лента, и она проявляется
-          подъёмом (общий .sf-rise-in моушен-системы), а не подменяется рывком. */}
-      <div key={`${day ?? month}:${loading}:${failed}`} className="sf-rise-in" aria-busy={loading} aria-live="polite">
-        {failed ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-[0.8125rem] text-danger">{t('profile.activity.loadFailed', lang)}</p>
-            <Button size="xs" onClick={onRetry}>
-              {t('tryAgain', lang)}
-            </Button>
-          </div>
-        ) : loading ? (
-          <LoadingTopics />
-        ) : topics.length === 0 ? (
-          <p className="text-[0.8125rem] text-muted">{t(day ? 'profile.activity.emptyDay' : 'profile.activity.emptyMonth', lang)}</p>
-        ) : (
-          /* Полоска таймлайна проходит по центру кружков (14px = половина w-7) и
-             обрывается у первого и последнего, а не тянется через всю секцию. */
-          <ol className="relative flex flex-col gap-5 before:absolute before:bottom-3 before:left-[0.875rem] before:top-3 before:w-px before:bg-border">
-            {topics.map((topic) => (
-              <ActivityTopicItem key={topic.kind} topic={topic} handle={handle} lang={lang} />
-            ))}
-          </ol>
-        )}
+      {/* Живая область СТАБИЛЬНА: скринридер объявляет изменения только внутри
+          уже зарегистрированной области, а пересоздавай мы её на каждую фазу —
+          и приехавшие темы, и сообщение об ошибке остались бы непрочитанными.
+          Ключ с анимацией висит на вложенном блоке. */}
+      <div aria-busy={loading} aria-live="polite">
+        <div key={`${day ?? month}:${loading}:${failed}`} className="sf-rise-in">
+          {failed ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-[0.8125rem] text-danger">{t('profile.activity.loadFailed', lang)}</p>
+              <Button size="xs" onClick={onRetry}>
+                {t('tryAgain', lang)}
+              </Button>
+            </div>
+          ) : loading ? (
+            <LoadingTopics />
+          ) : topics.length === 0 ? (
+            <p className="text-[0.8125rem] text-muted">{t(day ? 'profile.activity.emptyDay' : 'profile.activity.emptyMonth', lang)}</p>
+          ) : (
+            /* Полоска таймлайна проходит по центру кружков (14px = половина w-7) и
+               обрывается у первого и последнего, а не тянется через всю секцию. */
+            <ol className="relative flex flex-col gap-5 before:absolute before:bottom-3 before:left-[0.875rem] before:top-3 before:w-px before:bg-border">
+              {topics.map((topic) => (
+                <ActivityTopicItem key={topic.kind} topic={topic} handle={handle} lang={lang} />
+              ))}
+            </ol>
+          )}
+        </div>
       </div>
     </section>
   )
