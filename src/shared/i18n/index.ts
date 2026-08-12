@@ -91,6 +91,11 @@ const PLURALS = {
   edits: { ru: ['правка', 'правки', 'правок'], en: ['edit', 'edits'] },
   runs: { ru: ['прогон', 'прогона', 'прогонов'], en: ['run', 'runs'] },
   lists: { ru: ['список', 'списка', 'списков'], en: ['list', 'lists'] },
+  // Предложный падеж («в 1 списке», «в 5 списках»): у русского это ДРУГИЕ формы,
+  // чем именительный выше, и без них выходит «в 5 списков».
+  listsIn: { ru: ['списке', 'списках', 'списках'], en: ['list', 'lists'] },
+  issues: { ru: ['задача', 'задачи', 'задач'], en: ['issue', 'issues'] },
+  contributions: { ru: ['вклад', 'вклада', 'вкладов'], en: ['contribution', 'contributions'] },
   suggestions: { ru: ['предложение', 'предложения', 'предложений'], en: ['suggestion', 'suggestions'] },
   contributors: { ru: ['участник', 'участника', 'участников'], en: ['contributor', 'contributors'] },
 } as const

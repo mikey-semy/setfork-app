@@ -364,16 +364,6 @@
       "count": 4
     }
   },
-  "src/features/profile/ActivityGraph.tsx": {
-    "no-restricted-syntax": {
-      "count": 4
-    }
-  },
-  "src/features/profile/ContributionActivity.tsx": {
-    "no-restricted-syntax": {
-      "count": 15
-    }
-  },
   "src/features/profile/ListsToolbar.tsx": {
     "no-restricted-syntax": {
       "count": 10

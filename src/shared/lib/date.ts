@@ -26,3 +26,13 @@ export function monthYear(value: Date | string | number, lang: Lang): string {
 export function dayMonthYear(value: Date | string | number, lang: Lang): string {
   return formatter(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value))
 }
+
+/** «11 августа 2026» — дата заголовком (день, на который сужена лента активности). */
+export function fullDate(value: Date | string | number, lang: Lang): string {
+  return formatter(lang, { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value))
+}
+
+/** «август 2026» — месяц заголовком (окно ленты активности). */
+export function monthYearLong(value: Date | string | number, lang: Lang): string {
+  return formatter(lang, { month: 'long', year: 'numeric' }).format(new Date(value))
+}

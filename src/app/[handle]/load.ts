@@ -7,8 +7,8 @@ import { avatarSrc } from '@/shared/media'
 import type { Lang } from '@/shared/i18n'
 import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries'
 import {
+  getActivityTopics,
   getContributions,
-  getMonthActivity,
   getOwnListsLight,
   getProfileCounts,
   getReceivedStats,
@@ -109,7 +109,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   // лишнего запроса не делаем.
   const agent = tab === 'overview' && user.accountType === 'agent' ? await agentProfile(user.id) : null
 
-  const { monthStart, monthActivity, activityNav } = await loadMonth({
+  const { monthStart, monthTopics, activityNav } = await loadMonth({
     month: sp.month,
     handle,
     userId: user.id,
@@ -173,7 +173,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     graphYear,
     graphYears,
     monthStart,
-    monthActivity,
+    monthTopics,
     activityNav,
     starFolders,
     fsort,
@@ -253,7 +253,7 @@ async function loadMonth(ctx: {
 
   return {
     monthStart,
-    monthActivity: enabled ? await getMonthActivity(userId, monthStart, monthEnd, viewerId) : null,
+    monthTopics: enabled ? await getActivityTopics(userId, monthStart, monthEnd, viewerId) : null,
     activityNav: {
       prev: prev >= firstMonth ? `/${handle}?month=${key(prev)}` : null,
       next: next <= nowMonth ? (key(next) === key(nowMonth) ? `/${handle}` : `/${handle}?month=${key(next)}`) : null,
