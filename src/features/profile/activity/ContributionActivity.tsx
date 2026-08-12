@@ -89,7 +89,7 @@ export function ContributionActivity({
                обрывается у первого и последнего, а не тянется через всю секцию. */
             <ol className="relative flex flex-col gap-5 before:absolute before:bottom-3 before:left-[0.875rem] before:top-3 before:w-px before:bg-border">
               {topics.map((topic) => (
-                <ActivityTopicItem key={topic.kind} topic={topic} handle={handle} lang={lang} />
+                <ActivityTopicItem key={topic.kind} topic={topic} handle={handle} windowKey={day ?? month} lang={lang} />
               ))}
             </ol>
           )}

@@ -5,7 +5,7 @@ import { courseCompletions, db, issues, runs, stars, suggestions, templateVersio
 import type { LocaleText } from '@/shared/i18n'
 import type { FeedItem } from '@/features/library/queries'
 import { avatarSrc } from '@/shared/media'
-import type { ActivityTopic } from './activity/types'
+import type { ActivityKind, ActivityTopic, DetailsPage, ListEvent, TopicList } from './activity/types'
 
 // cache() — дедуп в рамках одного запроса (generateMetadata + сама страница
 // зовут его на профиле → один SQL вместо двух).
@@ -16,8 +16,15 @@ export const getUserByHandle = cache(async (handle: string) => {
 
 // ── Лента активности (Contribution activity, как GitHub) ─────────────
 
-/** Сколько списков перечисляем внутри темы: дальше это стена ссылок, а не сводка. */
-const TOP_LISTS = 5
+/**
+ * Гейт видимости списка для ЗРИТЕЛЯ: публично видимый (public+published+active)
+ * доступен любому, чужие черновики/приватные/снятые — только владельцу. Условие
+ * одно на все запросы активности: разъедься они, и профиль начнёт подтверждать
+ * существование чужого черновика счётчиком (та же утечка, что закрыл #193).
+ */
+function visibleToViewer(viewerId?: string) {
+  return sql`and (t.visibility = 'public' and t.status = 'published' and t.moderation = 'active' or t.owner_id = ${viewerId ?? null})`
+}
 
 /** Время последнего события темы в ISO; null — темы за окно не было. */
 function at(row: { at?: string | Date | null } | undefined): string | null {
@@ -34,23 +41,15 @@ export async function getActivityTopics(userId: string, from: Date, to: Date, vi
   // (public+published+active) видит любой; черновики/приватные/снятые — только сам
   // владелец. Иначе аноним узнавал существование и slug чужого черновика по его версиям
   // (та же утечка, что #193 закрыл в ленте/дайджесте/Starred, но профильную активность минула).
-  const vid = viewerId ?? null
-  const visV = sql`and (t.visibility = 'public' and t.status = 'published' and t.moderation = 'active' or t.owner_id = ${vid})`
-  const visC = sql`and (visibility = 'public' and status = 'published' and moderation = 'active' or owner_id = ${vid})`
+  const visV = visibleToViewer(viewerId)
   const [verRows, created, issuesAgg, suggAgg] = await Promise.all([
-    // Оконные счётчики (count(*) over ()) считаются ДО limit — сводка «в N списках»
-    // остаётся честной, хотя перечисляем мы только топ.
     db.execute(sql`
-      select t.slug, t.title, count(*)::int as count, max(tv.created_at) as at,
-             max(max(tv.created_at)) over () as topic_at,
-             (count(*) over ())::int as lists_total, (sum(count(*)) over ())::int as versions_total
-      from template_versions tv join templates t on t.id = tv.template_id
-      where t.owner_id = ${userId} and tv.created_at >= ${from} and tv.created_at < ${to} ${visV}
-      group by t.slug, t.title order by count desc, t.slug asc limit ${TOP_LISTS}`),
+      select count(*)::int as n, count(distinct tv.template_id)::int as lists, max(tv.created_at) as at
+      from ${templateVersions} tv join ${templates} t on t.id = tv.template_id
+      where t.owner_id = ${userId} and tv.created_at >= ${from} and tv.created_at < ${to} ${visV}`),
     db.execute(sql`
-      select slug, title, created_at as at, (count(*) over ())::int as total from templates
-      where owner_id = ${userId} and created_at >= ${from} and created_at < ${to} ${visC}
-      order by created_at desc limit ${TOP_LISTS}`),
+      select count(*)::int as n, max(t.created_at) as at from ${templates} t
+      where t.owner_id = ${userId} and t.created_at >= ${from} and t.created_at < ${to} ${visV}`),
     // Задачи и правки к ЧУЖИМ спискам гейтим тем же правилом: счётчик активности не
     // должен подтверждать существование приватного списка, в котором человек работал.
     db.execute(sql`
@@ -63,27 +62,19 @@ export async function getActivityTopics(userId: string, from: Date, to: Date, vi
       where s.author_id = ${userId} and s.created_at >= ${from} and s.created_at < ${to} ${visV}`),
   ])
 
-  const versions = (verRows.rows ?? []) as { slug: string; title: LocaleText; count: number; at: string; topic_at: string; lists_total: number; versions_total: number }[]
-  const lists = (created.rows ?? []) as { slug: string; title: LocaleText; at: string; total: number }[]
+  const versions = verRows.rows[0] as { n: number; lists: number; at: string | null } | undefined
+  const lists = created.rows[0] as { n: number; at: string | null } | undefined
   const issues = issuesAgg.rows[0] as { n: number; lists: number; at: string | null } | undefined
   const suggs = suggAgg.rows[0] as { n: number; at: string | null } | undefined
 
   const topics: ActivityTopic[] = []
-  // Время темы берём оконным максимумом: перечисляем мы топ по числу версий, а
-  // самая поздняя правка легко может оказаться в списке, который в топ не попал.
-  const versionsAt = versions[0] ? at({ at: versions[0].topic_at }) : null
-  if (versionsAt) {
-    topics.push({
-      kind: 'versions',
-      at: versionsAt,
-      total: Number(versions[0].versions_total),
-      listsTotal: Number(versions[0].lists_total),
-      lists: versions.map((v) => ({ slug: v.slug, title: v.title, count: Number(v.count) })),
-    })
+  const versionsAt = at(versions)
+  if (versionsAt && Number(versions?.n) > 0) {
+    topics.push({ kind: 'versions', at: versionsAt, total: Number(versions!.n), listsTotal: Number(versions!.lists) })
   }
-  const listsAt = at(lists[0])
-  if (listsAt) {
-    topics.push({ kind: 'lists', at: listsAt, total: Number(lists[0].total), lists: lists.map((l) => ({ slug: l.slug, title: l.title })) })
+  const listsAt = at(lists)
+  if (listsAt && Number(lists?.n) > 0) {
+    topics.push({ kind: 'lists', at: listsAt, total: Number(lists!.n) })
   }
   const issuesAt = at(issues)
   if (issuesAt && Number(issues?.n) > 0) {
@@ -115,9 +106,8 @@ export async function getContributions(userId: string, year?: number, viewerId?:
       ? sql`day >= ${`${year}-01-01`}::date and day < ${`${year + 1}-01-01`}::date`
       : sql`day >= now() - interval '371 days'`
   // Версии приватных/черновиков/снятых списков светились в графе-квадратиках ВСЕМ —
-  // чужой видел «в этот день была активность» по недоступному ему списку. Гейтим по
-  // видимости с учётом зрителя (владелец видит всё), как getActivityTopics.
-  const vis = sql`and (t.visibility = 'public' and t.status = 'published' and t.moderation = 'active' or t.owner_id = ${viewerId ?? null})`
+  // чужой видел «в этот день была активность» по недоступному ему списку.
+  const vis = visibleToViewer(viewerId)
   // Клетка календаря — это фильтр ленты, поэтому считает ровно те же события, что
   // лента показывает: версии, задачи, предложения. Создание списка (как заведение
   // репозитория у GitHub) в клетку не идёт — оно только в ленте.
@@ -256,4 +246,84 @@ export async function getProfileRuns(userId: string) {
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(eq(runs.userId, userId))
     .orderBy(desc(runs.updatedAt))
+}
+
+
+// ── Раскрытие темы: списки внутри неё и события внутри списка ──────────
+
+/** Сколько строк отдаём за раз: дальше это уже не сводка, а выгрузка. */
+export const DETAILS_LIMIT = 50
+
+/** Что считать событием темы и по какому полю искать автора. */
+const SOURCE = {
+  versions: { table: templateVersions, byOwner: true },
+  lists: { table: templates, byOwner: true },
+  issues: { table: issues, byOwner: false },
+  suggestions: { table: suggestions, byOwner: false },
+} as const
+
+/**
+ * Второй уровень ленты: списки, в которых шла работа по теме, с числом событий —
+ * по нему же рисуется полоска доли. Порядок как у темы: тяжёлые сверху, при
+ * равенстве — свежие.
+ */
+export async function getTopicLists(
+  userId: string,
+  kind: ActivityKind,
+  from: Date,
+  to: Date,
+  viewerId?: string,
+): Promise<DetailsPage<TopicList>> {
+  const vis = visibleToViewer(viewerId)
+  // Созданные списки — сами себе событие: считать внутри нечего, берём их прямо.
+  const rows =
+    kind === 'lists'
+      ? await db.execute(sql`
+          select t.slug, t.title, 1::int as count, t.created_at as at, (count(*) over ())::int as total
+          from ${templates} t
+          where t.owner_id = ${userId} and t.created_at >= ${from} and t.created_at < ${to} ${vis}
+          order by t.created_at desc limit ${DETAILS_LIMIT}`)
+      : await db.execute(sql`
+          select t.slug, t.title, count(*)::int as count, max(e.created_at) as at, (count(*) over ())::int as total
+          from ${SOURCE[kind].table} e join ${templates} t on t.id = e.template_id
+          where ${SOURCE[kind].byOwner ? sql`t.owner_id` : sql`e.author_id`} = ${userId}
+            and e.created_at >= ${from} and e.created_at < ${to} ${vis}
+          group by t.slug, t.title
+          order by count desc, at desc limit ${DETAILS_LIMIT}`)
+
+  const raw = (rows.rows ?? []) as { slug: string; title: LocaleText; count: number; at: string; total: number }[]
+  return {
+    items: raw.map((r) => ({ slug: r.slug, title: r.title, count: Number(r.count), at: new Date(r.at).toISOString() })),
+    total: Number(raw[0]?.total ?? 0),
+  }
+}
+
+/**
+ * Третий уровень: сами события внутри одного списка — версия с пояснением,
+ * задача с заголовком, предложение с номером. Свежие сверху.
+ */
+export async function getListEvents(
+  userId: string,
+  kind: ActivityKind,
+  slug: string,
+  from: Date,
+  to: Date,
+  viewerId?: string,
+): Promise<DetailsPage<ListEvent>> {
+  if (kind === 'lists') return { items: [], total: 0 } // создание списка — само событие, глубже некуда
+  const vis = visibleToViewer(viewerId)
+  const ref = kind === 'versions' ? sql`e.version` : sql`coalesce(e.number, 0)`
+  const text = kind === 'issues' ? sql`e.title` : kind === 'versions' ? sql`e.note` : sql`''`
+  const rows = await db.execute(sql`
+    select ${ref} as ref, ${text} as text, e.created_at as at, (count(*) over ())::int as total
+    from ${SOURCE[kind].table} e join ${templates} t on t.id = e.template_id
+    where ${SOURCE[kind].byOwner ? sql`t.owner_id` : sql`e.author_id`} = ${userId} and t.slug = ${slug}
+      and e.created_at >= ${from} and e.created_at < ${to} ${vis}
+    order by e.created_at desc limit ${DETAILS_LIMIT}`)
+
+  const raw = (rows.rows ?? []) as { ref: number; text: string | null; at: string; total: number }[]
+  return {
+    items: raw.map((r) => ({ ref: Number(r.ref), text: r.text ?? '', at: new Date(r.at).toISOString() })),
+    total: Number(raw[0]?.total ?? 0),
+  }
 }

@@ -8,10 +8,10 @@ import type { LocaleText } from '@/shared/i18n'
  * по дню), а `queries.ts` помечен `server-only`.
  */
 export type ActivityTopic =
-  /** Опубликованные версии списков: сколько всего и в каких списках (топ). */
-  | { kind: 'versions'; at: string; total: number; listsTotal: number; lists: { slug: string; title: LocaleText; count: number }[] }
-  /** Созданные списки: сколько всего и какие (топ). */
-  | { kind: 'lists'; at: string; total: number; lists: { slug: string; title: LocaleText }[] }
+  /** Опубликованные версии списков: сколько всего и в скольких списках. */
+  | { kind: 'versions'; at: string; total: number; listsTotal: number }
+  /** Созданные списки. */
+  | { kind: 'lists'; at: string; total: number }
   /** Открытые задачи: сколько и в скольких списках. */
   | { kind: 'issues'; at: string; total: number; listsTotal: number }
   /** Предложенные правки. */
@@ -34,4 +34,37 @@ export function parseDayKey(key: string): Date | null {
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
   // Отсев несуществующих дат (2026-02-31 → 3 марта): дата обязана совпасть с разбором.
   return dayKey(d) === key ? d : null
+}
+
+/** Строка второго уровня: список, в котором шла работа по теме. */
+export interface TopicList {
+  slug: string
+  title: LocaleText
+  count: number
+  /** ISO последнего события в этом списке — по нему строки и сортируются. */
+  at: string
+}
+
+/** Строка третьего уровня: само событие внутри списка. */
+export interface ListEvent {
+  /** Номер версии, задачи или предложения — то, чем событие адресуется. */
+  ref: number
+  /** Пояснение (note версии, заголовок задачи); у предложений его нет. */
+  text: string
+  at: string
+}
+
+/** Что раскрывают: перечень списков темы или события внутри одного списка. */
+export interface DetailsRequest {
+  kind: ActivityKind
+  /** Окно ленты: день `YYYY-MM-DD` или месяц `YYYY-MM`. */
+  windowKey: string
+  /** Задан — нужны события ЭТОГО списка (третий уровень). */
+  slug?: string
+}
+
+/** Ответ подгрузки: сколько всего и что показываем (перечень обрезан лимитом). */
+export interface DetailsPage<T> {
+  items: T[]
+  total: number
 }
