@@ -108,6 +108,33 @@ describe('здоровье автономии', () => {
     expect((await loopPolicy('gardener')).circuitTripped).toBe(false)
   })
 
+  // Предохранитель, который нельзя снять, — это выключенная петля с лишним шагом. Пока
+  // проверка снятой модерацией публикации не знала о сбросе, один такой список рвал цепь
+  // навсегда: человек жал «сбросить», первый же проход находил ту же публикацию и срывал
+  // снова. Сброс обязан работать, иначе им перестают пользоваться.
+  it('после сброса СТАРАЯ снятая публикация цепь больше не рвёт', async () => {
+    const [tpl] = await db
+      .insert(templates)
+      .values({ ownerId, slug: 'old-bad', title: { ru: 'Старый снятый' }, moderation: 'flagged' })
+      .returning({ id: templates.id })
+    await act({ signal: { templateId: tpl.id, slug: 'old-bad' } })
+    expect(await autonomyHealthy('gardener')).toBe(false)
+
+    await resetCircuit('gardener')
+
+    expect(await autonomyHealthy('gardener')).toBe(true)
+  })
+
+  it('НОВАЯ снятая публикация после сброса срывает снова — защита не отключается', async () => {
+    await resetCircuit('gardener')
+    const [tpl] = await db
+      .insert(templates)
+      .values({ ownerId, slug: 'new-bad', title: { ru: 'Новый снятый' }, moderation: 'hidden' })
+      .returning({ id: templates.id })
+    await act({ signal: { templateId: tpl.id, slug: 'new-bad' } })
+    expect(await autonomyHealthy('gardener')).toBe(false)
+  })
+
   it('чужая петля не отвечает за наши ошибки', async () => {
     for (let i = 0; i < ERROR_STREAK_TRIP; i++) await act({ loop: 'selfgen', resultStatus: 'error' })
     expect(await autonomyHealthy('gardener')).toBe(true)

@@ -131,6 +131,22 @@ export interface SelfGenResult {
 }
 
 /**
+ * Исходы, которые НЕ являются отказом петли: работа просто не нашлась или условия не
+ * позволили начать. Различать обязательно — предохранитель считает пять «ошибок» подряд
+ * поводом погасить петлю, а пять неудачных тем или почти-дублей означают ровно обратное:
+ * петля работает и честно ничего не выдумывает. Каждый из этих исходов уже имеет своего
+ * сторожа: пустой канал — у `aiwatch`, исчерпанный бюджет — у бухгалтера.
+ */
+const NOT_A_LOOP_FAILURE = new Set(['no-topic', 'near-duplicate', 'ai-unavailable', 'budget-exhausted'])
+
+/** Статус записи в журнале по коду исхода: 'ok' — сделано, 'skipped' — не сложилось,
+ *  'error' — отказ, за который петлю стоит гасить. */
+export function selfGenStatus(error: string | undefined): 'ok' | 'skipped' | 'error' {
+  if (!error) return 'ok'
+  return NOT_A_LOOP_FAILURE.has(error) ? 'skipped' : 'error'
+}
+
+/**
  * Одна работа: специалист пишет черновик списка по своей теме. Общая операция для
  * ОБОИХ режимов — ручной вызов и петля идут одним путём, поэтому не разъезжаются.
  */
@@ -307,7 +323,7 @@ export async function runSelfGenSweep(): Promise<{ created: number; skipped: num
     await recordAgentAction({
       loop: 'selfgen',
       action: 'list.draft',
-      resultStatus: res.error ? 'error' : 'ok',
+      resultStatus: selfGenStatus(res.error),
       agentId: pick.id,
       actorUserId: pick.userId,
       signal,
