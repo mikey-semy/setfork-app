@@ -8,11 +8,12 @@ import { modelMeta } from '@/features/admin/model-enrich'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { CouncilList, type CouncilRow } from '@/features/admin/CouncilList'
 import { gnomeReputation } from '@/shared/ai/gnome-reputation'
+import { needsOwnName } from '@/shared/ai/gnome-names'
 import { hireSignals } from '@/features/admin/hire'
 import { builtinAvatars } from '@/shared/ai/avatar-gallery'
-import { createGnomeAccounts, hireGnome, selfGenerateNow } from '@/features/admin/actions'
+import { assignGnomeNames, createGnomeAccounts, hireGnome, selfGenerateNow } from '@/features/admin/actions'
 import { Button } from '@/shared/ui/button'
-import { Sparkles, UserPlus } from 'lucide-react'
+import { Signature, Sparkles, UserPlus } from 'lucide-react'
 import type { Option } from '@/features/admin/ModelSelect'
 
 export async function generateMetadata() {
@@ -74,6 +75,9 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
   }))
   // Сколько действующих специалистов ещё без аккаунта — только они и мешают.
   const noAccounts = rows.filter((e) => e.enabled && e.lifecycle === 'active' && !e.userId).length
+  // Сколько ещё носит роль вместо имени. Правило одно на страницу и на раздачу —
+  // иначе кнопка обещала бы одно число, а переименовывалось бы другое.
+  const unnamed = rows.filter((e) => needsOwnName(e.nameEn, e.professionEn)).length
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
@@ -129,6 +133,26 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
           <form action={createGnomeAccounts}>
             <Button type="submit" variant="primary" size="md">
               <UserPlus size={14} /> {t('admin.createAccounts', lang)}
+            </Button>
+          </form>
+        </div>
+      )}
+      {/* Имена: и у исходного состава, и у нанятых в поле имени лежит РОЛЬ («Chef»,
+          «Web Designer»). Кнопка раздаёт собственные имена двергов, а роль переносит в
+          профессию — обе колонки живут на странице специалиста. */}
+      {unnamed > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3.5">
+          <div className="min-w-0">
+            <div className="text-[0.78125rem] font-semibold text-ink">
+              {t('admin.namesMissing', lang)}
+            </div>
+            <p className="mt-0.5 text-[0.6875rem] text-ink-2">
+              {t('admin.namesMissingWhy', lang).replace('{a}', String(unnamed)).replace('{b}', String(roster.length))}
+            </p>
+          </div>
+          <form action={assignGnomeNames}>
+            <Button type="submit" variant="primary" size="md">
+              <Signature size={14} /> {t('admin.giveNames', lang)}
             </Button>
           </form>
         </div>

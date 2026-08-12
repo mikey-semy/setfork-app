@@ -173,6 +173,25 @@ export function isMythicName(s: string): boolean {
   return CANON.some((c) => c.name === v) || Object.values(CANON_RU).includes(v)
 }
 
+/**
+ * Специалисту ещё НЕ давали собственного имени: в поле имени лежит его роль.
+ *
+ * Так устроены оба пути появления в составе, и это не оплошность — исходный состав
+ * заводился с `nameEn: 'Chef'` (имя И БЫЛО профессией), а найм просит у модели
+ * «short role name» и профессию не заполняет вовсе. Признак ровно один: профессия
+ * пуста либо повторяет имя.
+ *
+ * Мифологическое имя — уже своё, его не трогаем никогда. Собственное имя, набранное
+ * владельцем руками, защищено ЗАПОЛНЕННОЙ профессией: обе колонки живут в одной форме
+ * (`ExpertSettings`), и раздача имён их только дополняет, а не перетирает.
+ */
+export function needsOwnName(nameEn: string, professionEn: string): boolean {
+  const name = nameEn.trim()
+  if (!name || isMythicName(name)) return false
+  const profession = professionEn.trim()
+  return !profession || profession.toLowerCase() === name.toLowerCase()
+}
+
 /** Имена для всего состава сразу — без повторов канона. */
 export function mythicNames(list: { id: string; profession: string }[]): Record<string, MythicName> {
   const taken = new Set<string>()

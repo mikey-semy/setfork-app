@@ -2,7 +2,7 @@ import 'server-only'
 import { and, arrayOverlaps, desc, eq, inArray, sql } from 'drizzle-orm'
 import { councilExperts, db, templates, users } from '@/shared/db'
 import type { Expert } from './roster'
-import { HOME_REALM, isMythicName, mythicName } from './gnome-names'
+import { HOME_REALM, mythicName, needsOwnName } from './gnome-names'
 import { domainAffinity } from './precedent-filter'
 import type { Lang } from '@/shared/i18n'
 
@@ -181,35 +181,63 @@ export async function agentUserIds(): Promise<string[]> {
   return rows.map((r) => r.id)
 }
 
+/** Кому ещё не дали собственного имени (для кнопки в админке). */
+export async function unnamedGnomesCount(): Promise<number> {
+  const rows = await db.select({ nameEn: councilExperts.nameEn, professionEn: councilExperts.professionEn }).from(councilExperts)
+  return rows.filter((r) => needsOwnName(r.nameEn, r.professionEn)).length
+}
+
 /**
- * Дать специалистам мифологические имена — ОДНОРАЗОВО и только тем, у кого имя всё ещё
- * равно профессии (исторически name_en='Chef' и был профессией). Собственное имя,
- * однажды заданное владельцем в админке, не перетираем: иначе правка молча откатывалась
- * бы при каждом прогоне — тем же граблям, что уже ловил бэкфилл гильдий.
+ * Дать специалистам мифологические имена — тем, у кого в поле имени всё ещё лежит роль
+ * (исторически name_en='Chef' и БЫЛ профессией; найм тоже кладёт туда «short role name»).
+ * Собственное имя, заданное владельцем в админке, не перетираем — признак «имя своё»
+ * описан в `needsOwnName`.
+ *
+ * Роль при этом не теряется: она уезжает в свою колонку ДО переименования. Без этого
+ * `professionOf()` при пустой колонке читает профессию ИЗ ИМЕНИ — и в профиле должностью
+ * становилось бы «Brokkr», а следующая раздача считала бы аффинити ремесла по этому мусору
+ * (ровно это уже случалось на дев-БД). Заодно перенос делает операцию идемпотентной:
+ * заполненная профессия — это и есть отметка «имя выдано».
  *
  * id НЕ трогаем: он же ключ аватарки и значение who в истории беседы.
  */
 export async function assignMythicNames(): Promise<{ renamed: number; names: Record<string, string> }> {
   const rows = await db.select().from(councilExperts)
-  const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
-  // Профессия: своя колонка, иначе имя — но ТОЛЬКО если имя ещё не мифологическое.
-  // Иначе испорченная профессия («Brokkr» вместо «Devops») ломала бы аффинити ремесла:
-  // ровно это и случилось после сброса дев-БД.
-  const profOf = (r: (typeof rows)[number]) => r.professionEn || (isMythicName(r.nameEn) ? '' : r.nameEn)
-  const pending = rows.filter((r) => same(r.nameEn, profOf(r) || r.nameEn))
+  const pending = rows.filter((r) => needsOwnName(r.nameEn, r.professionEn))
   // Занятые имена: у кого имя уже своё — его не выдаём повторно.
   const taken = new Set(rows.filter((r) => !pending.includes(r)).map((r) => r.nameEn))
   const names: Record<string, string> = {}
+  // Специалисты идут ПО ОЧЕРЕДИ намеренно: `taken` копится по ходу, и канон не должен
+  // достаться двоим. Параллельный проход выдал бы одно имя дважды — здесь очередь и есть
+  // условие правильности, а не недосмотр.
   for (const r of pending) {
-    const n = mythicName(r.id, profOf(r), taken)
+    // Роль читается из ИМЕНИ, пока колонка пуста, — это и есть то состояние, которое
+    // раздача имён закрывает.
+    const professionEn = r.professionEn.trim() || r.nameEn.trim()
+    const professionRu = r.professionRu.trim() || r.nameRu.trim()
+    const n = mythicName(r.id, professionEn, taken)
+    // Обе записи — в одной транзакции, и обе под условием «строка всё ещё та, что мы
+    // прочитали». Иначе: правка админа, сделанная между чтением и записью, была бы молча
+    // затёрта; а упади вторая запись после первой — состав звался бы Brokkr, профиль
+    // остался бы Devops, и кнопка чинить это отказалась бы (профессия уже заполнена, то
+    // есть строка считается названной).
+    const renamed = await db.transaction(async (tx) => {
+      const done = await tx
+        .update(councilExperts)
+        .set({ nameEn: n.name, nameRu: n.nameRu, professionEn, professionRu, updatedAt: new Date() })
+        .where(and(eq(councilExperts.id, r.id), eq(councilExperts.nameEn, r.nameEn), eq(councilExperts.professionEn, r.professionEn)))
+        .returning({ id: councilExperts.id })
+      if (!done.length) return false
+      // Аккаунт заведён раньше и держит СВОЮ копию имени: не обновить его значит развести
+      // состав и публичный профиль — в ростере Brokkr, в профиле по-прежнему Devops.
+      if (r.userId) await tx.update(users).set({ name: n.name, profession: professionEn }).where(eq(users.id, r.userId))
+      return true
+    })
+    if (!renamed) continue // строку успели поправить руками — её имя теперь дело владельца
     taken.add(n.name)
-    await db
-      .update(councilExperts)
-      .set({ nameEn: n.name, nameRu: n.nameRu, updatedAt: new Date() })
-      .where(eq(councilExperts.id, r.id))
     names[r.id] = `${n.name} / ${n.nameRu} (${n.source}: ${n.meaning})`
   }
-  return { renamed: pending.length, names }
+  return { renamed: Object.keys(names).length, names }
 }
 
 /** Сколько специалистов уже имеют аккаунт (для админки/дашборда). */

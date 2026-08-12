@@ -528,6 +528,20 @@ export async function createGnomeAccounts(): Promise<void> {
 }
 
 /**
+ * Дать составу собственные имена (дверги Двергатáля) там, где в поле имени всё ещё
+ * стоит роль. Кнопкой, как и аккаунты: имя публично — оно подписывает автора списка и
+ * стоит в профиле, поэтому меняется явным решением, а не побочным эффектом чтения
+ * ростера. Роль не теряется: уезжает в колонку профессии (см. assignMythicNames).
+ */
+export async function assignGnomeNames(): Promise<void> {
+  await requireAdmin()
+  const { assignMythicNames } = await import('@/shared/ai/gnome-account')
+  await assignMythicNames()
+  revalidatePath('/admin/council')
+  redirect('/admin/council')
+}
+
+/**
  * Ручной режим самогенерации: поручить специалисту написать черновик списка по его
  * теме. Тот же путь, что у авто-петли — поэтому режимы не разъезжаются.
  * Результат — ЧЕРНОВИК: публикует человек.
