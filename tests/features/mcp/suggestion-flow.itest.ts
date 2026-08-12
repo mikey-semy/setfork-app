@@ -132,7 +132,7 @@ describe('слить', () => {
 
   it('посторонний не сливает чужое', async () => {
     expect(await mcpMergeSuggestion(strangerId, { list: 'flow-owner/flow-list', number: 1 })).toMatchObject({
-      error: expect.stringContaining('not your list'),
+      error: expect.stringContaining('not a maintainer'),
     })
   })
 
