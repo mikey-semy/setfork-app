@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { safeHref } from '@/shared/lib/safe-url'
+import { redirectLocation, safeHref } from '@/shared/lib/safe-url'
 
 describe('safeHref', () => {
   it('пропускает http/https/mailto/tel', () => {
@@ -35,5 +35,26 @@ describe('safeHref', () => {
     expect(safeHref('   ')).toBe('')
     expect(safeHref(null)).toBe('')
     expect(safeHref(undefined)).toBe('')
+  })
+})
+
+describe('redirectLocation', () => {
+  it('кодирует не-ASCII: значение заголовка его не принимает', () => {
+    expect(redirectLocation('https://ru.wikipedia.org/wiki/Пример')).toBe('https://ru.wikipedia.org/wiki/%D0%9F%D1%80%D0%B8%D0%BC%D0%B5%D1%80')
+    // Собираем настоящий ответ — ровно это падало на проде пятисотой.
+    expect(() => new Response(null, { status: 302, headers: { location: redirectLocation('https://example.com/статья') } })).not.toThrow()
+  })
+
+  it('домен с кириллицей уходит в punycode', () => {
+    expect(redirectLocation('https://пример.рф/путь')).toBe('https://xn--e1afmkfd.xn--p1ai/%D0%BF%D1%83%D1%82%D1%8C')
+  })
+
+  it('уже закодированный адрес не портится', () => {
+    expect(redirectLocation('https://example.com/a%20b?q=%D0%B0')).toBe('https://example.com/a%20b?q=%D0%B0')
+  })
+
+  it('неразбираемый адрес → пусто, и вызывающий отвечает 404', () => {
+    expect(redirectLocation('not a url')).toBe('')
+    expect(redirectLocation('')).toBe('')
   })
 })

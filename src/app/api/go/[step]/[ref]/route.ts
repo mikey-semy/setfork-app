@@ -7,6 +7,7 @@ import { productItems } from '@/features/library/blocks'
 import { isBot, recordClick, visitorKey } from '@/features/analytics/service'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { clientIp, rateLimit } from '@/shared/rate-limit'
+import { redirectLocation } from '@/shared/lib/safe-url'
 
 // Исходящий редирект по ссылке шага: /api/go/<stepId>/<refIndex> (refs шага)
 // или /api/go/<stepId>/p<idx> (товар product-блока) → 302 на внешний url.
@@ -59,9 +60,16 @@ export async function GET(req: Request, ctx: { params: Promise<{ step: string; r
   // пишем итоговый URL — по нему видно, ушёл переход с тегом или без.
   const mon = await getMonetizationSettings()
   const target = mon.affiliateEnabled ? applyAffiliate(url, mon.affiliateRules).url : url
+  // Адрес для заголовка: не-ASCII роняет Response (см. redirectLocation). Партнёрское
+  // правило проводит URL через конструктор и кодирует его попутно, поэтому падало
+  // только на ссылках БЕЗ правила — то есть на обычных.
+  const location = redirectLocation(target)
+  if (!location) return notFound()
 
   // Журналим клик best-effort: боты и владелец — мимо; при шторме (rate limit)
   // журнал пропускаем, но редиректим всегда — UX важнее строки статистики.
+  // В журнал идёт ТОТ ЖЕ адрес, что и в заголовок: иначе один переход копился бы
+  // в статистике двумя видами одной ссылки.
   const ip = clientIp(req)
   const ua = req.headers.get('user-agent')
   if (!isBot(ua) && !isOwner && (await rateLimit(`go:${ip}`, 120, 60_000)).ok) {
@@ -69,7 +77,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ step: string; r
       templateId: row.templateId,
       stepId,
       refIndex,
-      url: target,
+      url: location,
       userId: viewer?.userId ?? null,
       visitor: visitorKey(viewer?.userId, ip, ua),
     }).catch(() => {})
@@ -78,7 +86,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ step: string; r
   return new Response(null, {
     status: 302,
     headers: {
-      location: target,
+      location,
       'cache-control': 'no-store',
       'x-robots-tag': 'noindex, nofollow',
     },
