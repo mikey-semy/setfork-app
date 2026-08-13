@@ -106,6 +106,8 @@ const SKIP_REASON: Record<PublishSkip, string> = {
   'not-yours': 'not found among your lists',
   'not-draft': 'already published',
   'over-limit': `over the batch limit of ${PUBLISH_BATCH_MAX}`,
+  'read-only': 'archived or frozen — read-only',
+  'changed-meanwhile': 'changed while publishing — read it again',
 }
 
 /**
@@ -126,7 +128,13 @@ export async function mcpPublishLists(userId: string, refs: string[], dryRun = t
   if (!list.length) return { error: 'nothing to publish: pass refs from my_drafts' }
   if (list.length > PUBLISH_BATCH_MAX) return { error: `too many lists in one call: ${list.length} > ${PUBLISH_BATCH_MAX}` }
 
+  // Дедуп идёт по КАНОНИЧЕСКОМУ адресу, а не по строке: `owner/foo`, `foo` и `other/foo`
+  // указывают на один и тот же список (владельца определяет токен, не префикс). Схлопывать
+  // надо после приведения — иначе отчёт снова насчитает «опубликовано 2» на одну запись
+  // (находка авто-ревью).
   const slugs = list.map((ref) => (ref.includes('/') ? ref.split('/').slice(1).join('/') : ref))
+  const firstRefOf = new Map<string, string>()
+  for (let i = 0; i < list.length; i++) if (!firstRefOf.has(slugs[i])) firstRefOf.set(slugs[i], list[i])
   const rows = slugs.length
     ? await db
         .select({ id: templates.id, slug: templates.slug })
@@ -142,6 +150,11 @@ export async function mcpPublishLists(userId: string, refs: string[], dryRun = t
 
   const out: McpPublishResult = { dryRun, planned: list.length, published: 0, skipped: 0, lists: [] }
   list.forEach((ref, i) => {
+    if (firstRefOf.get(slugs[i]) !== ref) {
+      out.skipped++
+      out.lists.push({ ref, status: 'skipped', reason: `same list as ${firstRefOf.get(slugs[i])}` })
+      return
+    }
     const id = idBySlug.get(slugs[i])
     const outcome = id ? byId.get(id) : null
     if (!outcome || outcome.skip) {

@@ -1,5 +1,5 @@
 import 'server-only'
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
 // eslint-disable-next-line boundaries/dependencies -- барьер модерации неотделим от публикации; мост держим ЗДЕСЬ одной точкой (как gitPort в actions/shared), а не по копии в каждом входе
 import { MODERATE_DAILY_CAP, gateListPublication } from '@/features/moderation/moderate-list'
@@ -28,7 +28,7 @@ import { MODERATE_DAILY_CAP, gateListPublication } from '@/features/moderation/m
 export const PUBLISH_BATCH_MAX = MODERATE_DAILY_CAP
 
 /** Почему список не опубликован. Коды: текст добавляет вызывающий на своём языке. */
-export type PublishSkip = 'not-yours' | 'not-draft' | 'over-limit'
+export type PublishSkip = 'not-yours' | 'not-draft' | 'over-limit' | 'read-only' | 'changed-meanwhile'
 
 export interface PublishOutcome {
   id: string
@@ -74,6 +74,8 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
       status: templates.status,
       visibility: templates.visibility,
       moderation: templates.moderation,
+      archivedAt: templates.archivedAt,
+      frozenAt: templates.frozenAt,
     })
     .from(templates)
     .where(inArray(templates.id, wanted))
@@ -90,6 +92,13 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
       report.outcomes.push({ id, skip: 'not-draft', moderation: null })
       continue
     }
+    // Архив и заморозка запрещают правку списка (`canEditList`), а публикация — правка
+    // самая крупная. Проверка стоит ЗДЕСЬ, в общем слое: у пакетного действия она была, а
+    // MCP и кнопка адресуют список напрямую и обошли бы её (находка авто-ревью).
+    if (row.archivedAt || row.frozenAt) {
+      report.outcomes.push({ id, skip: 'read-only', moderation: null })
+      continue
+    }
     drafts.push(row)
   }
   report.skipped = report.outcomes.length
@@ -104,6 +113,9 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
     return report
   }
 
+  // Что реально записалось: гонка с админом отсеивает строки, и отчёт обязан считать по
+  // ним, а не по намерению.
+  const landed: typeof go = []
   for (const row of go) {
     // ПУБЛИКУЕМ ПО ОДНОМУ И СРАЗУ С УДЕРЖАНИЕМ.
     //
@@ -119,22 +131,41 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
     //
     // Приватный не трогаем: наружу он не выставлен, проверять в нём нечего. Снятое
     // модерацией — тем более: его судьбу решает только админ.
+    // Запись УСЛОВНАЯ — по состоянию, которое мы видели. Между чтением пачки и этой
+    // строкой админ успевает снять список, и безусловное «moderation = pending» затёрло бы
+    // его решение, а барьер следом отпустил бы удержание доверенному автору — снятое стало
+    // бы публичным (находка авто-ревью, P1). Условие в самом UPDATE, а не проверкой перед
+    // ним: проверка — это ещё одно окно между «посмотрел» и «записал».
     const hold = row.visibility === 'public' && row.moderation !== 'flagged' && row.moderation !== 'hidden'
-    await db
+    const [wrote] = await db
       .update(templates)
       .set(hold ? { status: 'published', moderation: 'pending', updatedAt: new Date() } : { status: 'published', updatedAt: new Date() })
-      .where(eq(templates.id, row.id))
+      .where(
+        and(
+          eq(templates.id, row.id),
+          eq(templates.status, 'draft'),
+          hold ? notInArray(templates.moderation, ['flagged', 'hidden']) : sql`true`,
+        ),
+      )
+      .returning({ id: templates.id })
+    if (!wrote) {
+      report.outcomes.push({ id: row.id, skip: 'changed-meanwhile', moderation: null })
+      report.skipped++
+      continue
+    }
     if (row.visibility === 'public') await gateListPublication(row.id)
+    landed.push(row)
   }
 
   // Итог читаем ИЗ БАЗЫ, а не предполагаем: решение принял барьер, и только он знает,
   // отпущено удержание или список ждёт проверки. Одним запросом на всю пачку.
+  if (!landed.length) return report
   const after = await db
     .select({ id: templates.id, moderation: templates.moderation })
     .from(templates)
-    .where(inArray(templates.id, go.map((r) => r.id)))
+    .where(inArray(templates.id, landed.map((r) => r.id)))
   const modOf = new Map(after.map((r) => [r.id, r.moderation]))
-  for (const row of go) {
+  for (const row of landed) {
     const moderation = modOf.get(row.id) ?? null
     report.outcomes.push({ id: row.id, skip: null, moderation })
     // Считаем по видимости: у приватного отметка модерации может остаться с прошлой

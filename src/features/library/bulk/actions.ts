@@ -91,13 +91,17 @@ export async function bulkSetCatalog(ids: string[], catalogName: string | null):
   // Снимок и запись — одной транзакцией: карта возврата обязана описывать ровно то, что мы
   // затёрли. Между отдельными «прочитать» и «записать» полка списка успевает измениться из
   // соседней вкладки, и «Отменить» вернуло бы его не туда, где он был.
+  //
+  // `updatedAt` НЕ трогаем — как и одиночный перенос через `catalogStore`. Полка это не
+  // правка содержимого; иначе разложил пятьсот списков — и все пятьсот всплыли в лентах «по
+  // обновлению» с сегодняшней датой, хотя ни одна буква в них не изменилась.
   const before = await db.transaction(async (tx) => {
     const rows = await tx
       .select({ id: templates.id, repositoryId: templates.repositoryId })
       .from(templates)
       .where(inArray(templates.id, mine))
       .for('update')
-    await tx.update(templates).set({ repositoryId: targetId, updatedAt: new Date() }).where(inArray(templates.id, mine))
+    await tx.update(templates).set({ repositoryId: targetId }).where(inArray(templates.id, mine))
     return rows
   })
   revalidatePath(`/${session.handle}`)
@@ -150,7 +154,7 @@ export async function bulkRestoreCatalog(groups: RestoreGroup[]): Promise<{ chan
             .limit(1)
         )[0]?.id ?? null
       : null
-    await db.update(templates).set({ repositoryId: catalogId, updatedAt: new Date() }).where(inArray(templates.id, ids))
+    await db.update(templates).set({ repositoryId: catalogId }).where(inArray(templates.id, ids))
     changed += ids.length
   }
   revalidatePath(`/${session.handle}`)

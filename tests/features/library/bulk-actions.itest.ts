@@ -139,6 +139,18 @@ describe('раскладка по полкам', () => {
     expect((await rowOf(frozen)).repositoryId).toBeNull()
   })
 
+  it('раскладка не выдаёт себя за правку содержимого', async () => {
+    // Иначе разложил пятьсот списков — и все пятьсот всплыли в лентах «по обновлению» с
+    // сегодняшней датой, хотя ни одна буква в них не изменилась.
+    await shelf('devops')
+    const long = new Date('2020-01-01T00:00:00Z')
+    const list = await seed({ updatedAt: long })
+
+    await bulkSetCatalog([list], 'devops')
+
+    expect((await rowOf(list)).updatedAt.toISOString()).toBe(long.toISOString())
+  })
+
   it('новая полка заводится и сразу принимает пачку', async () => {
     const one = await seed()
     const two = await seed()
@@ -245,6 +257,43 @@ describe('публикация пачкой', () => {
     expect(res.overflow).toBe(1)
     const published = await db.select({ status: templates.status }).from(templates).where(eq(templates.status, 'published'))
     expect(published).toHaveLength(PUBLISH_BATCH_MAX)
+  })
+
+  it('снятие админом посреди пачки не затирается', async () => {
+    // Пачка читает состояние всех списков ОДИН раз, а пишет по одному. Пока она идёт, админ
+    // успевает снять список, которого очередь ещё не дошла. Безусловное «moderation =
+    // pending» затёрло бы его решение, а барьер следом отпустил бы удержание доверенному
+    // автору — снятое стало бы публичным.
+    //
+    // Момент «посреди» ловим барьером первого списка: он вызывается уже после того, как
+    // состояние второго прочитано, но до того, как оно записано.
+    const first = await seed({ status: 'draft', visibility: 'public' })
+    const second = await seed({ status: 'draft', visibility: 'public' })
+    const mod = await import('@/features/moderation/moderate-list')
+    vi.spyOn(mod, 'gateListPublication').mockImplementation(async () => {
+      await db.update(templates).set({ moderation: 'flagged' }).where(eq(templates.id, second))
+    })
+
+    const res = await bulkPublish([first, second], false)
+    vi.restoreAllMocks()
+
+    const row = await rowOf(second)
+    expect(row.moderation).toBe('flagged')
+    expect(row.status).toBe('draft') // публикация не состоялась вовсе
+    expect(res.skipped).toBe(1)
+  })
+
+  it('архивное и замороженное не публикуется даже адресно', async () => {
+    // Пакетное действие отсекало такое своим отбором, но MCP и кнопка адресуют список
+    // напрямую — проверка обязана стоять в общем слое публикации.
+    const archived = await seed({ status: 'draft', visibility: 'public', archivedAt: new Date() })
+    const frozen = await seed({ status: 'draft', visibility: 'public', frozenAt: new Date() })
+
+    const res = await bulkPublish([archived, frozen], false)
+
+    expect(res).toMatchObject({ published: 0, pending: 0, skipped: 2 })
+    expect((await rowOf(archived)).status).toBe('draft')
+    expect((await rowOf(frozen)).status).toBe('draft')
   })
 
   it('чужое не публикуется', async () => {
