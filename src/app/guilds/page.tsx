@@ -42,7 +42,7 @@ export default async function GuildsPage() {
         {t('guilds.everySetforkListForged', lang)}
       </p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {roster.map((e) => {
           const r = rep[e.id]
           const share = r && r.gens >= REP_MIN_GENS ? Math.round((r.accepted / r.gens) * 100) : null

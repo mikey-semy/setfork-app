@@ -9,6 +9,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { PAGE } from '@/shared/ui/control'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -31,7 +32,7 @@ export default async function GenerationHistoryPage() {
         actions={
           <Link
             href="/generate"
-            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
+            className={buttonClass({ variant: 'primary' })}
           >
             <Sparkles size={14} /> {t('generation.newDraft', lang)}
           </Link>

@@ -22,7 +22,7 @@ export function ForgotPasswordForm({ lang }: { lang: Lang }) {
   return (
     <form action={action} className="flex flex-col gap-3">
       <Input name="email" type="email" required placeholder="you@example.com" autoComplete="email" autoFocus />
-      <Button type="submit" variant="primary" size="md" disabled={pending} className="h-10 w-full">
+      <Button type="submit" variant="primary" size="lg" disabled={pending} className="w-full">
         {ru ? 'Отправить ссылку' : 'Send reset link'}
       </Button>
     </form>
@@ -43,7 +43,7 @@ export function ResetPasswordForm({ token, lang }: { token: string; lang: Lang }
         </Alert>
       )}
       <Input name="password" type="password" required minLength={8} placeholder={ru ? 'Новый пароль (мин. 8)' : 'New password (min 8)'} autoComplete="new-password" autoFocus />
-      <Button type="submit" variant="primary" size="md" disabled={pending} className="h-10 w-full">
+      <Button type="submit" variant="primary" size="lg" disabled={pending} className="w-full">
         {ru ? 'Сменить пароль' : 'Change password'}
       </Button>
     </form>

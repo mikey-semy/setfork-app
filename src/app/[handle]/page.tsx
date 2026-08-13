@@ -94,7 +94,7 @@ export default async function ProfilePage({
               catalogs.length === 0 ? (
                 <EmptyState hint={t('noCatalogsYet', lang)} />
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {catalogs.map((c) => (
                     <Link
                       key={c.id}

@@ -76,7 +76,7 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
       <HeroImage initial={heroPreview} lang={lang} onRef={(ref) => setC((p) => ({ ...p, heroImage: ref }))} />
 
       {/* Текстовые поля с лимитом + AI-кнопкой */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {FIELDS.map((f) => (
           <LimitedField
             key={f.key}
@@ -92,7 +92,7 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
       {/* Числа-статы (4 плитки) */}
       <div>
         <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink-2">{t('admin.trustStats4', lang)}</div>
-        <div className="grid gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
           {copy.stats.map((s, i) => (
             <div key={i} className="flex flex-col gap-1.5 rounded-md border border-border p-2">
               <Input value={s.num} maxLength={8} onChange={(e) => setStat(i, 'num', e.target.value)} placeholder="12k+" size="sm" />

@@ -11,6 +11,8 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { toast } from '@/shared/ui/toast'
 import type { ModFilter, ModItem } from './queries'
 import { aiModerate, setModeration, setVerified } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
+import { TOUCH_BOX } from '@/shared/ui/control'
 
 function StatusBadge({ s, lang }: { s: ModItem['moderation']; lang: Lang }) {
   if (s === 'hidden') return <Badge variant="danger">{t('hiddenLabel', lang)}</Badge>
@@ -102,7 +104,7 @@ export function ModerationTable({
                       onClick={() => start(() => void setModeration(it.id, 'active'))}
                       disabled={pending}
                       aria-label={t('approveAction', lang)}
-                      className="grid h-8 w-8 place-items-center rounded-md border border-ok/50 text-ok disabled:opacity-60"
+                      className={buttonClass({ className: `size-8 p-0 border-ok/50 text-ok ${TOUCH_BOX}` })}
                     >
                       <Check size={14} />
                     </button>
@@ -114,7 +116,7 @@ export function ModerationTable({
                     onClick={() => start(() => void setVerified(it.id, !it.verified))}
                     disabled={pending}
                     aria-label={it.verified ? t('unverifyAction', lang) : t('verifyAction', lang)}
-                    className={`grid h-8 w-8 place-items-center rounded-md border disabled:opacity-60 ${
+                    className={`${buttonClass({ className: `size-8 p-0 ${TOUCH_BOX}` })} ${
                       it.verified ? 'border-ok text-ok' : 'border-border text-ink-2 hover:text-ink'
                     }`}
                   >
@@ -127,7 +129,7 @@ export function ModerationTable({
                     onClick={() => runAi(it.id)}
                     disabled={pending}
                     aria-label={t('aiCheck', lang)}
-                    className="grid h-8 w-8 place-items-center rounded-md border border-border text-ink-2 hover:text-ink disabled:opacity-60"
+                    className={buttonClass({ className: `size-8 p-0 text-ink-2 hover:text-ink ${TOUCH_BOX}` })}
                   >
                     {busy === it.id ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                   </button>
@@ -138,7 +140,7 @@ export function ModerationTable({
                     onClick={() => start(() => void setModeration(it.id, hidden ? 'active' : 'hidden'))}
                     disabled={pending}
                     aria-label={hidden ? t('unhideAction', lang) : t('hideAction', lang)}
-                    className={`grid h-8 w-8 place-items-center rounded-md border disabled:opacity-60 ${
+                    className={`${buttonClass({ className: `size-8 p-0 ${TOUCH_BOX}` })} ${
                       hidden ? 'border-border text-ink-2 hover:text-ink' : 'border-danger/40 text-danger'
                     }`}
                   >

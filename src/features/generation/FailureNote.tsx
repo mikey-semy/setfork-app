@@ -106,7 +106,7 @@ export function FailureNote({
               size="xs"
               onClick={copy}
               aria-label={t('generation.copy', lang)}
-              className="max-sm:min-h-11 max-sm:min-w-11 max-sm:px-0"
+              className="max-sm:min-w-11 max-sm:px-0"
             >
               <Copy size={13} />
               <span className="max-sm:hidden">{t('generation.copy', lang)}</span>

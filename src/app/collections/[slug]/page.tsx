@@ -55,7 +55,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
           <h2 className="mb-3 text-[1rem] font-semibold text-ink">
             {ru ? 'Каталоги' : 'Catalogs'} <span className="font-mono text-[0.78125rem] text-muted">{c.catalogs.length}</span>
           </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {c.catalogs.map((cat) => (
               <Link
                 key={cat.id}

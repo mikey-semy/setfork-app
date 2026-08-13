@@ -98,7 +98,6 @@ export function TelegramLoginWatcher({ lang }: { lang: Lang }) {
         </label>
         <Input
           id="tg-code"
-          size="md"
           inputMode="numeric"
           autoComplete="one-time-code"
           pattern="[0-9]*"
@@ -107,10 +106,11 @@ export function TelegramLoginWatcher({ lang }: { lang: Lang }) {
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
           aria-label={t('tgLoginCodePrompt', lang)}
-          className="h-12 text-center text-[1.25rem] tracking-[0.4em]"
+          size="lg"
+          className="text-center text-[1.25rem] tracking-[0.4em]"
         />
         {badCode && <div className="text-[0.78125rem] text-danger">{t('tgLoginBadCode', lang)}</div>}
-        <Button type="submit" variant="primary" size="md" disabled={submitting || code.length < 6} className="h-11 w-full">
+        <Button type="submit" variant="primary" size="lg" disabled={submitting || code.length < 6} className="w-full">
           {submitting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : t('tgLoginCodeSubmit', lang)}
         </Button>
       </form>

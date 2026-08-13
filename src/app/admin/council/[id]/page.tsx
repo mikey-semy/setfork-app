@@ -71,7 +71,9 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   const mood = gnomeMood({ [e.id]: { gens: kpi.gens, accepted: kpi.accepted } }, e.id, thanksN)
   const moodEmoji: Record<string, string> = { elated: '😄', content: '🙂', settled: '😐', wary: '😟', grumpy: '😾' }
 
-  const card = 'rounded-lg border border-border bg-surface p-4'
+  // min-w-0: у элемента грида ширина по умолчанию не меньше его min-content, и
+  // карточка с длинным текстом распирала бы колонку даже при grid-cols-1.
+  const card = 'min-w-0 rounded-lg border border-border bg-surface p-4'
   const kpiCell = (icon: ReactNode, label: string, value: string, sub?: string) => (
     <div className={card}>
       <div className="flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
@@ -156,21 +158,21 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
         )}
       </div>
 
-      <div className="mb-5 grid gap-3 lg:grid-cols-2">
+      <div className="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className={card}>
           <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('admin.personaWorkingFrame', lang)}</div>
-          <p className="whitespace-pre-wrap text-[0.8125rem] leading-[1.55] text-ink-2">{e.persona}</p>
+          <p className="whitespace-pre-wrap text-[0.8125rem] leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{e.persona}</p>
           {e.code && (
             <>
               <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('common.guildCode', lang)}</div>
               {/* Людям — на их языке; агентам всегда едет EN `code`. */}
-              <p className="whitespace-pre-wrap font-mono text-[0.78125rem] leading-[1.55] text-ink-2">{(ru ? e.codeRu : '') || e.code}</p>
+              <p className="whitespace-pre-wrap font-mono text-[0.78125rem] leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{(ru ? e.codeRu : '') || e.code}</p>
             </>
           )}
           {e.memory && (
             <>
               <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('admin.craftMemoryAutoDistilled', lang)}</div>
-              <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2">{e.memory}</p>
+              <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{e.memory}</p>
             </>
           )}
 

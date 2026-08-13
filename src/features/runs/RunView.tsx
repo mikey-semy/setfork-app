@@ -19,6 +19,7 @@ import { DIG_SAVED_EVENT, DigChatHost, DigChatOpen, type GnomeOption } from '@/f
 import { linkLabel } from '@/shared/lib/link-label'
 import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export interface RunStepVM {
   id: string
@@ -169,7 +170,7 @@ export function RunView({
               <button
                 type="button"
                 onClick={() => start(() => reopenRun(runId))}
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[0.78125rem] text-ink hover:border-border-strong"
+                className={buttonClass()}
               >
                 <RotateCcw size={14} /> {t('runReopen', lang)}
               </button>
@@ -178,7 +179,7 @@ export function RunView({
                 <button
                   type="button"
                   onClick={() => start(() => finishRun(runId))}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3.5 text-[0.8125rem] font-semibold text-primary-fg"
+                  className={buttonClass({ variant: 'primary' })}
                 >
                   <CircleCheckBig size={15} /> {t('runFinish', lang)}
                 </button>

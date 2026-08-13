@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { cn } from '@/shared/lib/cn'
-import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_BOX, FIELD_TEXT_MOBILE, type ControlSize } from './control'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_BOX, type ControlSize } from './control'
 
 // Единый текстовый инпут (поисковые поля — отдельный SearchField).
 // Размеры — из общей шкалы control.ts: высота и кегль совпадают с Button/Select
@@ -27,7 +27,6 @@ export function Input({ size = 'md', className, trailing, ...props }: InputProps
         CONTROL_H[size],
         CONTROL_PX[size],
         CONTROL_TEXT[size],
-        FIELD_TEXT_MOBILE,
         // Место под кнопку: текст под неё не заезжает.
         trailing && 'pr-9',
         className,

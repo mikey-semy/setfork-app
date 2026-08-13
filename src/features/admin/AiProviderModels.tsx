@@ -165,7 +165,7 @@ export function AiProviderModels({
               }
             }}
             disabled={checking}
-            className="min-h-11 shrink-0 max-sm:ml-auto"
+            className="shrink-0 max-sm:ml-auto"
           >
             {checking ? <Loader2 size={13} className="animate-spin" /> : <PlugZap size={13} />}
             {t('admin.checkConnection', lang)}
@@ -190,7 +190,7 @@ export function AiProviderModels({
               {catalogProblem(error, lang)}
             </span>
             {/* max-sm:ml-auto — при переносе строки кнопка прижимается вправо, а не повисает по центру. */}
-            <Button size="sm" onClick={() => reload(prov)} className="min-h-11 shrink-0 max-sm:ml-auto">
+            <Button size="sm" onClick={() => reload(prov)} className="shrink-0 max-sm:ml-auto">
               <RefreshCw size={13} /> {t('admin.retry', lang)}
             </Button>
           </div>

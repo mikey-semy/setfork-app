@@ -68,7 +68,7 @@ export default async function NewReleasePage({
         )}
 
         <form action={createRelease.bind(null, meta.id)} className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
               <span className="text-[0.78125rem] font-semibold text-ink">{ru ? 'Версия' : 'Version'}</span>
               <VersionSelect

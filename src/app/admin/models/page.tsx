@@ -95,7 +95,7 @@ export default async function AdminModelsPage() {
       {assignments.length === 0 ? (
         <EmptyState title={t('models.nothingAssigned', lang)} />
       ) : (
-        <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {assignments.map((a) => {
             const alive = !a.model || catalog.has(a.model)
             const opt = catalog.get(a.model)

@@ -33,7 +33,9 @@ import { t } from '@/shared/i18n'
 // ряду, и любое расхождение по высоте/кеглю бросается в глаза до того, как
 // расползётся по страницам. Новый примитив/размер/вариант — сначала сюда.
 
-const SIZES: ControlSize[] = ['md', 'sm', 'xs']
+// Порядок сверху вниз — от крупного к плотному: lg (одиночная кнопка формы во всю
+// ширину), md (ряды действий и формы, дефолт), sm (панели), xs (плотные тулбары).
+const SIZES: ControlSize[] = ['lg', 'md', 'sm', 'xs']
 const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'outline', 'ghost', 'danger', 'dangerSolid']
 const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft', 'danger', 'warn']
 const ALERT_VARIANTS: AlertVariant[] = ['danger', 'warn', 'ok', 'info']
@@ -60,7 +62,7 @@ function MotionDemo({ lang }: { lang: Lang }) {
   const box = 'rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.8125rem] text-ink'
   return (
     <div className="flex flex-col gap-3">
-      <div key={run} className="grid gap-3 sm:grid-cols-3">
+      <div key={run} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className={cn2('sf-overlay-in', box)}>sf-overlay-in</div>
         <div className={cn2('sf-pop-in', box)}>sf-pop-in</div>
         <div className={cn2('sf-rise-in', box)}>sf-rise-in</div>
@@ -157,7 +159,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         title={t('admin.fields', lang)}
         hint={t('admin.noHandRolledField', lang)}
       >
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input placeholder={t('admin.defaultMd', lang)} />
           <Input placeholder="font-mono" className="font-mono" />
           <Input size="sm" placeholder="sm" />
@@ -171,7 +173,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         title={t('admin.fieldFormRowAnatomy', lang)}
         hint={t('admin.labelControlHintError', lang)}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t('admin.withHint', lang)} hint={t('admin.explainsValueByExample', lang)}>
             <Input placeholder="value" />
           </Field>

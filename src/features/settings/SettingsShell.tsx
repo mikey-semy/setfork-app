@@ -54,8 +54,11 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
     }
   }, [visible])
 
+  // Зазор тот же, что в оболочке админки: 16px по вертикали (мобила), 32px по
+  // горизонтали (md+). 32px между свёрнутым меню и содержимым на телефоне —
+  // пустая полоса в пол-экрана.
   return (
-    <div className={`${PAGE} flex flex-col gap-8 md:flex-row`}>
+    <div className={`${PAGE} flex flex-col gap-4 md:flex-row md:gap-8`}>
       {/* top = высота шапки (57) + верхний паддинг рамки (py-6 = 24) → без «прыжка» к шапке при скролле. */}
       <aside className="shrink-0 md:sticky md:top-[5.0625rem] md:h-fit md:w-[13.75rem]">
         <SideNav

@@ -174,11 +174,11 @@ export default async function EditPage({
             SubmitButton сам блокируется на время отправки — публикация это git-коммит,
             и второй клик создавал бы вторую версию. */}
         <div className="mt-6 flex flex-wrap items-center gap-2">
-          <SubmitButton variant="outline" className="h-11 max-sm:flex-1 sm:h-8">
+          <SubmitButton variant="outline" className="max-sm:flex-1">
             {t('saveDraft', lang)}
           </SubmitButton>
           {!stale && (
-            <SubmitButton variant="primary" className="h-11 max-sm:flex-1 sm:h-8" formAction={publishEdits.bind(null, tpl.id)}>
+            <SubmitButton variant="primary" className="max-sm:flex-1" formAction={publishEdits.bind(null, tpl.id)}>
               {t('publishVersion', lang).replace('{v}', String(tpl.currentVersion + 1))}
             </SubmitButton>
           )}
@@ -188,7 +188,7 @@ export default async function EditPage({
 
       {draft && (
         <form action={discardDraft.bind(null, tpl.id)} className="mt-3">
-          <SubmitButton variant="danger" className="h-11 max-sm:w-full sm:h-8">
+          <SubmitButton variant="danger" className="max-sm:w-full">
             {t('discardDraft', lang)}
           </SubmitButton>
         </form>

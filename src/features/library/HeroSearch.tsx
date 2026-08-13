@@ -23,7 +23,7 @@ export function HeroSearch({ placeholder, clearLabel }: { placeholder: string; c
     >
       <SearchField
         variant="bare"
-        size="lg"
+        size="hero"
         value={q}
         onValueChange={setQ}
         placeholder={placeholder}

@@ -20,7 +20,7 @@ import { startGeneration } from './actions'
  */
 
 // eslint-disable-next-line no-restricted-syntax -- герой-ввод главной: 15px — прямая пара к SearchField lg, сознательно вне лестницы ролей
-const HERO_INPUT = 'max-h-40 min-h-[2.75rem] w-full resize-none bg-transparent px-1.5 py-2 text-[0.9375rem] leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70 max-sm:text-[1rem]'
+const HERO_INPUT = 'max-h-40 min-h-[2.75rem] w-full resize-none bg-transparent px-1.5 py-2 text-[0.9375rem] leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70'
 
 export function GenerateForm({
   lang,

@@ -10,6 +10,8 @@ import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { t, type Lang } from '@/shared/i18n'
 import type { AffiliateRule } from '@/core'
 import { setMonetizationSettings } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
+import { TOUCH_BOX } from '@/shared/ui/control'
 
 export interface MonetizationFormValues {
   viewTracking: boolean
@@ -118,7 +120,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
                 <button
                   type="button"
                   onClick={() => setRules((xs) => xs.filter((x) => x.rowId !== r.rowId))}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted hover:text-danger"
+                  className={buttonClass({ variant: 'danger', className: `size-8 shrink-0 p-0 ${TOUCH_BOX}` })}
                   aria-label={t('monRuleRemove', lang)}
                 >
                   <Trash2 size={14} />

@@ -2,7 +2,7 @@
 
 import { useId, type ReactNode } from 'react'
 import { cn } from '@/shared/lib/cn'
-import { FIELD_BOX, FIELD_TEXT_MOBILE, TEXT } from './control'
+import { FIELD_BOX, TEXT } from './control'
 
 /**
  * Поле с ПЛАВАЮЩЕЙ меткой: пока пусто — метка стоит вместо подсказки внутри поля,
@@ -53,7 +53,6 @@ export function FloatingInput({
             'peer w-full px-2.5 pt-5 pb-1.5',
             FIELD_BOX,
             TEXT.body,
-            FIELD_TEXT_MOBILE,
             trailing && 'pr-9',
             inputClassName,
           )}
