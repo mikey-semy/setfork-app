@@ -8,10 +8,10 @@ import { Input } from '@/shared/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { PAGE_X } from '@/shared/ui/control'
 import { useViewportBottom } from '@/shared/ui/use-viewport-bottom'
-import { useConfirm } from '@/shared/ui/use-confirm'
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { toast } from '@/shared/ui/toast'
 import { fill, plural, t, type Lang } from '@/shared/i18n'
-import { bulkCreateCatalogAndMove, bulkPublish, bulkRestoreCatalog, bulkSetCatalog, type MoveResult } from './actions'
+import { bulkCreateCatalogAndMove, bulkPublish, bulkRestoreCatalog, bulkSetCatalog, type MoveResult, type PublishBatchResult } from './actions'
 import { useSelection } from './selection'
 
 /**
@@ -30,9 +30,12 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
   const sel = useSelection()
   const router = useRouter()
   const { gap } = useViewportBottom()
-  const { confirm, confirmDialog } = useConfirm()
   const [pending, start] = useTransition()
   const [newCatalog, setNewCatalog] = useState<string | null>(null)
+  // План публикации держим состоянием, а не ждём ответа диалога внутри перехода: ожидание
+  // решения человека держало бы переход «в работе» всё время, пока открыт вопрос, и полоса
+  // крутила бы вертушку, ничего не делая.
+  const [plan, setPlan] = useState<PublishBatchResult | null>(null)
 
   if (!sel?.active) return null
   const ids = [...sel.ids]
@@ -79,32 +82,29 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
     })
   }
 
-  function publish() {
+  /** Спросить план: что именно произойдёт. Сервер считает его теми же правилами, что и
+   *  запись, — иначе «опубликую 30» на экране разошлось бы с «опубликовано 12» по факту. */
+  function askPlan() {
     start(async () => {
-      // Сначала план: считает его сервер по тем же правилам, что и запись, — иначе
-      // «опубликую 30» на экране разошлось бы с «опубликовано 12» по факту.
-      const plan = await bulkPublish(ids)
-      if (!plan.published) {
+      const next = await bulkPublish(ids)
+      if (!next.published) {
         toast.error(t('bulk.publishNothing', lang))
         return
       }
-      const ok = await confirm({
-        title: fill('bulk.publishTitle', lang, { n: plan.published, lists: plural(plan.published, 'lists', lang) }),
-        intro: [
-          t('bulk.publishIntro', lang),
-          plan.skipped ? fill('bulk.publishSkipped', lang, { n: plan.skipped }) : '',
-          plan.overflow ? fill('bulk.publishOverflow', lang, { n: plan.published }) : '',
-        ]
-          .filter(Boolean)
-          .join(' '),
-        confirmLabel: t('bulk.publish', lang),
-      })
-      if (!ok) return
+      setPlan(next)
+    })
+  }
+
+  function doPublish() {
+    start(async () => {
       const res = await bulkPublish(ids, false)
+      setPlan(null)
       sel?.stop()
+      // Числа показываем только ненулевые: «Опубликовано: 0 · на проверке: 20» — правда,
+      // но читается как сбой, хотя произошло ровно то, о чём предупредили.
       toast.success(
         [
-          fill('bulk.published', lang, { n: res.published }),
+          res.published ? fill('bulk.published', lang, { n: res.published }) : '',
           res.pending ? fill('bulk.pendingReview', lang, { n: res.pending }) : '',
         ]
           .filter(Boolean)
@@ -157,7 +157,7 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button variant="primary" size="md" onClick={publish} disabled={!count || pending} aria-label={t('bulk.publish', lang)} className="h-11 sm:h-8">
+                <Button variant="primary" size="md" onClick={askPlan} disabled={!count || pending} aria-label={t('bulk.publish', lang)} className="h-11 sm:h-8">
                   {pending ? <Loader2 size={15} className="animate-spin" /> : <Globe size={15} />}
                   <span className="max-sm:hidden">{t('bulk.publish', lang)}</span>
                 </Button>
@@ -193,7 +193,24 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
           )}
         </div>
       </div>
-      {confirmDialog}
+      {plan && (
+        <ConfirmDialog
+          open
+          onClose={() => setPlan(null)}
+          title={fill('bulk.publishTitle', lang, { n: plan.published, lists: plural(plan.published, 'lists', lang) })}
+          intro={[
+            t('bulk.publishIntro', lang),
+            plan.skipped ? fill('bulk.publishSkipped', lang, { n: plan.skipped }) : '',
+            plan.overflow ? fill('bulk.publishOverflow', lang, { n: plan.published }) : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          confirmLabel={t('bulk.publish', lang)}
+          cancelLabel={t('cancel', lang)}
+          busy={pending}
+          onConfirm={doPublish}
+        />
+      )}
     </>
   )
 }
