@@ -672,6 +672,7 @@ export const ru: Record<DictKey, string> = {
   noCommitMessage: '(без описания)',
   quizSnapshotReadOnly: 'Снимок версии — ответы не принимаются',
   authorNotRecorded: 'автор не записан',
+  loadingMore: 'Загрузка…',
   loadingChanges: 'Загружаю изменения…',
   expandCommit: 'Показать изменения',
   allAuthors: 'Все авторы',

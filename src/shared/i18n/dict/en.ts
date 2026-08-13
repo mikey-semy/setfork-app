@@ -680,6 +680,7 @@ export const en = {
   noCommitMessage: '(no message)',
   quizSnapshotReadOnly: 'Version snapshot — answers are not accepted',
   authorNotRecorded: 'author not recorded',
+  loadingMore: 'Loading…',
   loadingChanges: 'Loading changes…',
   expandCommit: 'Show changes',
   allAuthors: 'All authors',

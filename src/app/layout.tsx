@@ -8,6 +8,7 @@ import { getLang } from '@/shared/i18n/server'
 import { avatarSrc } from '@/shared/media'
 import { getBrowserNotifyEnabled, getNotifications, getUnreadCount } from '@/features/notifications/queries'
 import { getUserTemplates } from '@/features/library/queries'
+import { SIDEBAR_LISTS } from '@/widgets/ListsPanel'
 import { listVisibilityState } from '@/features/library/list-visibility'
 import { getUserAppearance } from '@/features/settings/appearance'
 import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
@@ -103,7 +104,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         getUnreadCount(user.userId),
         getNotifications(user.userId, 8),
         getBrowserNotifyEnabled(user.userId),
-        getUserTemplates(user.userId, user.userId),
+        // Ровно столько, сколько показываем ниже: до 13.08.2026 здесь поднимались
+        // ВСЕ списки владельца на КАЖДОЙ странице сайта ради десяти строк рейки.
+        getUserTemplates(user.userId, user.userId, { limit: SIDEBAR_LISTS }),
         getUserAppearance(user.userId),
       ])
     : [0, [], false, [], { accent: '', font: '', scale: '' }]
@@ -111,7 +114,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // полей. Значок состояния — тот же признак, что в шапке и в переключателе, и
   // считается одним правилом (list-visibility): у черновика поле visibility говорит
   // лишь о будущем, поэтому по нему рисовать нельзя.
-  const topLists = ownLists.slice(0, 10).map((l) => ({
+  const topLists = ownLists.map((l) => ({
     handle: l.ownerHandle,
     slug: l.slug,
     title: l.title,
