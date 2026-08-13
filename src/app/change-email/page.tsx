@@ -3,6 +3,7 @@ import { CheckCircle2, XCircle } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { confirmEmailChange } from '@/features/auth/email-flows'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Обработка ссылки из письма-подтверждения новой почты. */
 export async function generateMetadata() {
@@ -40,7 +41,7 @@ export default async function ChangeEmailPage({ searchParams }: { searchParams: 
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-[26.25rem] rounded-lg border border-border bg-surface p-6 text-center">
+      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[26.25rem] text-center' })}>
         <div className="mb-2 flex justify-center">{M.icon}</div>
         <div className="text-[1rem] font-bold text-ink">{M.title}</div>
         <p className="mt-1 text-[0.8125rem] text-ink-2">{M.sub}</p>

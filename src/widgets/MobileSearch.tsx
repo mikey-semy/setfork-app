@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ListChecks, Search, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { IconButton } from '@/shared/ui/IconButton'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Мобильный поиск: оверлей НА МЕСТЕ (не редирект на /search — оттуда не вернуться).
  *  На странице списка первая опция — «искать в этом списке» (?find= фильтрует шаги,
@@ -39,7 +40,7 @@ export function MobileSearch({
       {open &&
         createPortal(
           <div className="fixed inset-0 z-50 bg-black/40 p-3 pt-14" onClick={() => setOpen(false)}>
-            <div onClick={(e) => e.stopPropagation()} className="mx-auto max-w-[35rem] rounded-lg border border-border bg-surface p-2 shadow-card">
+            <div onClick={(e) => e.stopPropagation()} className={cardClass({ pad: 'sm', className: 'mx-auto max-w-[35rem] shadow-card' })}>
               <div className="flex items-center gap-2">
                 <Search size={15} className="shrink-0 text-muted" />
                 <input

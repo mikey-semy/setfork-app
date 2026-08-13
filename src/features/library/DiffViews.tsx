@@ -9,6 +9,7 @@ import { blockLabel, diffSteps, isStepBlock, lineDiff, serializeSteps, type CmpS
 import { DiffComments, type DiffCommentLabels, type RowThread } from './DiffComments'
 import { ViewedToggle } from './ViewedToggle'
 import { blockFingerprint, isStaleMark } from './viewed-fingerprint'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Два вида диффа версий — ОДИН источник правды для сравнения версий И для правки
 // (PR). Раньше «код»/«список» жили локальными функциями внутри страницы
@@ -114,8 +115,11 @@ export function ListDiff({
           // берём подпись и тело оттуда, иначе карточка выходит безымянной и пустой.
           const block = !isStepBlock(e)
           const body = block ? (e.type === 'text' ? String(e.content?.md ?? '') : '') : e.desc
+          // Цвет рамки приходит инлайновым style по статусу блока диффа и потому
+          // перекрывает тон карточки — сам рецепт при этом общий.
+          const cardCls = cardClass({ className: `group relative ${comments ? 'pr-12' : ''} ${st.color ? '' : 'opacity-60'}` })
           return (
-            <div key={e.blockId ?? `${e.status}:${e.type ?? 'step'}:${i}`} style={cardStyle} className={`group relative rounded-lg border p-4 ${comments ? 'pr-12' : ''} ${st.color ? '' : 'border-border opacity-60'}`}>
+            <div key={e.blockId ?? `${e.status}:${e.type ?? 'step'}:${i}`} style={cardStyle} className={cardCls}>
               {/* Отметка «просмотрено» — СТРОГО в углу карточки, а не в потоке
                   заголовка: при переносе строки она уплыла бы в середину. */}
               {viewed && e.blockId && (

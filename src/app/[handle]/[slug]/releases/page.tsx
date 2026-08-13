@@ -18,6 +18,7 @@ import { getReleases } from '@/features/releases/queries'
 import { HistoryNav } from '@/widgets/HistoryNav'
 import { deleteRelease } from '@/features/releases/actions'
 import { PAGE } from '@/shared/ui/control'
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -50,6 +51,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
           actions={
             <>
               <Tooltip label="Atom feed">
+                {/* eslint-disable-next-line no-restricted-syntax -- иконочная ссылка на atom-ленту — роль кнопки, не карточки */}
                 <a href={`${base}/releases.atom`} className="rounded-md border border-border p-1.5 text-muted hover:text-ink">
                   <Rss size={14} />
                 </a>
@@ -84,7 +86,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
         ) : (
           <div className="flex flex-col gap-3">
             {rels.map((r) => (
-              <div key={r.id} className="rounded-lg border border-border bg-surface p-4">
+              <div key={r.id} className={cardClass()}>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className="px-2.5 font-mono text-[0.78125rem] text-ink">
                     <Tag size={12} className="text-muted" /> {r.tag}

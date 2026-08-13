@@ -9,6 +9,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { BackLink } from '@/shared/ui/BackLink'
 import { ForkForm } from '@/features/library/ForkForm'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -39,7 +40,7 @@ export default async function ForkPage({ params }: { params: Promise<{ handle: s
           </>
         }
       />
-      <div className="rounded-lg border border-border bg-surface p-5">
+      <div className={cardClass({ pad: 'lg' })}>
         <ForkForm
           templateId={meta.id}
           defaultSlug={meta.slug}

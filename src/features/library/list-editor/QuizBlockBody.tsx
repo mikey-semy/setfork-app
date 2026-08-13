@@ -13,6 +13,7 @@ import { QuizNumber } from './quiz/QuizNumber'
 import { QuizSort } from './quiz/QuizSort'
 import type { QuizKindProps } from './quiz/kind-props'
 import type { EditorQuiz } from '../editor'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Виды теста — таблица «значение → подпись и форма ответов». Ветвления по kind в
  *  разметке нет: вид выбирается по этой карте, и новый добавляется строкой сюда
@@ -45,7 +46,7 @@ export function QuizBlockBody({ quiz, onChange, lang }: { quiz: EditorQuiz; onCh
   const Form = QUIZ_KINDS.find((o) => o.k === quiz.kind)?.Form ?? QuizChoice
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
+    <div className={cardClass({ tone: 'inset', pad: 'sm', className: 'flex flex-col gap-2' })}>
       {/* ТИП ТЕСТА — списком, а не рядом кнопок: семи подписей в ряд нужен 481px, и
           на экране 390 они распирали страницу горизонтальной прокруткой (замер
           07.08.2026). Список из семи и по сути не сегмент. */}

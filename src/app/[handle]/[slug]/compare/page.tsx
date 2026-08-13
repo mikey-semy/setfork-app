@@ -15,6 +15,7 @@ import { safeHref } from '@/shared/lib/safe-url'
 import { rowsToCmp } from '@/features/library/diff'
 import { CodeDiff, ListDiff } from '@/features/library/DiffViews'
 import { PAGE } from '@/shared/ui/control'
+import { cardClass } from '@/shared/ui/card-style'
 
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -71,7 +72,7 @@ export default async function ComparePage({
           size="section"
           title={t('compareTitle', lang)}
           actions={
-            <div className="flex items-center gap-1 rounded-md border border-border bg-surface-2 p-0.5">
+            <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'flex items-center gap-1' })}>
               {toggle('code', <Code2 size={14} />, 'viewCode')}
               {toggle('list', <List size={14} />, 'viewList')}
             </div>

@@ -12,6 +12,7 @@ import { loadMyLists } from '@/features/library/actions/my-lists'
 import { t, tr } from '@/shared/i18n'
 import { PromoCard } from './PromoCard'
 import { ChangelogCard } from './ChangelogCard'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Dashboard залогиненного (GitHub-стиль, full-width):
 //   слева — Your lists (переиспользуемая панель с фильтром),
@@ -84,7 +85,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
       {/* Центр: лента (AI-строка убрана — дублировала кнопку «Создать» из шапки/списков). */}
       <div className="min-w-0">
         {improve.length > 0 && (
-          <div className="mb-4 rounded-lg border border-border bg-surface p-3">
+          <div className={cardClass({ pad: 'sm', className: 'mb-4' })}>
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
                 <Sparkles size={14} className="text-accent" /> {lang === 'ru' ? 'Что улучшить' : 'What to improve'}

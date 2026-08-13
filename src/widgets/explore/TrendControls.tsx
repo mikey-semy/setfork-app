@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { t, type Lang } from '@/shared/i18n'
 import type { TrendRange } from '@/features/library/queries'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * Управление разделом «популярное»: переключатель списки/люди и фильтр периода.
@@ -29,8 +30,11 @@ const seg = (on: boolean) =>
 export function TrendScope({ active, range, lang }: { active: 'lists' | 'people'; range: TrendRange; lang: Lang }) {
   // Период переносим только на списки: у людей его нет, и тащить туда `?range=`
   // значило бы показывать в адресе параметр, который ни на что не влияет.
+  // Обёртка сегментированного контрола — это вложенный блок: тон на ступень
+  // глубже и мелкий радиус, ровно как inset-карточка. Отдельного рецепта не
+  // заводим, иначе он и станет следующим «почти таким же».
   return (
-    <div className="inline-flex rounded-md border border-border p-0.5 text-[0.8125rem]">
+    <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'inline-flex text-[0.8125rem]' })}>
       <Link href={range === 'week' ? '/trending' : `/trending?range=${range}`} className={seg(active === 'lists')}>
         {t('scopeLists', lang)}
       </Link>

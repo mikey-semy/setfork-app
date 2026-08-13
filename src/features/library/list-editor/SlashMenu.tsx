@@ -5,6 +5,7 @@ import { TOUCH_MIN_H } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import type { BlockType } from '../blocks'
 import { BLOCK_ICON, blockLabel, matchBlockTypes, slashQuery } from './block-meta'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * Слэш-меню: «/» в пустом текстовом блоке открывает список типов, выбор превращает
@@ -53,7 +54,7 @@ export function useSlashMenu({ value, lang, onPick }: { value: string; lang: Lan
 export function SlashMenu({ menu, lang }: { menu: ReturnType<typeof useSlashMenu>; lang: Lang }) {
   if (!menu.open) return null
   return (
-    <div role="listbox" aria-label={t('editor.blockType', lang)} className="absolute inset-x-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-surface p-1 shadow-lg">
+    <div role="listbox" aria-label={t('editor.blockType', lang)} className={cardClass({ pad: 'xs', className: 'absolute inset-x-0 top-full z-30 mt-1 max-h-64 overflow-y-auto shadow-lg' })}>
       {menu.options.map((type) => {
         const Icon = BLOCK_ICON[type]
         return (

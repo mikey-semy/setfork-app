@@ -11,6 +11,7 @@ import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
 import { dismissSuggestionReview, submitSuggestionReview, withdrawSuggestionReview } from './review-actions'
 import type { ReviewView, Verdict } from './review-model'
+import { cardClass } from '@/shared/ui/card-style'
 
 export interface ReviewLabels {
   title: string
@@ -73,7 +74,7 @@ export function ReviewPanel({
     })
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className={cardClass()}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="text-[0.8125rem] font-semibold text-ink">{labels.title}</span>
         {blocking && <Badge variant="danger">{labels.blocked}</Badge>}

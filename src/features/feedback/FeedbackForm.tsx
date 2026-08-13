@@ -8,13 +8,14 @@ import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { FEEDBACK_BODY_MAX } from './validate'
 import { submitFeedback, type FeedbackResult } from './actions'
+import { cardClass } from '@/shared/ui/card-style'
 
 export function FeedbackForm({ lang }: { lang: Lang }) {
   const [state, action, pending] = useActionState<FeedbackResult, FormData>(submitFeedback, null)
 
   if (state?.ok) {
     return (
-      <div className="rounded-xl border border-border bg-surface p-6 text-center">
+      <div className={cardClass({ pad: 'lg', className: 'text-center' })}>
         <div className="mb-1 text-[1rem] font-bold text-ink">{t('fbThanks', lang)}</div>
         <p className="text-[0.8125rem] text-ink-2">{t('fbThanksBody', lang)}</p>
       </div>

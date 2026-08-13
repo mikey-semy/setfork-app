@@ -9,6 +9,7 @@ import type { EditorProduct } from '../editor'
 import { AddLink } from './block-fields'
 import { linkHost } from './link-url'
 import { ProductDialog } from './ProductDialog'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * Product-блок: заголовок подборки и товары — чипами, правка в окне.
@@ -32,7 +33,7 @@ export function ProductBlockBody({
   lang: Lang
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
+    <div className={cardClass({ tone: 'inset', pad: 'sm', className: 'flex flex-col gap-2' })}>
       <Input aria-label={t('productCaptionPh', lang)} placeholder={t('productCaptionPh', lang)} value={caption} onChange={(e) => onCaption(e.target.value)} />
       <ChipList
         items={products}

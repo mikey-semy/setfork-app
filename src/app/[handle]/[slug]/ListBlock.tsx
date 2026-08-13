@@ -13,6 +13,7 @@ import { SmartImage } from '@/shared/ui/SmartImage'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
 import { t, type Lang } from '@/shared/i18n'
 import type { ListPageData } from './load'
+import { cardClass } from '@/shared/ui/card-style'
 
 type BlockProps = Pick<
   ListPageData,
@@ -42,7 +43,7 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
     // здесь был голый абзац: ни рамки, ни входа в чат (фидбек владельца).
     const canDig = !!viewer && !readOnlyView && typeof step.n === 'number'
     return (
-      <div className="relative break-inside-avoid rounded-lg border border-border bg-surface p-4">
+      <div className={cardClass({ className: 'relative break-inside-avoid' })}>
         {canDig && typeof step.n === 'number' && (
           <span className="absolute right-2 top-2 print:hidden">
             <DigChatOpen

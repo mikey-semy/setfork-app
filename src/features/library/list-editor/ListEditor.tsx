@@ -16,6 +16,7 @@ import { useBlockDrag } from './use-block-drag'
 import { useBlockList } from './use-block-list'
 import { useBlockUploads } from './use-block-uploads'
 import { useFlipReorder } from './use-flip-reorder'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * Редактор состава списка: собирает воедино состояние (useBlockList), загрузки
@@ -149,7 +150,7 @@ export function ListEditor({
       {preview && (
         // Состав, приведённый к доменной форме, — ровно то, что уедет в версию.
         // Черновые пункты без заголовка сюда не попадают, как и при сохранении.
-        <div className="rounded-lg border border-dashed border-border p-3">
+        <div className={cardClass({ pad: 'sm', dashed: true })}>
           <div className={`mb-2 ${TEXT.bodySm} text-muted`}>{t('previewHint', lang)}</div>
           <SuggestionResult items={toProposedItems(list.items, lang)} lang={lang} ordered={ordered} />
         </div>

@@ -6,6 +6,7 @@ import { fmtCount, fmtNumber } from '@/shared/lib/count'
 import { buildCalendar, LEVEL } from './grid'
 import { ContributionGrid } from './ContributionGrid'
 import { parseDayKey, type DayKey } from './types'
+import { cardClass } from '@/shared/ui/card-style'
 
 // GitHub-стайл граф активности (contribution-хитмап). Без year — скользящее
 // окно ~год; с year — календарный год (Jan–Dec) + селектор годов.
@@ -46,7 +47,7 @@ export function ActivityGraph({
   const firstWeek = calendar.weeks[0]
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className={cardClass()}>
       <div key={year} className="sf-fade-in sf-slow mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-ink-2">
         <span>
           <b className="text-ink">{fmtNumber(calendar.total, lang)}</b> {plural(calendar.total, 'contributions', lang)}{' '}

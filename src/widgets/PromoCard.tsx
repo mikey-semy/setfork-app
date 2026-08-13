@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Terminal, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Промо-слот сайдбара (место под «свою рекламу», как Copilot-карточка у GitHub).
 // Одна активная кампания; id — для повторного показа после смены кампании.
@@ -38,7 +39,7 @@ export function PromoCard({ lang }: { lang: Lang }) {
 
   if (hidden) return null
   return (
-    <div className="relative overflow-hidden rounded-lg border border-border bg-linear-to-br from-(--accent-soft) to-surface p-3.5">
+    <div className={cardClass({ className: 'relative overflow-hidden bg-linear-to-br from-(--accent-soft) to-surface' })}>
       <button type="button" onClick={dismiss} className="absolute right-2 top-2 rounded-md p-1 text-muted hover:text-ink" aria-label="Dismiss">
         <X size={13} />
       </button>

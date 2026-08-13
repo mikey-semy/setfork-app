@@ -6,6 +6,7 @@ import type { Lang } from '@/shared/i18n'
 import { pollHistory, votePoll } from './actions'
 import type { PollHistoryEvent, PollResult } from './queries'
 import { PollHistoryChart } from './PollHistoryChart'
+import { cardClass } from '@/shared/ui/card-style'
 
 export interface PollContent {
   question: string
@@ -55,7 +56,7 @@ export function PollBlock({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className={cardClass()}>
       <div className="mb-2.5 flex items-center gap-2">
         <BarChart3 size={15} className="shrink-0 text-accent" />
         {/* Вопрос пишет автор списка, длина не ограничена — без переноса блок уносит страницу. */}

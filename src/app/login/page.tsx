@@ -8,6 +8,7 @@ import { Button } from "@/shared/ui/button";
 import { Alert } from "@/shared/ui/Alert";
 import { LoginForm } from "@/features/auth/AuthForms";
 import { PasskeyLoginButton } from "@/features/auth/PasskeyLoginButton";
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata() {
   const lang = await getLang();
@@ -40,7 +41,7 @@ export default async function LoginPage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-[23.75rem] rounded-xl border border-border bg-surface p-8 text-center shadow-card">
+      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[23.75rem] text-center shadow-card' })}>
         <div className="font-logo mb-1 text-[2.375rem] leading-none text-ink">
           SF
         </div>

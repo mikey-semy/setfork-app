@@ -12,6 +12,7 @@ import { getMilestones } from '@/features/milestones/queries'
 import { MilestoneForm } from '@/features/milestones/MilestoneForm'
 import { deleteMilestone, toggleMilestoneClosed } from '@/features/milestones/actions'
 import { PAGE } from '@/shared/ui/control'
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -43,7 +44,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
               const total = m.openCount + m.closedCount
               const pct = total ? Math.round((m.closedCount / total) * 100) : 0
               return (
-                <div key={m.id} className="rounded-lg border border-border bg-surface p-4">
+                <div key={m.id} className={cardClass()}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

@@ -10,6 +10,7 @@ import { linkLabel } from '@/shared/lib/link-label'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ListPageData } from './load'
+import { cardClass } from '@/shared/ui/card-style'
 
 type Props = Pick<ListPageData, 'tpl' | 'base' | 'viewer' | 'readOnlyView' | 'isOwner' | 'digSteps' | 'stepImages' | 'mon'> & {
   step: ListPageData['steps'][number]
@@ -37,7 +38,7 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
   const why = tr(step.why, lang)
 
   return (
-    <div className="relative break-inside-avoid rounded-lg border border-border bg-surface p-4">
+    <div className={cardClass({ className: 'relative break-inside-avoid' })}>
       {/* Кирка — СТРОГО в правом верхнем углу карточки (absolute, не в потоке:
           при переносе заголовка она уплывала в середину — фидбек владельца). */}
       {viewer && !readOnlyView && typeof step.n === 'number' && (

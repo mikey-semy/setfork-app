@@ -20,6 +20,7 @@ import { linkLabel } from '@/shared/lib/link-label'
 import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { buttonClass } from '@/shared/ui/button-style'
+import { cardClass } from '@/shared/ui/card-style'
 
 export interface RunStepVM {
   id: string
@@ -148,7 +149,7 @@ export function RunView({
       </Link>
 
       {/* Прогресс. Кнопки одной высоты (32px шкалы): «Завершить» текстом, остальное — иконки. */}
-      <div className="sticky top-[4rem] z-10 mb-5 rounded-lg border border-border bg-surface/95 p-4 backdrop-blur-sm">
+      <div className={cardClass({ className: 'sticky top-[4rem] z-10 mb-5 bg-surface/95 backdrop-blur-sm' })}>
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="truncate text-[1rem] font-semibold text-ink">{title}</div>
@@ -258,7 +259,7 @@ export function RunView({
               // Текст-блок — как шаг: контейнер + «кирка» для углублённого изучения
               // (dig-чат), но презентационный: без чекбокса и «не получается».
               return s.text ? (
-                <div key={s.id} className="relative rounded-lg border border-border bg-surface p-4">
+                <div key={s.id} className={cardClass({ className: 'relative' })}>
                   {digEnabled && (
                     <div className="absolute right-2 top-2">
                       <DigChatOpen detail={{ templateId, stepN: s.n, stepTitle: s.digTitle }} label={t('digStep', lang)} hasSession={dugLocal.has(s.n)} />
@@ -281,6 +282,7 @@ export function RunView({
           return (
             <div
               key={s.id}
+              // eslint-disable-next-line no-restricted-syntax -- цвет рамки меняется по состоянию шага прогона
               className={`relative rounded-lg border p-4 transition-colors ${
                 s.blocked ? 'border-danger/40 bg-danger/5' : s.done ? 'border-ok/40 bg-ok/5' : 'border-border bg-surface'
               }`}
@@ -380,7 +382,7 @@ export function RunView({
 
                 {/* Ввод причины «не получилось» (открывает угловая иконка Ban). */}
                 {blockingId === s.id && (
-                  <div className="rounded-md border border-danger/40 bg-danger/5 p-2.5">
+                  <div className={cardClass({ tone: 'danger', pad: 'sm' })}>
                     <textarea
                       autoFocus
                       value={reasonDraft}
@@ -410,7 +412,7 @@ export function RunView({
 
                 {/* Состояние «застрял»: причина + сообщить/снять (помощь теперь через «кирку» в углу). */}
                 {s.blocked && blockingId !== s.id && (
-                  <div className="rounded-md border border-danger/40 bg-danger/5 p-2.5 text-[0.78125rem]">
+                  <div className={cardClass({ tone: 'danger', pad: 'sm', className: 'text-[0.78125rem]' })}>
                     <div className="flex items-center gap-1.5 font-semibold text-danger">
                       <Ban size={13} /> {t('runBlockedLabel', lang)}
                       {s.reason ? ':' : ''}

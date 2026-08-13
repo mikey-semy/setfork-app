@@ -20,6 +20,7 @@ import type { BlockThread } from '@/features/comments/queries'
 // eslint-disable-next-line boundaries/dependencies -- тип состояния якоря из comments
 import type { ThreadState } from '@/features/comments/state'
 import { buttonClass } from '@/shared/ui/button-style'
+import { cardClass } from '@/shared/ui/card-style'
 
 export interface DiffCommentLabels {
   add: string
@@ -174,7 +175,7 @@ export function DiffComments({
           )}
 
           {open && (
-            <div className="rounded-md border border-border bg-surface p-2.5">
+            <div className={cardClass({ pad: 'sm' })}>
               {quote && (
                 <div className="mb-2 border-l-2 border-accent/50 pl-2 text-[0.78125rem] text-ink-2">
                   <span className="text-muted">{labels.onSelection}: </span>
@@ -204,7 +205,7 @@ export function DiffComments({
                   <Replace size={14} /> {labels.suggestLabel}
                 </button>
               ) : (
-                <div className="mt-2 rounded-md border border-accent/40 bg-(--accent-soft) p-2">
+                <div className={cardClass({ tone: 'accent', pad: 'sm', className: 'mt-2' })}>
                   <div className="mb-1.5 flex items-center gap-1.5 text-[0.78125rem] text-ink-2">
                     <Replace size={13} className="shrink-0 text-accent" />
                     <span className="min-w-0 truncate">{labels.suggestHint}</span>
@@ -274,7 +275,7 @@ function ThreadCard({
   const quote = orphaned ? thread.anchorOriginal.exact : state.quote
 
   return (
-    <div className={`rounded-md border p-2.5 ${orphaned ? 'border-dashed border-border bg-surface-2/60' : 'border-border bg-surface-2'}`}>
+    <div className={cardClass({ tone: 'inset', pad: 'sm', dashed: orphaned, className: orphaned ? 'bg-surface-2/60' : '' })}>
       {/* Честное состояние якоря: перепривязан — с уверенностью; потерян — цитата
           из вмороженного снимка, зачёркнутая, но тред НА МЕСТЕ. */}
       {quote && (

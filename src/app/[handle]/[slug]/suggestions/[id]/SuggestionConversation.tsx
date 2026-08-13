@@ -17,6 +17,7 @@ import { setSuggestionDraft } from '@/features/library/suggestion-meta-actions'
 import { SuggestionTimeline } from '@/features/library/SuggestionTimeline'
 import type { ReactNode } from 'react'
 import type { loadSuggestionPage } from './load'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * Вкладка обсуждения: заметка правки, разговор, ревью, слияние и история действий.
@@ -211,7 +212,7 @@ export function SuggestionConversation({
         {reviewPanel}
 
         {session ? (
-          <div className="mt-4 rounded-lg border border-border bg-surface p-4">
+          <div className={cardClass({ className: 'mt-4' })}>
             <form action={addSuggestionComment} className="flex flex-col gap-3">
               <input type="hidden" name="suggestionId" value={sug.id} />
               <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} people={sugPeople} />

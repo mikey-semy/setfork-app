@@ -7,6 +7,7 @@ import { Badge } from '@/shared/ui/badge'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { setReportStatus } from './actions'
 import type { ReportFilter, ReportItem } from './queries'
+import { cardClass } from '@/shared/ui/card-style'
 
 const REASON_LABEL = {
   illegal: 'rpReasonIllegal',
@@ -43,7 +44,7 @@ function Row({ item, lang }: { item: ReportItem; lang: Lang }) {
   const listPath = item.ownerHandle ? `/${item.ownerHandle}/${item.listSlug}` : null
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className={cardClass()}>
       <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.78125rem] text-ink-2">
         <StatusBadge status={item.status} lang={lang} />
         <Badge variant="danger">{t(REASON_LABEL[item.reason], lang)}</Badge>

@@ -2,6 +2,7 @@
 
 import type { Lang } from '@/shared/i18n'
 import type { PollHistoryEvent } from './queries'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Палитра линий (различима в light/dark). Порядок = порядок вариантов опроса.
 const PALETTE = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#65a30d']
@@ -56,7 +57,7 @@ export function PollHistoryChart({ events, options, lang }: { events: PollHistor
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="overflow-hidden rounded-md border border-border bg-surface-2 p-2">
+      <div className={cardClass({ tone: 'inset', pad: 'sm', className: 'overflow-hidden' })}>
         <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" preserveAspectRatio="none" role="img" aria-label={ru ? 'Динамика голосов во времени' : 'Vote dynamics over time'}>
           {/* горизонтальные направляющие */}
           {[0, 0.5, 1].map((f) => (

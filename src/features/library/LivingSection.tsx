@@ -5,6 +5,7 @@ import { Radio } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { setListLiving } from './actions'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * Настройки списка → «Живой список» (лента).
@@ -24,7 +25,7 @@ export function LivingSection({ templateId, living, lang }: { templateId: string
   const on = pending ?? living
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-5">
+    <section className={cardClass({ pad: 'lg' })}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 font-semibold text-ink">

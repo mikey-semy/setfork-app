@@ -18,6 +18,7 @@ import { countIssues, searchIssues, type IssueStateFilter } from '@/features/iss
 import { IssueResults } from '@/features/issues/IssueResults'
 import { parseSearchQuery } from '@/features/library/search-query'
 import { PAGE } from '@/shared/ui/control'
+import { cardClass } from '@/shared/ui/card-style'
 
 const BASE = '/search'
 const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostStarred' }[] = [
@@ -243,7 +244,7 @@ export default async function SearchPage({
 
         {/* Правый рейл — панели (не растягиваем результаты во всю ширину) */}
         <aside className="hidden w-[18.75rem] shrink-0 flex-col gap-4 pt-1 xl:flex">
-          <div className="rounded-md border border-border bg-surface-2 p-3">
+          <div className={cardClass({ tone: 'inset', pad: 'sm' })}>
             <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink">{t('proTip', lang)}</div>
             <p className="text-[0.78125rem] leading-relaxed text-muted">{t('proTipBody', lang)}</p>
             <div className="mt-2 wrap-break-word font-mono text-[0.6875rem] text-ink-2">
@@ -251,7 +252,7 @@ export default async function SearchPage({
             </div>
           </div>
           {tags.length > 0 && (
-            <div className="rounded-md border border-border bg-surface-2 p-3">
+            <div className={cardClass({ tone: 'inset', pad: 'sm' })}>
               <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{t('popularTags', lang)}</div>
               <div className="flex flex-wrap gap-1.5">
                 {tags.slice(0, 12).map((tg) => (

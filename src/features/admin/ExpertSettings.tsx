@@ -21,6 +21,7 @@ import { Field } from '@/shared/ui/Field'
 import { ModelSelect, NONE, type Option } from './ModelSelect'
 import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } from './actions'
 import { t, type Lang } from '@/shared/i18n'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * Менеджер ростера совета: кто такие эксперты, как их зовут, чем они думают.
@@ -108,7 +109,7 @@ function AvatarPicker({
         </button>
       </Tooltip>
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-2 w-[14.5rem] rounded-md border border-border bg-surface p-1.5 shadow-card">
+        <div className={cardClass({ pad: 'xs', className: 'absolute left-0 top-full z-20 mt-2 w-[14.5rem] shadow-card' })}>
           <div className="grid max-h-[8.5rem] grid-cols-6 gap-1 overflow-y-auto">
             {gallery.map((g) => (
               <button
@@ -171,7 +172,7 @@ function ExpertCard({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOpt
           setTimeout(() => setSaved(false), 1600)
         })
       }
-      className={`rounded-md border border-border bg-surface-2 p-3 ${enabled ? '' : 'opacity-60'}`}
+      className={cardClass({ tone: 'inset', pad: 'sm', className: enabled ? '' : 'opacity-60' })}
     >
       {/* Аватарки в форме НЕТ: ею владеют setExpertAvatar/upload/reset. Иначе форма со своим
           устаревшим значением затирала бы только что загруженную картинку — и на «вернуть

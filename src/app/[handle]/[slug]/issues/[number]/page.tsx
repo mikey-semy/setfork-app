@@ -20,6 +20,7 @@ import { Reactions } from '@/features/reactions/Reactions'
 import { CommentCard } from '@/features/collab/CommentCard'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
   const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
@@ -135,7 +136,7 @@ export default async function IssueThreadPage({
 
         {/* Форма ответа */}
         {session ? (
-          <div className="mt-5 rounded-lg border border-border bg-surface p-4">
+          <div className={cardClass({ className: 'mt-5' })}>
             {/* Отдельная форма смены статуса (сиблинг, не вложенная) — кнопка ниже привязана через form=… */}
             {canToggle && (
               <form id="issue-status-form" action={setIssueStatus.bind(null, owner, slug, issue.number, closed ? 'open' : 'closed')} className="hidden" />

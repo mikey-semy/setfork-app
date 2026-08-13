@@ -9,6 +9,7 @@ import { completionHolderMeta, getCourseCompletion } from '@/features/quizzes/qu
 import { CertificatePrintButton } from '@/features/quizzes/CertificatePrintButton'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { SITE_HOST } from '@/shared/site'
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -46,7 +47,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
             </Link>
           </p>
         ) : !completion ? (
-          <div className="rounded-lg border border-border bg-surface p-6 text-center">
+          <div className={cardClass({ pad: 'lg', className: 'text-center' })}>
             <p className="text-[0.875rem] text-ink-2">{t('certNotCompleted', lang)}</p>
             <Link href={base} className="mt-3 inline-block text-[0.8125rem] text-accent hover:underline">
               {t('certBackToCourse', lang)}
@@ -55,6 +56,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
         ) : (
           <div className="flex flex-col items-center gap-4">
             {/* Сам сертификат — печатается; рамка decorative */}
+            {/* eslint-disable-next-line no-restricted-syntax -- герой-сертификат: печатная форма со своей рамкой (border-2) и радиусом */}
             <div className="w-full overflow-hidden rounded-xl border-2 border-ok/50 bg-surface p-8 text-center shadow-card sm:p-12">
               <div className="mx-auto flex flex-col items-center gap-1 border-b border-border pb-6">
                 <Award size={40} className="text-ok" />

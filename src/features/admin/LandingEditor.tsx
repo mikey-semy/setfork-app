@@ -12,6 +12,7 @@ import type { Lang } from '@/shared/i18n'
 import type { LandingContent, LandingCopy } from '@/shared/settings/landing'
 import { saveLanding, suggestSlogan, uploadLandingImage } from './landing-actions'
 import { t } from '@/shared/i18n'
+import { cardClass } from '@/shared/ui/card-style'
 
 type FieldKey = keyof Omit<LandingCopy, 'stats'>
 type Field = { key: FieldKey; label: string; max: number; area?: boolean; ai?: boolean }
@@ -59,7 +60,7 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
   return (
     <div className="flex flex-col gap-5">
       {/* Язык контента */}
-      <div className="flex w-fit items-center gap-1 rounded-md border border-border bg-surface-2 p-0.5">
+      <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'flex w-fit items-center gap-1' })}>
         {(['ru', 'en'] as const).map((l) => (
           <button
             key={l}
@@ -94,6 +95,9 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
         <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink-2">{t('admin.trustStats4', lang)}</div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
           {copy.stats.map((s, i) => (
+            // Обводка-группировка без фона: рамка тут разделяет пары полей, а не
+            // выделяет блок содержимого, поэтому это не карточка.
+            // eslint-disable-next-line no-restricted-syntax -- см. комментарий выше
             <div key={i} className="flex flex-col gap-1.5 rounded-md border border-border p-2">
               <Input value={s.num} maxLength={8} onChange={(e) => setStat(i, 'num', e.target.value)} placeholder="12k+" size="sm" />
               <Input value={s.label} maxLength={30} onChange={(e) => setStat(i, 'label', e.target.value)} placeholder={t('admin.label', lang)} size="sm" />
@@ -207,7 +211,7 @@ function HeroImage({ initial, onRef, lang }: { initial?: string; onRef: (ref: st
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files?.[0]; if (f) void upload(f) }}
         className={cn(
-          'flex cursor-pointer items-center gap-4 rounded-lg border border-dashed p-4 transition-colors',
+          cardClass({ dashed: true, className: 'flex cursor-pointer items-center gap-4 transition-colors' }),
           drag ? 'border-accent bg-(--accent-soft)' : 'border-border-strong hover:border-accent hover:bg-surface-2',
         )}
       >

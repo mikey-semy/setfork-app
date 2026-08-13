@@ -11,6 +11,7 @@ import { ACH_META } from '@/features/profile/achievement-meta'
 import type { AchDisplayMap } from '@/features/profile/achievement-config'
 import { removeAchievementImage, setAchievementEnabled, uploadAchievementImage } from './achievement-actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Админ-панель достижений: вкл/выкл + своя картинка (drag-and-drop) на каждое. */
 export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; lang: Lang }) {
@@ -84,7 +85,7 @@ function AchRow({
   const [over, setOver] = useState(false)
 
   return (
-    <div className={`flex items-center gap-3 rounded-md border border-border bg-surface-2 p-2.5 ${d.enabled ? '' : 'opacity-60'}`}>
+    <div className={cardClass({ tone: 'inset', pad: 'sm', className: `flex items-center gap-3 ${d.enabled ? '' : 'opacity-60'}` })}>
       {/* Плитка-дропзона: картинка или иконка-фолбэк. */}
       <Tooltip label={t('ach.pickImage', lang)}>
         <button

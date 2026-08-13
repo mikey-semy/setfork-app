@@ -8,6 +8,7 @@ import { Input } from '@/shared/ui/input'
 import { Alert } from '@/shared/ui/Alert'
 import type { Lang } from '@/shared/i18n'
 import { beginTotpEnroll, confirmTotpEnroll, disableTotp, regenerateRecoveryCodes, type EnrollStart } from '@/features/auth/twofa'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Настройки → Двухфакторная аутентификация (TOTP).
 // Флоу включения: QR/секрет → код из приложения → recovery-коды (один раз).
@@ -114,7 +115,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
 
       {/* Одноразовый показ recovery-кодов */}
       {recovery && (
-        <div className="rounded-md border border-warn/50 bg-warn/10 p-3.5">
+        <div className={cardClass({ tone: 'warn' })}>
           <div className="mb-1.5 text-[0.8125rem] font-semibold text-ink">
             {ru ? 'Recovery-коды — сохрани сейчас, второй раз не покажем' : 'Recovery codes — save them now, they won’t be shown again'}
           </div>
@@ -143,8 +144,8 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
       )}
 
       {!isOn && enroll && (
-        <div className="flex flex-col gap-3 rounded-md border border-border bg-surface-2 p-4 sm:flex-row sm:items-start">
-          {/* eslint-disable-next-line @next/next/no-img-element -- локальный data:URL QR */}
+        <div className={cardClass({ tone: 'inset', className: 'flex flex-col gap-3 sm:flex-row sm:items-start' })}>
+          {/* eslint-disable-next-line @next/next/no-img-element, no-restricted-syntax -- локальный data:URL QR; рамка КАРТИНКИ: белый фон обязателен для читаемости сканером */}
           <img src={enroll.qrDataUrl} alt="TOTP QR" width={160} height={160} className="shrink-0 rounded-md border border-border bg-white p-1" />
           <div className="min-w-0 flex-1">
             <p className="text-[0.8125rem] text-ink-2">
@@ -170,7 +171,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
       )}
 
       {isOn && mode !== 'idle' && (
-        <div className="rounded-md border border-border bg-surface-2 p-3.5">
+        <div className={cardClass({ tone: 'inset' })}>
           <p className="mb-2 text-[0.8125rem] text-ink-2">
             {mode === 'disable'
               ? ru ? 'Для отключения введи код из приложения (или recovery-код):' : 'Enter a code from your app (or a recovery code) to disable:'

@@ -5,6 +5,7 @@ import { LayoutTemplate } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import type { Lang } from '@/shared/i18n'
 import { setListTemplate } from './actions'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Настройки списка → «Шаблон»: включает кнопку «Use this template»
  *  (копия текущей версии БЕЗ fork-связи — стартовая точка для своих списков). */
@@ -14,7 +15,7 @@ export function TemplateSection({ templateId, isTemplate, lang }: { templateId: 
   const [, start] = useTransition()
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-5">
+    <section className={cardClass({ pad: 'lg' })}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 font-semibold text-ink">

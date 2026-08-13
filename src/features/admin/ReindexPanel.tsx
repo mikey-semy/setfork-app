@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getEmbedSpaceInfo, getReindexStatus, purgeEmbeddings, setEmbedTarget, startReindex } from './actions'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
+import { cardClass } from '@/shared/ui/card-style'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
 type SpaceInfo = Awaited<ReturnType<typeof getEmbedSpaceInfo>>
@@ -96,14 +97,14 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
   return (
     // Та же читаемая ширина, что у карточек-секций /admin (const card на странице):
     // без кэпа панель растягивалась на весь экран и выбивалась из колонны секций.
-    <div className="w-full max-w-[53.75rem] rounded-lg border border-border bg-surface p-4">
+    <div className={cardClass({ className: 'w-full max-w-[53.75rem]' })}>
       <div className="mb-1 font-semibold text-ink">{t('admin.searchIndexEmbeddings', lang)}</div>
       <p className="mb-3 text-[0.8125rem] text-ink-2">
         {t('admin.rebuildVectorIndexLists', lang)}
       </p>
 
       {space && (
-        <div className={`mb-4 rounded-md border p-3 ${space.inSync ? 'border-border bg-surface-2' : 'border-warn/50 bg-warn/10'}`}>
+        <div className={cardClass({ tone: space.inSync ? 'inset' : 'warn', pad: 'sm', className: 'mb-4' })}>
           <div className="flex flex-wrap items-center gap-3">
             {/* Мерность — крупным бейджем: в чём реально построен индекс */}
             <span className="inline-flex items-baseline gap-1 rounded-md bg-primary px-2.5 py-1.5 font-mono text-primary-fg">

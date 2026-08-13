@@ -11,6 +11,7 @@ import { CatalogRow } from '@/features/catalogs/CatalogRow'
 import { searchPeople } from '@/features/profile/search'
 import { ExploreNav } from '@/widgets/explore/ExploreNav'
 import { PAGE } from '@/shared/ui/control'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Витрина-открытие (не поиск!). Соседние разделы — теги, популярное и подборки —
 // живут по СВОИМ адресам (/tags, /trending, /collections), как у GitHub; здесь
@@ -141,7 +142,7 @@ function Widget({
   moreLabel?: string
 }) {
   return (
-    <section className="rounded-lg border border-border bg-surface p-4">
+    <section className={cardClass()}>
       <div className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-ink">
         {icon} {title}
       </div>

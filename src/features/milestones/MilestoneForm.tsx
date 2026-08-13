@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { createMilestone } from './actions'
+import { cardClass } from '@/shared/ui/card-style'
 
 const inputCls = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] text-ink outline-hidden focus:border-border-strong'
 
@@ -31,7 +32,7 @@ export function MilestoneForm({ owner, slug, lang }: { owner: string; slug: stri
           titleRef.current?.focus()
         }
       }}
-      className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4"
+      className={cardClass({ className: 'flex flex-col gap-2' })}
     >
       <input type="hidden" name="owner" value={owner} />
       <input type="hidden" name="slug" value={slug} />

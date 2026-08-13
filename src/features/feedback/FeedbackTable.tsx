@@ -6,6 +6,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { setFeedbackStatus } from './actions'
 import type { FeedbackFilter, FeedbackItem } from './queries'
+import { cardClass } from '@/shared/ui/card-style'
 
 const CAT_LABEL = {
   bug: 'fbCatBug',
@@ -33,7 +34,7 @@ function Row({ item, lang }: { item: FeedbackItem; lang: Lang }) {
     'rounded-md border border-border bg-surface px-2.5 py-1 text-[0.78125rem] font-semibold text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50'
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className={cardClass()}>
       <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.78125rem] text-ink-2">
         <StatusBadge status={item.status} lang={lang} />
         <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-semibold text-ink-2">

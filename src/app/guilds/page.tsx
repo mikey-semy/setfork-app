@@ -7,6 +7,7 @@ import { gnomeRank, gnomeReputation, REP_MIN_GENS } from '@/features/generation/
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { PAGE } from '@/shared/ui/control'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Стиль бейджа ранга по tier: выше — заметнее. Ученик (0) — приглушённо (стартовый
 // ранг, не «пусто»); Старший мастер (3) — самый выразительный. Только токены темы.
@@ -49,7 +50,7 @@ export default async function GuildsPage() {
           // Видимый ранг (профразвитие): цеховой титул по объёму принятых списков.
           const rank = gnomeRank(rep, e.id)
           return (
-            <div key={e.id} className="rounded-lg border border-border bg-surface p-4">
+            <div key={e.id} className={cardClass()}>
               <div className="flex items-center gap-3">
                 <GnomeAvatar src={avatars[e.id]} size={56} className="size-14 shrink-0" />
                 <div className="min-w-0">
