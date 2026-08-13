@@ -88,6 +88,11 @@ function up() {
 function printEnv() {
   out(`  DATABASE_URL=${DATABASE_URL} \\`)
   out(`  SETFORK_CORE_URL=1 SETFORK_CORE_ADDR=${CORE_ADDR} \\`)
+  // Имя контейнера базы нужно тестам, которые проверяют поведение при МЁРТВОЙ
+  // базе (readiness): они гасят её и поднимают обратно. Без переменной такой
+  // тест молча пропускается — самая важная его половина не гоняется вовсе, а
+  // прогон при этом зелёный.
+  out(`  ITEST_PG_CONTAINER=${PG} \\`)
   out('  npm run test:integration')
 }
 
