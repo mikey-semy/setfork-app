@@ -19,11 +19,25 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+# Пол для всех джоб: без этой строки GITHUB_TOKEN приезжает с правами по
+# умолчанию для репозитория (в том числе на запись) даже в джобы, которым нужен
+# только исходник. Кому нужно больше — объявляет у себя и перекрывает
+# (image, deploy, stuck ниже).
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: [self-hosted, setfork]
     steps:
+      # persist-credentials: false — иначе checkout кладёт GITHUB_TOKEN в
+      # .git/config рабочей копии, а раннер общий и переиспользуемый: токен
+      # доживает до чужих шагов и уезжает в артефакты. Git-креды checkout'а не
+      # использует ни один шаг. То же в остальных джобах и воркфлоу.
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -100,6 +114,8 @@ jobs:
           echo "DATABASE_URL=postgresql://ci:ci@pg-$NET:5432/ci" >> "$GITHUB_ENV"
           echo "CI_REDIS_URL=redis://redis-$NET:6379" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -180,6 +196,8 @@ jobs:
           echo "CI_NET=$NET" >> "$GITHUB_ENV"
           echo "DATABASE_URL=postgresql://ci:ci@pg-$NET:5432/ci" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -255,18 +273,28 @@ jobs:
       IMAGE: ghcr.io/${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       # Повтор — из-за той же внешней зависимости, что и в `check`: сборка Next тянет
       # шрифты с fonts.googleapis.com, и с российских адресов это лотерея. Там повтор
       # уже стоит (и понадобился 30.07), здесь без него сорванная загрузка шрифта
       # останавливала бы ВЫКАТКУ. Настоящее лечение — держать шрифты у себя
       # (next/font/local), пока его нет — три попытки.
       - name: Сборка образов app и migrate (до 3 попыток — внешние шрифты)
+        # Значения приходят переменными окружения, а не подстановкой ${{ }} внутрь
+        # скрипта: подстановка склеивает текст ДО запуска шелла, поэтому апостроф
+        # в значении переменной репозитория разваливает кавычки и остаток строки
+        # исполняется как команда. Через env шелл видит значение, а не код.
+        env:
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_UMAMI_URL: ${{ vars.NEXT_PUBLIC_UMAMI_URL }}
+          NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${{ vars.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
         run: |
           build_app() {
             docker build --target runner \
-            --build-arg NEXT_PUBLIC_SITE_URL='${{ vars.NEXT_PUBLIC_SITE_URL }}' \
-            --build-arg NEXT_PUBLIC_UMAMI_URL='${{ vars.NEXT_PUBLIC_UMAMI_URL }}' \
-            --build-arg NEXT_PUBLIC_UMAMI_WEBSITE_ID='${{ vars.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}' \
+            --build-arg NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
+            --build-arg NEXT_PUBLIC_UMAMI_URL="$NEXT_PUBLIC_UMAMI_URL" \
+            --build-arg NEXT_PUBLIC_UMAMI_WEBSITE_ID="$NEXT_PUBLIC_UMAMI_WEBSITE_ID" \
               -t "$IMAGE:app-$GITHUB_SHA" .
           }
           for i in 1 2 3; do
@@ -278,8 +306,11 @@ jobs:
           # migrate сети не касается (ни сборки Next, ни шрифтов) — повтор ему не нужен.
           docker build --target migrate -t "$IMAGE:migrate-$GITHUB_SHA" .
       - name: Публикация в GHCR
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
           docker push "$IMAGE:app-$GITHUB_SHA"
           docker push "$IMAGE:migrate-$GITHUB_SHA"
           docker logout ghcr.io
@@ -373,6 +404,8 @@ jobs:
 
       - uses: actions/checkout@v4
         if: steps.target.outputs.sha != ''
+        with:
+          persist-credentials: false
 
       - name: 'Deployment: старт'
         id: dep
@@ -419,6 +452,12 @@ jobs:
       # не предусмотрели, он не потерян, а лежит рядом.
       - name: Доставка дерева → готовый образ из GHCR → up
         if: steps.target.outputs.sha != ''
+        # Через env, а не подстановкой ${{ }} в текст скрипта: строка ниже уезжает
+        # ещё и на прод-сервер целиком, то есть подставленное значение исполнилось
+        # бы там. Правило одинаковое для всех run-блоков.
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SSH="ssh -i /tmp/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
           tar --exclude=.git -czf - . | $SSH "rm -rf $APP_DIR.new && mkdir -p $APP_DIR.new && tar -xzf - -C $APP_DIR.new"
@@ -444,8 +483,8 @@ jobs:
           # Вход в реестр — ТОКЕНОМ ЭТОГО ПРОГОНА и через stdin: он живёт минуты,
           # на сервере не остаётся (logout ниже) и не светится в списке процессов.
           # Отдельный долгоживущий PAT на сервере заводить не потребовалось.
-          echo "${{ secrets.GITHUB_TOKEN }}" \
-            | $SSH "docker login ghcr.io -u ${{ github.actor }} --password-stdin > /dev/null"
+          echo "$GHCR_TOKEN" \
+            | $SSH "docker login ghcr.io -u '$GHCR_USER' --password-stdin > /dev/null"
           $SSH "docker pull $IMAGE:app-$GITHUB_SHA && docker pull $IMAGE:migrate-$GITHUB_SHA"
           $SSH "docker logout ghcr.io > /dev/null"
 

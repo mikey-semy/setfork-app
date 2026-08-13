@@ -28,11 +28,24 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+# Пол для всех джоб: без этой строки GITHUB_TOKEN приезжает с правами по
+# умолчанию для репозитория (в том числе на запись). Кому нужно больше —
+# объявляет у себя и перекрывает.
+permissions:
+  contents: read
+
 jobs:
   npm-audit:
     runs-on: [self-hosted, setfork]
     steps:
+      # persist-credentials: false — иначе checkout кладёт GITHUB_TOKEN в
+      # .git/config рабочей копии, а раннер общий и переиспользуемый: токен
+      # доживает до чужих шагов и уезжает в артефакты. Ни один шаг здесь
+      # git-кредами не пользуется. То же в остальных джобах и воркфлоу.
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -59,9 +72,13 @@ jobs:
   secrets:
     runs-on: [self-hosted, setfork]
     steps:
+      # persist-credentials: false здесь особенно к месту: шаг ниже заносит в
+      # контейнер gitleaks рабочую копию ЦЕЛИКОМ, вместе с .git — то есть вместе
+      # с токеном, если его туда положить.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # полная история для скана
+          persist-credentials: false
       # Рабочая копия заносится через `docker cp`, а НЕ bind-mount: раннер сам в
       # контейнере с проброшенным docker.sock, поэтому демон на ХОСТЕ монтировал бы
       # несуществующий путь (пустоту) — gitleaks не находил .gitleaks.toml и падал
@@ -76,3 +93,57 @@ jobs:
       - name: cleanup
         if: always()
         run: docker rm -f "gl-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true
+
+  # Аудит САМИХ воркфлоу (zizmor): инъекция в `run:` через подконтрольные поля
+  # события, лишние права GITHUB_TOKEN, токен, осевший в .git/config, экшены на
+  # подвижной ссылке. У нас это не абстракция: раннер свой, у него docker.sock
+  # ХОСТА и ключ выкатки на прод — цена чужого кода в шаге здесь выше, чем на
+  # одноразовой машине GitHub. Правила и политика закрепления — .github/zizmor.yml.
+  # Такая же джоба стоит в setfork-core.
+  #
+  # Гейт настоящий, не «печатаем и идём дальше»: на момент подключения находок
+  # ноль, поэтому красный цвет означает ровно «в воркфлоу завелось новое».
+  workflows:
+    runs-on: [self-hosted, setfork]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # Образ с GHCR, а не pip: у раннера python 3.8, а zizmor новее 1.2 требует
+      # 3.10+ — pip там молча подсовывает версию годичной давности (проверено
+      # прогоном в setfork-core). Релиз-бинарь с GitHub и официальный экшен
+      # отпадают по другой причине: они тянут release-assets.githubusercontent.com,
+      # которые у нас рвутся DPI.
+      #
+      # Дальше — тот же приём, что с gitleaks выше: контейнер создаётся, дерево
+      # заносится `docker cp` (bind-mount из sibling-демона монтировал бы пустоту),
+      # `docker start -a` отдаёт код возврата контейнера — 0 без находок, 11..14
+      # с находками, то есть гейт получается без единой строки условий.
+      # Заносим ТОЛЬКО .github: остальное дерево и .git аудиту не нужны.
+      #
+      # Версия образа закреплена: линтер, который сам приносит новые правила,
+      # красил бы PR без единой правки воркфлоу. Обновлять сознательно.
+      #
+      # --offline: без него zizmor ходит в API GitHub за метаданными экшенов —
+      # лишняя сетевая зависимость и лимиты на канале, который и так шейпится.
+      # --format github: находки приезжают аннотациями к строкам воркфлоу.
+      - name: zizmor (аудит воркфлоу)
+        run: |
+          docker rm -f "zz-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true
+          rm -rf "$RUNNER_TEMP/zz"
+          mkdir -p "$RUNNER_TEMP/zz"
+          cp -r .github "$RUNNER_TEMP/zz/"
+          # Тянем с ЧИСТЫМ docker-конфигом: останься в конфиге раннера протухший
+          # логин в ghcr.io от прошлой выкатки — даже публичный образ ответил бы
+          # «denied» (так упал первый прогон этой джобы в setfork-core, где
+          # docker logout после пуша не стоял).
+          ZZ_CFG=$(mktemp -d)
+          DOCKER_CONFIG="$ZZ_CFG" docker pull --quiet ghcr.io/zizmorcore/zizmor:1.29.0 >/dev/null
+          rm -rf "$ZZ_CFG"
+          docker create --name "zz-${GITHUB_RUN_ID}" ghcr.io/zizmorcore/zizmor:1.29.0 \
+            --offline --no-progress --format github --config /repo/.github/zizmor.yml /repo >/dev/null
+          docker cp "$RUNNER_TEMP/zz/." "zz-${GITHUB_RUN_ID}:/repo"
+          docker start -a "zz-${GITHUB_RUN_ID}"
+      - name: cleanup
+        if: always()
+        run: docker rm -f "zz-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true

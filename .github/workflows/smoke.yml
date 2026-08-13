@@ -34,6 +34,12 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+# Пол прав: смок только читает исходники и выкладывает артефакты, писать в
+# репозиторий его токену незачем.
+permissions:
+  contents: read
+
 jobs:
   smoke:
     runs-on: [self-hosted, setfork]
@@ -74,6 +80,9 @@ jobs:
 
       - name: Checkout frontend
         uses: actions/checkout@v4
+        with:
+          # Токен не остаётся в .git/config переиспользуемого раннера.
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -145,6 +154,9 @@ jobs:
           repository: mikey-semy/setfork-sim
           token: ${{ secrets.SIM_REPO_TOKEN }}
           path: _sim
+          # Здесь это ДОЛГОЖИВУЩИЙ PAT, а не токен прогона: без этой строки он
+          # осел бы в _sim/.git/config на общем раннере и пережил бы прогон.
+          persist-credentials: false
 
       - name: Run smoke (c1–c9)
         working-directory: _sim
