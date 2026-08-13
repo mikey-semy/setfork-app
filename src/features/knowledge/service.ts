@@ -66,6 +66,15 @@ export async function runTriplesSweep(): Promise<{ mined: number; skipped: numbe
   let mined = 0
   let skipped = 0
   for (const tpl of batch) {
+    // Бюджет перепроверяем НА КАЖДОМ списке, а не только на входе в проход: добыча
+    // зовёт платную модель, и к середине партии денег может уже не быть. Так это
+    // сделано у самогенерации; уход и рудник проверяли только вход — находка A3
+    // линзы 06. Партия здесь до TRIPLES_BATCH списков, и её размер задаётся
+    // переменной окружения, поэтому цена промаха растёт вместе с ней.
+    if (!(await globalBudgetOk())) {
+      log.info('triples: budget exhausted mid-batch, stopping', { mined, planned: batch.length })
+      break
+    }
     const [ver] = await db
       .select({ id: templateVersions.id })
       .from(templateVersions)
@@ -140,6 +149,14 @@ export async function updateGnomeMemories(): Promise<{ updated: number }> {
 
   let updated = 0
   for (const e of due) {
+    // Тот же потолок, что и у добычи выше. Эта функция — вторая половина ОДНОЙ суточной
+    // задачи рудника: остановка добычи по исчерпанному бюджету не мешала памяти гномов
+    // тут же потратить ещё до двух вызовов модели, и суточный кап пробивался сразу после
+    // того, как его заметили. Замечание авто-ревью на fe#801 (P2).
+    if (!(await globalBudgetOk())) {
+      log.info('gnome memory: budget exhausted, stopping', { updated, planned: due.length })
+      break
+    }
     // Лучшие списки его доменов: точное пересечение тегов, вес практики.
     const top = await db
       .select({ title: templates.title, desc: templates.desc, tags: templates.tags, stars: templates.starsCount })
