@@ -161,23 +161,27 @@ export async function bulkRestoreCatalog(move: Pick<MoveResult, 'restore' | 'mov
   for (const group of groups) {
     const ids = group.ids.filter((id) => mine.has(id))
     if (!ids.length) continue
-    // Полку проверяем по владельцу и здесь: карта возврата пришла из браузера, а значит
-    // могла бы указать на чужую полку не хуже, чем прямой вызов.
-    const catalogId = group.catalogId
-      ? (
-          await db
-            .select({ id: repositories.id })
-            .from(repositories)
-            .where(and(eq(repositories.ownerId, session.userId), eq(repositories.id, group.catalogId)))
-            .limit(1)
-        )[0]?.id ?? null
-      : null
+    // Проверка полки и запись — одной транзакцией с замком, как и в прямом переносе. Порознь
+    // они разъезжаются: полку успевают удалить между «нашли» и «записали», и отмена вернула
+    // бы списки на исчезнувшую полку (внешнего ключа у `repositoryId` нет — база смолчит).
+    // Владельца проверяем здесь же: карта возврата пришла из браузера и могла бы указать на
+    // чужую полку не хуже, чем прямой вызов.
     const stillThere = movedTo ? eq(templates.repositoryId, movedTo) : isNull(templates.repositoryId)
-    const back = await db
-      .update(templates)
-      .set({ repositoryId: catalogId })
-      .where(and(editable(session.userId, ids), stillThere))
-      .returning({ id: templates.id })
+    const back = await db.transaction(async (tx) => {
+      let catalogId: string | null = null
+      if (group.catalogId) {
+        const [live] = await tx
+          .select({ id: repositories.id })
+          .from(repositories)
+          .where(and(eq(repositories.ownerId, session.userId), eq(repositories.id, group.catalogId)))
+          .limit(1)
+          .for('update')
+        // Полки больше нет — возвращаем «без каталога»: ровно там список и оказался бы,
+        // удали её владелец без всякой пачки.
+        catalogId = live?.id ?? null
+      }
+      return tx.update(templates).set({ repositoryId: catalogId }).where(and(editable(session.userId, ids), stillThere)).returning({ id: templates.id })
+    })
     changed += back.length
   }
   revalidatePath(`/${session.handle}`)

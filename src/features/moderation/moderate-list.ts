@@ -186,7 +186,7 @@ export async function gateListPublication(templateId: string): Promise<void> {
       await enqueueModerate(templateId, false, tpl.ownerId)
       return
     }
-    await db
+    const [held] = await db
       .update(templates)
       .set({ moderation: 'pending', moderationReason: null, moderationSeverity: 0 })
       // Любое решение админа, принятое ПОКА гейт думал, не затираем: пишем только если
@@ -194,7 +194,12 @@ export async function gateListPublication(templateId: string): Promise<void> {
       // умеет и одобрять (`setModeration(..., 'active')`), и такое одобрение эта запись
       // откатывала бы обратно в очередь (находка авто-ревью).
       .where(and(eq(templates.id, templateId), eq(templates.moderation, tpl.moderation)))
+      .returning({ id: templates.id })
     decided = true
+    // Удержание не наше — значит и проверку ставить не за чем. Джоба с `gate: true` считает
+    // себя хозяйкой вердикта и позже перекрыла бы одобрение админа своим (находка
+    // авто-ревью): решение человека сильнее не только этой записи, но и всей очереди.
+    if (!held) return
     if ((await enqueueModerate(templateId, true, tpl.ownerId)) === 'capped') await markCapped(templateId)
   } catch (e) {
     captureError(e, { where: 'moderation.gate', templateId })

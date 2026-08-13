@@ -169,6 +169,21 @@ describe('раскладка по полкам', () => {
     expect((await rowOf(list)).repositoryId).toBeNull()
   })
 
+  it('отмена не возвращает списки на удалённую полку', async () => {
+    // Полку успевают удалить, пока висит тост. Вернуть туда некуда: без проверки список
+    // указывал бы на несуществующую полку и пропал изо всех фильтров. «Без каталога» — ровно
+    // то, где он оказался бы, удали владелец полку и без всякой пачки.
+    const a = await shelf('a')
+    await shelf('target')
+    const list = await seed({ repositoryId: a })
+
+    const res = await bulkSetCatalog([list], 'target')
+    await db.delete(repositories).where(eq(repositories.id, a))
+    await bulkRestoreCatalog(res)
+
+    expect((await rowOf(list)).repositoryId).toBeNull()
+  })
+
   it('раскладка не выдаёт себя за правку содержимого', async () => {
     // Иначе разложил пятьсот списков — и все пятьсот всплыли в лентах «по обновлению» с
     // сегодняшней датой, хотя ни одна буква в них не изменилась.
@@ -395,6 +410,9 @@ describe('публикация пачкой', () => {
     vi.restoreAllMocks()
 
     expect((await rowOf(draft)).moderation).toBe('active')
+    // И проверку не ставим: джоба с gate считает себя хозяйкой вердикта и позже перекрыла бы
+    // одобрение админа своим. Решение человека сильнее не только записи, но и всей очереди.
+    expect(await db.select({ type: jobs.type }).from(jobs)).toHaveLength(0)
   })
 
   it('архивное и замороженное не публикуется даже адресно', async () => {
