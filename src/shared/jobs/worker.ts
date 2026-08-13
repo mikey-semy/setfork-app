@@ -14,6 +14,7 @@ import {
   type Job,
 } from './queue'
 import { AUTONOMOUS_LOOPS, recordAgentAction } from '@/shared/agents/policy'
+import { errorForJob } from './error'
 
 /** Записать падение задачи ПЕТЛИ в журнал действий (обычные задачи туда не пишем). */
 async function recordLoopFailure(jobType: string, e: unknown): Promise<void> {
@@ -63,28 +64,6 @@ const HEARTBEAT_MS = 15_000
 // Уборка терминальных задач — раз в час (1200 тиков × 3с). Чаще незачем: выдержка измеряется
 // сутками, а каждый проход это DELETE по горячей таблице.
 const CLEANUP_EVERY_TICKS = 1200
-
-/**
- * Что сохранить об упавшей задаче.
- *
- * Раньше писали одно `e.message` — и авария оставалась БЕЗ АДРЕСА: 13.08 задача
- * selfgen умерла с «i.getTime is not a function», а где именно — восстановить уже
- * нечем, логи контейнера к тому времени прокрутились. Сообщение без места
- * диагностируется только гаданием по коду.
- *
- * Поэтому берём и стек. `last_error` в базе обрезан 1000 символами — столько и
- * отдаём: первые кадры и есть самое ценное, дальше идёт машинерия рантайма.
- */
-export function errorForJob(e: unknown): string {
-  if (!(e instanceof Error)) return String(e)
-  // Первая строка стека — это сам message, поэтому берём кадры со второй.
-  const frames = (e.stack ?? '')
-    .split('\n')
-    .slice(1, 9)
-    .map((l) => l.trim())
-    .filter(Boolean)
-  return frames.length ? [e.message, ...frames].join('\n') : e.message
-}
 
 let started = false
 

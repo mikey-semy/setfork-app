@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { errorForJob } from '@/shared/jobs/worker'
+import { JOB_ERROR_MAX, errorForJob } from '@/shared/jobs/error'
 import { asDate } from '@/shared/db/raw'
 
 // 13.08 петля самогенерации умерла с «i.getTime is not a function», и место
@@ -29,9 +29,25 @@ describe('errorForJob', () => {
     expect(errorForJob({ code: 42 })).toContain('object')
   })
 
-  it('влезает в отведённые под ошибку 1000 символов вместе со стеком', () => {
+  it('влезает в отведённый под ошибку бюджет вместе со стеком', () => {
     const e = new Error('x'.repeat(200))
-    expect(errorForJob(e).length).toBeLessThanOrEqual(1000)
+    expect(errorForJob(e).length).toBeLessThanOrEqual(JOB_ERROR_MAX)
+  })
+
+  it('огромное сообщение НЕ вытесняет адрес падения', () => {
+    // Так выглядят ошибки Postgres с текстом запроса и ответы моделей: обрезка по хвосту
+    // оставила бы одно сообщение — то есть снова «упало, а где — неизвестно».
+    let saved = ''
+    try {
+      throw new Error('щ'.repeat(5000))
+    } catch (e) {
+      saved = errorForJob(e)
+    }
+
+    expect(saved.length).toBeLessThanOrEqual(JOB_ERROR_MAX)
+    expect(saved).toMatch(/error-for-job\.test/)
+    // Обрезка обязана быть видимой, иначе не отличить укороченное от исходного.
+    expect(saved.split('\n')[0]).toMatch(/…$/)
   })
 })
 

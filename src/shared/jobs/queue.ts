@@ -2,6 +2,7 @@ import 'server-only'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { db, jobs, type JobType } from '@/shared/db'
 import { backoffMs } from './backoff'
+import { clampJobError } from './error'
 
 export interface Job {
   id: string
@@ -254,7 +255,7 @@ export async function failJob(job: Job, error: string): Promise<boolean> {
     .set({
       status: permanent ? 'failed' : 'pending',
       runAt: permanent ? undefined : new Date(Date.now() + backoffMs(job.attempts)),
-      lastError: error.slice(0, 1000),
+      lastError: clampJobError(error),
       updatedAt: new Date(),
       // Отпускаем задачу — гасим пульс (см. reapStalledJobs): чужой старый пульс на новой
       // попытке заставил бы reaper судить её по минутному порогу и отобрать живую работу.
