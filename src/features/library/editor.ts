@@ -52,6 +52,21 @@ export type EditorItem = {
   // шага живёт только в колонке steps.block_id: класть его в content шага нельзя,
   // это сломало бы байт-в-байт golden-паритет list.json с Rust.
   bid: string
+  /**
+   * Идентичность из КОЛОНКИ `steps.block_id`, отдельно от `bid`.
+   *
+   * Разделены, потому что у легаси-блоков это РАЗНЫЕ значения и обоим надо
+   * выжить. `bid` уезжает в `content.bid` (его знает git-merge), колонка живёт
+   * своей жизнью. Пока поле было одно, каждое сохранение выбирало между ними и
+   * теряло второе:
+   *   • взять колонку — легаси-алиас перезаписывался uuid'ом, и сравнение с
+   *     ранними версиями снова давало «удалён + добавлен» (D4 линзы 05);
+   *   • взять алиас — `blockId: isBlockUuid(bid) ? bid : newBlockId()` ниже
+   *     генерировал НОВЫЙ uuid при каждом сохранении, то есть идентичность в
+   *     БД становилась нестабильной, что ещё хуже.
+   * Пусто у новых блоков и у строк, записанных до ADR-0013.
+   */
+  blockId?: string
   text: string // markdown text-блока ('' для не-text)
   caption: string // подпись image/video-блока
   videoUrl: string // ссылка video-блока ('' для не-video)
@@ -252,7 +267,15 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
     // снаружи (API, импорт), а нераспознанное значение уронило бы вставку шагов —
     // у черновика она идёт после удаления старых, и список остался бы пустым.
     // Легаси-bid (не-uuid) при этом живёт дальше в content.bid, как и жил.
-    .map((p, i) => ({ ...p, blockId: isBlockUuid(kept[i].bid) ? kept[i].bid : newBlockId() }))
+    // Колонка — из своего поля; вывести её из `bid` нельзя: у легаси-блока там
+    // не-uuid, и `newBlockId()` выдавал бы НОВЫЙ идентификатор при каждом
+    // сохранении. Если колонки ещё нет, uuid рождается один раз: дальше он
+    // приезжает из БД через toEditorItems. D4 линзы 05.
+    .map((p, i) => {
+      const kept_i = kept[i]
+      const column = kept_i.blockId || (isBlockUuid(kept_i.bid) ? kept_i.bid : newBlockId())
+      return { ...p, blockId: column }
+    })
 }
 
 type LocaleItem = {
@@ -282,20 +305,24 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     const type = asBlockType(it.type)
     // Идентичность: колонка block_id — источник правды; content.bid — легаси-дом
     // не-step блоков (и то, что переживает git-round-trip). Пусто у старых строк.
-    const bid = it.blockId || (typeof it.content?.bid === 'string' ? it.content.bid : '')
+    // Алиас payload'а и колонка — ПОРОЗНЬ (см. EditorItem.blockId). Раньше здесь
+    // выбиралось одно значение, и второе терялось на записи.
+    const legacyBid = typeof it.content?.bid === 'string' ? it.content.bid : ''
+    const bid = legacyBid || it.blockId || ''
+    const blockId = it.blockId || ''
     const section = it.section ? tr(it.section, lang) : '' // секция/урок — у любого блока
     if (type === 'text') {
-      return { ...emptyItem(), type: 'text', bid, section, text: typeof it.content?.md === 'string' ? it.content.md : '' }
+      return { ...emptyItem(), type: 'text', bid, blockId, section, text: typeof it.content?.md === 'string' ? it.content.md : '' }
     }
     if (type === 'image') {
       const ref = typeof it.content?.ref === 'string' ? it.content.ref : ''
-      return { ...emptyItem(), type: 'image', bid, section, imageKey: ref, imagePreview: ref ? (previews[ref] ?? '') : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
+      return { ...emptyItem(), type: 'image', bid, blockId, section, imageKey: ref, imagePreview: ref ? (previews[ref] ?? '') : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
     }
     if (type === 'video') {
-      return { ...emptyItem(), type: 'video', bid, section, videoUrl: typeof it.content?.url === 'string' ? it.content.url : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
+      return { ...emptyItem(), type: 'video', bid, blockId, section, videoUrl: typeof it.content?.url === 'string' ? it.content.url : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
     }
     if (type === 'file') {
-      return { ...emptyItem(), type: 'file', bid, section, fileUrl: typeof it.content?.url === 'string' ? it.content.url : '', fileName: typeof it.content?.name === 'string' ? it.content.name : '' }
+      return { ...emptyItem(), type: 'file', bid, blockId, section, fileUrl: typeof it.content?.url === 'string' ? it.content.url : '', fileName: typeof it.content?.name === 'string' ? it.content.name : '' }
     }
     if (type === 'product') {
       const c = it.content ?? {}
@@ -313,6 +340,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
         ...emptyItem(),
         type: 'product',
         bid,
+        blockId,
         section,
         caption: typeof c.title === 'string' ? c.title : '',
         // Пустой строки-заготовки быть не должно: товары теперь чипы, и пустой
@@ -331,6 +359,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
         ...emptyItem(),
         type: 'poll',
         bid,
+        blockId,
         section,
         poll: {
           question: typeof c.question === 'string' ? c.question : '',
@@ -361,6 +390,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
         ...emptyItem(),
         type: 'quiz',
         bid,
+        blockId,
         section,
         quiz: {
           kind,
@@ -382,6 +412,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     return {
       type: 'step',
       bid, // шаг тоже несёт идентичность сквозь версии (пусто у строк до block_id)
+      blockId,
       text: '',
       caption: '',
       videoUrl: '',

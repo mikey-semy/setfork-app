@@ -313,3 +313,42 @@ describe('editor block converters', () => {
     expect(back[2].caption).toBe('a shot')
   })
 })
+
+// D4 линзы 05: у легаси-блока ДВЕ идентичности — алиас в `content.bid` (его
+// знает git-merge) и колонка `steps.block_id`. Пока в редакторе было одно поле,
+// каждое сохранение выбирало между ними и теряло второе: либо алиас
+// перезаписывался uuid'ом (и сравнение с ранними версиями снова давало
+// «удалён + добавлен»), либо колонка перегенерировалась при каждом сохранении.
+describe('легаси-блок: алиас и колонка переживают цикл сохранений', () => {
+  const legacyRow = (md: string, blockId?: string) => ({
+    type: 'text',
+    blockId: blockId ?? null,
+    content: { bid: 'legacy-42', md },
+    title: {}, desc: {}, command: '', level: 'required' as const, why: {},
+    section: {}, subtasks: [], refs: [], hasImage: false, imageKey: null,
+    needsHuman: false, needsHumanAsk: {}, danger: false,
+  })
+
+  it('первое сохранение: алиас остаётся в payload, колонка рождается uuid', () => {
+    const [saved] = toProposedItems(toEditorItems([legacyRow('Текст')] as never, 'ru'), 'ru')
+    expect(saved.content?.bid, 'легаси-алиас обязан пережить сохранение').toBe('legacy-42')
+    expect(saved.blockId, 'колонке нужен uuid').toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  it('второе сохранение: НИЧЕГО не меняется — ни алиас, ни колонка', () => {
+    const first = toProposedItems(toEditorItems([legacyRow('Текст')] as never, 'ru'), 'ru')[0]
+    // Так строка выглядит после записи в БД: колонка есть, алиас прежний.
+    const reopened = toEditorItems([legacyRow('Текст', first.blockId)] as never, 'ru')
+    const second = toProposedItems(reopened, 'ru')[0]
+
+    expect(second.content?.bid, 'алиас затёрли uuid-ом').toBe('legacy-42')
+    expect(second.blockId, 'колонка перегенерировалась — идентичность нестабильна').toBe(first.blockId)
+  })
+
+  it('новый блок: алиас и колонка совпадают и оба uuid', () => {
+    const fresh = { ...emptyBlock('text'), text: 'Свежий' }
+    const [saved] = toProposedItems([fresh], 'ru')
+    expect(saved.content?.bid).toBe(saved.blockId)
+    expect(saved.blockId).toMatch(/^[0-9a-f-]{36}$/)
+  })
+})
