@@ -23,16 +23,26 @@ import { db } from '@/shared/db'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-/** Проба должна отвечать быстро: зависшая БД не должна превращаться в зависший монитор. */
+/**
+ * Потолок ожидания — на СТОРОНЕ POSTGRES (`statement_timeout`), а не гонкой
+ * промисов. `Promise.race` перестаёт ждать, но сам запрос не отменяет: клиент
+ * остаётся занят, и каждая следующая проба съедала бы ещё один из пула
+ * (`DB_POOL_MAX` по умолчанию 20). Проба, добивающая пул во время аварии, — это
+ * не мониторинг, а вторая авария. Замечание авто-ревью на fe#778.
+ *
+ * `set local` требует транзакции, поэтому запрос идёт в ней: по истечении срока
+ * Postgres сам прерывает запрос и возвращает клиента в пул. Тот же приём уже
+ * работает в `tests/helpers/reset-db.ts` (там `lock_timeout`).
+ */
 const TIMEOUT_MS = 2000
 
 export async function GET() {
   const started = Date.now()
   try {
-    await Promise.race([
-      db.execute(sql`select 1`),
-      new Promise((_, reject) => setTimeout(() => reject(new Error(`нет ответа за ${TIMEOUT_MS} мс`)), TIMEOUT_MS)),
-    ])
+    await db.transaction(async (tx) => {
+      await tx.execute(sql.raw(`set local statement_timeout = ${TIMEOUT_MS}`))
+      await tx.execute(sql`select 1`)
+    })
     return text(`READY db ${Date.now() - started}ms\n`, 200)
   } catch (e) {
     // Причина в теле: «NOT_READY» без неё заставляет лезть в логи ровно тогда,
