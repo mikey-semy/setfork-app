@@ -32,7 +32,9 @@ function contentStrings(v: unknown): string[] {
 
 // Кап LLM-проверок на автора в сутки: защита от расхода OpenRouter циклом
 // publish/save (git push пропускает до 240 запросов/мин — без капа это деньги).
-const MODERATE_DAILY_CAP = 20
+// Экспортируется затем, что из него выведен предел пакетной публикации: смысла публиковать
+// за раз больше, чем проверка успевает за сутки, нет (см. library/publish-draft).
+export const MODERATE_DAILY_CAP = 20
 
 interface LoadedList {
   signals: ListSignals

@@ -1,0 +1,203 @@
+import { eq } from 'drizzle-orm'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
+
+// ПАКЕТНЫЕ ДЕЙСТВИЯ. Опасность у них ровно в объёме: одно нажатие меняет сотни списков.
+// Поэтому тесты держат три вещи — чужое не трогается ни при каком наборе идентификаторов;
+// отмена возвращает КАЖДЫЙ список на свою прежнюю полку, а не сваливает всё в одну; и
+// публикация не обходит модерацию и не публикует больше, чем проверка успевает за сутки.
+//
+// Мокаем только границу Next-рантайма (кто вошёл, revalidatePath) — БД и правила настоящие.
+const h = vi.hoisted(() => ({ session: null as null | { userId: string; handle: string } }))
+vi.mock('@/shared/auth/session', () => ({
+  requireSession: async () => {
+    if (!h.session) throw new Error('no session')
+    return h.session
+  },
+  getSession: async () => h.session,
+}))
+vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
+vi.mock('@/shared/i18n/server', () => ({ getLang: async () => 'ru' }))
+// Авто-модерация требует ключа модели: без него гейт отвечает «выключен», и проверка
+// «ушло на модерацию» проверяла бы отсутствие ключа, а не поведение барьера.
+vi.mock('@/shared/settings/ai', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  getApiKey: vi.fn(async () => 'test-key'),
+}))
+
+const { db, jobs, repositories, templates, users } = await import('@/shared/db')
+const { bulkCreateCatalogAndMove, bulkPublish, bulkRestoreCatalog, bulkSetCatalog } = await import('@/features/library/bulk/actions')
+const { PUBLISH_BATCH_MAX } = await import('@/features/library/publish-draft')
+
+let ownerId = ''
+let otherId = ''
+
+const seed = async (over: Partial<typeof templates.$inferInsert> = {}): Promise<string> => {
+  const [row] = await db
+    .insert(templates)
+    .values({ ownerId, slug: `l-${Math.random().toString(36).slice(2)}`, title: { en: 'L' }, ...over })
+    .returning({ id: templates.id })
+  return row.id
+}
+const shelf = async (name: string): Promise<string> => {
+  const [row] = await db.insert(repositories).values({ ownerId, name, title: { ru: name } }).returning({ id: repositories.id })
+  return row.id
+}
+const rowOf = async (id: string) => (await db.select().from(templates).where(eq(templates.id, id)))[0]
+
+beforeEach(async () => {
+  await resetTables([jobs, templates, repositories, users])
+  const [o] = await db.insert(users).values({ handle: 'bulk-owner' }).returning({ id: users.id })
+  const [x] = await db.insert(users).values({ handle: 'bulk-other' }).returning({ id: users.id })
+  ownerId = o.id
+  otherId = x.id
+  h.session = { userId: ownerId, handle: 'bulk-owner' }
+})
+afterAll(async () => {
+  await resetTables([jobs, templates, repositories, users])
+})
+
+describe('раскладка по полкам', () => {
+  it('чужой список не переезжает, сколько бы его ни присылали', async () => {
+    const mine = await seed()
+    const [foreign] = await db
+      .insert(templates)
+      .values({ ownerId: otherId, slug: 'foreign', title: { en: 'F' } })
+      .returning({ id: templates.id })
+    const cat = await shelf('devops')
+
+    const res = await bulkSetCatalog([mine, foreign.id], 'devops')
+
+    expect(res.changed).toBe(1)
+    expect((await rowOf(mine)).repositoryId).toBe(cat)
+    expect((await rowOf(foreign.id)).repositoryId).toBeNull()
+  })
+
+  it('чужая полка не принимает списки: имя ищется среди СВОИХ', async () => {
+    const mine = await seed()
+    await db.insert(repositories).values({ ownerId: otherId, name: 'secret', title: { ru: 'secret' } })
+
+    const res = await bulkSetCatalog([mine], 'secret')
+
+    expect(res.error).toBe('catalog-not-found')
+    expect((await rowOf(mine)).repositoryId).toBeNull()
+  })
+
+  it('отмена возвращает каждый список НА СВОЮ прежнюю полку', async () => {
+    const a = await shelf('a')
+    const b = await shelf('b')
+    await shelf('target')
+    const fromA = await seed({ repositoryId: a })
+    const fromB = await seed({ repositoryId: b })
+    const unfiled = await seed()
+
+    const res = await bulkSetCatalog([fromA, fromB, unfiled], 'target')
+    expect(res.changed).toBe(3)
+    await bulkRestoreCatalog(res.restore)
+
+    expect((await rowOf(fromA)).repositoryId).toBe(a)
+    expect((await rowOf(fromB)).repositoryId).toBe(b)
+    expect((await rowOf(unfiled)).repositoryId).toBeNull()
+  })
+
+  it('снятие с полки — это тоже раскладка, с возможностью вернуть', async () => {
+    const a = await shelf('a')
+    const list = await seed({ repositoryId: a })
+
+    const res = await bulkSetCatalog([list], null)
+    expect((await rowOf(list)).repositoryId).toBeNull()
+
+    await bulkRestoreCatalog(res.restore)
+    expect((await rowOf(list)).repositoryId).toBe(a)
+  })
+
+  it('возврат не пускает список на ЧУЖУЮ полку, даже если её id прислали', async () => {
+    const [foreignShelf] = await db
+      .insert(repositories)
+      .values({ ownerId: otherId, name: 'theirs', title: { ru: 'theirs' } })
+      .returning({ id: repositories.id })
+    const list = await seed()
+
+    await bulkRestoreCatalog([{ catalogId: foreignShelf.id, ids: [list] }])
+
+    expect((await rowOf(list)).repositoryId).toBeNull()
+  })
+
+  it('новая полка заводится и сразу принимает пачку', async () => {
+    const one = await seed()
+    const two = await seed()
+
+    const res = await bulkCreateCatalogAndMove([one, two], 'Мои скиллы')
+
+    expect(res.changed).toBe(2)
+    const [cat] = await db.select().from(repositories).where(eq(repositories.ownerId, ownerId))
+    expect(cat.name).toBe('moi-skilly')
+    expect((await rowOf(one)).repositoryId).toBe(cat.id)
+  })
+})
+
+describe('публикация пачкой', () => {
+  it('по умолчанию это ПЛАН: в библиотеке ничего не меняется', async () => {
+    const draft = await seed({ status: 'draft', visibility: 'public' })
+
+    const plan = await bulkPublish([draft])
+
+    expect(plan).toMatchObject({ dryRun: true, published: 1 })
+    expect((await rowOf(draft)).status).toBe('draft')
+  })
+
+  it('публикуются только черновики, остальное считается пропущенным', async () => {
+    const draft = await seed({ status: 'draft', visibility: 'private' })
+    const already = await seed({ status: 'published' })
+
+    const res = await bulkPublish([draft, already], false)
+
+    expect(res).toMatchObject({ skipped: 1 })
+    expect((await rowOf(draft)).status).toBe('published')
+  })
+
+  it('публичный список уходит на проверку — барьер модерации не обходится', async () => {
+    const draft = await seed({ status: 'draft', visibility: 'public' })
+
+    const res = await bulkPublish([draft], false)
+
+    const row = await rowOf(draft)
+    expect(row.status).toBe('published')
+    expect(row.moderation).toBe('pending')
+    // Про «ушёл на проверку» человеку говорят отдельно: список опубликован, но пока
+    // виден только ему — молчать об этом нельзя.
+    expect(res).toMatchObject({ published: 0, pending: 1 })
+    expect((await db.select({ type: jobs.type }).from(jobs)).map((j) => j.type)).toContain('moderate')
+  })
+
+  it('снятое модерацией не отмывается пачкой', async () => {
+    const flagged = await seed({ status: 'draft', visibility: 'public', moderation: 'flagged' })
+
+    await bulkPublish([flagged], false)
+
+    expect((await rowOf(flagged)).moderation).toBe('flagged')
+  })
+
+  it('за раз публикуется не больше суточного предела проверок, и остаток назван', async () => {
+    const ids: string[] = []
+    for (let i = 0; i <= PUBLISH_BATCH_MAX; i++) ids.push(await seed({ status: 'draft', visibility: 'private' }))
+
+    const res = await bulkPublish(ids, false)
+
+    expect(res.overflow).toBe(1)
+    const published = await db.select({ status: templates.status }).from(templates).where(eq(templates.status, 'published'))
+    expect(published).toHaveLength(PUBLISH_BATCH_MAX)
+  })
+
+  it('чужое не публикуется', async () => {
+    const [foreign] = await db
+      .insert(templates)
+      .values({ ownerId: otherId, slug: 'foreign-draft', title: { en: 'F' }, status: 'draft' })
+      .returning({ id: templates.id })
+
+    const res = await bulkPublish([foreign.id], false)
+
+    expect(res.published + res.pending).toBe(0)
+    expect((await rowOf(foreign.id)).status).toBe('draft')
+  })
+})

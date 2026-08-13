@@ -321,7 +321,7 @@
   },
   "src/features/library/actions/versions.ts": {
     "boundaries/dependencies": {
-      "count": 4
+      "count": 3
     }
   },
   "src/features/library/cover-actions.ts": {
