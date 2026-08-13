@@ -20,9 +20,16 @@ FROM base AS builder
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_UMAMI_URL
 ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
+# Адреса доков и лендинга: на проде их дефолты (`docs.<хост>` и `<origin>/about`)
+# и есть правильные значения, а на своём стенде — нет, поэтому демо ссылалось на
+# прод. Пустая строка означает «взять дефолт из shared/site». R13 линзы 08.
+ARG NEXT_PUBLIC_DOCS_URL
+ARG NEXT_PUBLIC_ABOUT_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_UMAMI_URL=$NEXT_PUBLIC_UMAMI_URL \
-    NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
+    NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID \
+    NEXT_PUBLIC_DOCS_URL=$NEXT_PUBLIC_DOCS_URL \
+    NEXT_PUBLIC_ABOUT_URL=$NEXT_PUBLIC_ABOUT_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
