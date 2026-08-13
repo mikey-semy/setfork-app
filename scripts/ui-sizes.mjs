@@ -109,4 +109,49 @@ for (const file of files) {
 console.log(`\nгридов без базового grid-cols (риск горизонтального скролла): ${grids.length}`)
 if (LIST) for (const g of grids) console.log(`  ${g.file}:${g.line}  ${g.cls}`)
 
-process.exit(overrides.length + handRolled.length + grids.length > 0 ? 1 : 0)
+// ── РЯДЫ: одна ступень на весь ряд ────────────────────────────────────────
+// Шкала гарантирует, что ступени ровные, но НЕ гарантирует, что в одном ряду
+// выбрана одна. Поле `sm` рядом с кнопкой `md` — это 28 против 32, и «волна
+// разных высот» видна первым же взглядом (замечание владельца 13.08.2026).
+// Кнопки при этом могут быть безупречны: в ряду с ними стоят селекты и поля.
+//
+// Эвристика, а не истина: смотрим контейнер-ряд (flex без flex-col) и контролы
+// в его теле, обрываясь на содержимом порталов (поповер/меню/диалог) — оно
+// рисуется в другом месте экрана и в ряд не встаёт.
+const ROW_CTRL = ['Button', 'IconButton', 'Input', 'Textarea', 'SearchField', 'SelectTrigger', 'SubmitButton', 'FloatingInput']
+const PORTAL = /<(PopoverContent|DropdownMenuContent|SelectContent|DialogContent|OverlayPanel|SheetContent|TooltipContent)\b/
+const mixedRows = []
+for (const file of files) {
+  const lines = readFileSync(file, 'utf8').split('\n')
+  lines.forEach((line, i) => {
+    const m = line.match(/class(?:Name)?=(?:"([^"]*)"|\{`([^`]*)`\})/)
+    const cls = m ? (m[1] ?? m[2] ?? '') : ''
+    if (!cls.includes('flex') || cls.includes('flex-col')) return
+    const indent = line.length - line.trimStart().length
+    const body = []
+    for (let j = i + 1; j < Math.min(i + 40, lines.length); j++) {
+      const l = lines[j]
+      if (PORTAL.test(l)) break
+      if (l.trimStart().startsWith('</') && l.length - l.trimStart().length <= indent) break
+      body.push(l)
+    }
+    const text = body.join('\n')
+    const found = []
+    for (const tag of ROW_CTRL) {
+      const re = new RegExp(`<${tag}\\b((?:[^<>{}]|\\{[^{}]*\\})*?)/?>`, 'gs')
+      let mm
+      while ((mm = re.exec(text))) {
+        const sm = mm[1].match(/size="(\w+)"/)
+        found.push({ tag, size: sm ? sm[1] : 'md' })
+      }
+    }
+    if (found.length < 2) return
+    if (new Set(found.map((f) => f.size)).size > 1) {
+      mixedRows.push({ file: relative(ROOT, file).replace(/\\/g, '/'), line: i + 1, found })
+    }
+  })
+}
+console.log(`\nрядов с РАЗНЫМИ ступенями у соседей: ${mixedRows.length}`)
+if (LIST) for (const r of mixedRows) console.log(`  ${r.file}:${r.line}  ${r.found.map((f) => `${f.tag}=${f.size}`).join(', ')}`)
+
+process.exit(overrides.length + handRolled.length + grids.length + mixedRows.length > 0 ? 1 : 0)

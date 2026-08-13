@@ -2,15 +2,26 @@
 
 import { useRef } from 'react'
 import { Search, X } from 'lucide-react'
-import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, ICON_SIZE, TOUCH_MIN_H } from './control'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, ICON_SIZE, TOUCH_MIN_H, type ControlSize } from './control'
 
-type Size = 'lg' | 'md' | 'sm' | 'xs'
+type Size = 'hero' | ControlSize
 
 // xs..md — общая шкала контролов (control.ts): высота ряда совпадает с
-// Button/Input/Select. lg — герой-поиск главной, живёт выше шкалы.
+// Button/Input/Select. hero — поиск-герой главной, он СОЗНАТЕЛЬНО вне шкалы и
+// стоит на странице один, ни с чем в ряд не вставая.
+//
+// ⚠️ Ступени ШКАЛЫ поле обязано поддерживать ВСЕ до одной. Примитив, у которого
+// нет какой-то ступени, вынуждает ряд собираться из разных: рядом с кнопкой lg
+// такое поле встанет ступенькой, и «одна высота в ряду» перестанет работать
+// именно там, где её видно (замечание владельца 13.08.2026).
+//
+// Ступень называется `hero`, а НЕ `lg`: с 13.08.2026 в шкале есть свой `lg`
+// (40px), и одинаковое имя при разной высоте — ловушка того же рода, что и
+// разнобой, который эта шкала лечит.
 const SIZES: Record<Size, { box: string; text: string; icon: number; clear: number }> = {
-  // eslint-disable-next-line no-restricted-syntax -- lg = герой-поиск главной, сознательно вне лестницы ролей (см. коммент выше)
-  lg: { box: 'h-[2.75rem] px-3.5', text: 'text-[0.9375rem]', icon: 16, clear: 16 },
+  // eslint-disable-next-line no-restricted-syntax -- hero = поиск главной, сознательно вне лестницы ролей (см. коммент выше)
+  hero: { box: 'h-[2.75rem] px-3.5', text: 'text-[0.9375rem]', icon: 16, clear: 16 },
+  lg: { box: `${CONTROL_H.lg} ${CONTROL_PX.lg}`, text: CONTROL_TEXT.lg, icon: ICON_SIZE.lg, clear: ICON_SIZE.lg },
   md: { box: `${CONTROL_H.md} ${CONTROL_PX.md}`, text: CONTROL_TEXT.md, icon: ICON_SIZE.md, clear: ICON_SIZE.md },
   sm: { box: `${CONTROL_H.sm} ${CONTROL_PX.sm}`, text: CONTROL_TEXT.sm, icon: ICON_SIZE.sm, clear: ICON_SIZE.sm },
   xs: { box: `${CONTROL_H.xs} ${CONTROL_PX.xs}`, text: CONTROL_TEXT.xs, icon: ICON_SIZE.xs, clear: ICON_SIZE.xs },

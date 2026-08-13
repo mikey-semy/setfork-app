@@ -86,10 +86,11 @@ export function StarFolderMenu({
               : undefined
           }
           footer={
-            // Поле и кнопка одной высоты — ряд не «ступенькой» (правило владельца).
+            // Поле и кнопка одной ступени шкалы (обе md) — ряд не «ступенькой»
+            // (правило владельца). Явный size тут НЕ ставим: дефолт у всех примитивов
+            // один, и это единственное, что удерживает ряд ровным без присмотра.
             <div className="flex items-center gap-1.5">
               <Input
-                size="sm"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && create()}
