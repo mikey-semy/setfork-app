@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, arrayOverlaps, desc, eq, gte, sql } from 'drizzle-orm'
 import { aiUsage, db, generationMessages, generations, templates, publiclyVisible } from '@/shared/db'
+import { asDate } from '@/shared/db/raw'
 
 /**
  * KPI гнома — этап (а) профразвития (HQ research/2026-07-21-gnome-workshop.md, раздел 4).
@@ -96,7 +97,8 @@ export async function gnomeKpi(id: string, domains: string[], model: string): Pr
     roundsTotal: r?.total ?? 0,
     gens: g?.gens ?? 0,
     accepted: g?.accepted ?? 0,
-    lastSeenAt: r?.last ?? null,
+    // Дата из сырого max(...): тип там обещан вручную и может прийти строкой.
+    lastSeenAt: asDate(r?.last),
     knowledge: knowledgeRow[0]?.n ?? 0,
     model: m && m.calls > 0 ? { calls: m.calls, okRate: m.ok / m.calls, avgMs: m.avgMs } : null,
     recent,

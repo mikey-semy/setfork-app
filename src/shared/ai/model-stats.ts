@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, gte, ne, sql } from 'drizzle-orm'
 import { aiUsage, db } from '@/shared/db'
+import { asDate } from '@/shared/db/raw'
 import { envNumber } from '@/shared/env'
 import { baseModelId, isQuarantined } from './health'
 
@@ -72,7 +73,8 @@ export async function modelUsageStats(days = STATS_WINDOW_DAYS): Promise<Map<str
       p95Ms: r.p95,
       avgCostUsd: r.calls ? r.cost / r.calls : 0,
       costUsd: r.cost,
-      lastAt: r.lastAt,
+      // Дата из сырого max(...): тип обещан вручную, наружу отдаём настоящий Date.
+      lastAt: asDate(r.lastAt),
       // Тот же порог, по которому совет выводит модель из ротации: щиток и авторотация
       // обязаны говорить одно и то же, иначе «почему её не зовут» неотвечаемо.
       quarantined: isQuarantined({ model: r.model, calls: r.calls, okRate, p95Ms: r.p95 }),

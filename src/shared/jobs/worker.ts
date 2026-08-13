@@ -59,9 +59,32 @@ const CONCURRENCY = Math.max(1, Number(process.env.SETFORK_JOB_CONCURRENCY) || 1
 // одна залипшая запись в БД не выглядела похоронами. Дешёвый UPDATE одной строки по первичному
 // ключу: даже при 12 задачах в полёте это ~1 запрос в секунду на весь инстанс.
 const HEARTBEAT_MS = 15_000
+
 // Уборка терминальных задач — раз в час (1200 тиков × 3с). Чаще незачем: выдержка измеряется
 // сутками, а каждый проход это DELETE по горячей таблице.
 const CLEANUP_EVERY_TICKS = 1200
+
+/**
+ * Что сохранить об упавшей задаче.
+ *
+ * Раньше писали одно `e.message` — и авария оставалась БЕЗ АДРЕСА: 13.08 задача
+ * selfgen умерла с «i.getTime is not a function», а где именно — восстановить уже
+ * нечем, логи контейнера к тому времени прокрутились. Сообщение без места
+ * диагностируется только гаданием по коду.
+ *
+ * Поэтому берём и стек. `last_error` в базе обрезан 1000 символами — столько и
+ * отдаём: первые кадры и есть самое ценное, дальше идёт машинерия рантайма.
+ */
+export function errorForJob(e: unknown): string {
+  if (!(e instanceof Error)) return String(e)
+  // Первая строка стека — это сам message, поэтому берём кадры со второй.
+  const frames = (e.stack ?? '')
+    .split('\n')
+    .slice(1, 9)
+    .map((l) => l.trim())
+    .filter(Boolean)
+  return frames.length ? [e.message, ...frames].join('\n') : e.message
+}
 
 let started = false
 
@@ -139,7 +162,7 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
       // упавших проходов оставляли журнал чистым, и «пять ошибок подряд» не наступало
       // никогда. То есть предохранитель был описан, но не мог сработать.
       await recordLoopFailure(job.type, e)
-      if (await failJob(job, e instanceof Error ? e.message : String(e))) await finalize(job)
+      if (await failJob(job, errorForJob(e))) await finalize(job)
     } finally {
       // Пульс обязан замолчать вместе с работой — иначе завершённая задача «дышала» бы вечно,
       // а таймер держал бы процесс и ссылку на неё.

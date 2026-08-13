@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { agentActions, councilExperts, db, generationMessages } from '@/shared/db'
+import { asDate } from '@/shared/db/raw'
 import { stageAfterWork, stageFor, workQueue, type Candidate, type Lifecycle, type WorkSlot } from './activation'
 import type { Expert } from './roster'
 import { log } from '@/shared/observability'
@@ -25,14 +26,16 @@ async function attemptsAndLastWork(): Promise<Map<string, { attempts: number; la
     .from(generationMessages)
     .where(and(eq(generationMessages.kind, 'draft'), isNotNull(generationMessages.who)))
     .groupBy(generationMessages.who)
-  for (const r of drafts) if (r.who) bump(r.who, r.n, r.last)
+  // asDate: `last` приходит из сырого max(...) — тип там обещан вручную и может
+  // оказаться строкой; дальше по коду его сравнивают и зовут .getTime().
+  for (const r of drafts) if (r.who) bump(r.who, r.n, asDate(r.last))
 
   const acts = await db
     .select({ id: agentActions.agentId, n: sql<number>`count(*)::int`, last: sql<Date | null>`max(${agentActions.occurredAt})` })
     .from(agentActions)
     .where(and(sql`${agentActions.agentId} <> ''`, sql`${agentActions.resultStatus} <> 'dry-run'`))
     .groupBy(agentActions.agentId)
-  for (const r of acts) if (r.id) bump(r.id, r.n, r.last)
+  for (const r of acts) if (r.id) bump(r.id, r.n, asDate(r.last))
 
   return out
 }
