@@ -1,5 +1,15 @@
 # Полный деплой SetFork в Dokploy: Postgres + git-ядро (Rust) + миграции + фронт (Next).
-# Всё в общей сети dokploy-network. Медиа (S3/imgproxy) — внешние (Selectel), задаётся через .env.
+# Сети ДВЕ, и это временно. Медиа (S3/imgproxy) — внешние (Selectel), задаётся через .env.
+#
+# `edge` — обычная bridge-сеть, куда мы переезжаем: прежняя dokploy-network это
+# overlay Swarm, а Swarm тянулся за панелью Dokploy (снята 13.08) и на одном
+# сервере без нод не нужен.
+#
+# ⚠️ ОБЕ СЕТИ ОДНОВРЕМЕННО, пока не переехали соседи. Ядро (setfork-core) живёт
+# ОТДЕЛЬНЫМ проектом и всё ещё в dokploy-network: уведи фронт только в `edge` —
+# и `SETFORK_CORE_ADDR=setfork-core:50051` перестанет резолвиться, то есть вся
+# запись версий через git-ядро отвалится. Убирать dokploy-network отсюда можно
+# лишь после того, как переедет ядро, а `swarm leave` — когда overlay опустеет.
 #
 # core собирается из соседнего чекаута ../setfork-core — при деплое оба репо должны быть рядом
 # (моно-чекаут). Иначе деплойте core отдельно его же setfork-core/docker-compose.dokploy.yml,
@@ -8,7 +18,7 @@
 # Traefik-роутинг на `app` (домен, порт 3000) настраивается ярлыками Dokploy в UI — тут портов нет.
 services:
   # ВАЖНО: имя сервиса УНИКАЛЬНОЕ (setfork-db), НЕ generic `db`. Compose добавляет
-  # имя сервиса сетевым алиасом в общую внешнюю dokploy-network. Если назвать `db`,
+  # имя сервиса сетевым алиасом в общие внешние сети. Если назвать `db`,
   # этот алиас перехватит подключения ДРУГИХ проектов, которые тоже ходят на хост
   # `db` (у них своя БД в своей сети) → их приложения попадут в наш Postgres и упадут.
   setfork-db:
@@ -25,7 +35,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    networks: [dokploy-network]
+    networks: [edge, dokploy-network]
 
   # git-ядро (Rust) деплоится ОТДЕЛЬНЫМ проектом Dokploy из репо setfork-core
   # (setfork-core/docker-compose.dokploy.yml) → контейнер `setfork-core` в общей
@@ -41,7 +51,7 @@ services:
     depends_on:
       setfork-db: { condition: service_healthy }
     restart: 'no'
-    networks: [dokploy-network]
+    networks: [edge, dokploy-network]
 
   # Трансформации изображений на лету по подписанным URL. Читает ОРИГИНАЛЫ из
   # внешнего S3 (Selectel) — те же креды, что у приложения. Наружу отдаётся через
@@ -66,7 +76,7 @@ services:
       IMGPROXY_ALLOW_ORIGIN: ${IMGPROXY_ALLOW_ORIGIN:-*}
     ports:
       - '${IMGPROXY_PORT:-8081}:8080'
-    networks: [dokploy-network]
+    networks: [edge, dokploy-network]
 
   # Свой почтовый сервер — Stalwart (Rust MTA). ОПЦИОНАЛЬНО и ВЫКЛЮЧЕН по умолчанию
   # (profile "mail"): почта в приложении и так необязательна (пустой SMTP = отключена),
@@ -89,7 +99,7 @@ services:
       - '587:587' # submission (STARTTLS)
       - '465:465' # submission (implicit TLS)
       - '8080:8080' # веб-админка (закрыть после настройки)
-    networks: [dokploy-network]
+    networks: [edge, dokploy-network]
 
   app:
     build: { context: ., target: runner }
@@ -116,7 +126,7 @@ services:
     depends_on:
       setfork-db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
-    networks: [dokploy-network]
+    networks: [edge, dokploy-network]
 
   # Redis для общего rate-limit при ГОРИЗОНТАЛЬНОМ масштабе (>1 реплики app).
   # На одном инстансе НЕ нужен (in-memory быстрее, без сети) — profile scale держит
@@ -128,7 +138,7 @@ services:
     profiles: ['scale']
     restart: always
     command: ['redis-server', '--maxmemory', '128mb', '--maxmemory-policy', 'allkeys-lru', '--save', '']
-    networks: [dokploy-network]
+    networks: [edge, dokploy-network]
 
   # Бэкап Postgres → S3 (те же Selectel-креды, что у медиа). Единственный хост:
   # потеря диска = потеря всего, поэтому бэкап ОБЯЗАН быть offsite (в объектном S3),
@@ -155,12 +165,14 @@ services:
       PASSPHRASE: ${BACKUP_PASSPHRASE:-} # если задан — дамп GPG-шифруется (restore требует его)
     depends_on:
       setfork-db: { condition: service_healthy }
-    networks: [dokploy-network]
+    networks: [edge, dokploy-network]
 
 volumes:
   pgdata:
   stalwart:
 
 networks:
+  edge:
+    external: true
   dokploy-network:
     external: true
