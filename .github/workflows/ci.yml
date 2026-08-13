@@ -255,13 +255,27 @@ jobs:
       IMAGE: ghcr.io/${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
-      - name: Сборка образов app и migrate
+      # Повтор — из-за той же внешней зависимости, что и в `check`: сборка Next тянет
+      # шрифты с fonts.googleapis.com, и с российских адресов это лотерея. Там повтор
+      # уже стоит (и понадобился 30.07), здесь без него сорванная загрузка шрифта
+      # останавливала бы ВЫКАТКУ. Настоящее лечение — держать шрифты у себя
+      # (next/font/local), пока его нет — три попытки.
+      - name: Сборка образов app и migrate (до 3 попыток — внешние шрифты)
         run: |
-          docker build --target runner \
+          build_app() {
+            docker build --target runner \
             --build-arg NEXT_PUBLIC_SITE_URL='${{ vars.NEXT_PUBLIC_SITE_URL }}' \
             --build-arg NEXT_PUBLIC_UMAMI_URL='${{ vars.NEXT_PUBLIC_UMAMI_URL }}' \
             --build-arg NEXT_PUBLIC_UMAMI_WEBSITE_ID='${{ vars.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}' \
-            -t "$IMAGE:app-$GITHUB_SHA" .
+              -t "$IMAGE:app-$GITHUB_SHA" .
+          }
+          for i in 1 2 3; do
+            build_app && break
+            [ $i -eq 3 ] && { echo "::error::образ app не собрался за 3 попытки"; exit 1; }
+            echo "::notice::сборка образа сорвалась (попытка $i/3) — вероятно загрузка шрифтов; повторяю"
+            sleep 15
+          done
+          # migrate сети не касается (ни сборки Next, ни шрифтов) — повтор ему не нужен.
           docker build --target migrate -t "$IMAGE:migrate-$GITHUB_SHA" .
       - name: Публикация в GHCR
         run: |
@@ -304,6 +318,10 @@ jobs:
       contents: read
       issues: write
       deployments: write
+      # Пакет GHCR приватный (репозиторий приватный), а перечисление permissions
+      # обнуляет всё неупомянутое: без этой строки `docker pull` в шаге доставки
+      # получает отказ и выкатка встаёт до старта compose.
+      packages: read
     # Потолок — про саму доставку и сборку на сервере; ожидания CI внутри джобы нет.
     timeout-minutes: 40
     env:
