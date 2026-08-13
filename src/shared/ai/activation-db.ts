@@ -13,22 +13,39 @@ import { log } from '@/shared/observability'
  * совете (generation_messages) и собственные действия петли (agent_actions). Считать только
  * первое значило бы, что самогенерация «не считается работой» — и очередь бы её игнорировала.
  */
+/**
+ * Время из СЫРОГО sql в Date.
+ *
+ * `sql<Date>` — это обещание типа, а не приведение: результат произвольного выражения
+ * drizzle не разбирает, и `max(timestamptz)` приезжает СТРОКОЙ. Любая арифметика по датам
+ * после этого падает с «getTime is not a function», причём падает не при написании кода,
+ * а в день, когда ветку наконец исполнили: очередь работы читается только проходом
+ * самогенерации, а он был выключен настройкой до 13.08.2026 — первый же живой проход и лёг.
+ */
+const asDate = (v: Date | string | null): Date | null => {
+  if (!v) return null
+  if (v instanceof Date) return v
+  const d = new Date(v)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 async function attemptsAndLastWork(): Promise<Map<string, { attempts: number; last: Date | null }>> {
   const out = new Map<string, { attempts: number; last: Date | null }>()
-  const bump = (id: string, n: number, at: Date | null) => {
+  const bump = (id: string, n: number, raw: Date | string | null) => {
+    const at = asDate(raw)
     const prev = out.get(id) ?? { attempts: 0, last: null }
     out.set(id, { attempts: prev.attempts + n, last: !at ? prev.last : !prev.last || at > prev.last ? at : prev.last })
   }
 
   const drafts = await db
-    .select({ who: generationMessages.who, n: sql<number>`count(*)::int`, last: sql<Date | null>`max(${generationMessages.createdAt})` })
+    .select({ who: generationMessages.who, n: sql<number>`count(*)::int`, last: sql<Date | string | null>`max(${generationMessages.createdAt})` })
     .from(generationMessages)
     .where(and(eq(generationMessages.kind, 'draft'), isNotNull(generationMessages.who)))
     .groupBy(generationMessages.who)
   for (const r of drafts) if (r.who) bump(r.who, r.n, r.last)
 
   const acts = await db
-    .select({ id: agentActions.agentId, n: sql<number>`count(*)::int`, last: sql<Date | null>`max(${agentActions.occurredAt})` })
+    .select({ id: agentActions.agentId, n: sql<number>`count(*)::int`, last: sql<Date | string | null>`max(${agentActions.occurredAt})` })
     .from(agentActions)
     .where(and(sql`${agentActions.agentId} <> ''`, sql`${agentActions.resultStatus} <> 'dry-run'`))
     .groupBy(agentActions.agentId)
