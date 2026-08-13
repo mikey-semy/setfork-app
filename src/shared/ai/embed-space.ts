@@ -15,7 +15,16 @@ import { defaultEmbeddingModel } from '@/shared/settings/ai'
 // вендора: вернула столько же — идеально; вернула больше — усечение + L2-нормализация
 // (осознанная деградация, о ней говорим вслух); меньше — паддинг нулями (косинус точен).
 
-export type EmbedProvider = 'openrouter' | 'yandex'
+/** Провайдеры эмбеддингов — ОДИН список: из него и тип, и проверка чужого ввода, и набор
+ *  пунктов в админке. Пара 'openrouter' | 'yandex' была переписана руками в разборе
+ *  настройки, в server action и в разметке панели — новый провайдер требовал найти все три. */
+export const EMBED_PROVIDERS = ['openrouter', 'yandex'] as const
+
+export type EmbedProvider = (typeof EMBED_PROVIDERS)[number]
+
+export function isEmbedProvider(v: unknown): v is EmbedProvider {
+  return typeof v === 'string' && (EMBED_PROVIDERS as readonly string[]).includes(v)
+}
 
 /**
  * Мерность колонки — ЧИТАЕТСЯ ИЗ СХЕМЫ, а не повторяется числом. Пока это была отдельная
@@ -33,7 +42,7 @@ export interface EmbedSpace {
   provider: EmbedProvider
   docModel: string
   queryModel: string
-  /** РОДНАЯ мерность пространства (в колонке 1536 паддинг нулями). */
+  /** Мерность, которую просим у провайдера; вектор приводится к колонке (fitToColumn). */
   dim: number
   /** Момент старта реиндекса, unix ms (нет у legacy-пространства). */
   at?: number
@@ -47,7 +56,10 @@ export function resolveTargetSpace(
   m: Record<string, string | undefined>,
   env: Record<string, string | undefined> = process.env,
 ): EmbedSpace {
-  const target = (m[EMBED_TARGET_SETTING]?.trim() || env.EMBED_PROVIDER || 'openrouter') as EmbedProvider
+  // Настройка и env — чужой ввод: неизвестное значение падает на openrouter, а не
+  // просачивается в EmbedSpace.provider под видом типа (раньше здесь стоял голый as).
+  const raw = m[EMBED_TARGET_SETTING]?.trim() || env.EMBED_PROVIDER || ''
+  const target: EmbedProvider = isEmbedProvider(raw) ? raw : 'openrouter'
   if (target === 'yandex') {
     const folder = (m['ai.yandex_folder_id']?.trim() || env.YC_AI_FOLDER_ID || '').trim()
     return {
@@ -68,7 +80,7 @@ export function parseIndexSpace(raw: string | undefined | null): EmbedSpace | nu
   if (!raw) return null
   try {
     const j = JSON.parse(raw) as Partial<EmbedSpace>
-    if ((j.provider === 'openrouter' || j.provider === 'yandex') && j.docModel && j.queryModel && j.dim) {
+    if (isEmbedProvider(j.provider) && j.docModel && j.queryModel && j.dim) {
       return { provider: j.provider, docModel: j.docModel, queryModel: j.queryModel, dim: Number(j.dim), at: j.at }
     }
   } catch {

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   COLUMN_DIM,
+  EMBED_PROVIDERS,
   EMBED_TARGET_SETTING,
   fitToColumn,
+  isEmbedProvider,
   parseIndexSpace,
   resolveTargetSpace,
   sameSpace,
@@ -29,6 +31,26 @@ describe('resolveTargetSpace', () => {
   it('env EMBED_PROVIDER работает как фолбэк, folder из env', () => {
     const s = resolveTargetSpace({}, { EMBED_PROVIDER: 'yandex', YC_AI_FOLDER_ID: 'b1genv' })
     expect(s.docModel).toContain('b1genv')
+  })
+
+  it('незнакомый провайдер в настройке не просачивается в пространство — откат на openrouter', () => {
+    const s = resolveTargetSpace({ [EMBED_TARGET_SETTING]: 'gigachat' }, {})
+    expect(s.provider).toBe('openrouter')
+    expect(EMBED_PROVIDERS).toContain(s.provider)
+  })
+
+  it('любой провайдер списка просит мерность КОЛОНКИ — своей цифры на провайдера нет', () => {
+    for (const p of EMBED_PROVIDERS) {
+      expect(resolveTargetSpace({ [EMBED_TARGET_SETTING]: p }, {}).dim).toBe(COLUMN_DIM)
+    }
+  })
+})
+
+describe('isEmbedProvider', () => {
+  it('пропускает только значения из списка', () => {
+    expect(EMBED_PROVIDERS.every(isEmbedProvider)).toBe(true)
+    expect(isEmbedProvider('gigachat')).toBe(false)
+    expect(isEmbedProvider(undefined)).toBe(false)
   })
 })
 

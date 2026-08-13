@@ -1956,6 +1956,7 @@ export const en = {
   'admin.daysShort': '{n}d',
   'admin.removedOrphaned': 'Removed orphaned: {n}',
   'admin.targetChanged': 'Target changed: {p} ({d}-dim) — run a reindex to rebuild. Old vectors will be wiped.',
+  'admin.columnDimHint': 'The index column is {n}-dim — that is the size we ask every provider for.',
   'admin.inMin': 'In {n} min',
   'dig.mineN': 'Mine: {n}',
   'dig.digLowerN': 'Dig lower ({a}/{b})',

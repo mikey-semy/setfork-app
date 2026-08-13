@@ -1944,6 +1944,7 @@ export const ru: Record<DictKey, string> = {
   'admin.daysShort': '{n} дн.',
   'admin.removedOrphaned': 'Удалено осиротевших: {n}',
   'admin.targetChanged': 'Цель изменена: {p} ({d}-мерное) — запусти реиндекс, чтобы перестроить индекс. Старые векторы будут стёрты.',
+  'admin.columnDimHint': 'Колонка индекса {n}-мерная — столько просим у любого провайдера.',
   'admin.inMin': 'Через {n} мин',
   'dig.mineN': 'Шахта: {n}',
   'dig.digLowerN': 'Копаем ниже ({a}/{b})',
