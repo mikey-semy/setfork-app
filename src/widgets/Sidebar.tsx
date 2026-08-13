@@ -9,7 +9,6 @@ import { t, type Lang } from '@/shared/i18n'
 import { ListsPanel, type ListsPanelItem } from './ListsPanel'
 import { useSidebar } from './sidebar-context'
 import { buttonClass } from '@/shared/ui/button-style'
-import { TOUCH_BOX } from '@/shared/ui/control'
 
 // ОДИН сайдбар: показан ЦЕЛИКОМ (иконки + подписи + «Top lists») или скрыт ЦЕЛИКОМ —
 // без промежуточного мини-рельса (иконки+подписи в узкой колонке смысла не давали).
@@ -132,7 +131,7 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
                 type="button"
                 aria-label={t('menu', lang)}
                 onClick={() => setMobileOpen(false)}
-                className={buttonClass({ variant: 'ghost', className: `size-8 p-0 ${TOUCH_BOX}` })}
+                className={buttonClass({ variant: 'ghost', className: 'size-8 p-0' })}
               >
                 <X size={18} />
               </button>

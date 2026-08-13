@@ -26,7 +26,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { humanModerationReason } from '@/features/moderation/reason'
 import { ListTabs } from './ListTabs'
 import { ShowOnListRoot } from './ShowOnListRoot'
-import { PAGE_X, TOUCH_BOX } from '@/shared/ui/control'
+import { PAGE_X } from '@/shared/ui/control'
 import { buttonClass } from '@/shared/ui/button-style'
 
 /** Общая шапка страницы списка (= «репозиторий»): owner/name, действия, вкладки.
@@ -228,7 +228,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               copyLinkLabel={t('copyLink', lang)}
               shareViaLabel={t('shareVia', lang)}
               qrHint={t('qrHint', lang)}
-              className={buttonClass({ className: `size-8 p-0 ${TOUCH_BOX} sm:size-auto sm:h-8 sm:px-3.5` })}
+              className={buttonClass({ className: 'size-8 p-0 sm:size-auto sm:h-8 sm:px-3.5' })}
             />
             {/* Use (клон) и Edit/Suggest переехали в область списка (version-bar) — как
                 зелёная Code и карандаш у GitHub живут в контенте, не в шапке. */}

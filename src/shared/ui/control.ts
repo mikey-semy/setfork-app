@@ -159,9 +159,13 @@ export const LAYER = {
  * focus-visible и при клике, так что кольцо показывается всегда.
  * На touch/узких экранах поле не ниже 32px: globals.css форсит там 16px
  * кегль (анти-зум iOS), в компактные 28px он влезает впритык (Codex #651).
- * С дефолтом md=32 это касается только рядов, явно переведённых на xs/sm. */
+ * С дефолтом md=32 это касается только рядов, явно переведённых на xs/sm.
+ *
+ * Роста до 44 на сенсоре здесь НЕТ (снят 13.08.2026): поле в ряду с кнопкой
+ * обязано совпасть с ней по высоте, а кнопка на сенсоре остаётся 32px. Цель
+ * добирается зоной нажатия у кнопок; у поля она и так большая — оно широкое. */
 export const FIELD_BOX =
-  'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50 max-sm:min-h-8 pointer-coarse:min-h-11'
+  'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50 max-sm:min-h-8'
 
 // ── Тач-цель ─────────────────────────────────────────────────────────────
 // Шкала контролов (24/28/32) — про ВИД: мышь попадает в такую кнопку без труда.
