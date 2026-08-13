@@ -1,4 +1,5 @@
 import type { GeneratedItem } from '@/shared/ai/generate'
+import { cleanText } from './text-input'
 import type { ProposedItem } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
 import { isRiskyCommand } from '@/core/domain/destructive-command'
@@ -15,21 +16,24 @@ import { isRiskyCommand } from '@/core/domain/destructive-command'
 
 /** Пункт от ИИ (плоские строки) → ProposedItem (LocaleText по языку списка). */
 export function toProposed(items: GeneratedItem[], lang: Lang): ProposedItem[] {
+  // Текст приводится к канонической форме ЗДЕСЬ: это общий вход состава для веба, MCP и
+  // генерации, и «ё» в составной форме иначе доезжает до базы как другая строка
+  // (см. shared/lib/text-input).
   return items.map((it) => ({
-    title: { [lang]: it.title.trim() },
-    desc: it.desc.trim() ? { [lang]: it.desc.trim() } : {},
-    command: (it.command ?? '').trim(),
+    title: { [lang]: cleanText(it.title) },
+    desc: cleanText(it.desc) ? { [lang]: cleanText(it.desc) } : {},
+    command: cleanText(it.command),
     hasImage: false,
     level: it.level ?? 'required',
-    why: it.why?.trim() ? { [lang]: it.why.trim() } : {},
+    why: cleanText(it.why) ? { [lang]: cleanText(it.why) } : {},
     // Пометка «здесь нужен человек» переносится ВМЕСТЕ с вопросом: без вопроса это
     // просто «мы не знаем», с вопросом — приглашение ответить из опыта.
-    ...(it.needsHuman ? { needsHuman: true, needsHumanAsk: it.needsHumanAsk?.trim() ? { [lang]: it.needsHumanAsk.trim() } : {} } : {}),
-    section: it.section?.trim() ? { [lang]: it.section.trim() } : {},
-    subtasks: (it.subtasks ?? []).filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
+    ...(it.needsHuman ? { needsHuman: true, needsHumanAsk: cleanText(it.needsHumanAsk) ? { [lang]: cleanText(it.needsHumanAsk) } : {} } : {}),
+    section: cleanText(it.section) ? { [lang]: cleanText(it.section) } : {},
+    subtasks: (it.subtasks ?? []).map((s) => cleanText(s)).filter(Boolean).map((s) => ({ [lang]: s })),
     refs: (it.refs ?? [])
-      .filter((r) => r.label?.trim())
-      .map((r) => ({ label: { [lang]: r.label.trim() }, ...(r.url?.trim() ? { url: r.url.trim() } : {}) })),
+      .filter((r) => cleanText(r.label))
+      .map((r) => ({ label: { [lang]: cleanText(r.label) }, ...(cleanText(r.url) ? { url: cleanText(r.url) } : {}) })),
   }))
 }
 

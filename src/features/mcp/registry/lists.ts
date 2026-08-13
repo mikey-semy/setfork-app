@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpPatchList, mcpPublishDraft, mcpUpdateList } from '@/features/mcp/tools'
+import { mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
 import { itemShape } from './block-schema'
 import { json, err, type ToolKit } from './kit'
 
@@ -110,6 +110,39 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
     },
     async (userId, { handle, slug, note, confirm }) => {
       const res = await mcpPublishDraft(userId, handle, slug, note, confirm === true)
+      return 'error' in res ? err(res.error as string) : json(res)
+    },
+  )
+
+  // РАЗБОР ЗАВАЛА. Черновики не видны ни поиску, ни ленте — значит через ассистента их
+  // было не разобрать вовсе, а по одному через сайт сотня списков занимает часы.
+  readTool(
+    'my_drafts',
+    {
+      title: 'My unpublished lists',
+      description:
+        'Your unpublished (draft) lists — what is waiting for a decision. Returns refs, tags and how many blocks each has, so you can tell a finished list from a stub. Filter by tag to review one family at a time. Publish the ones you picked with publish_lists.',
+      inputSchema: {
+        tag: z.string().optional().describe('Only drafts carrying this tag'),
+        limit: z.number().int().min(1).max(100).optional().describe('How many to return (default 25)'),
+      },
+    },
+    async (userId, { tag, limit }) => json(await mcpMyDrafts(userId, { tag, limit })),
+  )
+
+  writeTool(
+    'publish_lists',
+    {
+      title: 'Publish drafts',
+      description:
+        `Publish your drafts in one call (max ${MCP_PUBLISH_MAX}). DRY RUN BY DEFAULT: it reports what would be published and writes nothing until you pass dryRun:false. This does NOT bypass moderation — a published public list goes through the same gate as the button on the site: it becomes "pending" and is auto-checked, and anything already flagged or hidden stays that way. Lists that are not yours or not drafts are skipped with a reason.`,
+      inputSchema: {
+        refs: z.array(z.string()).min(1).describe('Refs from my_drafts, e.g. ["me/deploy-to-vps"]'),
+        dryRun: z.boolean().optional().describe('Default TRUE — report the plan without publishing. Pass false to publish.'),
+      },
+    },
+    async (userId, { refs, dryRun }) => {
+      const res = await mcpPublishLists(userId, refs, dryRun !== false)
       return 'error' in res ? err(res.error as string) : json(res)
     },
   )

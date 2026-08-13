@@ -9,6 +9,7 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
 import { listQuota } from '@/shared/quota'
+import { cleanText } from '@/shared/lib/text-input'
 import { detectTextLang } from '@/shared/lib/translit'
 import { listStore } from '@/features/library/list-store'
 import { slugify, uniqueSlug } from '@/features/library/slug'
@@ -31,7 +32,7 @@ export interface McpCreateInput {
 
 /** Создать список от имени пользователя. Всегда как ЧЕРНОВИК — публикует потом владелец на сайте. */
 export async function mcpCreateList(userId: string, input: McpCreateInput) {
-  const title = input.title?.trim()
+  const title = cleanText(input.title)
   if (!title) return { error: 'title is required' }
   const proposed = toProposed(input.items ?? [])
   if (!proposed.length) return { error: 'at least one item with a title is required' }
@@ -49,7 +50,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
     ownerId: userId,
     slug,
     title: { [lang]: title },
-    desc: input.desc?.trim() ? { [lang]: input.desc.trim() } : {},
+    desc: cleanText(input.desc) ? { [lang]: cleanText(input.desc) } : {},
     tags,
     ordered: input.ordered ?? true,
     visibility: 'public',
