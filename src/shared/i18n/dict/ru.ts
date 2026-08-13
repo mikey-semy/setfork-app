@@ -1387,6 +1387,8 @@ export const ru: Record<DictKey, string> = {
   'admin.heldYou': 'Оставлено вам',
   'admin.heroImage': 'Картинка hero',
   'admin.hiringFailedModelDid': 'Найм не удался — модель не вернула валидный профиль. Попробуй ещё раз.',
+  'admin.showKey': 'Показать ключ',
+  'admin.hideKey': 'Скрыть ключ',
   'admin.hiringSignalGeneralistKeeps': 'Сигнал найма: универсал раз за разом отдувается по этим темам',
   'admin.hours': 'Часы',
   'admin.humanEdits': 'Правок людей',
