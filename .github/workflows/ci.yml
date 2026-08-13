@@ -225,6 +225,65 @@ jobs:
 
   # ── Выкатка на прод ─────────────────────────────────────────────────────────
   #
+  # ── Образ фронта ────────────────────────────────────────────────────────────
+  #
+  # Собирается ЗДЕСЬ, а не на прод-сервере. На сервере 7,8 ГБ памяти на все
+  # проекты, и сборка Next съедала её пиком у работающих сервисов: за сутки
+  # 13.08 ядро убило по нехватке памяти 33 процесса, включая наш next-server
+  # (дважды). Подкачка это смягчила, но лечение — не собирать на проде вовсе.
+  #
+  # Доставка через GHCR, а не `docker save | ssh docker load` как у ядра
+  # (core#91): у ядра образ 307 МБ, у фронта два образа больше гигабайта, и
+  # save шлёт их ЦЕЛИКОМ на каждый деплой через домашний канал раннера. push
+  # отправляет только изменившиеся слои — базовые (node_modules, node:22-slim)
+  # лежат в реестре и не двигаются. Это осознанное отклонение от формы ядра.
+  #
+  # Публичные NEXT_PUBLIC_* вшиваются в бандл ПРИ СБОРКЕ. Раньше их давал .env
+  # сервера; теперь сборка идёт здесь, поэтому значения живут в variables
+  # репозитория. Забыть их — молча потерять аналитику и абсолютные ссылки.
+  image:
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
+      github.event_name == 'workflow_dispatch'
+    needs: [check]
+    runs-on: [self-hosted, setfork]
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 40
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      # Повтор — из-за той же внешней зависимости, что и в `check`: сборка Next тянет
+      # шрифты с fonts.googleapis.com, и с российских адресов это лотерея. Там повтор
+      # уже стоит (и понадобился 30.07), здесь без него сорванная загрузка шрифта
+      # останавливала бы ВЫКАТКУ. Настоящее лечение — держать шрифты у себя
+      # (next/font/local), пока его нет — три попытки.
+      - name: Сборка образов app и migrate (до 3 попыток — внешние шрифты)
+        run: |
+          build_app() {
+            docker build --target runner \
+            --build-arg NEXT_PUBLIC_SITE_URL='${{ vars.NEXT_PUBLIC_SITE_URL }}' \
+            --build-arg NEXT_PUBLIC_UMAMI_URL='${{ vars.NEXT_PUBLIC_UMAMI_URL }}' \
+            --build-arg NEXT_PUBLIC_UMAMI_WEBSITE_ID='${{ vars.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}' \
+              -t "$IMAGE:app-$GITHUB_SHA" .
+          }
+          for i in 1 2 3; do
+            build_app && break
+            [ $i -eq 3 ] && { echo "::error::образ app не собрался за 3 попытки"; exit 1; }
+            echo "::notice::сборка образа сорвалась (попытка $i/3) — вероятно загрузка шрифтов; повторяю"
+            sleep 15
+          done
+          # migrate сети не касается (ни сборки Next, ни шрифтов) — повтор ему не нужен.
+          docker build --target migrate -t "$IMAGE:migrate-$GITHUB_SHA" .
+      - name: Публикация в GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push "$IMAGE:app-$GITHUB_SHA"
+          docker push "$IMAGE:migrate-$GITHUB_SHA"
+          docker logout ghcr.io
+
   # ЗДЕСЬ, а не отдельным воркфлоу по `workflow_run`. Документация называет
   # назначение того события прямо: цепочка нужна, «when you need to perform
   # privileged actions in a subsequent workflow that the initial, less-privileged
@@ -246,7 +305,7 @@ jobs:
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
       github.event_name == 'workflow_dispatch'
-    needs: [check, integration]
+    needs: [check, integration, image]
     runs-on: [self-hosted, setfork]
     # `queue: max` — штатный способ не терять прогоны: по умолчанию (`single`) в
     # группе ждёт РОВНО ОДИН, и каждая новая постановка отменяет предыдущего, то есть
@@ -259,11 +318,16 @@ jobs:
       contents: read
       issues: write
       deployments: write
+      # Пакет GHCR приватный (репозиторий приватный), а перечисление permissions
+      # обнуляет всё неупомянутое: без этой строки `docker pull` в шаге доставки
+      # получает отказ и выкатка встаёт до старта compose.
+      packages: read
     # Потолок — про саму доставку и сборку на сервере; ожидания CI внутри джобы нет.
     timeout-minutes: 40
     env:
       DEPLOY: root@159.195.151.41
       APP_DIR: /root/setfork/src/setfork-frontend
+      IMAGE: ghcr.io/${{ github.repository }}
     steps:
       # Очередь порядок завершения не выравнивает: два пуша подряд могут дойти сюда
       # не по порядку, и опоздавший собрал бы прод НАЗАД. Ручной запуск катит всегда —
@@ -353,7 +417,7 @@ jobs:
       # репозитория должна побеждать серверную.
       # Прежнее дерево остаётся как .old на один цикл: если серверного файла всё же
       # не предусмотрели, он не потерян, а лежит рядом.
-      - name: Доставка исходников → сборка на сервере → up
+      - name: Доставка дерева → готовый образ из GHCR → up
         if: steps.target.outputs.sha != ''
         run: |
           SSH="ssh -i /tmp/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
@@ -376,12 +440,27 @@ jobs:
           # сервере частично управляет Dokploy, и «лишним» он может счесть чужой
           # контейнер.
           $SSH "test -f $APP_DIR/docker-compose.override.yml || { echo '::error::на сервере нет docker-compose.override.yml — в нём весь traefik-роутинг .com; без него сайт уйдёт в 404. Прежнее дерево в $APP_DIR.old'; exit 1; }"
-          $SSH "cd $APP_DIR && docker compose -f docker-compose.dokploy.yml -f docker-compose.override.yml up -d --build"
-          # Кэш сборки чистим СРАЗУ после сборки. Образ собирается на сервере, и кэш
-          # растёт с каждым деплоем без потолка: 29.07 он занял 15 ГБ из 35 и вывел
-          # диск на 80%, а авто-чистка мониторинга включается только с 90%.
-          # Оставляем свежее (сутки) — следующая сборка не начнётся с нуля.
-          $SSH "docker builder prune -f --filter until=24h >/dev/null 2>&1 || true"
+
+          # Вход в реестр — ТОКЕНОМ ЭТОГО ПРОГОНА и через stdin: он живёт минуты,
+          # на сервере не остаётся (logout ниже) и не светится в списке процессов.
+          # Отдельный долгоживущий PAT на сервере заводить не потребовалось.
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | $SSH "docker login ghcr.io -u ${{ github.actor }} --password-stdin > /dev/null"
+          $SSH "docker pull $IMAGE:app-$GITHUB_SHA && docker pull $IMAGE:migrate-$GITHUB_SHA"
+          $SSH "docker logout ghcr.io > /dev/null"
+
+          # Какие образы поднимать — отдельным файлом поверх остальных, как у ядра.
+          # Он же документирует, что на проде крутится: тег совпадает с коммитом.
+          $SSH "printf 'services:\n  app:\n    image: %s\n  migrate:\n    image: %s\n' \
+                  '$IMAGE:app-$GITHUB_SHA' '$IMAGE:migrate-$GITHUB_SHA' > $APP_DIR/docker-compose.image.yml"
+
+          # --no-build: сборки на проде больше нет, и если образа вдруг не окажется,
+          # деплой обязан упасть, а не начать собирать — ради этого всё и затевалось.
+          $SSH "cd $APP_DIR && docker compose -f docker-compose.dokploy.yml -f docker-compose.override.yml -f docker-compose.image.yml up -d --no-build"
+
+          # Прежние теги накапливались бы на диске: держим два последних образа
+          # каждого вида, остальные убираем. Текущий не трогаем — он используется.
+          $SSH "docker images '$IMAGE' --format '{{.Tag}} {{.ID}}' | grep -E '^(app|migrate)-' | tail -n +5 | awk '{print \$2}' | xargs -r docker rmi -f >/dev/null 2>&1 || true"
 
       # Ждём НАСТОЯЩЕЙ готовности, а не фиксированную паузу.
       # Прежняя проверка была `sleep 10` + `grep -q 'healthy\|Up'`, и она пропускала
