@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, eq, gte, inArray, sql } from 'drizzle-orm'
-import { aiUsage, db, jobs, users } from '@/shared/db'
+import { and, desc, eq, gt, gte, inArray, sql } from 'drizzle-orm'
+import { agentActions, aiUsage, db, jobs, users } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { autonomyHealthy } from '@/shared/agents/canary'
@@ -38,9 +38,17 @@ const QUIET_DAY = 'день без событий — писать не о че�
 const NO_EVENTS = 'нет событий'
 const DRY_RUN = 'сухой прогон'
 const ALREADY_SENT = 'за этот день уже отправлено'
+// Заголовки писем сторожа. Как и тревоги бухгалтера, это сообщения ВЛАДЕЛЬЦУ инстанса,
+// а не интерфейс: словарь тут не при чём, а тернарник из двух строк линт принимает за
+// двуязычный текст.
+const CHANNEL_DOWN_SUBJECT = 'канал к модели не отвечает'
+const CHANNEL_UP_SUBJECT = 'канал к модели восстановлен'
 
 const FINANCE_EVERY_HOURS = 6
 const CHRONICLE_EVERY_HOURS = 24
+// Сторож канала ходит ЧАЩЕ прочих: неделя молчания (инцидент 05–12.08) стоила компании
+// всей её работы, а сама проверка бесплатна — это один запрос к журналу вызовов.
+const AI_WATCH_EVERY_HOURS = 1
 
 export async function ensureFinanceScheduled(): Promise<void> {
   await ensureLoop('finance', FINANCE_EVERY_HOURS)
@@ -50,7 +58,11 @@ export async function ensureChronicleScheduled(): Promise<void> {
   await ensureLoop('chronicle', CHRONICLE_EVERY_HOURS)
 }
 
-async function ensureLoop(type: 'finance' | 'chronicle', everyHours: number): Promise<void> {
+export async function ensureAiWatchScheduled(): Promise<void> {
+  await ensureLoop('aiwatch', AI_WATCH_EVERY_HOURS)
+}
+
+async function ensureLoop(type: 'finance' | 'chronicle' | 'aiwatch', everyHours: number): Promise<void> {
   const [pending] = await db
     .select({ id: jobs.id })
     .from(jobs)
@@ -206,8 +218,20 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
     ['расхождений форком', day.forked],
     ['ошибок', day.errors],
   ]
-  // Молчим, когда молчать честно: день без единого события — это не новость, а тишина.
-  const quiet = rows.every(([, n]) => n === 0)
+  // Молчим, когда молчать честно. Но «ничего не сделано» и «ничего не происходило» — разные
+  // вещи: в инциденте 05–12.08 компания каждый день просыпалась, звала модель, получала отказ
+  // и снова засыпала, а летописец видел нули и считал это тихим днём. Сломанная неделя
+  // выглядела чередой выходных.
+  //
+  // Право на тревогу даёт КАРТИНА дня, а не число вызовов: пользовательские генерации
+  // (успешные и одиночные упавшие) не должны ни будить летописца нулевой сводкой, ни
+  // объявлять поломку. Поломка — это когда за день не прошёл НИ ОДИН вызов при их
+  // достаточном числе, и порог тут общий с предохранителем.
+  const { callsOnDay, channelBrokenAllDay } = await import('./ai-watch')
+  const day1 = await callsOnDay(1)
+  const broken = channelBrokenAllDay(day1)
+  const nothingDone = rows.every(([, n]) => n === 0)
+  const quiet = nothingDone && !broken
 
   if (policy.dryRun || quiet) {
     await recordAgentAction({
@@ -223,6 +247,12 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   }
 
   const html = `<p>День компании, ${date}:</p><ul>${rows.map(([k, n]) => `<li>${k}: ${n}</li>`).join('')}</ul>` +
+    // День, в котором не прошёл ни один вызов, а библиотека не изменилась ни на строку, —
+    // это не отчёт, а тревога. Называем её вслух прямо в сводке, иначе нули читаются как
+    // «спокойно» — ровно так неделя поломки и выглядела чередой выходных.
+    (broken
+      ? `<p><b>Компания не сделала ничего: за день не прошёл ни один вызов модели (${day1.failed} из ${day1.calls} с отказом).</b> Похоже на поломку канала или на исчерпанный бюджет.</p>`
+      : '') +
     (day.holdReasons.length ? `<p>Почему не пропустила планка: ${day.holdReasons.map((r) => `${r.reason} (${r.times})`).join('; ')}</p>` : '') +
     developmentDashboardLink()
   // Ключ на дату — ДО отправки: две задачи на один день (рестарт, второй инстанс) иначе
@@ -258,6 +288,185 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   return out
 }
 
+export interface AiWatchResult {
+  /** Что сторож увидел: канал лежит, канал вернулся или всё как было. */
+  verdict: 'down' | 'recovered' | 'ok'
+  sent: number
+  skipped: string
+}
+
+/**
+ * Проход сторожа канала. Смотрит хвост журнала вызовов и говорит вслух, когда модель
+ * перестала отвечать, — и когда снова начала.
+ *
+ * «Вернулся» отправляется не для симметрии: без него владелец, получив тревогу, обязан
+ * ходить и проверять сам, а это возвращает нас к «тревоге, на которую нужно смотреть».
+ * Оба сообщения — с ключом на сутки: беда, повторяемая каждый час, перестаёт читаться.
+ */
+export async function runAiWatchSweep(): Promise<AiWatchResult> {
+  await ensureAiWatchScheduled()
+  const out: AiWatchResult = { verdict: 'ok', sent: 0, skipped: '' }
+  if (!(await autonomyHealthy('aiwatch'))) return out
+  const policy = await loopPolicy('aiwatch')
+  const { channelState, channelDown, callsLastDay, successAfter } = await import('./ai-watch')
+  // Хвост журнала и открытый эпизод друг от друга не зависят — читаем разом.
+  const [state, alarm] = await Promise.all([channelState(), openAlarm()])
+  const down = channelDown(state)
+  // «Канал вернулся» говорим ТОЛЬКО при доказательстве — успешном вызове ПОСЛЕ НАЧАЛА
+  // ЭПИЗОДА. Пустой хвост доказательством не является: отказы могли просто состариться,
+  // а звать модель с тех пор было некому, и «работает снова» мы бы выдумали.
+  //
+  // Отсчёт именно от эпизода, а не от времени записи тревоги: вызов, прошедший между
+  // снимком состояния и отправкой письма, иначе не считался бы доказательством, и эпизод
+  // остался бы открытым навсегда — канал жив, а компания об этом молчит.
+  const recovered = !down && !!alarm && (await successAfter(alarm.since))
+  out.verdict = down ? 'down' : recovered ? 'recovered' : 'ok'
+
+  if (policy.dryRun || out.verdict === 'ok') {
+    await recordAgentAction({
+      loop: 'aiwatch',
+      action: 'ai.watch',
+      resultStatus: policy.dryRun ? 'dry-run' : 'ok',
+      signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes },
+      decision: { verdict: out.verdict, alarmOpen: !!alarm },
+      policyVersion: policy.policyVersion,
+    })
+    return out
+  }
+
+  // Тревога уже открыта, а канал всё ещё лежит — молчим: беда, повторяемая каждый час,
+  // перестаёт читаться. Новый эпизод (канал ожил и лёг снова) придёт своим письмом,
+  // потому что имя эпизода — момент последнего успеха, а не календарный день.
+  const episode = down ? state.episode : (alarm?.episode ?? state.episode)
+  if (down && alarm && episode === alarm.episode) {
+    out.skipped = ALREADY_SENT
+    return out
+  }
+
+  const action = down ? 'ai.down' : 'ai.recovered'
+  // ЗАЯВКА НА ПОПЫТКУ. Ключ занимается ДО отправки — иначе два прохода (второй инстанс,
+  // перезапуск) увидят одно состояние и пришлют одно письмо дважды. Но ключ включает
+  // НОМЕР попытки, а не только эпизод: недоставленное письмо оставляет эпизод открытым,
+  // и следующий проход берёт свободный ключ и пробует снова. Так дубль исключён, а
+  // потерянная тревога — нет; между этими двумя бедами вторая хуже.
+  // Предыдущая попытка могла ещё не закончиться: заявка занята, письмо в полёте, записи
+  // об успехе пока нет. Начинать вторую в этот момент значит слать дубль — ждём, пока
+  // первая договорит. Своих таймаутов SMTP у отправителя нет, поэтому окно берём с запасом.
+  const inFlight = await claimFresh(action, episode, DELIVERY_IN_FLIGHT_MS)
+  if (inFlight) {
+    out.skipped = ALREADY_SENT
+    return out
+  }
+  const attempt = await attemptsFor(action, episode)
+  const claimed = await recordAgentAction({
+    loop: 'aiwatch',
+    action,
+    resultStatus: 'skipped', // «попытка начата»; доставку подтверждает отдельная запись
+    signal: { model: state.lastModel, episode, attempt },
+    decision: { verdict: out.verdict, stage: 'claim' },
+    idempotencyKey: `aiwatch:${out.verdict}:${episode}:${attempt}`,
+    policyVersion: policy.policyVersion,
+  })
+  if (!claimed) {
+    out.skipped = ALREADY_SENT
+    return out
+  }
+
+  const calls = await callsLastDay()
+  const subject = down ? CHANNEL_DOWN_SUBJECT : CHANNEL_UP_SUBJECT
+  const body = down
+    ? `<p>Подряд ${state.failStreak} вызова модели закончились неудачей (${state.outcomes.join(', ')}).</p>` +
+      `<p>Последняя модель: ${state.lastModel || '—'}. Вызовов за сутки: ${calls}.</p>` +
+      '<p>Компания продолжает просыпаться по расписанию, но думать не может: черновики, уход и разбор фактов остановлены.</p>'
+    : `<p>Вызовы модели снова проходят. Последняя модель: ${state.lastModel || '—'}, вызовов за сутки: ${calls}.</p>`
+
+  const delivery = await tellOwner(`SetFork: ${subject}`, `${body}${developmentDashboardLink()}`)
+  out.sent = delivery.sent
+  out.skipped = delivery.skipped
+  // Состояние меняет только ДОСТАВЛЕННОЕ сообщение: запись 'ok' и есть закрытие вопроса.
+  // Не дошло — остаётся заявка со 'skipped' и причиной, эпизод открыт, попытка повторится.
+  if (delivery.sent) {
+    await recordAgentAction({
+      loop: 'aiwatch',
+      action,
+      resultStatus: 'ok',
+      signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes, calls, episode },
+      decision: { verdict: out.verdict },
+      policyVersion: policy.policyVersion,
+    })
+  }
+  log.info('aiwatch sweep done', { ...out, failStreak: state.failStreak, attempt })
+  return out
+}
+
+/** Свежая заявка = доставка ещё идёт. Пять минут — с запасом на любой SMTP. */
+const DELIVERY_IN_FLIGHT_MS = 5 * 60_000
+
+/** Есть ли заявка по этому эпизоду моложе окна — то есть письмо ещё в полёте. */
+async function claimFresh(action: string, episode: string, windowMs: number): Promise<boolean> {
+  const [row] = await db
+    .select({ id: agentActions.id })
+    .from(agentActions)
+    .where(
+      and(
+        eq(agentActions.loop, 'aiwatch'),
+        eq(agentActions.action, action),
+        sql`${agentActions.signal}->>'episode' = ${episode}`,
+        sql`${agentActions.decision}->>'stage' = 'claim'`,
+        gt(agentActions.occurredAt, new Date(Date.now() - windowMs)),
+      ),
+    )
+    .limit(1)
+  return !!row
+}
+
+/** Сколько раз уже пробовали сообщить об этом эпизоде — номер следующей попытки. */
+async function attemptsFor(action: string, episode: string): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(agentActions)
+    .where(
+      and(
+        eq(agentActions.loop, 'aiwatch'),
+        eq(agentActions.action, action),
+        sql`${agentActions.signal}->>'episode' = ${episode}`,
+        sql`${agentActions.decision}->>'stage' = 'claim'`,
+      ),
+    )
+  return row?.n ?? 0
+}
+
+/**
+ * ОТКРЫТЫЙ ЭПИЗОД: доставленная тревога, после которой не было доставленного «вернулся».
+ *
+ * Состояние ведём по эпизодам, а не по последней записи. Три вещи иначе ломаются, и все
+ * три нашло авто-ревью: недоставленная тревога считалась бы тревогой (владелец получил бы
+ * «восстановлен» без «лёг»); недоставленное «вернулся» закрывало бы эпизод навсегда и
+ * больше не повторялось; а второй обрыв в те же сутки не отличался бы от первого, потому
+ * что ключом был календарный день.
+ */
+async function openAlarm(): Promise<{ at: Date; since: Date; episode: string } | null> {
+  const rows = await db
+    .select({ action: agentActions.action, at: agentActions.occurredAt, signal: agentActions.signal })
+    .from(agentActions)
+    .where(
+      and(
+        eq(agentActions.loop, 'aiwatch'),
+        eq(agentActions.resultStatus, 'ok'), // недоставленное сообщение состояния не меняет
+        inArray(agentActions.action, ['ai.down', 'ai.recovered']),
+      ),
+    )
+    .orderBy(desc(agentActions.occurredAt))
+    .limit(1)
+  const row = rows[0]
+  if (row?.action !== 'ai.down') return null
+  const episode = String((row.signal as { episode?: unknown })?.episode ?? '')
+  // Начало эпизода — момент последнего успеха ПЕРЕД обрывом. Он и есть точка отсчёта для
+  // доказательства восстановления; время самой записи для этого не годится (см. вызов).
+  const since = Number.isNaN(Date.parse(episode)) ? new Date(0) : new Date(episode)
+  return { at: row.at, since, episode }
+}
+
 export async function runFinanceJob(): Promise<void> {
   try {
     await runFinanceSweep()
@@ -271,5 +480,13 @@ export async function runChronicleJob(): Promise<void> {
     await runChronicleSweep()
   } finally {
     await ensureChronicleScheduled()
+  }
+}
+
+export async function runAiWatchJob(): Promise<void> {
+  try {
+    await runAiWatchSweep()
+  } finally {
+    await ensureAiWatchScheduled()
   }
 }

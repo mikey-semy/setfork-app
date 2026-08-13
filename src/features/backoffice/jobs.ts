@@ -10,3 +10,8 @@ export async function runChronicleJob(): Promise<void> {
   const { runChronicleJob: run } = await import('./service')
   await run()
 }
+
+export async function runAiWatchJob(): Promise<void> {
+  const { runAiWatchJob: run } = await import('./service')
+  await run()
+}
