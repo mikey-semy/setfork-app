@@ -40,6 +40,8 @@ export interface MoveResult {
   changed: number
   /** Прежнее размещение — данные для «Отменить». */
   restore: RestoreGroup[]
+  /** Куда переложили. Отмена вернёт только то, что ДО СИХ ПОР лежит здесь. */
+  movedTo?: string | null
   /** Почему не вышло: полка исчезла или из имени не получилось технического. */
   error?: 'catalog-not-found' | 'bad-name'
 }
@@ -94,6 +96,13 @@ export async function bulkSetCatalog(ids: string[], catalogName: string | null):
   // правка содержимого; иначе разложил пятьсот списков — и все пятьсот всплыли в лентах «по
   // обновлению» с сегодняшней датой, хотя ни одна буква в них не изменилась.
   const before = await db.transaction(async (tx) => {
+    // Полку перепроверяем ПОД ЗАМКОМ. Между `ownCatalogId` и этой записью её успевают
+    // удалить, а внешнего ключа у `repositoryId` нет — списки молча уехали бы на
+    // несуществующую полку и пропали разом из всех фильтров (находка авто-ревью).
+    if (targetId) {
+      const [live] = await tx.select({ id: repositories.id }).from(repositories).where(and(eq(repositories.id, targetId), eq(repositories.ownerId, session.userId))).for('update')
+      if (!live) return null
+    }
     // Условие повторяется и под замком: между отбором и транзакцией список успевает сменить
     // владельца, и без него мы заперли бы уже чужую строку и положили её на свою полку.
     const rows = await tx.select({ id: templates.id, repositoryId: templates.repositoryId }).from(templates).where(editable(session.userId, mine)).for('update')
@@ -101,12 +110,13 @@ export async function bulkSetCatalog(ids: string[], catalogName: string | null):
     await tx.update(templates).set({ repositoryId: targetId }).where(editable(session.userId, rows.map((r) => r.id)))
     return rows
   })
+  if (before === null) return { changed: 0, restore: [], error: 'catalog-not-found' }
   revalidatePath(`/${session.handle}`)
 
   const groups = new Map<string | null, string[]>()
   for (const row of before) groups.set(row.repositoryId, [...(groups.get(row.repositoryId) ?? []), row.id])
   // Считаем по тому, что реально заперли и записали, а не по намерению.
-  return { changed: before.length, restore: [...groups].map(([catalogId, ids]) => ({ catalogId, ids })) }
+  return { changed: before.length, restore: [...groups].map(([catalogId, ids]) => ({ catalogId, ids })), movedTo: targetId }
 }
 
 /**
@@ -130,9 +140,19 @@ export async function bulkCreateCatalogAndMove(ids: string[], rawTitle: string):
   return bulkSetCatalog(ids, name)
 }
 
-/** Отмена перекладывания: каждый список — обратно на свою прежнюю полку. */
-export async function bulkRestoreCatalog(groups: RestoreGroup[]): Promise<{ changed: number }> {
+/**
+ * Отмена перекладывания: каждый список — обратно на свою прежнюю полку.
+ *
+ * `movedTo` — полка, куда пачка их положила. Возвращаем ТОЛЬКО то, что до сих пор там и
+ * лежит: пока тост с «Отменить» висит, список успевают переложить руками из другой вкладки,
+ * и слепая отмена затёрла бы этот свежий, осознанный выбор снимком до пачки (находка
+ * авто-ревью).
+ */
+export async function bulkRestoreCatalog(move: Pick<MoveResult, 'restore' | 'movedTo'>): Promise<{ changed: number }> {
   const session = await requireSession()
+  // Принимаем результат перекладывания ЦЕЛИКОМ, а не список групп: пункт назначения тут не
+  // дополнение, а часть смысла отмены, и вторым необязательным доводом его легко забыть.
+  const { restore: groups, movedTo = null } = move
   const mine = new Set(await ownIds(session.userId, groups.flatMap((g) => g.ids)))
   let changed = 0
   // Полок в возврате столько, сколько их было у пачки, — единицы. Раскладывать эти
@@ -152,7 +172,12 @@ export async function bulkRestoreCatalog(groups: RestoreGroup[]): Promise<{ chan
             .limit(1)
         )[0]?.id ?? null
       : null
-    const back = await db.update(templates).set({ repositoryId: catalogId }).where(editable(session.userId, ids)).returning({ id: templates.id })
+    const stillThere = movedTo ? eq(templates.repositoryId, movedTo) : isNull(templates.repositoryId)
+    const back = await db
+      .update(templates)
+      .set({ repositoryId: catalogId })
+      .where(and(editable(session.userId, ids), stillThere))
+      .returning({ id: templates.id })
     changed += back.length
   }
   revalidatePath(`/${session.handle}`)

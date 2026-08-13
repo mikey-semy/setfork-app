@@ -64,7 +64,7 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
         label: t('bulk.undo', lang),
         onClick: () =>
           start(async () => {
-            const back = await bulkRestoreCatalog(res.restore)
+            const back = await bulkRestoreCatalog(res)
             // refresh, а не только revalidatePath на сервере: возврат зовётся из тоста, вне
             // рендера страницы, и без явного обновления лента осталась бы с новой полкой.
             router.refresh()

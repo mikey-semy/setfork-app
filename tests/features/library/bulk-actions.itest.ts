@@ -93,7 +93,7 @@ describe('раскладка по полкам', () => {
 
     const res = await bulkSetCatalog([fromA, fromB, unfiled], 'target')
     expect(res.changed).toBe(3)
-    await bulkRestoreCatalog(res.restore)
+    await bulkRestoreCatalog(res)
 
     expect((await rowOf(fromA)).repositoryId).toBe(a)
     expect((await rowOf(fromB)).repositoryId).toBe(b)
@@ -107,7 +107,7 @@ describe('раскладка по полкам', () => {
     const res = await bulkSetCatalog([list], null)
     expect((await rowOf(list)).repositoryId).toBeNull()
 
-    await bulkRestoreCatalog(res.restore)
+    await bulkRestoreCatalog(res)
     expect((await rowOf(list)).repositoryId).toBe(a)
   })
 
@@ -118,7 +118,7 @@ describe('раскладка по полкам', () => {
       .returning({ id: repositories.id })
     const list = await seed()
 
-    await bulkRestoreCatalog([{ catalogId: foreignShelf.id, ids: [list] }])
+    await bulkRestoreCatalog({ restore: [{ catalogId: foreignShelf.id, ids: [list] }], movedTo: null })
 
     expect((await rowOf(list)).repositoryId).toBeNull()
   })
@@ -137,6 +137,36 @@ describe('раскладка по полкам', () => {
     expect((await rowOf(normal)).repositoryId).toBe(cat)
     expect((await rowOf(archived)).repositoryId).toBeNull()
     expect((await rowOf(frozen)).repositoryId).toBeNull()
+  })
+
+  it('отмена не затирает выбор, сделанный после пачки', async () => {
+    // Тост с «Отменить» висит несколько секунд, и за это время список успевают переложить
+    // руками. Слепая отмена вернула бы его снимком ДО пачки, стерев свежий осознанный выбор.
+    const a = await shelf('a')
+    const target = await shelf('target')
+    const other = await shelf('other')
+    const list = await seed({ repositoryId: a })
+
+    const res = await bulkSetCatalog([list], 'target')
+    expect((await rowOf(list)).repositoryId).toBe(target)
+    // Пока тост висит, список переложили вручную.
+    await db.update(templates).set({ repositoryId: other }).where(eq(templates.id, list))
+    await bulkRestoreCatalog(res)
+
+    expect((await rowOf(list)).repositoryId).toBe(other)
+  })
+
+  it('исчезнувшая полка не принимает списки в никуда', async () => {
+    // У `repositoryId` нет внешнего ключа: без проверки под замком списки уехали бы на
+    // удалённую полку и пропали разом из всех фильтров.
+    const cat = await shelf('devops')
+    const list = await seed()
+    await db.delete(repositories).where(eq(repositories.id, cat))
+
+    const res = await bulkSetCatalog([list], 'devops')
+
+    expect(res.error).toBe('catalog-not-found')
+    expect((await rowOf(list)).repositoryId).toBeNull()
   })
 
   it('раскладка не выдаёт себя за правку содержимого', async () => {
