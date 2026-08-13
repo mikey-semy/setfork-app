@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { agentActions, councilExperts, db, generationMessages } from '@/shared/db'
+import { asDate } from '@/shared/db/raw'
 import { stageAfterWork, stageFor, workQueue, type Candidate, type Lifecycle, type WorkSlot } from './activation'
 import type { Expert } from './roster'
 import { log } from '@/shared/observability'
@@ -13,22 +14,6 @@ import { log } from '@/shared/observability'
  * совете (generation_messages) и собственные действия петли (agent_actions). Считать только
  * первое значило бы, что самогенерация «не считается работой» — и очередь бы её игнорировала.
  */
-/**
- * Время из СЫРОГО sql в Date.
- *
- * `sql<Date>` — это обещание типа, а не приведение: результат произвольного выражения
- * drizzle не разбирает, и `max(timestamptz)` приезжает СТРОКОЙ. Любая арифметика по датам
- * после этого падает с «getTime is not a function», причём падает не при написании кода,
- * а в день, когда ветку наконец исполнили: очередь работы читается только проходом
- * самогенерации, а он был выключен настройкой до 13.08.2026 — первый же живой проход и лёг.
- */
-const asDate = (v: Date | string | null): Date | null => {
-  if (!v) return null
-  if (v instanceof Date) return v
-  const d = new Date(v)
-  return Number.isNaN(d.getTime()) ? null : d
-}
-
 async function attemptsAndLastWork(): Promise<Map<string, { attempts: number; last: Date | null }>> {
   const out = new Map<string, { attempts: number; last: Date | null }>()
   const bump = (id: string, n: number, raw: Date | string | null) => {
@@ -42,14 +27,16 @@ async function attemptsAndLastWork(): Promise<Map<string, { attempts: number; la
     .from(generationMessages)
     .where(and(eq(generationMessages.kind, 'draft'), isNotNull(generationMessages.who)))
     .groupBy(generationMessages.who)
-  for (const r of drafts) if (r.who) bump(r.who, r.n, r.last)
+  // asDate: `last` приходит из сырого max(...) — тип там обещан вручную и может
+  // оказаться строкой; дальше по коду его сравнивают и зовут .getTime().
+  for (const r of drafts) if (r.who) bump(r.who, r.n, asDate(r.last))
 
   const acts = await db
     .select({ id: agentActions.agentId, n: sql<number>`count(*)::int`, last: sql<Date | string | null>`max(${agentActions.occurredAt})` })
     .from(agentActions)
     .where(and(sql`${agentActions.agentId} <> ''`, sql`${agentActions.resultStatus} <> 'dry-run'`))
     .groupBy(agentActions.agentId)
-  for (const r of acts) if (r.id) bump(r.id, r.n, r.last)
+  for (const r of acts) if (r.id) bump(r.id, r.n, asDate(r.last))
 
   return out
 }

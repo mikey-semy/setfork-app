@@ -14,6 +14,7 @@ import {
   type Job,
 } from './queue'
 import { AUTONOMOUS_LOOPS, recordAgentAction } from '@/shared/agents/policy'
+import { errorForJob } from './error'
 
 /** Записать падение задачи ПЕТЛИ в журнал действий (обычные задачи туда не пишем). */
 async function recordLoopFailure(jobType: string, e: unknown): Promise<void> {
@@ -59,6 +60,7 @@ const CONCURRENCY = Math.max(1, Number(process.env.SETFORK_JOB_CONCURRENCY) || 1
 // одна залипшая запись в БД не выглядела похоронами. Дешёвый UPDATE одной строки по первичному
 // ключу: даже при 12 задачах в полёте это ~1 запрос в секунду на весь инстанс.
 const HEARTBEAT_MS = 15_000
+
 // Уборка терминальных задач — раз в час (1200 тиков × 3с). Чаще незачем: выдержка измеряется
 // сутками, а каждый проход это DELETE по горячей таблице.
 const CLEANUP_EVERY_TICKS = 1200
@@ -139,7 +141,7 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
       // упавших проходов оставляли журнал чистым, и «пять ошибок подряд» не наступало
       // никогда. То есть предохранитель был описан, но не мог сработать.
       await recordLoopFailure(job.type, e)
-      if (await failJob(job, e instanceof Error ? e.message : String(e))) await finalize(job)
+      if (await failJob(job, errorForJob(e))) await finalize(job)
     } finally {
       // Пульс обязан замолчать вместе с работой — иначе завершённая задача «дышала» бы вечно,
       // а таймер держал бы процесс и ссылку на неё.
