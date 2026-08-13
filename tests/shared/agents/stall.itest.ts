@@ -38,9 +38,24 @@ describe('холостой ход', () => {
     expect(r.sinceProgress).toBe(3)
   })
 
-  it('созданное, улучшенное, опубликованное, расхождение — прогресс', async () => {
-    for (const a of ['list.draft', 'list.improve', 'list.publish', 'list.fork']) await act(a)
+  it('предложенное, улучшенное, опубликованное, расхождение — прогресс', async () => {
+    // Именно эти действия уход и пишет; `list.draft` — не его, а самогенерации.
+    for (const a of ['list.suggest', 'list.improve', 'list.publish', 'list.fork']) await act(a)
     expect(await stallReport('gardener')).toMatchObject({ progress: 4, stalled: false, sinceProgress: 0 })
+  })
+
+  it('наблюдательная петля не холостая: её работа — само наблюдение', async () => {
+    // До этой правки прогрессом считались только действия над библиотекой, поэтому
+    // бухгалтер, летописец, дозор ИИ и ревизия повестки показывались холостыми ВСЕГДА —
+    // на проде четыре петли из пяти живых. Находка A2 линзы 06.
+    await act('money.watch', 'ok', 'finance')
+    expect(await stallReport('finance')).toMatchObject({ progress: 1, stalled: false })
+  })
+
+  it('петля не из реестра — не судим вовсе, а не объявляем холостой', async () => {
+    // Записи `mcp` пишет инструмент, а не петля: понятия «прогресс» у них нет.
+    await act('list.bulk', 'ok', 'mcp')
+    expect(await stallReport('mcp')).toMatchObject({ seen: 1, progress: 0, stalled: false })
   })
 
   it('прогресс был, потом тишина — считаем, сколько действий с тех пор', async () => {

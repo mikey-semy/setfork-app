@@ -1,6 +1,7 @@
 import 'server-only'
 import { desc, eq, sql } from 'drizzle-orm'
 import { agentActions, db } from '@/shared/db'
+import { LOOPS } from './loops'
 
 /**
  * ДЕТЕКТОР ХОЛОСТОГО ХОДА (5.5) — «петля работает, но ничего не происходит».
@@ -22,10 +23,22 @@ import { agentActions, db } from '@/shared/db'
  * работу, и решать, менять ли настройки, человеку.
  */
 
-/** Действия, которые считаются прогрессом: после них библиотека ДРУГАЯ. */
-// list.grow — рост живого списка. Для ленты это и есть работа: без него петля, исправно
-// пополняющая ленты новостями, выглядела бы застрявшей и слала бы ложную тревогу.
-const PROGRESS = ['list.draft', 'list.improve', 'list.publish', 'list.fork', 'list.grow'] as const
+/**
+ * Что считать прогрессом, знает САМА ПЕТЛЯ — список объявлен в её записи реестра
+ * (`LoopSpec.progress`), потому что «сделать дело» у каждой петли своё.
+ *
+ * Раньше список был один на всех и состоял из действий над библиотекой (`list.*`): детектор
+ * писался под садовника. Наблюдательные петли — бухгалтер, летописец, дозор ИИ, ревизия
+ * повестки — своих действий в нём не имели, и `/admin/development` показывал их холостыми
+ * ВСЕГДА, хотя работали они исправно: на проде это четыре петли из пяти живых. Индикатор,
+ * который всегда красный, — не индикатор, настоящий холостой ход в нём утонет.
+ * Находка A2 линзы 06.
+ *
+ * Пустой список означает «судить не по чему» (петли нет в реестре — например, записи `mcp`,
+ * которые пишет не петля, а инструмент). Тогда холостым ход не объявляем: молчать честнее,
+ * чем обвинять наугад.
+ */
+const прогрессПетли = (loop: string): readonly string[] => LOOPS.find((l) => l.name === loop)?.progress ?? []
 
 /** Сколько последних записей смотрим. Больше — дольше «помним» давний прогресс. */
 const WINDOW = 12
@@ -54,7 +67,8 @@ export async function stallReport(loop: string, window = WINDOW): Promise<StallR
     .orderBy(desc(agentActions.occurredAt))
     .limit(window)
 
-  const isProgress = (a: string, s: string) => (PROGRESS as readonly string[]).includes(a) && s === 'ok'
+  const дела = прогрессПетли(loop)
+  const isProgress = (a: string, s: string) => дела.includes(a) && s === 'ok'
   let sinceProgress = 0
   let progress = 0
   let found = false
@@ -66,7 +80,13 @@ export async function stallReport(loop: string, window = WINDOW): Promise<StallR
       sinceProgress++
     }
   }
-  return { seen: rows.length, progress, sinceProgress, stalled: rows.length > 0 && progress === 0 }
+  return {
+    seen: rows.length,
+    progress,
+    sinceProgress,
+    // Судить не по чему (петля вне реестра) — значит не судить: см. `прогрессПетли`.
+    stalled: дела.length > 0 && rows.length > 0 && progress === 0,
+  }
 }
 
 /** Все петли разом — для дашборда. */

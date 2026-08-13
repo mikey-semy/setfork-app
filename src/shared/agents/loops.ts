@@ -30,6 +30,19 @@ export interface LoopSpec {
   ensure: string
   /** Тратит ли петля деньги на модель — видно в обзоре и в рунбуках. */
   paid: boolean
+  /**
+   * Действия, после которых МИР ИЗМЕНИЛСЯ, — по ним детектор холостого хода отличает
+   * работу от кручения впустую. Поле обязательное: у каждой петли свой ответ на вопрос
+   * «что значит сделать дело», общего списка тут быть не может.
+   *
+   * Раньше список был один на всех и состоял из действий над библиотекой (`list.*`),
+   * потому что детектор писался под садовника. Наблюдательные петли — бухгалтер,
+   * летописец, дозор ИИ, ревизия повестки — своих действий в нём не имели и потому в
+   * админке ВСЕГДА показывались холостыми, хотя работали исправно: на проде это четыре
+   * петли из пяти живых. Индикатор, который всегда красный, — не индикатор, настоящий
+   * холостой ход в нём утонет. Находка A2 линзы 06.
+   */
+  progress: readonly string[]
   /** Одной строкой: что петля делает. Идёт в админку и документацию. */
   what: { en: string; ru: string }
 }
@@ -43,6 +56,7 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/backoffice/service',
     ensure: 'ensureFinanceScheduled',
     paid: false,
+    progress: ['money.watch', 'money.alert'],
     what: { en: 'watches spend and warns the owner', ru: 'следит за расходом и предупреждает владельца' },
   },
   {
@@ -53,6 +67,7 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/backoffice/service',
     ensure: 'ensureChronicleScheduled',
     paid: false,
+    progress: ['day.report'],
     what: { en: 'sends the company day summary to the owner', ru: 'отправляет владельцу сводку дня компании' },
   },
   {
@@ -63,6 +78,7 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/backoffice/service',
     ensure: 'ensureAiWatchScheduled',
     paid: false,
+    progress: ['ai.watch'],
     what: { en: 'tells the owner when the model channel goes down and when it is back', ru: 'сообщает владельцу, когда канал к модели лёг и когда вернулся' },
   },
   {
@@ -73,6 +89,7 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/partners/service',
     ensure: 'ensurePartnersScheduled',
     paid: false,
+    progress: ['agenda.review'],
     what: { en: 'turns signals into the development agenda', ru: 'превращает сигналы в повестку развития' },
   },
   {
@@ -83,6 +100,9 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/gardener/service',
     ensure: 'ensureGardenerScheduled',
     paid: true,
+    // list.stable и list.fresh-none в прогресс НЕ входят намеренно: «улучшать нечего» —
+    // законный ответ ухода, а не сделанное дело. Именно ради него и есть расхождение форком.
+    progress: ['list.suggest', 'list.improve', 'list.publish', 'list.fork', 'list.grow'],
     what: { en: 'improves lists and grows living feeds', ru: 'улучшает списки и растит живые ленты' },
   },
   {
@@ -93,6 +113,7 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/library/selfgen',
     ensure: 'ensureSelfGenScheduled',
     paid: true,
+    progress: ['list.draft'],
     what: { en: 'specialists draft lists on their own initiative', ru: 'специалисты сами пишут черновики списков' },
   },
   {
@@ -103,6 +124,7 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/feeds/service',
     ensure: 'ensureFeedPullScheduled',
     paid: false,
+    progress: ['feed.pull'],
     what: { en: 'pulls subscribed streams for fresh material', ru: 'тянет подписки на потоки за свежим материалом' },
   },
   {
@@ -113,6 +135,7 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/knowledge/service',
     ensure: 'ensureTriplesScheduled',
     paid: true,
+    progress: ['mine'],
     what: { en: 'mines facts from lists into the knowledge corpus', ru: 'добывает факты из списков в корпус знаний' },
   },
   {
@@ -123,6 +146,7 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/linkcheck/service',
     ensure: 'ensureLinkcheckScheduled',
     paid: false,
+    progress: ['probe', 'linkcheck.sweep'],
     what: { en: 'walks list links and marks the dead ones', ru: 'обходит ссылки списков и помечает мёртвые' },
   },
   {
@@ -133,6 +157,7 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/digest/service',
     ensure: 'ensureDigestScheduled',
     paid: false,
+    progress: ['send'],
     what: { en: 'sends subscription digests to people', ru: 'рассылает людям дайджесты подписок' },
   },
   {
@@ -144,6 +169,7 @@ export const LOOPS: LoopSpec[] = [
     ensure: 'ensureChangelogScheduled',
     // Платная: второй язык записи добирается переводом через модель.
     paid: true,
+    progress: ['changelog.refresh'],
     what: { en: 'keeps the public changelog fresh from GitHub', ru: 'держит публичный changelog свежим из GitHub' },
   },
 ]
