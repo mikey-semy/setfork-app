@@ -105,7 +105,11 @@ export async function bulkSetCatalog(ids: string[], catalogName: string | null):
     }
     // Условие повторяется и под замком: между отбором и транзакцией список успевает сменить
     // владельца, и без него мы заперли бы уже чужую строку и положили её на свою полку.
-    const rows = await tx.select({ id: templates.id, repositoryId: templates.repositoryId }).from(templates).where(editable(session.userId, mine)).for('update')
+    const locked = await tx.select({ id: templates.id, repositoryId: templates.repositoryId }).from(templates).where(editable(session.userId, mine)).for('update')
+    // Те, кто уже лежит на этой полке, никуда не переезжают. Считать их переложенными —
+    // соврать дважды: и числом в сообщении, и предложением «Отменить» действие, которого
+    // не было (находка авто-ревью).
+    const rows = locked.filter((r) => r.repositoryId !== targetId)
     if (!rows.length) return rows
     await tx.update(templates).set({ repositoryId: targetId }).where(editable(session.userId, rows.map((r) => r.id)))
     return rows

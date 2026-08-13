@@ -184,6 +184,19 @@ describe('раскладка по полкам', () => {
     expect((await rowOf(list)).repositoryId).toBeNull()
   })
 
+  it('уже лежащее на нужной полке не считается переложенным', async () => {
+    // Иначе выбор текущей полки даёт ложный успех и предложение отменить действие, которого
+    // не было, а в смешанном наборе число переложенных завышено.
+    const cat = await shelf('devops')
+    const already = await seed({ repositoryId: cat })
+    const fresh = await seed()
+
+    const res = await bulkSetCatalog([already, fresh], 'devops')
+
+    expect(res.changed).toBe(1)
+    expect(res.restore.flatMap((g) => g.ids)).toEqual([fresh])
+  })
+
   it('раскладка не выдаёт себя за правку содержимого', async () => {
     // Иначе разложил пятьсот списков — и все пятьсот всплыли в лентах «по обновлению» с
     // сегодняшней датой, хотя ни одна буква в них не изменилась.
