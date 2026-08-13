@@ -428,6 +428,18 @@ describe('публикация пачкой', () => {
     expect(await db.select({ type: jobs.type }).from(jobs)).toHaveLength(0)
   })
 
+  it('барьер с готовым удержанием не поднимает его заново из одобренного', async () => {
+    // Админ успевает одобрить список и ДО того, как барьер прочитал строку: тогда его снимок
+    // сам окажется `active`, и сравнение со снимком сойдётся. Вход, у которого удержание уже
+    // стоит, обязан лишь подтверждать его, а не создавать поверх чужого решения.
+    const approved = await seed({ status: 'published', visibility: 'public', moderation: 'active' })
+    const mod = await import('@/features/moderation/moderate-list')
+
+    await mod.gateListPublication(approved, { preHeld: true })
+
+    expect((await rowOf(approved)).moderation).toBe('active')
+  })
+
   it('архивное и замороженное не публикуется даже адресно', async () => {
     // Пакетное действие отсекало такое своим отбором, но MCP и кнопка адресуют список
     // напрямую — проверка обязана стоять в общем слое публикации.

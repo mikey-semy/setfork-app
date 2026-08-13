@@ -157,7 +157,7 @@ async function markCapped(templateId: string): Promise<void> {
  * (`initialModeration`) ДО записи, и в ядро оно уезжает значением вставки —
  * иначе между insert и этим апдейтом список недоверенного автора публичен.
  */
-export async function gateListPublication(templateId: string): Promise<void> {
+export async function gateListPublication(templateId: string, opts: { preHeld?: boolean } = {}): Promise<void> {
   // Успел ли барьер сам решить «держим». От этого зависит, что делать при сбое ниже:
   // решение состоялось — удержание законно и остаётся даже без очереди; не состоялось —
   // держать нечем, и заранее выставленное вызывающим удержание надо снять.
@@ -189,11 +189,17 @@ export async function gateListPublication(templateId: string): Promise<void> {
     const [held] = await db
       .update(templates)
       .set({ moderation: 'pending', moderationReason: null, moderationSeverity: 0 })
-      // Любое решение админа, принятое ПОКА гейт думал, не затираем: пишем только если
-      // состояние осталось тем, которое гейт видел. Исключить одни снятия мало — админ
-      // умеет и одобрять (`setModeration(..., 'active')`), и такое одобрение эта запись
-      // откатывала бы обратно в очередь (находка авто-ревью).
-      .where(and(eq(templates.id, templateId), eq(templates.moderation, tpl.moderation)))
+      // Решение админа не затираем ни при каком раскладе.
+      //
+      // Обычный вход (кнопка, смена видимости) удержание СТАВИТ, поэтому пишет, только если
+      // состояние осталось тем, которое гейт видел.
+      //
+      // Вход с `preHeld` (пакетная публикация) удержание уже поставил ДО нас, и наша задача
+      // — не поднять его заново, а лишь подтвердить. Тут мало сравнения со снимком: админ
+      // успевает одобрить список и до того, как гейт прочитал строку, — тогда снимок сам
+      // окажется `active`, сравнение сойдётся, и одобрение уедет обратно в очередь (находка
+      // авто-ревью). Поэтому условие жёстче: держим только то, что уже удержано.
+      .where(and(eq(templates.id, templateId), opts.preHeld ? eq(templates.moderation, 'pending') : eq(templates.moderation, tpl.moderation)))
       .returning({ id: templates.id })
     decided = true
     // Удержание не наше — значит и проверку ставить не за чем. Джоба с `gate: true` считает

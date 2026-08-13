@@ -184,7 +184,9 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
       report.skipped++
       continue
     }
-    if (row.visibility === 'public') await gateListPublication(row.id)
+    // `preHeld` — не подсказка, а факт: удержание уже стоит, и барьеру остаётся его
+    // подтвердить или отпустить, но не создавать заново поверх чужого решения.
+    if (row.visibility === 'public') await gateListPublication(row.id, { preHeld: hold })
     landed.push(row)
   }
 
