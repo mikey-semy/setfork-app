@@ -3,7 +3,6 @@
 import { useActionState } from 'react'
 import { Link2, Unlink } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { buttonClass } from '@/shared/ui/button-style'
 import { Alert } from '@/shared/ui/Alert'
 import { ProviderMark } from '@/shared/ui/ProviderMark'
 import { t, type Lang, type TKey } from '@/shared/i18n'
@@ -16,6 +15,14 @@ export interface SignInMethodRow {
   linked: boolean
   /** Провайдер выключен на этом стенде — показываем только если уже привязан. */
   available: boolean
+}
+
+/** Исход привязки из адреса → ключ словаря. Неизвестное значение молча не показываем. */
+const LINK_NOTICE: Record<string, TKey> = {
+  linked: 'auth.link.linked',
+  'already-yours': 'auth.link.alreadyYours',
+  taken: 'auth.link.taken',
+  unavailable: 'auth.link.unavailable',
 }
 
 /**
@@ -31,10 +38,15 @@ export interface SignInMethodRow {
 export function SignInMethods({ rows, lang, notice }: { rows: SignInMethodRow[]; lang: Lang; notice?: string }) {
   const [state, unlink, pending] = useActionState<UnlinkState, FormData>(unlinkSignInMethod, null)
   const shown = rows.filter((r) => r.available || r.linked)
+  // Исход приезжает из адреса словом провайдерского пути ('already-yours'), а ключи
+  // словаря пишутся camelCase. Собирать ключ склейкой значит однажды показать пустоту:
+  // приведение к TKey проверку имени отключает, а `t` на неизвестный ключ отвечает
+  // пустой строкой (находка авто-ревью на #782). Поэтому таблица.
+  const noticeKey = notice ? LINK_NOTICE[notice] : undefined
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      {notice && <Alert variant={notice === 'linked' ? 'ok' : 'warn'}>{t(`auth.link.${notice}` as TKey, lang)}</Alert>}
+      {noticeKey && <Alert variant={notice === 'linked' ? 'ok' : 'warn'}>{t(noticeKey, lang)}</Alert>}
       {state?.error && <Alert variant="warn">{t(state.error, lang)}</Alert>}
 
       {shown.map((r) => (
@@ -55,12 +67,16 @@ export function SignInMethods({ rows, lang, notice }: { rows: SignInMethodRow[];
               </Button>
             </form>
           ) : (
-            /* Ссылка, а не кнопка с fetch: привязка идёт тем же путём к провайдеру,
-               что и вход, — меняется только намерение в куке. */
-            <a href={`/api/auth/${r.provider}?intent=link`} className={buttonClass({ variant: 'outline', size: 'md' })}>
-              <Link2 size={14} />
-              <span className="max-sm:sr-only">{t('auth.link', lang)}</span>
-            </a>
+            /* POST, а не ссылка: привязка меняет то, кто сможет войти под аккаунтом, и
+               начинаться должна явным действием — GET браузер префетчит, а чужая
+               страница подделывает (правило nextjs-no-side-effect-in-get-handler). */
+            <form action="/api/auth/link" method="post">
+              <input type="hidden" name="provider" value={r.provider} />
+              <Button type="submit" variant="outline" size="md">
+                <Link2 size={14} />
+                <span className="max-sm:sr-only">{t('auth.link', lang)}</span>
+              </Button>
+            </form>
           )}
         </div>
       ))}

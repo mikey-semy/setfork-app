@@ -96,4 +96,47 @@ describe('отвязка способа входа', () => {
 
     expect(await unlinkIdentity(u.id, 'vk')).toBe('not-linked')
   })
+
+  // Две вкладки, повторная отправка формы, второй инстанс — оба запроса видели «входов
+  // два» и оба чистили свою колонку. Правило соблюдалось дважды, а дверей не оставалось.
+  it('две одновременные отвязки не оставляют аккаунт без входа', async () => {
+    const u = await mkUser('race', { githubId: 5, yandexId: 'ya-5' })
+
+    const [a, b] = await Promise.all([unlinkIdentity(u.id, 'github'), unlinkIdentity(u.id, 'yandex')])
+
+    expect([a, b].sort()).toEqual(['last-method', 'unlinked'])
+    const row = await rowOf(u.id)
+    expect(linkedProviders(row)).toHaveLength(1)
+  })
+})
+
+describe('последняя дверь: правило одно на все способы входа', () => {
+  const addPasskey = async (userId: string, name: string) => {
+    const [row] = await db
+      .insert(passkeys)
+      .values({ userId, credentialId: `cred-${name}`, publicKey: 'base64url-key', name })
+      .returning({ id: passkeys.id })
+    return row.id
+  }
+
+  // Обход, который нашло авто-ревью: passkey засчитывается при отвязке провайдера, а
+  // удаляется без всякой проверки. Два шага — и войти нечем.
+  it('passkey нельзя удалить, если он остался единственным входом', async () => {
+    const u = await mkUser('passkey-only', { githubId: 5 })
+    const keyId = await addPasskey(u.id, 'единственный')
+
+    expect(await unlinkIdentity(u.id, 'github')).toBe('unlinked')
+
+    const { wouldLoseLastMethod } = await import('@/shared/auth/identities')
+    expect(await wouldLoseLastMethod(u.id, { passkeyId: keyId })).toBe(true)
+  })
+
+  it('пока входов больше одного, закрыть любой можно', async () => {
+    const u = await mkUser('two-doors', { githubId: 5 })
+    const keyId = await addPasskey(u.id, 'второй')
+
+    const { wouldLoseLastMethod } = await import('@/shared/auth/identities')
+    expect(await wouldLoseLastMethod(u.id, { passkeyId: keyId })).toBe(false)
+    expect(await wouldLoseLastMethod(u.id, { provider: 'github' })).toBe(false)
+  })
 })

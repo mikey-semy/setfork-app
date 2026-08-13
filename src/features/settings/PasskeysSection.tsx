@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { startRegistration } from '@simplewebauthn/browser'
 import { Fingerprint, Loader2, Plus, Trash2 } from 'lucide-react'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { beginPasskeyRegistration, deletePasskey, finishPasskeyRegistration, listPasskeys } from '@/features/auth/passkeys'
 
 type Row = { id: string; name: string; createdAt: Date; lastUsedAt: Date | null }
@@ -42,8 +42,15 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
   }
 
   async function remove(id: string) {
+    // Сервер может отказать: последний способ входа удалить нельзя. Поэтому список
+    // обновляем ПО ОТВЕТУ, а не заранее — иначе passkey исчезал бы с экрана, оставаясь
+    // в базе, и человек считал бы, что доступа больше нет.
+    const res = await deletePasskey(id)
+    if (res.error === 'last-method') {
+      setErr(t('auth.link.lastMethod', lang))
+      return
+    }
     setList((prev) => prev.filter((p) => p.id !== id))
-    await deletePasskey(id)
   }
 
   const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat(ru ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d)) : null)

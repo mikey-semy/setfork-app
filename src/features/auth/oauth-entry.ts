@@ -19,10 +19,16 @@ import { linkIdentity } from './link-identity'
 const INTENT_COOKIE = 'oauth_intent'
 const INTENT_TTL_S = 600
 
-/** Пометить, что следующий возврат от провайдера — привязка, а не вход. */
-export async function markLinkIntent(): Promise<void> {
+/**
+ * Пометить, что следующий возврат ОТ ЭТОГО провайдера — привязка, а не вход.
+ *
+ * Провайдер записан в самой куке намеренно. Общая пометка «сейчас привязка» пережила бы
+ * брошенный на полпути заход и превратила бы следующий — возможно, совсем другой — вход
+ * в привязку: человек, вышедший из аккаунта, получил бы отказ вместо входа.
+ */
+export async function markLinkIntent(provider: OauthProvider): Promise<void> {
   const c = await cookies()
-  c.set(INTENT_COOKIE, 'link', {
+  c.set(INTENT_COOKIE, provider, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -32,11 +38,12 @@ export async function markLinkIntent(): Promise<void> {
 }
 
 /** Прочитать и погасить намерение: кука одноразовая, как и state. */
-async function takeIntent(): Promise<'link' | 'login'> {
+async function takeIntent(provider: OauthProvider): Promise<'link' | 'login'> {
   const c = await cookies()
   const v = c.get(INTENT_COOKIE)?.value
   if (v) c.delete(INTENT_COOKIE)
-  return v === 'link' ? 'link' : 'login'
+  // Чужая пометка входу не мешает: она гасится, а вход идёт своим чередом.
+  return v === provider ? 'link' : 'login'
 }
 
 /** Куда вести после привязки: своя секция настроек и исход словами, а не кодом. */
@@ -56,7 +63,7 @@ export async function enterWithIdentity(
   signIn: () => Promise<SessionUser>,
   appUrl: string,
 ): Promise<string> {
-  if ((await takeIntent()) === 'link') {
+  if ((await takeIntent(provider)) === 'link') {
     // Привязка возможна только изнутри сессии: аккаунт, к которому привязывают, обязан
     // быть доказан входом. Сессия истекла, пока человек ходил к провайдеру, — говорим
     // об этом прямо, а не заводим молча третий аккаунт.

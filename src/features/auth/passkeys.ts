@@ -13,6 +13,7 @@ import {
 } from '@simplewebauthn/server'
 import { db, passkeys, users } from '@/shared/db'
 import { requireSession, startSession } from '@/shared/auth/session'
+import { wouldLoseLastMethod } from '@/shared/auth/identities'
 import { secretKey } from '@/shared/auth/tokens'
 import { clientIpFromHeaders } from '@/shared/auth/app-origin'
 import { b64uFromBytes, bytesFromB64u, expectedOrigin, RP_NAME, rpID } from '@/shared/auth/webauthn'
@@ -145,10 +146,18 @@ export async function listPasskeys() {
     .orderBy(desc(passkeys.createdAt))
 }
 
-export async function deletePasskey(id: string): Promise<void> {
+/**
+ * Удалить passkey. Последний способ входа удалить нельзя — правило то же, что у отвязки
+ * провайдера, и живёт оно в одном месте (`shared/auth/identities`). Пока проверка стояла
+ * только на отвязке, обход был в два шага: отвязать провайдера, сославшись на passkey,
+ * затем удалить и passkey.
+ */
+export async function deletePasskey(id: string): Promise<{ error?: 'last-method' }> {
   const session = await requireSession()
+  if (await wouldLoseLastMethod(session.userId, { passkeyId: id })) return { error: 'last-method' }
   await db.delete(passkeys).where(and(eq(passkeys.id, id), eq(passkeys.userId, session.userId)))
   await recordAudit('passkey.remove', { actorId: session.userId })
+  return {}
 }
 
 export async function renamePasskey(id: string, name: string): Promise<void> {

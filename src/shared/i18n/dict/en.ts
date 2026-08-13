@@ -142,6 +142,7 @@ export const en = {
   'auth.link.linked': 'Sign-in method linked.',
   'auth.link.notLinked': 'This method is not linked to your account.',
   'auth.link.taken': 'That account already belongs to another profile. Sign in with it, or unlink it there first.',
+  'auth.link.unavailable': 'That sign-in method is not available on this site.',
   'auth.methodGithub': 'GitHub',
   'auth.methodLinked': 'Linked',
   'auth.methodNotLinked': 'Not linked',

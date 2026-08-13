@@ -137,6 +137,7 @@ export const ru: Record<DictKey, string> = {
   'auth.link.linked': 'Способ входа привязан.',
   'auth.link.notLinked': 'Этот способ к вашему аккаунту не привязан.',
   'auth.link.taken': 'Этот аккаунт принадлежит другому профилю. Войдите под ним или сначала отвяжите там.',
+  'auth.link.unavailable': 'Этот способ входа на сайте недоступен.',
   'auth.methodGithub': 'GitHub',
   'auth.methodLinked': 'Привязан',
   'auth.methodNotLinked': 'Не привязан',

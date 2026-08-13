@@ -63,13 +63,17 @@ export function linkedProviders(u: IdentityRow): OauthProvider[] {
 }
 
 /**
- * Сколько у пользователя способов войти. Считаются ВСЕ, а не только провайдеры: пароль и
- * passkey — тоже дверь, и без них счёт врал бы в опасную сторону.
+ * Сколько у пользователя способов войти. Считаются ВСЕ двери: провайдеры, пароль и
+ * passkey — иначе счёт врёт в опасную сторону.
  *
- * Нужно ради одного правила: последний способ входа отвязать нельзя. Иначе человек
- * закрывает себе дверь снаружи, и вернуть доступ сможет только владелец инстанса руками.
+ * `exclude` описывает дверь, которую собираются закрыть: «сколько останется, если убрать
+ * вот эту». Без параметра функция отвечала бы на другой вопрос, и каждый вызывающий
+ * вычитал бы единицу сам — а ошибиться тут стоит потери доступа к аккаунту.
  */
-export async function signInMethodsCount(userId: string): Promise<number> {
+export async function signInMethodsCount(
+  userId: string,
+  exclude?: { provider?: OauthProvider; passkeyId?: string; password?: boolean },
+): Promise<number> {
   const [u] = await db
     .select({
       githubId: users.githubId,
@@ -83,5 +87,22 @@ export async function signInMethodsCount(userId: string): Promise<number> {
     .limit(1)
   if (!u) return 0
   const keys = await db.select({ id: passkeys.id }).from(passkeys).where(eq(passkeys.userId, userId))
-  return linkedProviders(u).length + (u.passwordHash ? 1 : 0) + keys.length
+  const providers = linkedProviders(u).filter((p) => p !== exclude?.provider).length
+  const password = u.passwordHash && !exclude?.password ? 1 : 0
+  return providers + password + keys.filter((k) => k.id !== exclude?.passkeyId).length
+}
+
+/**
+ * ПОСЛЕДНЯЯ ДВЕРЬ. Правило одно на все способы входа: закрыть можно любой, кроме
+ * единственного оставшегося — иначе человек запирает себя снаружи, и вернуть доступ
+ * сможет только владелец инстанса руками в базе.
+ *
+ * Живёт здесь, а не в каждой фиче: проверка при отвязке провайдера ничего не стоит, если
+ * удаление passkey рядом делает то же самое без проверки (находка авто-ревью на #782).
+ */
+export async function wouldLoseLastMethod(
+  userId: string,
+  closing: { provider?: OauthProvider; passkeyId?: string; password?: boolean },
+): Promise<boolean> {
+  return (await signInMethodsCount(userId, closing)) < 1
 }
