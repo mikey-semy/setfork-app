@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, gte, ne, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, gte, ne, sql } from 'drizzle-orm'
 import { aiUsage, db } from '@/shared/db'
 import { ERROR_STREAK_TRIP } from '@/shared/agents/canary'
 
@@ -26,6 +26,13 @@ export interface ChannelState {
   lastModel: string
   /** Исходы серии: error/timeout/invalid различают «не пустили» и «не дождались». */
   outcomes: string[]
+  /**
+   * Начало серии — время самого раннего отказа в ней. Это ИМЯ ЭПИЗОДА: по нему
+   * различаются два обрыва, случившиеся в одни сутки. Без него ключ идемпотентности
+   * («день + вердикт») склеивал бы их в один, и о втором обрыве владелец не узнал бы
+   * до полуночи. Нет серии — null.
+   */
+  since: Date | null
 }
 
 /**
@@ -45,21 +52,39 @@ const FRESH_WINDOW_MS = 24 * 3_600_000
  */
 export async function channelState(): Promise<ChannelState> {
   const rows = await db
-    .select({ outcome: aiUsage.outcome, model: aiUsage.model })
+    .select({ outcome: aiUsage.outcome, model: aiUsage.model, at: aiUsage.createdAt })
     .from(aiUsage)
     .where(and(ne(aiUsage.feature, 'embed'), gte(aiUsage.createdAt, new Date(Date.now() - FRESH_WINDOW_MS))))
     .orderBy(desc(aiUsage.createdAt))
     .limit(ERROR_STREAK_TRIP)
   const outcomes: string[] = []
+  let since: Date | null = null
   for (const r of rows) {
     if (r.outcome === 'ok') break
     outcomes.push(r.outcome)
+    since = r.at
   }
-  return { failStreak: outcomes.length, lastModel: rows[0]?.model ?? '', outcomes }
+  return { failStreak: outcomes.length, lastModel: rows[0]?.model ?? '', outcomes, since }
 }
 
 /** Канал считается лежащим: серия отказов достигла общей планки. */
 export const channelDown = (s: ChannelState): boolean => s.failStreak >= ERROR_STREAK_TRIP
+
+/**
+ * Был ли УСПЕШНЫЙ вызов после указанного момента.
+ *
+ * Единственное честное доказательство, что канал вернулся. Пустой хвост доказательством
+ * не является: отказы могли просто состариться и выпасть из окна свежести, а вызовов с
+ * тех пор не было вовсе — «работает» в таком случае мы бы выдумали.
+ */
+export async function successAfter(since: Date): Promise<boolean> {
+  const [row] = await db
+    .select({ id: aiUsage.id })
+    .from(aiUsage)
+    .where(and(ne(aiUsage.feature, 'embed'), eq(aiUsage.outcome, 'ok'), gt(aiUsage.createdAt, since)))
+    .limit(1)
+  return !!row
+}
 
 /** Сколько вызовов было за последние сутки — цифра для письма сторожа: отличает
  *  «канал сломан» от «сегодня никто не звал». Окно скользящее, как и сама проверка. */

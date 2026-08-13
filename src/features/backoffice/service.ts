@@ -304,13 +304,15 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   const out: AiWatchResult = { verdict: 'ok', sent: 0, skipped: '' }
   if (!(await autonomyHealthy('aiwatch'))) return out
   const policy = await loopPolicy('aiwatch')
-  const { channelState, channelDown, callsLastDay } = await import('./ai-watch')
-  // Хвост журнала и «была ли тревога» друг от друга не зависят — читаем разом.
-  // «Канал вернулся» имеет смысл только после отправленной тревоги: иначе первое же
-  // включение стенда слало бы поздравление ни с чем.
-  const [state, alarmed] = await Promise.all([channelState(), lastAiWatchAlarm()])
+  const { channelState, channelDown, callsLastDay, successAfter } = await import('./ai-watch')
+  // Хвост журнала и открытый эпизод друг от друга не зависят — читаем разом.
+  const [state, alarm] = await Promise.all([channelState(), openAlarm()])
   const down = channelDown(state)
-  out.verdict = down ? 'down' : alarmed ? 'recovered' : 'ok'
+  // «Канал вернулся» говорим ТОЛЬКО при доказательстве — успешном вызове после тревоги.
+  // Пустой хвост доказательством не является: отказы могли просто состариться, а звать
+  // модель с тех пор было некому, и «работает снова» мы бы выдумали.
+  const recovered = !down && !!alarm && (await successAfter(alarm.at))
+  out.verdict = down ? 'down' : recovered ? 'recovered' : 'ok'
 
   if (policy.dryRun || out.verdict === 'ok') {
     await recordAgentAction({
@@ -318,13 +320,21 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
       action: 'ai.watch',
       resultStatus: policy.dryRun ? 'dry-run' : 'ok',
       signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes },
-      decision: { verdict: out.verdict },
+      decision: { verdict: out.verdict, alarmOpen: !!alarm },
       policyVersion: policy.policyVersion,
     })
     return out
   }
 
-  const day = new Date().toISOString().slice(0, 10)
+  // Тревога уже открыта, а канал всё ещё лежит — молчим: беда, повторяемая каждый час,
+  // перестаёт читаться. Новый эпизод (после восстановления) откроется своим письмом,
+  // потому что имя эпизода — время начала серии, а не календарный день.
+  const episode = (down ? state.since : alarm?.at)?.toISOString() ?? ''
+  if (down && alarm && episode === alarm.episode) {
+    out.skipped = ALREADY_SENT
+    return out
+  }
+
   const calls = await callsLastDay()
   const subject = down ? CHANNEL_DOWN_SUBJECT : CHANNEL_UP_SUBJECT
   const body = down
@@ -333,56 +343,50 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
       '<p>Компания продолжает просыпаться по расписанию, но думать не может: черновики, уход и разбор фактов остановлены.</p>'
     : `<p>Вызовы модели снова проходят. Последняя модель: ${state.lastModel || '—'}, вызовов за сутки: ${calls}.</p>`
 
-  // Ключ заявляем ДО отправки — та же механика, что у бухгалтера: запись с уникальным
-  // ключом и есть право отправить, иначе второй инстанс продублирует письмо.
-  const claimed = await recordAgentAction({
-    loop: 'aiwatch',
-    action: down ? 'ai.down' : 'ai.recovered',
-    resultStatus: 'ok',
-    signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes, calls },
-    decision: { verdict: out.verdict },
-    idempotencyKey: `aiwatch:${out.verdict}:${day}`,
-    policyVersion: policy.policyVersion,
-  })
-  if (!claimed) {
-    out.skipped = ALREADY_SENT
-    return out
-  }
   const delivery = await tellOwner(`SetFork: ${subject}`, `${body}${developmentDashboardLink()}`)
   out.sent = delivery.sent
   out.skipped = delivery.skipped
-  if (!delivery.sent) {
-    await recordAgentAction({
-      loop: 'aiwatch',
-      action: down ? 'ai.down' : 'ai.recovered',
-      resultStatus: 'skipped',
-      signal: { failStreak: state.failStreak, model: state.lastModel },
-      decision: { verdict: out.verdict },
-      error: delivery.skipped,
-      policyVersion: policy.policyVersion,
-    })
-  }
+  // Пишем ПОСЛЕ попытки, статусом по факту: недоставленное письмо не должно закрывать
+  // эпизод. Иначе один сбой SMTP оставлял бы владельца в уверенности, что канал лежит,
+  // и повторить сообщение было бы уже нечем — следующий проход считал бы его отправленным.
+  await recordAgentAction({
+    loop: 'aiwatch',
+    action: down ? 'ai.down' : 'ai.recovered',
+    resultStatus: delivery.sent ? 'ok' : 'skipped',
+    signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes, calls, episode },
+    decision: { verdict: out.verdict },
+    error: delivery.sent ? '' : delivery.skipped,
+    policyVersion: policy.policyVersion,
+  })
   log.info('aiwatch sweep done', { ...out, failStreak: state.failStreak })
   return out
 }
 
 /**
- * Была ли ДОСТАВЛЕННАЯ тревога о лежащем канале — по журналу, а не по памяти процесса
- * (проход может достаться другому инстансу).
+ * ОТКРЫТЫЙ ЭПИЗОД: доставленная тревога, после которой не было доставленного «вернулся».
  *
- * Статус важен наравне с действием: при неудачной отправке рядом с заявкой ложится строка
- * `skipped` с причиной, и она оказывается последней. Считать её тревогой значит однажды
- * прислать владельцу «канал восстановлен» без предшествующего «канал лёг» — сообщение,
- * которое непонятно как читать.
+ * Состояние ведём по эпизодам, а не по последней записи. Три вещи иначе ломаются, и все
+ * три нашло авто-ревью: недоставленная тревога считалась бы тревогой (владелец получил бы
+ * «восстановлен» без «лёг»); недоставленное «вернулся» закрывало бы эпизод навсегда и
+ * больше не повторялось; а второй обрыв в те же сутки не отличался бы от первого, потому
+ * что ключом был календарный день.
  */
-async function lastAiWatchAlarm(): Promise<boolean> {
-  const [row] = await db
-    .select({ action: agentActions.action, status: agentActions.resultStatus })
+async function openAlarm(): Promise<{ at: Date; episode: string } | null> {
+  const rows = await db
+    .select({ action: agentActions.action, at: agentActions.occurredAt, signal: agentActions.signal })
     .from(agentActions)
-    .where(and(eq(agentActions.loop, 'aiwatch'), inArray(agentActions.action, ['ai.down', 'ai.recovered'])))
+    .where(
+      and(
+        eq(agentActions.loop, 'aiwatch'),
+        eq(agentActions.resultStatus, 'ok'), // недоставленное сообщение состояния не меняет
+        inArray(agentActions.action, ['ai.down', 'ai.recovered']),
+      ),
+    )
     .orderBy(desc(agentActions.occurredAt))
     .limit(1)
-  return row?.action === 'ai.down' && row.status === 'ok'
+  const row = rows[0]
+  if (row?.action !== 'ai.down') return null
+  return { at: row.at, episode: String((row.signal as { episode?: unknown })?.episode ?? '') }
 }
 
 export async function runFinanceJob(): Promise<void> {

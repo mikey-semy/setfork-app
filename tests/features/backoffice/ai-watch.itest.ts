@@ -82,10 +82,43 @@ describe('сторож канала к модели', () => {
     expect(mail.sent).toHaveLength(1)
   })
 
+  // Отказы могут просто состариться и выпасть из окна свежести, а звать модель с тех пор
+  // было некому. Пустой хвост — не доказательство, что канал ожил.
+  it('без успешного вызова «восстановлен» не объявляем', async () => {
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 30 - i })
+    await runAiWatchSweep()
+    // Отказы уехали за окно свежести, новых вызовов не было.
+    await db.execute(sql`update ${aiUsage} set created_at = now() - interval '30 hours'`)
+
+    const res = await runAiWatchSweep()
+
+    expect(res.verdict).toBe('ok')
+    expect(mail.sent).toHaveLength(1) // только первая тревога
+  })
+
+  // Второй обрыв в те же сутки — отдельное событие. Пока ключом был календарный день,
+  // о нём владелец не узнавал до полуночи.
+  it('канал лёг, ожил и лёг снова в те же сутки — две тревоги, а не одна', async () => {
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 300 - i })
+    await runAiWatchSweep()
+    await call('ok') // успешный вызов ПОСЛЕ тревоги — это и есть доказательство
+    await runAiWatchSweep() // «восстановлен»
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error') // второй обрыв — ПОСЛЕ удачного вызова
+
+    const res = await runAiWatchSweep()
+
+    expect(res.verdict).toBe('down')
+    expect(mail.sent.map((m) => m.subject)).toEqual([
+      expect.stringContaining('не отвечает'),
+      expect.stringContaining('восстановлен'),
+      expect.stringContaining('не отвечает'),
+    ])
+  })
+
   it('после тревоги канал вернулся — говорим и об этом', async () => {
     for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 30 - i })
     await runAiWatchSweep()
-    await call('ok', { minutesAgo: 1 })
+    await call('ok') // прошёл ПОСЛЕ тревоги: раньше неё он ничего не доказывает
 
     const res = await runAiWatchSweep()
 
