@@ -70,9 +70,14 @@ async function pull(repo: string, source: 'releases' | 'merged'): Promise<Pulled
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
   }).catch(() => null)
-  if (!res || !res.ok) return []
+  // «Не смогли получить» и «получили пусто» — РАЗНЫЕ исходы, и раньше оба схлопывались
+  // в пустой массив. Из-за этого недоступный GitHub, 404 и битый JSON записывались в
+  // журнал как «нечего добавлять»: серия ошибок не набиралась, предохранитель не срывался,
+  // а публичный changelog тихо устаревал. Замечание авто-ревью на fe#800 (P2).
+  if (!res) throw new Error(`changelog: ${repo} недоступен`)
+  if (!res.ok) throw new Error(`changelog: ${repo} ответил ${res.status}`)
   const data = (await res.json().catch(() => null)) as unknown
-  if (!Array.isArray(data)) return []
+  if (!Array.isArray(data)) throw new Error(`changelog: ${repo} вернул не список`)
 
   if (source === 'releases') {
     return data
@@ -141,17 +146,29 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
    * `hasActions('changelog')` оставался бы ложным месяцами и петля выглядела бы никогда не
    * работавшей. Замечание авто-ревью на fe#800 (P2).
    */
-  const след = (status: AgentActionInput['resultStatus'], decision: Record<string, unknown>) =>
+  const след = (status: AgentActionInput['resultStatus'], decision: Record<string, unknown>, error?: string) =>
     recordAgentAction({
       loop: 'changelog',
       action: 'changelog.refresh',
       resultStatus: status,
       decision: { repo: s.repo, source: s.source, translate: s.translate, ...decision },
       resultRef: s.repo.slice(0, 300),
+      error,
       policyVersion: loop.policyVersion,
     })
 
-  const items = await pull(s.repo, s.source)
+  // Источник у этой петли ОДИН: он не ответил — работать не с чем, и это отказ, а не
+  // «нечего добавлять». У сборщика лент противоположный случай (источников много, один
+  // мёртвый не повод гасить петлю), поэтому там такой сбой пишется как 'skipped'.
+  let items
+  try {
+    items = await pull(s.repo, s.source)
+  } catch (e) {
+    const причина = e instanceof Error ? e.message : String(e)
+    await след('error', { reason: 'fetch failed' }, причина)
+    captureError(e, { where: 'changelog.pull' })
+    return { added: 0, skipped: 'fetch failed' }
+  }
   if (items.length === 0) {
     await след('skipped', { reason: 'nothing pulled' })
     return { added: 0, skipped: 'nothing pulled' }
