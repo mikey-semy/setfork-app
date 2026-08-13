@@ -19,6 +19,15 @@ const ROWS = 7
 const PROVIDER_LABEL: Record<string, string> = { openrouter: 'OpenRouter', yandex: 'Yandex v2 🇷🇺' }
 const providerLabel = (provider: string) => PROVIDER_LABEL[provider] ?? provider
 
+/** Что сказать про мерность цели. Число берём РОДНОЕ (targetNativeDim), а не target.dim:
+ *  у модели шире колонки второе уже урезано, и усечение выглядело бы точным попаданием. */
+function targetDimText(space: NonNullable<SpaceInfo>, lang: Lang): string {
+  const native = space.targetNativeDim
+  if (native === null) return t('admin.targetDimUnknown', lang).replace('{c}', String(space.columnDim))
+  const key = native > space.columnDim ? 'admin.targetDimTruncated' : 'admin.targetDimMeasured'
+  return t(key, lang).replace('{d}', String(native)).replace('{c}', String(space.columnDim))
+}
+
 /** Переиндексация эмбеддингов: прогресс сеткой-прямоугольником (как контрибуции
  *  на GitHub) — клетки наполняются долей прогресса; серый — ждёт, красный — ошибка. */
 export function ReindexPanel({ lang }: { lang: Lang }) {
@@ -168,11 +177,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
               стояло вписанное руками «· 1536» при колонке 768). Здесь — измеренный факт
               для текущей цели, а пока не измерен — так и сказано. */}
           <p className="mt-1.5 text-[0.78125rem] text-muted">
-            {space.targetMeasured
-              ? t('admin.targetDimMeasured', lang)
-                  .replace('{d}', String(space.target.dim))
-                  .replace('{c}', String(space.columnDim))
-              : t('admin.targetDimUnknown', lang).replace('{c}', String(space.columnDim))}
+            {targetDimText(space, lang)}
           </p>
         </div>
       )}

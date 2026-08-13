@@ -338,8 +338,10 @@ export async function getEmbedSpaceInfo(): Promise<{
   target: { provider: string; docModel: string; docLabel: string; dim: number }
   /** ПОТОЛОК колонки embeddings.embedding — числом ИЗ СХЕМЫ: вписанное руками разъезжается. */
   columnDim: number
-  /** Мерность цели известна измерением, а не взята потолком (панель не выдаёт догадку за факт). */
-  targetMeasured: boolean
+  /** РОДНАЯ мерность модели цели (до ограничения колонкой); null = ещё не измерена.
+   *  Панель показывает именно её: у модели шире колонки target.dim уже урезан, и на нём
+   *  усечение выглядело бы как точное попадание. */
+  targetNativeDim: number | null
   /** Какие провайдеры вообще бывают — список пунктов селекта родом отсюда. */
   providers: string[]
   inSync: boolean
@@ -355,7 +357,7 @@ export async function getEmbedSpaceInfo(): Promise<{
   ])
   // measure=false: панель опрашивает это раз в 1.5 с — проба у провайдера здесь была бы
   // сетевым вызовом на каждый тик. Меряем при сохранении модели и при старте реиндекса.
-  const { index, target, inSync, targetMeasured } = await ensureFreshSpace()
+  const { index, target, inSync, targetNativeDim } = await ensureFreshSpace()
   const [stats] = await db
     .select({
       rows: sql<number>`count(*)::int`,
@@ -366,7 +368,7 @@ export async function getEmbedSpaceInfo(): Promise<{
     index: { provider: index.provider, docModel: index.docModel, docLabel: prettyModelName(index.docModel), dim: index.dim, at: index.at },
     target: { provider: target.provider, docModel: target.docModel, docLabel: prettyModelName(target.docModel), dim: target.dim },
     columnDim: COLUMN_DIM,
-    targetMeasured,
+    targetNativeDim,
     providers: [...EMBED_PROVIDERS],
     inSync,
     rows: stats?.rows ?? 0,

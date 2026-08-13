@@ -1957,6 +1957,7 @@ export const en = {
   'admin.removedOrphaned': 'Removed orphaned: {n}',
   'admin.targetChanged': 'Target changed: {p} ({d}-dim) — run a reindex to rebuild. Old vectors will be wiped.',
   'admin.targetDimMeasured': 'The model returns {d}-dim vectors; the column holds up to {c}.',
+  'admin.targetDimTruncated': 'The model returns {d}-dim vectors — we take a {c}-dim slice (that is what the column holds).',
   'admin.targetDimUnknown': 'The model dimension is not measured yet — we learn it on the first call or reindex; the column holds up to {c}.',
   'admin.inMin': 'In {n} min',
   'dig.mineN': 'Mine: {n}',

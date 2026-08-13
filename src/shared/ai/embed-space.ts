@@ -140,12 +140,23 @@ async function nativeDimOf(space: EmbedSpace, measure: boolean): Promise<number 
   return cap?.dim ?? null
 }
 
-/** Целевое пространство (что выбрано в админке; реиндекс переводит индекс в него).
- *  Меряет модель пробой, если факта ещё нет. */
-export async function getTargetSpace(): Promise<EmbedSpace> {
+/** Цель + родная мерность её модели одним чтением настроек. */
+async function targetWithNative(measure: boolean): Promise<{ space: EmbedSpace; native: number | null }> {
   const m = await readSpaceSettings()
-  const base = resolveTargetSpace(m)
-  return resolveTargetSpace(m, process.env, await nativeDimOf(base, true))
+  const native = await nativeDimOf(resolveTargetSpace(m), measure)
+  return { space: resolveTargetSpace(m, process.env, native), native }
+}
+
+/**
+ * Целевое пространство (что выбрано в админке; реиндекс переводит индекс в него).
+ *
+ * БЕЗ пробы: чтение цели не должно ходить в сеть. Сохранение настроек зовёт это первым
+ * делом и лишь потом меряет модель под своим 5-секундным потолком — проба, спрятанная
+ * здесь, обошла бы этот потолок и держала бы сохранение до 20 с на каждый HTTP-таймаут
+ * (находка авто-ревью). Мерят те, кто принимает решение: saveAiSettings и реиндекс.
+ */
+export async function getTargetSpace(): Promise<EmbedSpace> {
+  return (await targetWithNative(false)).space
 }
 
 /** Зафиксировать пространство индекса (вызывается при СТАРТЕ полного реиндекса). */
@@ -186,14 +197,21 @@ export function sameSpace(a: EmbedSpace, b: EmbedSpace): boolean {
  * `targetMeasured` = мерность цели известна фактом, а не взята потолком колонки;
  * панель на этом говорит «не измерено» вместо красивого, но выдуманного числа.
  */
-export async function ensureFreshSpace(
-  measure = false,
-): Promise<{ index: EmbedSpace; target: EmbedSpace; inSync: boolean; targetMeasured: boolean }> {
+export async function ensureFreshSpace(measure = false): Promise<{
+  index: EmbedSpace
+  target: EmbedSpace
+  inSync: boolean
+  /** РОДНАЯ мерность модели цели до ограничения колонкой; null = ещё не измерена.
+   *  Отдаётся отдельно от target.dim: у модели шире колонки они расходятся, и панель
+   *  обязана показать именно родную — иначе усечение, о котором она предупреждает,
+   *  становится невидимым (находка авто-ревью). */
+  targetNativeDim: number | null
+}> {
   const m = await readSpaceSettings()
   const index =
     parseIndexSpace(m[EMBED_SPACE_SETTING]) ??
     resolveTargetSpace({ ...m, [EMBED_TARGET_SETTING]: 'openrouter' })
   const native = await nativeDimOf(resolveTargetSpace(m), measure)
   const target = resolveTargetSpace(m, process.env, native)
-  return { index, target, inSync: sameSpace(index, target), targetMeasured: native !== null }
+  return { index, target, inSync: sameSpace(index, target), targetNativeDim: native }
 }
