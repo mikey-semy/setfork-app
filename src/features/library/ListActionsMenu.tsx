@@ -10,7 +10,10 @@ import { buttonClass } from '@/shared/ui/button-style'
 import { TOUCH_BOX } from '@/shared/ui/control'
 import { LANG_META, t, type Lang } from '@/shared/i18n'
 import { toast } from '@/shared/ui/toast'
-import { publishList, translateList } from './actions'
+// Прямые модули, а не фасад './actions': бочка тянет в клиентский бандл все
+// экшены библиотеки разом (react-doctor/no-barrel-import).
+import { publishList } from './actions/versions'
+import { translateList } from './actions/ai'
 
 /**
  * Вторичные действия панели списка: правка, перевод, публикация черновика.
