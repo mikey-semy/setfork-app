@@ -45,28 +45,26 @@ export interface MoveResult {
 }
 
 /**
- * Свои и ПРАВИМЫЕ списки из присланного набора — единственный источник правды о том, что
- * пачке позволено трогать.
+ * Условие «этот список пачке трогать можно»: он твой и он правим.
  *
- * Владение проверяется запросом, а не доверием к присланному. Архив и заморозка отсекаются
- * здесь же: полка — это свойство списка, а у архивного списка свойства не меняются вовсе
- * (`canEditList`); пачка не может быть лазейкой мимо запрета, который держит одиночная
- * правка (находка авто-ревью).
+ * Живёт ОДНИМ выражением и подставляется и в отбор, и в каждую запись. Проверка «сначала
+ * посмотрели, потом пишем» защищает ровно до первой гонки: пока пачка идёт по списку,
+ * получатель успевает принять передачу прав, и прежний владелец допишет уже чужой список
+ * (находка авто-ревью). Условие в самом запросе такого окна не оставляет.
+ *
+ * Архив и заморозка здесь же: полка — свойство списка, а у архивного свойства не меняются
+ * вовсе (`canEditList`), и пачка не может быть лазейкой мимо запрета, который держит
+ * одиночная правка.
  */
+function editable(userId: string, ids: string[]) {
+  return and(eq(templates.ownerId, userId), inArray(templates.id, ids), isNull(templates.archivedAt), isNull(templates.frozenAt))
+}
+
+/** Списки из присланного набора, которые пачке позволено трогать. */
 async function ownIds(userId: string, ids: string[]): Promise<string[]> {
   const clean = [...new Set(ids.filter(Boolean))].slice(0, BULK_MAX)
   if (!clean.length) return []
-  const rows = await db
-    .select({ id: templates.id })
-    .from(templates)
-    .where(
-      and(
-        eq(templates.ownerId, userId),
-        inArray(templates.id, clean),
-        isNull(templates.archivedAt),
-        isNull(templates.frozenAt),
-      ),
-    )
+  const rows = await db.select({ id: templates.id }).from(templates).where(editable(userId, clean))
   return rows.map((r) => r.id)
 }
 
@@ -96,19 +94,19 @@ export async function bulkSetCatalog(ids: string[], catalogName: string | null):
   // правка содержимого; иначе разложил пятьсот списков — и все пятьсот всплыли в лентах «по
   // обновлению» с сегодняшней датой, хотя ни одна буква в них не изменилась.
   const before = await db.transaction(async (tx) => {
-    const rows = await tx
-      .select({ id: templates.id, repositoryId: templates.repositoryId })
-      .from(templates)
-      .where(inArray(templates.id, mine))
-      .for('update')
-    await tx.update(templates).set({ repositoryId: targetId }).where(inArray(templates.id, mine))
+    // Условие повторяется и под замком: между отбором и транзакцией список успевает сменить
+    // владельца, и без него мы заперли бы уже чужую строку и положили её на свою полку.
+    const rows = await tx.select({ id: templates.id, repositoryId: templates.repositoryId }).from(templates).where(editable(session.userId, mine)).for('update')
+    if (!rows.length) return rows
+    await tx.update(templates).set({ repositoryId: targetId }).where(editable(session.userId, rows.map((r) => r.id)))
     return rows
   })
   revalidatePath(`/${session.handle}`)
 
   const groups = new Map<string | null, string[]>()
   for (const row of before) groups.set(row.repositoryId, [...(groups.get(row.repositoryId) ?? []), row.id])
-  return { changed: mine.length, restore: [...groups].map(([catalogId, ids]) => ({ catalogId, ids })) }
+  // Считаем по тому, что реально заперли и записали, а не по намерению.
+  return { changed: before.length, restore: [...groups].map(([catalogId, ids]) => ({ catalogId, ids })) }
 }
 
 /**
@@ -154,8 +152,8 @@ export async function bulkRestoreCatalog(groups: RestoreGroup[]): Promise<{ chan
             .limit(1)
         )[0]?.id ?? null
       : null
-    await db.update(templates).set({ repositoryId: catalogId }).where(inArray(templates.id, ids))
-    changed += ids.length
+    const back = await db.update(templates).set({ repositoryId: catalogId }).where(editable(session.userId, ids)).returning({ id: templates.id })
+    changed += back.length
   }
   revalidatePath(`/${session.handle}`)
   return { changed }

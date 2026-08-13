@@ -317,6 +317,22 @@ describe('публикация пачкой', () => {
     expect((await rowOf(second)).status).toBe('draft')
   })
 
+  it('уехавший по передаче прав список прежний владелец не публикует', async () => {
+    // Передача прав принимается получателем, пока пачка идёт по списку. Без проверки
+    // владельца в самой записи прежний владелец опубликовал бы уже ЧУЖОЙ черновик.
+    const first = await seed({ status: 'draft', visibility: 'public' })
+    const second = await seed({ status: 'draft', visibility: 'public' })
+    const mod = await import('@/features/moderation/moderate-list')
+    vi.spyOn(mod, 'gateListPublication').mockImplementation(async () => {
+      await db.update(templates).set({ ownerId: otherId }).where(eq(templates.id, second))
+    })
+
+    await bulkPublish([first, second], false)
+    vi.restoreAllMocks()
+
+    expect((await rowOf(second)).status).toBe('draft')
+  })
+
   it('архивное и замороженное не публикуется даже адресно', async () => {
     // Пакетное действие отсекало такое своим отбором, но MCP и кнопка адресуют список
     // напрямую — проверка обязана стоять в общем слое публикации.
