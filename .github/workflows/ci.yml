@@ -626,12 +626,56 @@ jobs:
               }
             }
 
+            // ПОРОГ ПО ВОЗРАСТУ ОТСТАВАНИЯ, а не «упало — кричим».
+            //
+            // Тревога срабатывала с первого красного прогона и гасла сама: 10–11.08
+            // это дало четыре срабатывания за двое суток (#729, #736, #742, #746),
+            // три закрылись автоматически. Сигнал, который загорается дважды в день
+            // и гаснет сам, перестают читать — и настоящая остановка доставки тонет
+            // среди флейковых. R6 линзы 08.
+            //
+            // Порог взят из РАСПРЕДЕЛЕНИЯ, а не с потолка: 91 выкатка за 30.07–13.08
+            // дала медиану интервала 1,4 ч, p90 = 7,1 ч, p95 = 12,9 ч. Дольше шести
+            // часов длились 12 интервалов из 90 (13%), и почти все — ночные паузы,
+            // когда master и не уходил вперёд. Значит отставание до шести часов —
+            // рабочая норма, а не происшествие.
+            const STALE_HOURS = Number(process.env.STALE_ALERT_HOURS || 6)
+            const { data: live } = await github.rest.repos.listDeployments({
+              ...context.repo, environment: 'production', per_page: 20,
+            })
+            let lastOk = null
+            for (const d of live) {
+              const { data: st } = await github.rest.repos.listDeploymentStatuses({
+                ...context.repo, deployment_id: d.id, per_page: 1,
+              })
+              if (st[0]?.state === 'success') { lastOk = d; break }
+            }
+            const ageH = lastOk ? (Date.now() - Date.parse(lastOk.created_at)) / 3.6e6 : Infinity
+            if (ageH < STALE_HOURS) {
+              return core.notice(
+                `CI красный, но прод свеж: последняя выкатка ${ageH.toFixed(1)} ч назад (порог ${STALE_HOURS} ч) — тревогу не заводим`,
+              )
+            }
+
+            // Сколько коммитов не уехало — это и есть мера отставания, понятная без
+            // чтения логов (R6 просил показывать её прямо в тексте).
+            let behind = '?'
+            try {
+              const cmp = await github.rest.repos.compareCommitsWithBasehead({
+                ...context.repo, basehead: `${lastOk?.sha ?? sha}...${tip}`,
+              })
+              behind = String(cmp.data.ahead_by)
+            } catch { /* сравнение не критично: тревога важнее точного числа */ }
+
             const failed = [['check', process.env.R_CHECK], ['integration', process.env.R_INTEGRATION]]
               .filter(([, r]) => r !== 'success')
               .map(([n]) => n)
               .join(', ')
             const body = [
-              `CI на master не прошёл на \`${sha.slice(0, 7)}\` — деплой пропущен, прод остался на прошлом коммите.`,
+              `CI на master не прошёл на \`${sha.slice(0, 7)}\` — деплой пропущен.`,
+              '',
+              `**Прод отстаёт ${ageH === Infinity ? 'неизвестно сколько' : ageH.toFixed(1) + ' ч'}**, не уехало коммитов: **${behind}**.`,
+              `Порог тревоги ${STALE_HOURS} ч выбран по распределению: медиана между выкатками 1,4 ч, p90 = 7,1 ч.`,
               '',
               `Упало: **${failed || 'неизвестно'}**. Прогон: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               '',
