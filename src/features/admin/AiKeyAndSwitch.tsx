@@ -6,8 +6,8 @@ import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
-import { buttonClass } from '@/shared/ui/button-style'
-import { TOUCH_HIT } from '@/shared/ui/control'
+import { Input } from '@/shared/ui/input'
+import { IconButton } from '@/shared/ui/IconButton'
 
 export type AiProviderChoice = 'openrouter' | 'selectel' | 'yandex' | 'gigachat'
 export type KeySource = 'db' | 'env' | 'none'
@@ -64,8 +64,6 @@ export function AiKeyAndSwitch({
   const canEnable = hasKey[prov] || keyInput.trim().length > 0
   const checked = on && canEnable
 
-  const inputCls =
-    'w-full rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[0.8125rem] text-ink outline-hidden focus:border-border-strong'
 
   const KEY_FIELD: Record<AiProviderChoice, { label: string; placeholder: string; name: string }> = {
     openrouter: { label: t('admin.openRouterApiKey', lang), placeholder: 'sk-or-v1-…', name: 'apiKey' },
@@ -159,28 +157,36 @@ export function AiKeyAndSwitch({
         htmlFor="ai-api-key"
         hint={KEY_HINT[keySources[prov]]}
       >
-        <div className="relative">
-          <input
-            key={prov} // смена провайдера сбрасывает поле, а не тащит чужой ключ
-            id="ai-api-key"
-            name={field.name}
-            type={reveal ? 'text' : 'password'}
-            value={keyInput}
-            onChange={(e) => setKeyInput(e.target.value)}
-            placeholder={hasKey[prov] ? maskedKeys[prov] || '••••••••' : field.placeholder}
-            autoComplete="off"
-            spellCheck={false}
-            className={`${inputCls} pr-10`}
-          />
-          <button
-            type="button"
-            aria-label={reveal ? 'hide' : 'show'}
-            onClick={() => setReveal((v) => !v)}
-            className={buttonClass({ variant: 'ghost', size: 'sm', className: `absolute right-2 top-1/2 size-7 -translate-y-1/2 p-0 ${TOUCH_HIT}` })}
-          >
-            {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
-          </button>
-        </div>
+        <Input
+          key={prov} // смена провайдера сбрасывает поле, а не тащит чужой ключ
+          id="ai-api-key"
+          name={field.name}
+          type={reveal ? 'text' : 'password'}
+          value={keyInput}
+          onChange={(e) => setKeyInput(e.target.value)}
+          placeholder={hasKey[prov] ? maskedKeys[prov] || '••••••••' : field.placeholder}
+          autoComplete="off"
+          spellCheck={false}
+          className="font-mono"
+          // Глаз показываем ТОЛЬКО когда есть что показывать — то есть когда ключ
+          // набрали прямо сейчас. Сохранённый ключ в браузер не уезжает вовсе (на
+          // месте плейсхолдера стоит маска), и переключать `type` у ПУСТОГО поля
+          // бессмысленно: кнопка нажимается, а не показывает ничего (жалоба
+          // владельца 13.08.2026).
+          trailing={
+            keyInput.length > 0 ? (
+              <IconButton
+                size="sm"
+                variant="ghost"
+                touch="hit"
+                label={reveal ? t('admin.hideKey', lang) : t('admin.showKey', lang)}
+                onClick={() => setReveal((v) => !v)}
+              >
+                {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
+              </IconButton>
+            ) : undefined
+          }
+        />
       </Field>
 
       {prov === 'yandex' && (
@@ -189,14 +195,7 @@ export function AiKeyAndSwitch({
             label={t('admin.yandexCloudFolderId', lang)}
             hint={t('admin.fromConsoleUrlAistudio', lang)}
           >
-            <input
-              name="yandexFolder"
-              defaultValue={yandexFolder}
-              placeholder="b1g…"
-              autoComplete="off"
-              spellCheck={false}
-              className={inputCls}
-            />
+            <Input name="yandexFolder" defaultValue={yandexFolder} placeholder="b1g…" autoComplete="off" spellCheck={false} className="font-mono" />
           </Field>
           {/* Веб-гора: ОТДЕЛЬНЫЙ ключ Yandex Search API (не чат-ключ). Пусто →
               веб-разведчик совета молча пропускается, а не выдумывает прецеденты. */}
@@ -205,14 +204,7 @@ export function AiKeyAndSwitch({
             label={t('admin.yandexSearchApiKey', lang)}
             hint={t('admin.separatePaidServiceActivate', lang)}
           >
-            <input
-              name="yandexSearchKey"
-              defaultValue=""
-              placeholder={searchKeyMasked || 'AQVN…'}
-              autoComplete="off"
-              spellCheck={false}
-              className={inputCls}
-            />
+            <Input name="yandexSearchKey" defaultValue="" placeholder={searchKeyMasked || 'AQVN…'} autoComplete="off" spellCheck={false} className="font-mono" />
           </Field>
         </div>
       )}

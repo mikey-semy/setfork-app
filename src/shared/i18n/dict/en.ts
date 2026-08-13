@@ -1395,6 +1395,8 @@ export const en = {
   'admin.heldYou': 'Held for you',
   'admin.heroImage': 'Hero image',
   'admin.hiringFailedModelDid': 'Hiring failed — the model did not return a valid profile. Try again.',
+  'admin.showKey': 'Show key',
+  'admin.hideKey': 'Hide key',
   'admin.hiringSignalGeneralistKeeps': 'Hiring signal: the generalist keeps covering these topics',
   'admin.hours': 'Hours',
   'admin.humanEdits': 'Human edits',
