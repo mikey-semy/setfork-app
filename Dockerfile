@@ -12,7 +12,17 @@ COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 # ── builder: сборка standalone ──
+# NEXT_PUBLIC_* вшиваются в бандл ЗДЕСЬ и потом не меняются: рантайм-подстановки
+# у них нет. Пока образ собирался на прод-сервере, значения брались из его .env;
+# со сборкой в CI их надо передать явно — иначе аналитика и абсолютные ссылки
+# уедут пустыми, причём молча.
 FROM base AS builder
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_UMAMI_URL
+ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_UMAMI_URL=$NEXT_PUBLIC_UMAMI_URL \
+    NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
