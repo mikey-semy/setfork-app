@@ -273,7 +273,12 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
     // приезжает из БД через toEditorItems. D4 линзы 05.
     .map((p, i) => {
       const kept_i = kept[i]
-      const column = kept_i.blockId || (isBlockUuid(kept_i.bid) ? kept_i.bid : newBlockId())
+      // Оба источника проверяем на uuid: колонка `steps.block_id` типа uuid, а
+      // значения приходят и снаружи (скрытое поле формы, API, импорт) — любое
+      // нераспознанное уронило бы вставку шагов, а у черновика она идёт ПОСЛЕ
+      // удаления старых, то есть список остался бы пустым. Замечание авто-ревью.
+      const fromColumn = isBlockUuid(kept_i.blockId ?? '') ? kept_i.blockId! : ''
+      const column = fromColumn || (isBlockUuid(kept_i.bid) ? kept_i.bid : newBlockId())
       return { ...p, blockId: column }
     })
 }

@@ -377,3 +377,19 @@ describe('путь через форму сохраняет обе иденти�
     expect(saved.blockId).toBe('11111111-2222-3333-4444-555555555555')
   })
 })
+
+// Колонка `steps.block_id` типа uuid, а значения приходят снаружи: скрытое поле
+// формы, API, импорт. Нераспознанное значение уронило бы вставку шагов, а у
+// черновика она идёт ПОСЛЕ удаления старых — список остался бы пустым.
+// Замечание авто-ревью на fe#780.
+describe('в колонку идентичности попадает только uuid', () => {
+  it('подделанный blockId из формы не доезжает до колонки', () => {
+    const serialized = JSON.stringify([
+      { type: 'text', bid: 'legacy-42', blockId: '../../etc/passwd', text: 'Текст', section: '' },
+    ])
+    const [saved] = toProposedItems(parseEditorItems(serialized), 'ru')
+    expect(saved.blockId, 'не-uuid обязан быть заменён').toMatch(/^[0-9a-f-]{36}$/)
+    expect(saved.blockId).not.toBe('../../etc/passwd')
+    expect(saved.content?.bid, 'алиас при этом сохраняется как есть').toBe('legacy-42')
+  })
+})
