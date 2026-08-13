@@ -27,7 +27,7 @@ export async function findExistingNearDuplicate(
   // Кандидаты: публичные живые списки по пересечению тегов + все свои (свои сравниваем
   // всегда — повторно генерировать себе же одно и то же обиднее всего).
   const alive = and(sql`${templates.archivedAt} is null`, opts.excludeId ? sql`${templates.id} <> ${opts.excludeId}` : sql`true`)
-  const pick = { id: templates.id, title: templates.title, currentVersion: templates.currentVersion }
+  const pick = { id: templates.id, title: templates.title, tags: templates.tags, currentVersion: templates.currentVersion }
 
   // ДВА запроса вместо одного с общим лимитом. Раньше стоял `limit(40)` БЕЗ сортировки:
   // у кого больше сорока подходящих списков (а это ровно сценарий массовой генерации,
@@ -77,6 +77,9 @@ export async function findExistingNearDuplicate(
     id: r.id,
     title: Object.values((r.title ?? {}) as Record<string, string>).find(Boolean) ?? '',
     items: itemsByTemplate.get(r.id) ?? [],
+    // Теги кандидата нужны сравнению темы: без них у соседей по жанру тема считалась бы
+    // по одному заголовку и правило «тема против шагов» теряло бы половину сигнала.
+    tags: r.tags ?? [],
   }))
   return findNearDuplicate(fresh, candidates)
 }

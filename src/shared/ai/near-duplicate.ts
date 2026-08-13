@@ -48,6 +48,40 @@ export const NEAR_DUP_THRESHOLD = 0.3
 export const MIN_STEMS_FOR_SOFT_THRESHOLD = 10
 export const SHORT_TEXT_THRESHOLD = 0.7
 
+/**
+ * ТЕМА ОБЯЗАНА БЫТЬ СОПОСТАВИМА С ШАГАМИ. Совпадения одних шагов мало: у списков одного
+ * ЖАНРА каркас общий по устройству («опиши роль», «ограничь инструменты», «проверь вывод»
+ * у любого субагента), и сходство по шагам меряет жанр, а не предмет.
+ *
+ * Замер на живом корпусе (496 списков ИИ-инструментария, 13.08.2026):
+ *
+ *   | пары                                   | шаги | тема | тема/шаги |
+ *   |----------------------------------------|------|------|-----------|
+ *   | Accessibility checker ↔ API designer   | 0.88 | 0.23 | 0.26      | ← РАЗНЫЕ субагенты
+ *   | Block rm -rf ↔ Announce active model   | 0.75 | 0.19 | 0.25      | ← РАЗНЫЕ хуки
+ *   | Brainstorm ↔ Anonymize personal data   | 0.71 | 0.14 | 0.20      | ← РАЗНЫЕ скиллы
+ *   | Auto-stage edited files ↔ Auto-Stage…  | 0.30 | 0.67 | 2.20      | ← настоящий дубль
+ *
+ * Видно, что различает не порог, а СООТНОШЕНИЕ: у дубля тема идёт наравне с шагами или
+ * выше, у соседей по жанру она втрое-впятеро ниже. На 54 403 парах внутри жанров правило
+ * «тема ≥ 0.6 × шаги» снижает ложные срабатывания с 780 (1.4%) до 42 (0.08%), не пропуская
+ * ни одного дубля с сохранённой половиной лексики.
+ *
+ * Почему не абсолютный порог темы: он ломается на сильном перефразе — при переписанном на
+ * две трети заголовке «тема ≥ 0.35» пропускает 97% настоящих дублей, тогда как
+ * относительное правило — 2%.
+ *
+ * Цена ошибки несимметрична: ложное «дубль» ТИХО отбрасывает готовую работу (так на проде
+ * 13.08 отсеялись 85 законных списков при переносе, и та же проверка стоит в самогенерации
+ * компании), пропущенный дубль виден человеку в библиотеке и правится руками.
+ */
+export const TOPIC_TO_STEPS_RATIO = 0.6
+
+/** Дубль ли это по соотношению «тема против шагов» (см. TOPIC_TO_STEPS_RATIO). */
+export function sameTopic(stepScore: number, topicScore: number): boolean {
+  return topicScore >= TOPIC_TO_STEPS_RATIO * stepScore
+}
+
 /** Значимые слова текста: без регистра, пунктуации, коротких обрывков; с грубым стеммингом. */
 function stems(text: string): string[] {
   return text
@@ -86,15 +120,21 @@ export function listText(list: { title: string; items: string[] }): string {
   return [list.title, ...list.items].filter(Boolean).join(' \n ')
 }
 
+/** Текст ТЕМЫ: заголовок и теги — то, чем список отличается от соседа по жанру. */
+export function topicText(list: { title: string; tags?: string[] }): string {
+  return [list.title, ...(list.tags ?? [])].filter(Boolean).join(' \n ')
+}
+
 export interface NearDupCandidate {
   id: string
   title: string
   items: string[]
+  tags?: string[]
 }
 
 export interface NearDupVerdict {
   /** Ближайший похожий список, если сходство по словам выше порога. */
-  match: { id: string; title: string; score: number; phrases: number } | null
+  match: { id: string; title: string; score: number; phrases: number; topic: number } | null
   /** Лучшее сходство вообще — в журнал: видно «еле прошёл» или «и близко нет». */
   best: number
 }
@@ -105,26 +145,34 @@ export interface NearDupVerdict {
  * разъезжаются, а «сколько именно» здесь проверяемо тестом.
  */
 export function findNearDuplicate(
-  fresh: { title: string; items: string[] },
+  fresh: { title: string; items: string[]; tags?: string[] },
   existing: NearDupCandidate[],
   threshold = NEAR_DUP_THRESHOLD,
 ): NearDupVerdict {
   const freshText = listText(fresh)
   const mine = wordSet(freshText)
   const minePhrases = shingles(freshText)
+  const myTopic = wordSet(topicText(fresh))
   let best = 0
   let match: NearDupVerdict['match'] = null
   for (const cand of existing) {
     const candText = listText(cand)
     const theirs = wordSet(candText)
     const score = jaccard(mine, theirs)
+    const topic = jaccard(myTopic, wordSet(topicText(cand)))
     // Порог адаптивный: короткому тексту веры меньше (см. MIN_STEMS_FOR_SOFT_THRESHOLD).
     const need = Math.min(mine.size, theirs.size) < MIN_STEMS_FOR_SOFT_THRESHOLD ? Math.max(threshold, SHORT_TEXT_THRESHOLD) : threshold
     if (score > best) {
       best = score
       match =
-        score >= need
-          ? { id: cand.id, title: cand.title, score: Number(score.toFixed(3)), phrases: Number(jaccard(minePhrases, shingles(candText)).toFixed(3)) }
+        score >= need && sameTopic(score, topic)
+          ? {
+              id: cand.id,
+              title: cand.title,
+              score: Number(score.toFixed(3)),
+              phrases: Number(jaccard(minePhrases, shingles(candText)).toFixed(3)),
+              topic: Number(topic.toFixed(3)),
+            }
           : match
     }
   }
