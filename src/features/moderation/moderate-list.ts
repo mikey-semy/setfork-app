@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, ne, notInArray, sql } from 'drizzle-orm'
 import { db, jobs, steps, templates, templateVersions } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { captureError } from '@/shared/observability'
@@ -158,6 +158,10 @@ async function markCapped(templateId: string): Promise<void> {
  * иначе между insert и этим апдейтом список недоверенного автора публичен.
  */
 export async function gateListPublication(templateId: string): Promise<void> {
+  // Успел ли барьер сам решить «держим». От этого зависит, что делать при сбое ниже:
+  // решение состоялось — удержание законно и остаётся даже без очереди; не состоялось —
+  // держать нечем, и заранее выставленное вызывающим удержание надо снять.
+  let decided = false
   try {
     const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
     if (!tpl) return
@@ -185,11 +189,23 @@ export async function gateListPublication(templateId: string): Promise<void> {
     await db
       .update(templates)
       .set({ moderation: 'pending', moderationReason: null, moderationSeverity: 0 })
-      .where(eq(templates.id, templateId))
+      // Решение админа, принятое ПОКА гейт думал, не затираем: между чтением строки выше и
+      // этой записью список успевает быть снят, и безусловное «pending» вернуло бы снятое в
+      // очередь как обычное (находка авто-ревью).
+      .where(and(eq(templates.id, templateId), notInArray(templates.moderation, ['flagged', 'hidden'])))
+    decided = true
     if ((await enqueueModerate(templateId, true, tpl.ownerId)) === 'capped') await markCapped(templateId)
   } catch (e) {
-    // гейт не должен ронять публикацию; список остаётся active — но след оставляем
     captureError(e, { where: 'moderation.gate', templateId })
+    // Гейт не должен ронять публикацию. Вызывающий вправе поставить удержание ЗАРАНЕЕ
+    // (пакетная публикация так и делает, чтобы список не побыл видимым до решения), и если
+    // решение НЕ состоялось — снимаем: иначе сбой проверки навсегда прячет опубликованный
+    // список, а очередь модерации о нём не знает (находка авто-ревью).
+    //
+    // А вот когда решение состоялось и упала только постановка в очередь, удержание
+    // законно: список действительно не проверен, и снимать его нельзя — это давнее
+    // поведение, за ним следит отдельный тест про счёт доверия.
+    if (!decided) await releaseHold(templateId).catch(() => {})
   }
 }
 

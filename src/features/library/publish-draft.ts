@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
 import { publicationDecision } from '@/shared/moderation/publication-state'
 // eslint-disable-next-line boundaries/dependencies -- барьер модерации неотделим от публикации; мост держим ЗДЕСЬ одной точкой (как gitPort в actions/shared), а не по копии в каждом входе
@@ -170,6 +170,11 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
           // барьер для него пропустят, и публичным он стал бы БЕЗ проверки и навсегда
           // (находка авто-ревью, P1). Раз состояние изменилось — не публикуем вовсе.
           eq(templates.visibility, row.visibility),
+          // Архив и заморозку владелец успевает включить, пока пачка идёт: отбор их уже
+          // отсеял, но запись обязана проверить снова — иначе список уезжает в публикацию
+          // из состояния, в котором он read-only (находка авто-ревью).
+          isNull(templates.archivedAt),
+          isNull(templates.frozenAt),
           hold ? notInArray(templates.moderation, ['flagged', 'hidden']) : sql`true`,
         ),
       )

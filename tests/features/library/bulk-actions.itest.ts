@@ -333,6 +333,23 @@ describe('публикация пачкой', () => {
     expect((await rowOf(second)).status).toBe('draft')
   })
 
+  it('сбой барьера не оставляет список опубликованным и невидимым', async () => {
+    // Публичный список публикуется сразу с удержанием, а решение принимает барьер. Если
+    // барьер упал (сеть, модель, база), держать удержание некому: список опубликован,
+    // очередь о нём не знает, и владелец видит «опубликовано» при пустой странице.
+    // Историческое поведение — не ронять публикацию, поэтому удержание снимается.
+    const draft = await seed({ status: 'draft', visibility: 'public' })
+    const state = await import('@/shared/moderation/publication-state')
+    vi.spyOn(state, 'publicationDecision').mockRejectedValueOnce(new Error('провайдер недоступен'))
+
+    await bulkPublish([draft], false)
+    vi.restoreAllMocks()
+
+    const row = await rowOf(draft)
+    expect(row.status).toBe('published')
+    expect(row.moderation).toBe('active')
+  })
+
   it('архивное и замороженное не публикуется даже адресно', async () => {
     // Пакетное действие отсекало такое своим отбором, но MCP и кнопка адресуют список
     // напрямую — проверка обязана стоять в общем слое публикации.
