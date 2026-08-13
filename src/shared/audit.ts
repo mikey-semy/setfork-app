@@ -35,6 +35,10 @@ export type AuditAction =
   | 'passkey.login'
   | 'account.delete'
   | 'account.handle-change'
+  // Способы входа: привязка и отвязка провайдера к уже вошедшему аккаунту. В журнале
+  // обязательны оба — это изменение того, КТО может войти под этим профилем.
+  | 'auth.identity-link'
+  | 'auth.identity-unlink'
 
 export async function recordAudit(
   action: AuditAction,

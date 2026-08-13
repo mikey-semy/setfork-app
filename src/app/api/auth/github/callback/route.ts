@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 import { oauthEnabled } from '@/shared/auth/oauth'
 import { upsertGithubUser } from '@/shared/auth/users'
-import { finishOauthLogin } from '@/features/auth/oauth-finish'
+import { enterWithIdentity } from '@/features/auth/oauth-entry'
 import { appOrigin } from '@/shared/auth/app-origin'
 
 export async function GET(req: NextRequest) {
@@ -54,6 +54,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/login?e=oauth_user`)
   }
 
-  const session = await upsertGithubUser(gh)
-  return NextResponse.redirect(await finishOauthLogin(session, appUrl))
+  return NextResponse.redirect(await enterWithIdentity('github', gh.id, () => upsertGithubUser(gh), appUrl))
 }

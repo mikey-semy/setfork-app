@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Wrench } from 'lucide-react'
+import { AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, Link2, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Unlink, Wrench } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, type Lang, type TKey } from '@/shared/i18n'
@@ -38,6 +38,8 @@ const META: Record<AuditAction, { icon: typeof KeyRound; label: TKey; cls: strin
   'passkey.login': { icon: Fingerprint, label: 'audit.passkeyLogin', cls: 'text-ink-2' },
   'account.delete': { icon: Trash2, label: 'audit.accountDelete', cls: 'text-danger' },
   'account.handle-change': { icon: AtSign, label: 'audit.accountHandleChange', cls: 'text-warn' },
+  'auth.identity-link': { icon: Link2, label: 'audit.identityLink', cls: 'text-ok' },
+  'auth.identity-unlink': { icon: Unlink, label: 'audit.identityUnlink', cls: 'text-warn' },
 }
 
 function fmt(d: Date, lang: Lang): string {
