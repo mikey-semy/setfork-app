@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { db, telegramLoginTokens } from '@/shared/db'
 import { upsertOauthUser } from '@/shared/auth/users'
-import { finishOauthLogin } from '@/features/auth/oauth-finish'
+import { enterWithIdentity } from '@/features/auth/oauth-entry'
 import { rateLimit } from '@/shared/rate-limit'
 import { telegramLoginCode } from '@/shared/telegram'
 import { appOrigin } from '@/shared/auth/app-origin'
@@ -48,11 +48,11 @@ export async function POST(req: Request) {
   await db.delete(telegramLoginTokens).where(eq(telegramLoginTokens.id, row.id))
   c.delete('tg_login')
 
-  const session = await upsertOauthUser('telegram', {
+  const profile = {
     externalId: row.tgId,
     handleCandidates: [row.tgUsername, row.tgName, `tg${row.tgId}`],
     name: row.tgName,
     avatarUrl: null, // фото профиля тянуть через мост дорого; identicon-фолбэк
-  })
-  return NextResponse.json({ url: await finishOauthLogin(session, appUrl) })
+  }
+  return NextResponse.json({ url: await enterWithIdentity('telegram', row.tgId, () => upsertOauthUser('telegram', profile), appUrl) })
 }

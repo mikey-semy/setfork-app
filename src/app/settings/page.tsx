@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import { eq } from 'drizzle-orm'
-import { BarChart3, Bell, Fingerprint, KeyRound, Mail, Monitor, Palette, ShieldCheck, TriangleAlert, User, UserRoundPlus } from 'lucide-react'
+import { BarChart3, Bell, Fingerprint, KeyRound, Link2, Mail, Monitor, Palette, ShieldCheck, TriangleAlert, User, UserRoundPlus } from 'lucide-react'
 import { db, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { avatarSrc } from '@/shared/media'
@@ -15,6 +15,9 @@ import { ApiTokensSection } from '@/features/mcp/ApiTokensSection'
 import { SettingsForm } from '@/features/settings/SettingsForm'
 import { TwoFactorSection } from '@/features/settings/TwoFactorSection'
 import { PasskeysSection } from '@/features/settings/PasskeysSection'
+import { SignInMethods } from '@/features/auth/SignInMethods'
+import { IDENTITIES, IDENTITY_PROVIDERS, linkedProviders } from '@/shared/auth/identities'
+import { oauthEnabled } from '@/shared/auth/oauth'
 import { listPasskeys } from '@/features/auth/passkeys'
 import { EmailSection } from '@/features/settings/EmailSection'
 import { AppearanceSettings } from '@/features/settings/AppearanceSettings'
@@ -33,7 +36,7 @@ export async function generateMetadata() {
   return { title: t('settings', lang) }
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ link?: string }> }) {
   const session = await requireSession()
   const [lang, [user]] = await Promise.all([getLang(), db.select().from(users).where(eq(users.id, session.userId)).limit(1)])
   if (!user) {
@@ -52,6 +55,17 @@ export default async function SettingsPage() {
     headers(),
   ])
   const mcpUrl = `${appOrigin()}/api/mcp`
+  // Исход привязки приезжает в адресе после возврата от провайдера — показываем его
+  // в самой секции, а не гадаем, получилось ли.
+  const linkNotice = (await searchParams).link
+  const enabled = oauthEnabled()
+  const linked = linkedProviders(user)
+  const signInRows = IDENTITY_PROVIDERS.map((p) => ({
+    provider: p,
+    labelKey: IDENTITIES[p].labelKey,
+    linked: linked.includes(p),
+    available: enabled[p],
+  }))
 
   const sections: ShellSection[] = [
     // Секция появляется только при наличии входящих передач списков.
@@ -155,6 +169,17 @@ export default async function SettingsPage() {
           }
         >
           <TwoFactorSection enabled={user.totpEnabled} lang={lang} />
+        </SettingsSection>
+      ),
+    },
+    {
+      id: 'sign-in',
+      title: t('auth.signInMethods', lang),
+      icon: <Link2 size={15} />,
+      keywords: ['sign in', 'login', 'oauth', 'link', 'github', 'yandex', 'vk', 'telegram', 'вход', 'привязка', 'аккаунты', 'способы'],
+      content: (
+        <SettingsSection title={t('auth.signInMethods', lang)} hint={t('auth.signInMethodsIntro', lang)}>
+          <SignInMethods rows={signInRows} lang={lang} notice={linkNotice} />
         </SettingsSection>
       ),
     },

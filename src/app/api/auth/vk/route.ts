@@ -6,8 +6,13 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { oauthEnabled } from '@/shared/auth/oauth'
 import { appOrigin } from '@/shared/auth/app-origin'
+import { markLinkIntent } from '@/features/auth/oauth-entry'
 
-export async function GET() {
+export async function GET(req: Request) {
+  // Намерение объявляется на старте: возврат от провайдера сам по себе не говорит,
+  // входят под этой идентичностью или привязывают её к уже открытой сессии.
+  if (new URL(req.url).searchParams.get('intent') === 'link') await markLinkIntent()
+
   const appUrl = appOrigin()
   if (!oauthEnabled().vk) {
     return NextResponse.redirect(`${appUrl}/login?e=oauth_off`)

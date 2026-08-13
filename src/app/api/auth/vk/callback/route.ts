@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 import { upsertOauthUser } from '@/shared/auth/users'
-import { finishOauthLogin } from '@/features/auth/oauth-finish'
+import { enterWithIdentity } from '@/features/auth/oauth-entry'
 import { appOrigin } from '@/shared/auth/app-origin'
 
 export async function GET(req: NextRequest) {
@@ -61,12 +61,12 @@ export async function GET(req: NextRequest) {
   }
 
   const name = [info.user?.first_name, info.user?.last_name].filter(Boolean).join(' ') || null
-  const session = await upsertOauthUser('vk', {
+  const profile = {
     externalId: Number(vkUserId),
     handleCandidates: [info.user?.email?.split('@')[0], name, `vk${vkUserId}`],
     name,
     avatarUrl: info.user?.avatar || null,
     email: info.user?.email,
-  })
-  return NextResponse.redirect(await finishOauthLogin(session, appUrl))
+  }
+  return NextResponse.redirect(await enterWithIdentity('vk', Number(vkUserId), () => upsertOauthUser('vk', profile), appUrl))
 }
