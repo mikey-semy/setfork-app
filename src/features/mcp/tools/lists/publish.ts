@@ -42,7 +42,11 @@ export async function mcpMyDrafts(userId: string, opts: { tag?: string; limit?: 
   const where = and(
     eq(templates.ownerId, userId),
     eq(templates.status, 'draft'),
+    // Архив И заморозка: публикация такой список не возьмёт (он read-only), а перечень без
+    // этого условия предлагал бы ассистенту адрес, по которому ничего сделать нельзя —
+    // работа по кругу вместо отказа сразу (находка авто-ревью).
     sql`${templates.archivedAt} is null`,
+    sql`${templates.frozenAt} is null`,
     tag ? sql`${tag} = any(${templates.tags})` : sql`true`,
   )
   const [[total], rows, [owner]] = await Promise.all([

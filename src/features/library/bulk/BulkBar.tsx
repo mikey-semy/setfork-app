@@ -31,6 +31,11 @@ import { useSelection } from './selection'
  *  считается — публикация его состояния не меняет. */
 const willPublish = (plan: PublishBatchResult) => plan.published + plan.pending
 
+/** Сколько черновиков заняло места в пачке. Снятые модерацией место занимают наравне с
+ *  прочими, поэтому предел считается по ним тоже — иначе «за раз влезает 15» при двадцати
+ *  влезших (находка авто-ревью). */
+const tookSlots = (plan: PublishBatchResult) => plan.published + plan.pending + plan.blocked
+
 export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { name: string; title: string }[]; allIds: string[] }) {
   const sel = useSelection()
   const router = useRouter()
@@ -107,6 +112,13 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
       const res = await bulkPublish(ids, false)
       setPlan(null)
       sel?.stop()
+      // Между планом и согласием состояние успевает измениться из другой вкладки — тогда не
+      // публикуется ничего. Пустой «успех» об этом молчит: все три числа нулевые, и человек
+      // видит пустое сообщение вместо причины (находка авто-ревью).
+      if (!tookSlots(res)) {
+        toast.error(t('bulk.nothingChanged', lang))
+        return
+      }
       // Числа показываем только ненулевые: «Опубликовано: 0 · на проверке: 20» — правда,
       // но читается как сбой, хотя произошло ровно то, о чём предупредили.
       toast.success(
@@ -216,7 +228,7 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
             plan.pending ? fill('bulk.publishPlanPending', lang, { n: plan.pending }) : t('bulk.publishIntro', lang),
             plan.blocked ? fill('bulk.publishPlanBlocked', lang, { n: plan.blocked }) : '',
             plan.skipped ? fill('bulk.publishSkipped', lang, { n: plan.skipped }) : '',
-            plan.overflow ? fill('bulk.publishOverflow', lang, { n: willPublish(plan) }) : '',
+            plan.overflow ? fill('bulk.publishOverflow', lang, { n: tookSlots(plan) }) : '',
           ]
             .filter(Boolean)
             .join(' ')}

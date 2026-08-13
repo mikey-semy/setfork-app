@@ -56,6 +56,16 @@ describe('свои черновики', () => {
     expect(res.drafts.map((d) => d.ref).sort()).toEqual(['drafts-me/mine-one', 'drafts-me/mine-two'])
   })
 
+  it('в перечень не попадает то, что публикация всё равно не возьмёт', async () => {
+    // Архивный и замороженный список read-only: предложить ассистенту такой адрес — значит
+    // отправить его работать по кругу вместо отказа сразу.
+    await draft(meId, 'ok-one')
+    await draft(meId, 'archived-one', { archivedAt: new Date() })
+    await draft(meId, 'frozen-one', { frozenAt: new Date() })
+
+    expect((await mcpMyDrafts(meId)).drafts.map((d) => d.ref)).toEqual(['drafts-me/ok-one'])
+  })
+
   it('фильтр по тегу разбирает семейство целиком', async () => {
     await draft(meId, 'a-skill', { tags: ['skill'] })
     await draft(meId, 'a-hook', { tags: ['hook'] })
