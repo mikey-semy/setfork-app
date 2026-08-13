@@ -101,6 +101,16 @@ function toStep(s: PbStep): Step {
     command: s.command,
     level: s.level as Step['level'],
     why: loc(s.why),
+    // Пометки приходят из ядра (domain_read.proto: needs_human 15,
+    // needs_human_ask 16, danger 17), но маппер их выбрасывал — при
+    // SETFORK_DOMAIN_READS=1 «здесь нужен человек» пропадала из показа, а
+    // «разрушительный пункт» переставал глушить команду в собранном скрипте.
+    // Тот же корень, что в локальном адаптере: поля перечислены руками, они
+    // опциональные, и типы пропажу не видят. В proto/git.proto:389 об этом
+    // прямо написано «этот баг уже чинили дважды — с needs_human и danger».
+    needsHuman: s.needsHuman,
+    needsHumanAsk: loc(s.needsHumanAsk),
+    danger: s.danger,
     section: loc(s.section),
     subtasks: s.subtasks.map((t) => loc(t)),
     refs: s.refs.map((r): StepRef => ({ label: loc(r.label), ...(r.url ? { url: r.url } : {}) })),
