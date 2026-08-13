@@ -149,6 +149,14 @@ export async function updateGnomeMemories(): Promise<{ updated: number }> {
 
   let updated = 0
   for (const e of due) {
+    // Тот же потолок, что и у добычи выше. Эта функция — вторая половина ОДНОЙ суточной
+    // задачи рудника: остановка добычи по исчерпанному бюджету не мешала памяти гномов
+    // тут же потратить ещё до двух вызовов модели, и суточный кап пробивался сразу после
+    // того, как его заметили. Замечание авто-ревью на fe#801 (P2).
+    if (!(await globalBudgetOk())) {
+      log.info('gnome memory: budget exhausted, stopping', { updated, planned: due.length })
+      break
+    }
     // Лучшие списки его доменов: точное пересечение тегов, вес практики.
     const top = await db
       .select({ title: templates.title, desc: templates.desc, tags: templates.tags, stars: templates.starsCount })
