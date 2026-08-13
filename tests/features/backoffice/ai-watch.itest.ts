@@ -82,6 +82,22 @@ describe('сторож канала к модели', () => {
     expect(mail.sent).toHaveLength(1)
   })
 
+  // Обрыв длится, петли продолжают ходить, отказы копятся — эпизод от этого не становится
+  // новым. Пока имя эпизода бралось из хвоста фиксированной длины, каждый новый отказ
+  // сдвигал бы его и приносил владельцу письмо каждый час.
+  it('обрыв длится и отказы копятся — письмо всё равно одно', async () => {
+    await call('ok', { minutesAgo: 600 })
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 100 - i })
+    await runAiWatchSweep()
+
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error') // канал всё ещё лежит
+    const again = await runAiWatchSweep()
+
+    expect(again.verdict).toBe('down')
+    expect(again.sent).toBe(0)
+    expect(mail.sent).toHaveLength(1)
+  })
+
   // Отказы могут просто состариться и выпасть из окна свежести, а звать модель с тех пор
   // было некому. Пустой хвост — не доказательство, что канал ожил.
   it('без успешного вызова «восстановлен» не объявляем', async () => {

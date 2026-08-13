@@ -27,12 +27,15 @@ export interface ChannelState {
   /** Исходы серии: error/timeout/invalid различают «не пустили» и «не дождались». */
   outcomes: string[]
   /**
-   * Начало серии — время самого раннего отказа в ней. Это ИМЯ ЭПИЗОДА: по нему
-   * различаются два обрыва, случившиеся в одни сутки. Без него ключ идемпотентности
-   * («день + вердикт») склеивал бы их в один, и о втором обрыве владелец не узнал бы
-   * до полуночи. Нет серии — null.
+   * ИМЯ ЭПИЗОДА — время последнего успешного вызова (никогда не было успеха → 'none').
+   *
+   * Именно оно, а не начало видимой серии: хвост читается фиксированной длины, и при
+   * длящемся обрыве каждый новый отказ сдвигал бы «начало серии» вперёд. Сторож счёл бы
+   * это новым обрывом и слал письмо каждый час — ровно та беда, от которой защищаемся.
+   * Момент последнего успеха стоит на месте, пока канал не оживёт: все отказы после него
+   * и есть один эпизод. Ожил и снова лёг — имя другое, значит и письмо новое.
    */
-  since: Date | null
+  episode: string
 }
 
 /**
@@ -51,21 +54,37 @@ const FRESH_WINDOW_MS = 24 * 3_600_000
  * значило бы прятать поломку за успехами соседнего канала.
  */
 export async function channelState(): Promise<ChannelState> {
-  const rows = await db
-    .select({ outcome: aiUsage.outcome, model: aiUsage.model, at: aiUsage.createdAt })
-    .from(aiUsage)
-    .where(and(ne(aiUsage.feature, 'embed'), gte(aiUsage.createdAt, new Date(Date.now() - FRESH_WINDOW_MS))))
-    .orderBy(desc(aiUsage.createdAt))
-    .limit(ERROR_STREAK_TRIP)
+  const [rows, success] = await Promise.all([
+    db
+      .select({ outcome: aiUsage.outcome, model: aiUsage.model })
+      .from(aiUsage)
+      .where(and(ne(aiUsage.feature, 'embed'), gte(aiUsage.createdAt, new Date(Date.now() - FRESH_WINDOW_MS))))
+      .orderBy(desc(aiUsage.createdAt))
+      .limit(ERROR_STREAK_TRIP),
+    // Последний успех берём БЕЗ окна свежести: имя эпизода должно быть устойчивым, даже
+    // когда сам успех состарился и из хвоста уехал.
+    db
+      .select({ at: aiUsage.createdAt })
+      .from(aiUsage)
+      .where(and(ne(aiUsage.feature, 'embed'), eq(aiUsage.outcome, 'ok')))
+      .orderBy(desc(aiUsage.createdAt))
+      .limit(1),
+  ])
   const outcomes: string[] = []
-  let since: Date | null = null
   for (const r of rows) {
     if (r.outcome === 'ok') break
     outcomes.push(r.outcome)
-    since = r.at
   }
-  return { failStreak: outcomes.length, lastModel: rows[0]?.model ?? '', outcomes, since }
+  return {
+    failStreak: outcomes.length,
+    lastModel: rows[0]?.model ?? '',
+    outcomes,
+    episode: success[0]?.at?.toISOString() ?? NO_SUCCESS_YET,
+  }
 }
+
+/** Успешных вызовов не было вовсе — тоже устойчивое имя эпизода (свежий стенд). */
+const NO_SUCCESS_YET = 'none'
 
 /** Канал считается лежащим: серия отказов достигла общей планки. */
 export const channelDown = (s: ChannelState): boolean => s.failStreak >= ERROR_STREAK_TRIP

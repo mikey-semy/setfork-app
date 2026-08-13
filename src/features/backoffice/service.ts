@@ -327,9 +327,9 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   }
 
   // Тревога уже открыта, а канал всё ещё лежит — молчим: беда, повторяемая каждый час,
-  // перестаёт читаться. Новый эпизод (после восстановления) откроется своим письмом,
-  // потому что имя эпизода — время начала серии, а не календарный день.
-  const episode = (down ? state.since : alarm?.at)?.toISOString() ?? ''
+  // перестаёт читаться. Новый эпизод (канал ожил и лёг снова) придёт своим письмом,
+  // потому что имя эпизода — момент последнего успеха, а не календарный день.
+  const episode = down ? state.episode : (alarm?.episode ?? state.episode)
   if (down && alarm && episode === alarm.episode) {
     out.skipped = ALREADY_SENT
     return out
