@@ -169,3 +169,28 @@ describe('threeWayMerge — блоки', () => {
     expect(r.conflicts[0].kind).toBe('modified')
   })
 })
+
+// ПЕРЕХОД легаси-блока на колонку — merge не должен видеть в нём два разных блока.
+// База сделана до появления `block_id` и несёт только `content.bid`; main после
+// первого сохранения получил ещё и колонку. Если ключом брать колонку, база и main
+// опознаются по-разному, и правка блока в ветке даёт «добавление» + конфликт
+// удаления вместо одного изменённого блока. Замечание авто-ревью на fe#769 (P1).
+describe('переход легаси-bid: merge сопоставляет по общему знаменателю', () => {
+  const text = (md: string, over: Partial<TwStep> = {}): TwStep => ({
+    type: 'text', title: '', desc: '', command: '', level: 'required', why: '',
+    section: '', subtasks: [], refs: [], content: { bid: 'legacy-9', md }, ...over,
+  })
+  const list = (steps: TwStep[]): TwList => ({ title: 'Список', desc: '', tags: [], ordered: true, steps })
+
+  it('правка в ветке — один изменённый блок, а не добавление с конфликтом', () => {
+    const base = list([text('Было')])
+    // main сохранили через редактор: колонка появилась, легаси-bid остался в payload
+    const ours = list([text('Было', { blockId: '99999999-8888-7777-6666-555555555555' })])
+    const theirs = list([text('Стало')])
+
+    const res = threeWayMerge(base, ours, theirs)
+    expect(res.conflicts, "конфликтов быть не должно — правка одна").toHaveLength(0)
+    expect(res.merged.steps, 'блок один, а не два').toHaveLength(1)
+    expect(res.merged.steps[0].content?.md).toBe('Стало')
+  })
+})
