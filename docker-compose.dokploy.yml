@@ -1,15 +1,13 @@
-# Полный деплой SetFork в Dokploy: Postgres + git-ядро (Rust) + миграции + фронт (Next).
-# Сети ДВЕ, и это временно. Медиа (S3/imgproxy) — внешние (Selectel), задаётся через .env.
+# Полный деплой SetFork на прод-хосте: Postgres + git-ядро (Rust) + миграции + фронт (Next).
+# Медиа (S3/imgproxy) — внешние (Selectel), задаётся через .env.
 #
-# `edge` — обычная bridge-сеть, куда мы переезжаем: прежняя dokploy-network это
-# overlay Swarm, а Swarm тянулся за панелью Dokploy (снята 13.08) и на одном
-# сервере без нод не нужен.
+# Сеть одна — `edge`, обычная bridge. Прежняя `dokploy-network` была overlay-сетью Swarm:
+# Swarm тянулся за панелью Dokploy (снята 13.08), а на одном сервере без нод не нужен.
+# Переезд шёл в два прохода — сперва обе сети разом, чтобы соседи по имени не потерялись,
+# потом уборка старой. Ядро (setfork-core) — ОТДЕЛЬНЫЙ проект, оно переехало парно
+# (setfork-core#94 и его же второй проход); связь идёт по `setfork-core:50051` внутри `edge`.
 #
-# ⚠️ ОБЕ СЕТИ ОДНОВРЕМЕННО, пока не переехали соседи. Ядро (setfork-core) живёт
-# ОТДЕЛЬНЫМ проектом и всё ещё в dokploy-network: уведи фронт только в `edge` —
-# и `SETFORK_CORE_ADDR=setfork-core:50051` перестанет резолвиться, то есть вся
-# запись версий через git-ядро отвалится. Убирать dokploy-network отсюда можно
-# лишь после того, как переедет ядро, а `swarm leave` — когда overlay опустеет.
+# Сеть создаётся на хосте руками: `docker network create edge`.
 #
 # core собирается из соседнего чекаута ../setfork-core — при деплое оба репо должны быть рядом
 # (моно-чекаут). Иначе деплойте core отдельно его же setfork-core/docker-compose.dokploy.yml,
@@ -35,11 +33,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    networks: [edge, dokploy-network]
+    networks: [edge]
 
-  # git-ядро (Rust) деплоится ОТДЕЛЬНЫМ проектом Dokploy из репо setfork-core
+  # git-ядро (Rust) деплоится ОТДЕЛЬНЫМ проектом из репо setfork-core
   # (setfork-core/docker-compose.dokploy.yml) → контейнер `setfork-core` в общей
-  # сети dokploy-network. Здесь его НЕ собираем (иначе Dokploy ищет ../setfork-core,
+  # сети `edge`. Здесь его НЕ собираем (иначе сборка ищет ../setfork-core,
   # которого в single-repo чекауте нет). Фронт зовёт его по имени контейнера:
   # SETFORK_CORE_ADDR=setfork-core:50051 (см. сервис app). Том git-объектов и
   # DATABASE_URL ядра живут в ЕГО проекте.
@@ -51,7 +49,7 @@ services:
     depends_on:
       setfork-db: { condition: service_healthy }
     restart: 'no'
-    networks: [edge, dokploy-network]
+    networks: [edge]
 
   # Трансформации изображений на лету по подписанным URL. Читает ОРИГИНАЛЫ из
   # внешнего S3 (Selectel) — те же креды, что у приложения. Наружу отдаётся через
@@ -76,7 +74,7 @@ services:
       IMGPROXY_ALLOW_ORIGIN: ${IMGPROXY_ALLOW_ORIGIN:-*}
     ports:
       - '${IMGPROXY_PORT:-8081}:8080'
-    networks: [edge, dokploy-network]
+    networks: [edge]
 
   # Свой почтовый сервер — Stalwart (Rust MTA). ОПЦИОНАЛЬНО и ВЫКЛЮЧЕН по умолчанию
   # (profile "mail"): почта в приложении и так необязательна (пустой SMTP = отключена),
@@ -99,7 +97,7 @@ services:
       - '587:587' # submission (STARTTLS)
       - '465:465' # submission (implicit TLS)
       - '8080:8080' # веб-админка (закрыть после настройки)
-    networks: [edge, dokploy-network]
+    networks: [edge]
 
   app:
     build: { context: ., target: runner }
@@ -126,7 +124,7 @@ services:
     depends_on:
       setfork-db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
-    networks: [edge, dokploy-network]
+    networks: [edge]
 
   # Redis для общего rate-limit при ГОРИЗОНТАЛЬНОМ масштабе (>1 реплики app).
   # На одном инстансе НЕ нужен (in-memory быстрее, без сети) — profile scale держит
@@ -138,7 +136,7 @@ services:
     profiles: ['scale']
     restart: always
     command: ['redis-server', '--maxmemory', '128mb', '--maxmemory-policy', 'allkeys-lru', '--save', '']
-    networks: [edge, dokploy-network]
+    networks: [edge]
 
   # Бэкап Postgres → S3 (те же Selectel-креды, что у медиа). Единственный хост:
   # потеря диска = потеря всего, поэтому бэкап ОБЯЗАН быть offsite (в объектном S3),
@@ -165,7 +163,7 @@ services:
       PASSPHRASE: ${BACKUP_PASSPHRASE:-} # если задан — дамп GPG-шифруется (restore требует его)
     depends_on:
       setfork-db: { condition: service_healthy }
-    networks: [edge, dokploy-network]
+    networks: [edge]
 
 volumes:
   pgdata:
@@ -173,6 +171,4 @@ volumes:
 
 networks:
   edge:
-    external: true
-  dokploy-network:
     external: true
