@@ -189,10 +189,11 @@ export async function gateListPublication(templateId: string): Promise<void> {
     await db
       .update(templates)
       .set({ moderation: 'pending', moderationReason: null, moderationSeverity: 0 })
-      // Решение админа, принятое ПОКА гейт думал, не затираем: между чтением строки выше и
-      // этой записью список успевает быть снят, и безусловное «pending» вернуло бы снятое в
-      // очередь как обычное (находка авто-ревью).
-      .where(and(eq(templates.id, templateId), notInArray(templates.moderation, ['flagged', 'hidden'])))
+      // Любое решение админа, принятое ПОКА гейт думал, не затираем: пишем только если
+      // состояние осталось тем, которое гейт видел. Исключить одни снятия мало — админ
+      // умеет и одобрять (`setModeration(..., 'active')`), и такое одобрение эта запись
+      // откатывала бы обратно в очередь (находка авто-ревью).
+      .where(and(eq(templates.id, templateId), eq(templates.moderation, tpl.moderation)))
     decided = true
     if ((await enqueueModerate(templateId, true, tpl.ownerId)) === 'capped') await markCapped(templateId)
   } catch (e) {

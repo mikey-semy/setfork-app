@@ -380,6 +380,23 @@ describe('публикация пачкой', () => {
     expect(row.moderation).toBe('active')
   })
 
+  it('одобрение админа во время работы барьера не откатывается в очередь', async () => {
+    // Админ умеет не только снимать, но и одобрять. Если одобрение пришло, пока барьер
+    // думал, запись «ставлю на проверку» вернула бы список в очередь и снова спрятала —
+    // решение человека проиграло бы гонку решению машины.
+    const draft = await seed({ status: 'draft', visibility: 'public' })
+    const state = await import('@/shared/moderation/publication-state')
+    vi.spyOn(state, 'publicationDecision').mockImplementation(async () => {
+      await db.update(templates).set({ moderation: 'active' }).where(eq(templates.id, draft))
+      return 'hold'
+    })
+
+    await bulkPublish([draft], false)
+    vi.restoreAllMocks()
+
+    expect((await rowOf(draft)).moderation).toBe('active')
+  })
+
   it('архивное и замороженное не публикуется даже адресно', async () => {
     // Пакетное действие отсекало такое своим отбором, но MCP и кнопка адресуют список
     // напрямую — проверка обязана стоять в общем слое публикации.
