@@ -27,6 +27,10 @@ import { useSelection } from './selection'
  *    станет видно сразу, а что уйдёт на авто-проверку. Это выход наружу — отменять поздно,
  *    спрашивать нужно до.
  */
+/** Сколько списков публикация реально выведет: сразу и через проверку. Снятое модерацией не
+ *  считается — публикация его состояния не меняет. */
+const willPublish = (plan: PublishBatchResult) => plan.published + plan.pending
+
 export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { name: string; title: string }[]; allIds: string[] }) {
   const sel = useSelection()
   const router = useRouter()
@@ -88,8 +92,10 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
   function askPlan() {
     start(async () => {
       const next = await bulkPublish(ids)
-      if (!next.published) {
-        toast.error(t('bulk.publishNothing', lang))
+      // Считаем то, что РЕАЛЬНО станет опубликованным: и уходящее в паблик сразу, и уходящее
+      // на проверку. Снятое модерацией сюда не входит — публикация его не меняет.
+      if (!willPublish(next)) {
+        toast.error(t(next.blocked ? 'bulk.publishAllBlocked' : 'bulk.publishNothing', lang))
         return
       }
       setPlan(next)
@@ -203,11 +209,14 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
         <ConfirmDialog
           open
           onClose={() => setPlan(null)}
-          title={fill('bulk.publishTitle', lang, { n: plan.published, lists: plural(plan.published, 'lists', lang) })}
+          title={fill('bulk.publishTitle', lang, { n: willPublish(plan), lists: plural(willPublish(plan), 'lists', lang) })}
           intro={[
-            t('bulk.publishIntro', lang),
+            // Числа плана — в вопросе, а не только в ответе: соглашаются один раз, и
+            // «сколько из них увидят не сразу» надо знать ДО согласия.
+            plan.pending ? fill('bulk.publishPlanPending', lang, { n: plan.pending }) : t('bulk.publishIntro', lang),
+            plan.blocked ? fill('bulk.publishPlanBlocked', lang, { n: plan.blocked }) : '',
             plan.skipped ? fill('bulk.publishSkipped', lang, { n: plan.skipped }) : '',
-            plan.overflow ? fill('bulk.publishOverflow', lang, { n: plan.published }) : '',
+            plan.overflow ? fill('bulk.publishOverflow', lang, { n: willPublish(plan) }) : '',
           ]
             .filter(Boolean)
             .join(' ')}

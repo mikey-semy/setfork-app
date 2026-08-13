@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
+import { publicationDecision } from '@/shared/moderation/publication-state'
 // eslint-disable-next-line boundaries/dependencies -- барьер модерации неотделим от публикации; мост держим ЗДЕСЬ одной точкой (как gitPort в actions/shared), а не по копии в каждом входе
 import { MODERATE_DAILY_CAP, gateListPublication } from '@/features/moderation/moderate-list'
 
@@ -26,6 +27,12 @@ import { MODERATE_DAILY_CAP, gateListPublication } from '@/features/moderation/m
  * больше суточного предела не публикует, а копит непроверенное.
  */
 export const PUBLISH_BATCH_MAX = MODERATE_DAILY_CAP
+
+/** Снят модерацией: его судьбу решает только админ, публикация тут ничего не меняет. */
+const isBlocked = (row: { moderation: string }) => row.moderation === 'flagged' || row.moderation === 'hidden'
+
+/** Список, который публикация выставляет наружу и потому ведёт через барьер. */
+const needsGate = (row: { moderation: string; visibility: string }) => row.visibility === 'public' && !isBlocked(row)
 
 /** Почему список не опубликован. Коды: текст добавляет вызывающий на своём языке. */
 export type PublishSkip = 'not-yours' | 'not-draft' | 'over-limit' | 'read-only' | 'changed-meanwhile'
@@ -108,8 +115,18 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
   report.overflow = drafts.length - go.length
   for (const row of drafts.slice(PUBLISH_BATCH_MAX)) report.outcomes.push({ id: row.id, skip: 'over-limit', moderation: null })
   if (!go.length || opts.dryRun) {
-    for (const row of go) report.outcomes.push({ id: row.id, skip: null, moderation: null })
-    report.published = go.length
+    // ПЛАН СЧИТАЕТСЯ ТЕМ ЖЕ ПРАВИЛОМ, что и запись, только без записи. Иначе диалог обещает
+    // «опубликовать 20», а результат приходит «на проверке: 20» — и хуже того, набор из
+    // одних снятых модерацией предлагается к публикации как ни в чём не бывало (находка
+    // авто-ревью). Решение об авторе одно на пачку: оно и не зависит от списка.
+    const decision = go.some((r) => needsGate(r)) ? await publicationDecision(userId, null) : null
+    for (const row of go) {
+      const moderation = isBlocked(row) ? row.moderation : needsGate(row) && decision === 'hold' ? 'pending' : 'active'
+      report.outcomes.push({ id: row.id, skip: null, moderation })
+      if (isBlocked(row)) report.blocked++
+      else if (moderation === 'pending') report.pending++
+      else report.published++
+    }
     return report
   }
 
@@ -136,7 +153,7 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
     // его решение, а барьер следом отпустил бы удержание доверенному автору — снятое стало
     // бы публичным (находка авто-ревью, P1). Условие в самом UPDATE, а не проверкой перед
     // ним: проверка — это ещё одно окно между «посмотрел» и «записал».
-    const hold = row.visibility === 'public' && row.moderation !== 'flagged' && row.moderation !== 'hidden'
+    const hold = needsGate(row)
     const [wrote] = await db
       .update(templates)
       .set(hold ? { status: 'published', moderation: 'pending', updatedAt: new Date() } : { status: 'published', updatedAt: new Date() })

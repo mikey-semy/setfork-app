@@ -170,8 +170,25 @@ describe('публикация пачкой', () => {
 
     const plan = await bulkPublish([draft])
 
-    expect(plan).toMatchObject({ dryRun: true, published: 1 })
+    // Автор пока не доверенный, значит план и обещает проверку, а не мгновенный паблик.
+    expect(plan).toMatchObject({ dryRun: true, pending: 1, published: 0 })
     expect((await rowOf(draft)).status).toBe('draft')
+  })
+
+  it('план обещает ровно то, что потом произойдёт', async () => {
+    // Диалог показывает план, а действие выполняет запись. Если они считаются разными
+    // правилами, человек соглашается на одно, а получает другое — и узнаёт об этом, когда
+    // отменять поздно. Смешанный набор ловит расхождение по всем трём исходам сразу.
+    const held = await seed({ status: 'draft', visibility: 'public' })
+    const flagged = await seed({ status: 'draft', visibility: 'public', moderation: 'flagged' })
+    const priv = await seed({ status: 'draft', visibility: 'private' })
+    const ids = [held, flagged, priv]
+
+    const plan = await bulkPublish(ids)
+    const done = await bulkPublish(ids, false)
+
+    expect(plan).toMatchObject({ published: done.published, pending: done.pending, blocked: done.blocked })
+    expect(plan).toMatchObject({ published: 1, pending: 1, blocked: 1 })
   })
 
   it('публикуются только черновики, остальное считается пропущенным', async () => {
