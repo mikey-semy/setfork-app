@@ -11,7 +11,6 @@ import { LineField } from './block-fields'
 import { FileDrop } from './FileDrop'
 import { SlashMenu, useSlashMenu } from './SlashMenu'
 import { buttonClass } from '@/shared/ui/button-style'
-import { TOUCH_BOX } from '@/shared/ui/control'
 
 // Загрузка СВОИХ видеофайлов выключена по умолчанию: держать объёмы без дохода
 // нечем. Код на месте и включается флагом, когда появится хостинг (S3/Cloudflare
@@ -36,7 +35,7 @@ function ImagePreview({ src, maxH, onRemove, lang }: { src: string; maxH: string
         type="button"
         onClick={onRemove}
         aria-label={t('editor.remove', lang)}
-        className={buttonClass({ size: 'xs', className: `absolute right-1.5 top-1.5 size-6 p-0 bg-black/60 text-white hover:bg-black/80 ${TOUCH_BOX}` })}
+        className={buttonClass({ size: 'xs', className: 'absolute right-1.5 top-1.5 size-6 p-0 bg-black/60 text-white hover:bg-black/80' })}
       >
         <X size={14} />
       </button>

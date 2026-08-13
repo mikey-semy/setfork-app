@@ -11,14 +11,16 @@ export type { ButtonSize, ButtonTouch, ButtonVariant }
 export interface ButtonProps extends React.ComponentProps<'button'> {
   variant?: ButtonVariant
   size?: ButtonSize
-  /** Как добирается тач-цель 44px: 'grow' — растёт кнопка, 'hit' — только зона нажатия. */
+  /** Как добирается тач-цель 44px: 'hit' (дефолт) — только зона нажатия, 'grow' — растёт кнопка.
+   *  Дефолт обязан совпадать с buttonClass: пока здесь стояло явное 'grow', новый дефолт
+   *  функции до <Button> не доходил вовсе (находка авто-ревью по #796). */
   touch?: ButtonTouch
 }
 
 // Дефолт md — ТОТ ЖЕ, что у Input/SelectTrigger/SearchField (02.08.2026): пока
 // кнопка молчком бралась sm, а поле md, любой ряд «поле + кнопка» без явных
 // пропов расходился по высоте на ступень. Совпадение по умолчанию — смысл шкалы.
-export function Button({ variant = 'outline', size = 'md', touch = 'grow', className, type = 'button', ...props }: ButtonProps) {
+export function Button({ variant = 'outline', size = 'md', touch = 'hit', className, type = 'button', ...props }: ButtonProps) {
   return (
     <button
       // eslint-disable-next-line react/button-has-type -- примитив безопасен по построению: дефолт 'button' задан в сигнатуре, submit — только явным пропом

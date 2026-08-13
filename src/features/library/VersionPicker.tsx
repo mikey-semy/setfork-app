@@ -5,7 +5,6 @@ import { ArrowLeftRight } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
-import { TOUCH_BOX } from '@/shared/ui/control'
 
 // Выбор пары версий (shadcn Select) — масштабируется на десятки/сотни версий.
 export function VersionPicker({
@@ -54,7 +53,7 @@ export function VersionPicker({
           type="button"
           onClick={() => go(to, from)}
           aria-label={swapLabel}
-          className={buttonClass({ className: `size-8 p-0 text-muted hover:text-ink ${TOUCH_BOX}` })}
+          className={buttonClass({ className: 'size-8 p-0 text-muted hover:text-ink' })}
         >
           <ArrowLeftRight size={14} />
         </button>

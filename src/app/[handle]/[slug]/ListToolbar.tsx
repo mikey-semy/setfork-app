@@ -7,7 +7,6 @@ import { CommitBar } from '@/features/library/CommitBar'
 import { ListActionsMenu } from '@/features/library/ListActionsMenu'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
-import { TOUCH_BOX } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import type { ListPageData } from './load'
 
@@ -107,7 +106,7 @@ export function ListToolbar({
           {viewer && !readOnlyView && (
             <form action={startRun.bind(null, tpl.id)} className="inline-flex">
               <Tooltip label={t('runStart', lang)}>
-                <button type="submit" aria-label={t('runStart', lang)} className={buttonClass({ variant: 'primary', className: `p-0 size-8 ${TOUCH_BOX}` })}>
+                <button type="submit" aria-label={t('runStart', lang)} className={buttonClass({ variant: 'primary', className: 'p-0 size-8' })}>
                   <PlayCircle size={16} />
                 </button>
               </Tooltip>
