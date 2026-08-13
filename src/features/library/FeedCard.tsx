@@ -5,6 +5,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
 import type { FeedItem } from './queries'
+import { buttonClass } from '@/shared/ui/button-style'
 
 function fmt(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0) + 'k'
@@ -69,9 +70,10 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
             <Tooltip label={t('star', lang)}>
               <button
                 type="submit"
-                className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[0.78125rem] font-medium transition-colors hover:border-border-strong ${
-                  starred ? 'border-warn text-warn' : 'border-border text-ink-2'
-                }`}
+                className={buttonClass({
+                  size: 'sm',
+                  className: starred ? 'border-warn text-warn hover:border-warn' : 'text-ink-2',
+                })}
               >
                 <Star size={14} fill={starred ? 'currentColor' : 'none'} /> {fmt(item.starsCount)}
               </button>

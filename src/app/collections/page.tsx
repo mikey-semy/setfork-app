@@ -24,7 +24,7 @@ export default async function CollectionsPage() {
         {cards.length === 0 ? (
           <EmptyState variant="plain" hint={t('collectionsEmpty', lang)} />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {cards.map((c) => (
               <CollectionCard key={c.id} c={c} lang={lang} />
             ))}

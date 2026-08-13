@@ -8,6 +8,8 @@ import { cn } from '@/shared/lib/cn'
 import { t, type Lang } from '@/shared/i18n'
 import { ListsPanel, type ListsPanelItem } from './ListsPanel'
 import { useSidebar } from './sidebar-context'
+import { buttonClass } from '@/shared/ui/button-style'
+import { TOUCH_BOX } from '@/shared/ui/control'
 
 // ОДИН сайдбар: показан ЦЕЛИКОМ (иконки + подписи + «Top lists») или скрыт ЦЕЛИКОМ —
 // без промежуточного мини-рельса (иконки+подписи в узкой колонке смысла не давали).
@@ -110,7 +112,7 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
               type="button"
               onClick={toggleCollapsed}
               aria-label={t('nav.hideMenu', lang)}
-              className="mt-2 flex h-8 shrink-0 items-center gap-2 rounded-md px-2.5 text-[0.78125rem] text-muted hover:bg-surface-2 hover:text-ink"
+              className={buttonClass({ variant: 'ghost', className: 'mt-2 shrink-0 justify-start text-muted' })}
             >
               <ChevronLeft size={15} className="shrink-0" />
               {t('nav.collapse', lang)}
@@ -130,7 +132,7 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
                 type="button"
                 aria-label={t('menu', lang)}
                 onClick={() => setMobileOpen(false)}
-                className="grid h-8 w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink"
+                className={buttonClass({ variant: 'ghost', className: `size-8 p-0 ${TOUCH_BOX}` })}
               >
                 <X size={18} />
               </button>

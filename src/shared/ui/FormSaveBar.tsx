@@ -124,10 +124,10 @@ export function FormSaveBar({ lang }: { lang: Lang }) {
               {t('ui.unsavedChanges', lang)}
             </span>
             <div className="flex flex-1 items-center justify-end gap-2 sm:flex-none">
-              <Button type="button" variant="outline" size="md" onClick={discard} disabled={pending} className="h-11 max-sm:flex-1 sm:h-8">
+              <Button type="button" variant="outline" size="md" onClick={discard} disabled={pending} className="max-sm:flex-1">
                 {t('ui.discard', lang)}
               </Button>
-              <Button type="submit" variant="primary" size="md" disabled={pending} className="h-11 max-sm:flex-1 sm:h-8">
+              <Button type="submit" variant="primary" size="md" disabled={pending} className="max-sm:flex-1">
                 {pending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                 {t('common.save', lang)}
               </Button>

@@ -12,6 +12,7 @@ import { Alert } from '@/shared/ui/Alert'
 import { addFeedSource, pullFeedNow, removeFeedSource, setFeedSourceEnabled } from '@/features/admin/feed-actions'
 import type { FeedSourceRow } from '@/features/admin/feed-queries'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Input } from '@/shared/ui/input'
 
 /**
  * ПОДПИСКИ НА ПОТОК — состав ровными столбцами, как состав специалистов.
@@ -44,32 +45,29 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
       <form action={addFeedSource} className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3.5 sm:flex-row sm:items-end">
         <label className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{t('admin.feedAddress', lang)}</span>
-          <input
+          <Input
             name="url"
             required
             inputMode="url"
             placeholder="https://example.com/feed.xml"
-            className="h-8 w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
           />
         </label>
         <label className="flex min-w-0 flex-col gap-1 sm:w-[12.5rem]">
           <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{t('admin.topic', lang)}</span>
-          <input
+          <Input
             name="tags"
             required
             placeholder="devops, ci"
-            className="h-8 w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
           />
         </label>
         <label className="flex flex-col gap-1 sm:w-[6rem]">
           <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{t('admin.hours', lang)}</span>
-          <input
+          <Input
             name="everyHours"
             type="number"
             min={1}
             max={168}
             defaultValue={6}
-            className="h-8 w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
           />
         </label>
         <Button type="submit" variant="primary" size="md" className="shrink-0">

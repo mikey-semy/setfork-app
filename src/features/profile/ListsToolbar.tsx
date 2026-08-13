@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react'
 import { SearchField } from '@/shared/ui/SearchField'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import type { Lang } from '@/shared/i18n'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /** Тулбар вкладки «Списки» профиля (как шапка репозиториев GitHub): поиск + фильтр
  *  по типу + сортировка + кнопка «Создать». Меняет query-параметры (сбрасывая
@@ -89,7 +90,7 @@ export function ListsToolbar({
       {isOwner && (
         <Link
           href="/new"
-          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-[0.8125rem] font-semibold text-white hover:opacity-90"
+          className={buttonClass({ className: 'border-transparent bg-accent text-white hover:opacity-90' })}
         >
           <Plus size={15} /> {ru ? 'Создать' : 'New'}
         </Link>

@@ -127,14 +127,13 @@ export function BranchPicker({
                     {/* Поле и кнопка одной высоты — иначе ряд «ступенькой» (правило владельца). */}
                     <div className="flex items-center gap-1.5">
                       <Input
-                        size="sm"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && create()}
                         placeholder={t('newBranchName', lang)}
-                        className="h-8 min-w-0 flex-1"
+                        className="min-w-0 flex-1"
                       />
-                      <Button size="sm" disabled={pending || !name.trim()} onClick={create} className="h-8 shrink-0">
+                      <Button disabled={pending || !name.trim()} onClick={create} className="shrink-0">
                         <Plus size={12} /> {t('create', lang)}
                       </Button>
                     </div>

@@ -8,6 +8,8 @@ import { ListActionsMenu } from '@/features/library/ListActionsMenu'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 import type { ListPageData } from './load'
+import { buttonClass } from '@/shared/ui/button-style'
+import { TOUCH_BOX } from '@/shared/ui/control'
 
 type Props = Pick<
   ListPageData,
@@ -75,7 +77,7 @@ export function ListToolbar({
               <Tooltip label={t('list.useTemplateHint', lang)}>
                 <button
                   type="submit"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-[0.8125rem] font-semibold text-ink hover:border-border-strong"
+                  className={buttonClass()}
                 >
                   <LayoutTemplate size={14} /> <span className="hidden md:inline">{t('list.useTemplate', lang)}</span>
                 </button>
@@ -100,7 +102,7 @@ export function ListToolbar({
           {viewer && !readOnlyView && (
             <form action={startRun.bind(null, tpl.id)} className="inline-flex">
               <Tooltip label={t('runStart', lang)}>
-                <button type="submit" aria-label={t('runStart', lang)} className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-fg hover:opacity-90">
+                <button type="submit" aria-label={t('runStart', lang)} className={buttonClass({ variant: 'primary', className: `p-0 size-8 ${TOUCH_BOX}` })}>
                   <PlayCircle size={16} />
                 </button>
               </Tooltip>

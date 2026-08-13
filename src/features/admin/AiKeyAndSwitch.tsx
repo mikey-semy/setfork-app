@@ -6,6 +6,8 @@ import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
+import { buttonClass } from '@/shared/ui/button-style'
+import { TOUCH_HIT } from '@/shared/ui/control'
 
 export type AiProviderChoice = 'openrouter' | 'selectel' | 'yandex' | 'gigachat'
 export type KeySource = 'db' | 'env' | 'none'
@@ -174,7 +176,7 @@ export function AiKeyAndSwitch({
             type="button"
             aria-label={reveal ? 'hide' : 'show'}
             onClick={() => setReveal((v) => !v)}
-            className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-muted hover:text-ink"
+            className={buttonClass({ variant: 'ghost', size: 'sm', className: `absolute right-2 top-1/2 size-7 -translate-y-1/2 p-0 ${TOUCH_HIT}` })}
           >
             {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>

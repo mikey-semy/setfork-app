@@ -134,7 +134,7 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
         {/* Оба числа обязаны быть В ФОРМЕ: экшен пишет ai.selfgen_* из formData, и поле,
             которого в форме нет, при сохранении настроек уедет в минимум клампа. Так
             «за проход» молча схлопнулось бы в 1 и партия перестала бы работать. */}
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('admin.draftsPerDay0', lang)}>
             <Input type="number" name="selfGenPerDay" min="0" max="200" step="1" defaultValue={v.selfGenPerDay} />
           </Field>
@@ -162,7 +162,7 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
             </SelectContent>
           </Select>
         </Field>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('admin.minimumStepsPublish', lang)}>
             <Input type="number" name="readinessMinSteps" min="1" max="50" step="1" defaultValue={v.readinessMinSteps} />
           </Field>

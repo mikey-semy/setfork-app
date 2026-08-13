@@ -39,7 +39,10 @@ export function PanelHead({
       <div className={`min-w-0 flex-1 truncate font-semibold text-ink ${TEXT.body}`}>{title}</div>
       {actions}
       {onClose && (
-        <IconButton variant="ghost" size="sm" label={closeLabel} onClick={onClose}>
+        // touch="hit": зона нажатия дорастает до 44px, а САМ крестик остаётся 28px.
+        // С обычным `box` он раздувал полосу шапки до 60px на телефоне — полосу,
+        // высоту которой должен задавать заголовок, а не кнопка закрытия.
+        <IconButton variant="ghost" size="sm" touch="hit" label={closeLabel} onClick={onClose}>
           <X size={14} />
         </IconButton>
       )}

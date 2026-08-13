@@ -24,8 +24,13 @@ import { PAGE } from '@/shared/ui/control'
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const lang = await getLang()
+  // Зазор нужен В ОБЕ стороны. Он был только `md:gap-8`, поэтому на мобиле
+  // свёрнутое меню («Разделы») стояло вплотную к содержимому: две рамки с
+  // одинаковым скруглением читались как один блок (замечание владельца
+  // 13.08.2026). По вертикали 16px, по горизонтали на md — прежние 32px;
+  // те же числа, что у оболочки настроек, чтобы разделы не отличались.
   return (
-    <div className={`${PAGE} flex min-w-0 flex-col md:flex-row md:gap-8`}>
+    <div className={`${PAGE} flex min-w-0 flex-col gap-4 md:flex-row md:gap-8`}>
       <AdminNavSlot groups={[...adminNavGroups(lang), adminSettingsLinksGroup(lang)]} lang={lang} />
       <div className="min-w-0 flex-1">{children}</div>
     </div>

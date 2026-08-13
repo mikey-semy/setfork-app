@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Braces, Check, ChevronDown, X } from 'lucide-react'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_TEXT_MOBILE, TEXT } from '@/shared/ui/control'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, TEXT } from '@/shared/ui/control'
 import { SearchField } from '@/shared/ui/SearchField'
 import { t, type Lang } from '@/shared/i18n'
 

@@ -47,7 +47,6 @@ export function MirrorCheckButton({ templateId, lang }: { templateId: string; la
         variant="ghost"
         disabled={busy}
         aria-label={t('mirrorCheckAccess', lang)}
-        className="min-h-11"
         onClick={async () => {
           if (hasUnsaved()) {
             setResult({ ok: false, text: t('mirrorCheckSaveFirst', lang) })

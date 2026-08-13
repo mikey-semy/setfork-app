@@ -76,7 +76,7 @@ export function ProfileOverview({
             </span>
             {isOwner && <PinsPicker lists={ownLight} lang={lang} />}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {pinned.map((it) => {
               const desc = tr(it.desc, lang)
               return (
@@ -104,7 +104,7 @@ export function ProfileOverview({
             <GraduationCap size={14} className="text-muted" /> {t('profile.completedCourses', lang)}
             <span className="font-mono text-[0.6875rem] text-muted">{completions.length}</span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {completions.map((c) => (
               <div key={c.templateId} className="rounded-lg border border-border bg-surface px-3.5 py-3">
                 <Link href={`/${c.ownerHandle}/${c.slug}`} className="block truncate text-[0.875rem] font-semibold text-accent hover:underline">

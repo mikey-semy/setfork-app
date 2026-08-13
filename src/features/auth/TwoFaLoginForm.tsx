@@ -26,7 +26,7 @@ export function TwoFaLoginForm({ lang }: { lang: Lang }) {
         autoFocus
         className="text-center font-mono text-[1rem] tracking-widest"
       />
-      <Button type="submit" variant="primary" size="md" disabled={pending} className="h-10 w-full">
+      <Button type="submit" variant="primary" size="lg" disabled={pending} className="w-full">
         {ru ? 'Войти' : 'Verify'}
       </Button>
       <Link href="/login" className="text-center text-[0.78125rem] text-ink-2 hover:text-ink">

@@ -11,7 +11,8 @@ import { CONTROL_H, CONTROL_TEXT, TOUCH_MIN_H, type ControlSize } from './contro
 //   outline — вторичное (рамка border, hover усиливает рамку)
 //   ghost   — «тихая» (без рамки, hover-подложка)
 //   danger  — деструктивная (текст/hover в danger)
-export type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'danger' | 'dangerSolid'
+//   ok      — «получить/забрать» (зелёная, как Code у GitHub)
+export type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'danger' | 'dangerSolid' | 'ok'
 export type ButtonSize = ControlSize
 
 const VARIANTS: Record<ButtonVariant, string> = {
@@ -20,6 +21,10 @@ const VARIANTS: Record<ButtonVariant, string> = {
   ghost: 'text-ink-2 hover:bg-surface-2 hover:text-ink',
   danger: 'text-muted hover:bg-danger/10 hover:text-danger', // «тихая» (иконка-корзинка)
   dangerSolid: 'bg-danger text-white hover:opacity-90', // залитая деструктивная (удалить аккаунт/список)
+  // Зелёная кнопка «Получить» была единственной рукописной кнопкой в ряду шапки
+  // списка — и единственной, которая не добирала тач-цель. Стала вариантом, а не
+  // осталась исключением: токен --ok-solid читается с белым текстом в обеих темах.
+  ok: 'bg-(--ok-solid) text-white hover:opacity-90',
 }
 
 // px у кнопок шире полей того же размера — тексту в кнопке нужен воздух.
@@ -27,6 +32,7 @@ const SIZES: Record<ButtonSize, string> = {
   xs: 'px-2 gap-1',
   sm: 'px-2.5 gap-1.5',
   md: 'px-3.5 gap-1.5',
+  lg: 'px-4 gap-2',
 }
 
 export function buttonClass({ variant = 'outline', size = 'md', className }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}): string {

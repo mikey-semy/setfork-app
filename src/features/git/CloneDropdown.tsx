@@ -6,6 +6,7 @@ import { Braces, ChevronDown, Code2, FileCode, FileDown, GitBranch, Printer, Spa
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { CodeCard } from '@/shared/ui/CodeCard'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { buttonClass } from '@/shared/ui/button-style'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
 import { AUTHORED_DIALECT, dialectSpec, scriptFilename } from '@/core/domain/script-dialect'
 import { t, type Lang } from '@/shared/i18n'
@@ -83,7 +84,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
             цветных значка в ряд спорили бы за внимание. */}
         <button
           type="button"
-          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-(--ok-solid) px-3.5 text-[0.8125rem] font-semibold text-white transition-opacity hover:opacity-90"
+          className={buttonClass({ variant: 'ok' })}
         >
           {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>

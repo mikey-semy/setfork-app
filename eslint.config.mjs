@@ -100,6 +100,33 @@ export default [
             'TemplateElement[value.cooked=/(?=\\u005B\\s\\S\\u005D*mx-auto)(?=\\u005B\\s\\S\\u005D*w-full)(?=\\u005B\\s\\S\\u005D*max-w-\\u005B)(?=\\u005B\\s\\S\\u005D*\\bp\\u005Bxy\\u005D-)/]',
           message: 'Своя ширина страницы запрещена — рамка одна на весь сайт: PAGE (или PAGE_X без вертикальных полей) из @/shared/ui/control. Читаемая колонка внутри страницы — PAGE_COLUMN.',
         },
+        // ── Узда высоты контролов (замер 13.08.2026) ───────────────────────────
+        // Шкала жила в control.ts, но её обходили ДВУМЯ способами, и оба дали по
+        // ряду разной высоты: 26 мест брали примитив и тут же перебивали ему
+        // высоту классом (`<Button className="h-10">`), ещё 29 рисовали кнопку
+        // руками из `h-8 rounded-md border`. Вторые не получали и тач-цель 44px
+        // (TOUCH_MIN_H живёт в buttonClass) — на телефоне «Получить» была 32px
+        // рядом с 44px-веткой, что владелец и увидел. Оба способа теперь запрещены.
+        //
+        // Роли выше md нет? Её надо ДОБАВИТЬ в шкалу (так появилась lg), а не
+        // обойти классом: иначе одна и та же роль снова расползётся по числам.
+        {
+          selector:
+            "JSXOpeningElement[name.name=/^(Button|IconButton|Input|Textarea|SearchField|SelectTrigger|SubmitButton|FloatingInput)$/] JSXAttribute[name.name='className'] :matches(Literal[value=/(^|\\s|:)(min-)?h-\\d/], TemplateElement[value.cooked=/(^|\\s|:)(min-)?h-\\d/])",
+          message:
+            'Высота примитива задаётся ТОЛЬКО пропом size (xs/sm/md/lg из shared/ui/control.ts), а не классом h-*. Нужна другая высота — добавь ступень в шкалу, иначе роль расползётся по числам.',
+        },
+        {
+          // ⚠️ Классов символов тут быть НЕ МОЖЕТ: `[` ломает разбор селектора, а
+          // приём `[` из правил выше означает ЛИТЕРАЛЬНУЮ скобку (он для того
+          // и заведён — ловить `text-[13px]`), а не «любой символ». Первая версия
+          // этого правила была написана с `[\s\S]*` и молча не срабатывала
+          // вовсе. Поэтому «что угодно между» — через `(?:.|\s)*`.
+          selector:
+            "JSXOpeningElement[name.name=/^(button|a)$/] JSXAttribute[name.name='className'] :matches(Literal[value=/(^|\\s)h-\\d(?:.|\\s)*rounded-md|rounded-md(?:.|\\s)*\\sh-\\d/], TemplateElement[value.cooked=/(^|\\s)h-\\d(?:.|\\s)*rounded-md|rounded-md(?:.|\\s)*\\sh-\\d/])",
+          message:
+            'Рукописная кнопка (h-* + rounded-md) не получает ни шкалы, ни тач-цели 44px. Возьми Button/IconButton или buttonClass() из @/shared/ui/button-style — вид, высота и фокус придут оттуда.',
+        },
       ],
       // Узда Ф7: <button> без явного type в форме сабмитит её случайно (дефолт
       // submit). Отдельным rule id (не no-restricted-syntax) — чтобы счётные

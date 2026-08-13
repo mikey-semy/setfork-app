@@ -19,6 +19,7 @@ import { threadToIssue } from '@/features/comments/thread-to-issue'
 import type { BlockThread } from '@/features/comments/queries'
 // eslint-disable-next-line boundaries/dependencies -- тип состояния якоря из comments
 import type { ThreadState } from '@/features/comments/state'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export interface DiffCommentLabels {
   add: string
@@ -198,7 +199,7 @@ export function DiffComments({
                 <button
                   type="button"
                   onClick={() => setSuggest(quote || '')}
-                  className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[0.78125rem] font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"
+                  className={buttonClass({ variant: 'ghost', className: 'mt-2' })}
                 >
                   <Replace size={14} /> {labels.suggestLabel}
                 </button>

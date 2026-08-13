@@ -4,7 +4,7 @@ import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
-import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_BOX, FIELD_TEXT_MOBILE, ICON_SIZE, type ControlSize } from './control'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_BOX, ICON_SIZE, type ControlSize } from './control'
 
 const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
@@ -21,19 +21,24 @@ function SelectTrigger({
   return (
     <SelectPrimitive.Trigger
       className={cn(
-      'flex w-full items-center justify-between data-placeholder:text-muted',
+      // Высота у поля ФИКСИРОВАННАЯ (шкала), поэтому длинная подпись обязана
+      // обрезаться, а не переноситься: без этого выбранный вариант вроде
+      // «Observe — decide and log, do not publish» разъезжался на две строки и
+      // вылезал за рамку. Так же поступает shadcn (`whitespace-nowrap` на
+      // триггере + обрезка значения) — полный текст виден в раскрытом списке.
+      'flex w-full items-center justify-between gap-2 whitespace-nowrap data-placeholder:text-muted [&>span]:min-w-0 [&>span]:truncate',
       FIELD_BOX,
       CONTROL_H[size],
       CONTROL_PX[size],
       CONTROL_TEXT[size],
-      FIELD_TEXT_MOBILE,
       className,
     )}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDown size={ICON_SIZE[size]} className="text-muted" />
+        {/* shrink-0: каретку нельзя сжимать — иначе длинное значение её съедает. */}
+        <ChevronDown size={ICON_SIZE[size]} className="shrink-0 text-muted" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )

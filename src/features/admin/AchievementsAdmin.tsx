@@ -10,6 +10,7 @@ import { ACHIEVEMENT_KEYS, type AchievementKey } from '@/features/profile/achiev
 import { ACH_META } from '@/features/profile/achievement-meta'
 import type { AchDisplayMap } from '@/features/profile/achievement-config'
 import { removeAchievementImage, setAchievementEnabled, uploadAchievementImage } from './achievement-actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /** Админ-панель достижений: вкл/выкл + своя картинка (drag-and-drop) на каждое. */
 export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; lang: Lang }) {
@@ -99,9 +100,10 @@ function AchRow({
             setOver(false)
             onUpload(k, e.dataTransfer.files?.[0])
           }}
-          className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border ${
-            over ? 'border-accent bg-(--accent-soft)' : 'border-dashed border-border'
-          }`}
+          className={buttonClass({
+            variant: 'ghost',
+            className: `relative size-11 shrink-0 overflow-hidden border p-0 ${over ? 'border-accent bg-(--accent-soft)' : 'border-dashed border-border'}`,
+          })}
         >
           {d.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

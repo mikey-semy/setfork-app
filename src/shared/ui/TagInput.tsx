@@ -120,7 +120,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
               }
             }}
             placeholder={tags.length === 0 ? 'docker' : ''}
-            className="min-w-[5.625rem] flex-1 bg-transparent px-1 py-0.5 text-[0.875rem] max-sm:text-[1rem] text-ink outline-hidden placeholder:text-muted"
+            className="min-w-[5.625rem] flex-1 bg-transparent px-1 py-0.5 text-[0.875rem] text-ink outline-hidden placeholder:text-muted"
           />
         )}
       </div>

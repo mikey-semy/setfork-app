@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeftRight } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { buttonClass } from '@/shared/ui/button-style'
+import { TOUCH_BOX } from '@/shared/ui/control'
 
 // Выбор пары версий (shadcn Select) — масштабируется на десятки/сотни версий.
 export function VersionPicker({
@@ -30,7 +32,7 @@ export function VersionPicker({
 
   const picker = (value: number, onPick: (v: number) => void) => (
     <Select value={String(value)} onValueChange={(v) => onPick(Number(v))}>
-      <SelectTrigger className="h-8 w-[5.75rem] font-mono text-[0.8125rem]">
+      <SelectTrigger className="w-[5.75rem] font-mono">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -52,7 +54,7 @@ export function VersionPicker({
           type="button"
           onClick={() => go(to, from)}
           aria-label={swapLabel}
-          className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted hover:border-border-strong hover:text-ink"
+          className={buttonClass({ className: `size-8 p-0 text-muted hover:text-ink ${TOUCH_BOX}` })}
         >
           <ArrowLeftRight size={14} />
         </button>
