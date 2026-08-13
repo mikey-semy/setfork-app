@@ -298,3 +298,30 @@ describe('переход к идентичностям не читается к�
     expect(d.summary.added, 'дубль заголовка слился со старым вместо «добавлен»').toBe(1)
   })
 })
+
+// ПЕРЕХОД легаси-блока на uuid. Редактор при первом сохранении выдаёт блоку
+// uuid в колонку, а старый нераспознанный bid оставляет в content.bid
+// (editor.ts: «в колонку кладём ТОЛЬКО uuid»). Тогда старая версия опознаётся по
+// bid, новая — по uuid: если считать идентичность ОДНИМ значением, блок читается
+// как «удалён + добавлен» ровно в момент перехода. Замечание авто-ревью на fe#769.
+describe('переход легаси-bid на uuid не читается как замена блока', () => {
+  const legacy = (md: string): CmpStep => ({
+    type: 'text', content: { bid: 'legacy-7', md }, title: '', desc: '',
+    command: '', level: 'required', why: '', subtasks: [],
+  })
+  const migrated = (md: string): CmpStep => ({
+    type: 'text', blockId: '11111111-2222-3333-4444-555555555555',
+    content: { bid: 'legacy-7', md }, title: '', desc: '',
+    command: '', level: 'required', why: '', subtasks: [],
+  })
+
+  it('блок получил колонку, содержимое не трогали — изменений нет', () => {
+    const { summary } = diffSteps([legacy('Текст')], [migrated('Текст')])
+    expect(summary).toMatchObject({ added: 0, removed: 0, changed: 0 })
+  })
+
+  it('блок получил колонку и правку — это «изменён», а не замена', () => {
+    const { summary } = diffSteps([legacy('Было')], [migrated('Стало')])
+    expect(summary).toMatchObject({ added: 0, removed: 0, changed: 1 })
+  })
+})

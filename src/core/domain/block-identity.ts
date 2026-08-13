@@ -31,3 +31,24 @@ export function blockIdentity(b: {
   const bid = b.content?.bid
   return typeof bid === 'string' && bid ? bid : null
 }
+
+/**
+ * ВСЕ идентичности блока — для СОПОСТАВЛЕНИЯ версий, где важно совпадение любой.
+ *
+ * Их бывает две одновременно, и это переход, а не дубль: легаси-блок хранит bid
+ * в `content.bid`, а редактор при первом сохранении выдаёт ему ещё и uuid в
+ * колонку (`editor.ts`: «в колонку кладём ТОЛЬКО uuid, легаси-bid живёт дальше в
+ * content.bid»). Старая версия тогда опознаётся по bid, новая — по uuid; если
+ * сравнивать одним значением, блок читается как «удалён + добавлен» ровно в
+ * момент перехода. Замечание авто-ревью на fe#769.
+ *
+ * Порядок сохранён от `blockIdentity`: колонка сильнее — она и стоит первой.
+ */
+export function blockIdentities(b: {
+  blockId?: string | null
+  content?: Record<string, unknown> | null
+}): string[] {
+  const bid = b.content?.bid
+  const legacy = typeof bid === 'string' && bid ? bid : null
+  return [b.blockId || null, legacy].filter((x): x is string => !!x)
+}
