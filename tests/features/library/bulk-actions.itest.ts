@@ -123,6 +123,22 @@ describe('раскладка по полкам', () => {
     expect((await rowOf(list)).repositoryId).toBeNull()
   })
 
+  it('архивное и замороженное пачка не двигает', async () => {
+    // Полка — свойство списка, а у архивного свойства не меняются вовсе (`canEditList`).
+    // Пачка не может быть лазейкой мимо запрета, который держит одиночная правка.
+    const cat = await shelf('devops')
+    const archived = await seed({ archivedAt: new Date() })
+    const frozen = await seed({ frozenAt: new Date() })
+    const normal = await seed()
+
+    const res = await bulkSetCatalog([archived, frozen, normal], 'devops')
+
+    expect(res.changed).toBe(1)
+    expect((await rowOf(normal)).repositoryId).toBe(cat)
+    expect((await rowOf(archived)).repositoryId).toBeNull()
+    expect((await rowOf(frozen)).repositoryId).toBeNull()
+  })
+
   it('новая полка заводится и сразу принимает пачку', async () => {
     const one = await seed()
     const two = await seed()
@@ -170,12 +186,54 @@ describe('публикация пачкой', () => {
     expect((await db.select({ type: jobs.type }).from(jobs)).map((j) => j.type)).toContain('moderate')
   })
 
-  it('снятое модерацией не отмывается пачкой', async () => {
+  it('снятое модерацией не отмывается пачкой и не выдаётся за «ждёт проверки»', async () => {
     const flagged = await seed({ status: 'draft', visibility: 'public', moderation: 'flagged' })
 
-    await bulkPublish([flagged], false)
+    const res = await bulkPublish([flagged], false)
 
     expect((await rowOf(flagged)).moderation).toBe('flagged')
+    // Снятый список НЕ ждёт проверку: её не будет, пока не решит админ. Обещать её —
+    // значит соврать в единственном месте, где человек про это узнаёт.
+    expect(res).toMatchObject({ blocked: 1, pending: 0 })
+  })
+
+  it('публичный список не бывает виден раньше барьера: статус и модерация — одной записью', async () => {
+    // Пока это были общая запись «все → published» и барьер следом, недоверенный автор
+    // успевал показать всем целую пачку, а прерванный запрос оставлял остаток открытым.
+    // Проверяем инвариант с другой стороны: НИ ОДИН публичный список пачки не оказывается
+    // published+active, даже если барьер прервать.
+    const ids = [await seed({ status: 'draft', visibility: 'public' }), await seed({ status: 'draft', visibility: 'public' })]
+    const mod = await import('@/features/moderation/moderate-list')
+    const gate = vi.spyOn(mod, 'gateListPublication').mockRejectedValueOnce(new Error('прервано'))
+
+    await bulkPublish(ids, false).catch(() => {})
+    gate.mockRestore()
+
+    const rows = await db.select({ status: templates.status, moderation: templates.moderation }).from(templates)
+    expect(rows.filter((r) => r.status === 'published' && r.moderation === 'active')).toHaveLength(0)
+  })
+
+  it('доверенному автору удержание отпускают: список виден сразу', async () => {
+    // Обратная сторона предыдущей проверки. Публичный список рождается опубликованным в
+    // pending, и если бы барьер не отпускал удержание, доверенные авторы (и стенды без
+    // ключа модели) получили бы вечно невидимые списки — цена «fail-closed» была бы
+    // сломанной публикацией у всех.
+    for (let i = 0; i < 3; i++) await seed({ status: 'published', visibility: 'public', moderation: 'active', origin: 'authored' })
+    const fresh = await seed({ status: 'draft', visibility: 'public' })
+
+    const res = await bulkPublish([fresh], false)
+
+    expect((await rowOf(fresh)).moderation).toBe('active')
+    expect(res).toMatchObject({ published: 1, pending: 0 })
+  })
+
+  it('приватному списку прежняя отметка модерации не переписывается', async () => {
+    // Приватный наружу не выставлен — проверять в нём нечего, и трогать его отметку не за что.
+    const priv = await seed({ status: 'draft', visibility: 'private', moderation: 'pending' })
+
+    await bulkPublish([priv], false)
+
+    expect((await rowOf(priv)).moderation).toBe('pending')
   })
 
   it('за раз публикуется не больше суточного предела проверок, и остаток назван', async () => {

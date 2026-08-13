@@ -199,6 +199,7 @@ export const ru: Record<DictKey, string> = {
   'bulk.publishNothing': 'Среди выбранного нет черновиков',
   'bulk.published': 'Опубликовано: {n}',
   'bulk.pendingReview': 'на проверке: {n}',
+  'bulk.blocked': 'снято модерацией: {n}',
   'unsubscribe.title': 'Отписка',
   'unsubscribe.confirm': 'Отключить письма от SetFork?',
   'unsubscribe.confirmHint': 'Уведомления на сайте продолжат работать — прекратятся только письма.',

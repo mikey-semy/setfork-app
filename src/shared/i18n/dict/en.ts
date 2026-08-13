@@ -207,6 +207,7 @@ export const en = {
   'bulk.publishNothing': 'No drafts among the selected lists',
   'bulk.published': 'Published: {n}',
   'bulk.pendingReview': 'awaiting check: {n}',
+  'bulk.blocked': 'blocked by moderation: {n}',
   'unsubscribe.title': 'Unsubscribe',
   'unsubscribe.confirm': 'Turn off email from SetFork?',
   'unsubscribe.confirmHint': 'Notifications inside the site keep working — only email stops.',

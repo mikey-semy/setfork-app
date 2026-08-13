@@ -1,6 +1,6 @@
 'use server'
 
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db, repositories, templates } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
@@ -44,14 +44,29 @@ export interface MoveResult {
   error?: 'catalog-not-found' | 'bad-name'
 }
 
-/** Свои списки из присланного набора — единственный источник правды о владении. */
+/**
+ * Свои и ПРАВИМЫЕ списки из присланного набора — единственный источник правды о том, что
+ * пачке позволено трогать.
+ *
+ * Владение проверяется запросом, а не доверием к присланному. Архив и заморозка отсекаются
+ * здесь же: полка — это свойство списка, а у архивного списка свойства не меняются вовсе
+ * (`canEditList`); пачка не может быть лазейкой мимо запрета, который держит одиночная
+ * правка (находка авто-ревью).
+ */
 async function ownIds(userId: string, ids: string[]): Promise<string[]> {
   const clean = [...new Set(ids.filter(Boolean))].slice(0, BULK_MAX)
   if (!clean.length) return []
   const rows = await db
     .select({ id: templates.id })
     .from(templates)
-    .where(and(eq(templates.ownerId, userId), inArray(templates.id, clean)))
+    .where(
+      and(
+        eq(templates.ownerId, userId),
+        inArray(templates.id, clean),
+        isNull(templates.archivedAt),
+        isNull(templates.frozenAt),
+      ),
+    )
   return rows.map((r) => r.id)
 }
 
@@ -144,6 +159,8 @@ export interface PublishBatchResult {
   published: number
   /** Опубликованы, но ждут авто-проверку: видны пока только владельцу. */
   pending: number
+  /** Опубликованы, но сняты модерацией: проверки не будет, решает админ. */
+  blocked: number
   /** Не тронуты: чужое или уже опубликованное. */
   skipped: number
   /** Сколько из отобранного не поместилось в пачку (см. PUBLISH_BATCH_MAX). */
@@ -163,5 +180,5 @@ export async function bulkPublish(ids: string[], dryRun = true): Promise<Publish
   const session = await requireSession()
   const report = await publishOwnedDrafts(session.userId, ids.slice(0, BULK_MAX), { dryRun })
   if (!dryRun) revalidatePath(`/${session.handle}`)
-  return { published: report.published, pending: report.pending, skipped: report.skipped, overflow: report.overflow, dryRun }
+  return { published: report.published, pending: report.pending, blocked: report.blocked, skipped: report.skipped, overflow: report.overflow, dryRun }
 }

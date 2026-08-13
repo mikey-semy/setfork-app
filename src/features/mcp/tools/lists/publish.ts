@@ -119,7 +119,10 @@ const SKIP_REASON: Record<PublishSkip, string> = {
  * языке ассистента.
  */
 export async function mcpPublishLists(userId: string, refs: string[], dryRun = true): Promise<McpPublishResult | { error: string }> {
-  const list = (refs ?? []).map((r) => r.trim()).filter(Boolean)
+  // Повтор адреса в наборе схлопываем СРАЗУ. Список публикуется один раз в любом случае, но
+  // отчёт по повторам насчитал бы «опубликовано 2» на одну запись — ассистент читает эти
+  // числа как результат, а не как эхо запроса (находка авто-ревью).
+  const list = [...new Set((refs ?? []).map((r) => r.trim()).filter(Boolean))]
   if (!list.length) return { error: 'nothing to publish: pass refs from my_drafts' }
   if (list.length > PUBLISH_BATCH_MAX) return { error: `too many lists in one call: ${list.length} > ${PUBLISH_BATCH_MAX}` }
 
@@ -151,7 +154,11 @@ export async function mcpPublishLists(userId: string, refs: string[], dryRun = t
       return
     }
     out.published++
-    out.lists.push({ ref, status: 'published', reason: outcome.moderation === 'pending' ? 'sent to moderation' : undefined })
+    // «Снято модерацией» и «ждёт проверки» — разные вещи: первое админ решает руками, и
+    // обещать ассистенту проверку там нельзя.
+    const blocked = outcome.moderation === 'flagged' || outcome.moderation === 'hidden'
+    const reason = blocked ? 'blocked by moderation — only an admin can lift it' : outcome.moderation === 'pending' ? 'sent to moderation' : undefined
+    out.lists.push({ ref, status: 'published', reason })
   })
   return out
 }

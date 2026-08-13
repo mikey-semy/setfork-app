@@ -126,6 +126,15 @@ async function enqueueModerate(templateId: string, gate: boolean, ownerId: strin
   return 'queued'
 }
 
+/** Отпустить удержание: только `pending` → `active`. Снятое админом (flagged/hidden) под
+ *  это условие не подпадает и остаётся снятым. */
+async function releaseHold(templateId: string): Promise<void> {
+  await db
+    .update(templates)
+    .set({ moderation: 'active', moderationReason: null, moderationSeverity: 0 })
+    .where(and(eq(templates.id, templateId), eq(templates.moderation, 'pending')))
+}
+
 /** Кап расхода исчерпан: список, ждущий проверку, остаётся pending — но с внятной
  *  причиной, иначе в очереди модерации он выглядит просто «висящим». Пометка нужна
  *  ОБОИМ путям: и публикации существующего списка, и созданию нового (там состояние
@@ -159,8 +168,17 @@ export async function gateListPublication(templateId: string): Promise<void> {
     // копия правила в двух путях публикации разъезжается, и одна из веток начинает
     // пускать непроверенное в паблик.
     const decision = await publicationDecision(tpl.ownerId, templateId)
-    if (decision === 'gate-off') return
+    // Снимаем удержание, если проверка не нужна. Вызывающий вправе выставить `pending` ДО
+    // того, как список стал видимым (так делает пакетная публикация: иначе между «уже
+    // опубликован» и «барьер решил» список открыт всем). Тогда именно барьер обязан
+    // удержание отпустить — а `where moderation = 'pending'` следит, чтобы этим нельзя было
+    // отмыть flagged/hidden, даже если проверки выше однажды переставят.
+    if (decision === 'gate-off') {
+      await releaseHold(templateId)
+      return
+    }
     if (decision === 'trusted') {
+      await releaseHold(templateId)
       await enqueueModerate(templateId, false, tpl.ownerId)
       return
     }

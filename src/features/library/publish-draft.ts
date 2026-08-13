@@ -1,5 +1,5 @@
 import 'server-only'
-import { inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
 // eslint-disable-next-line boundaries/dependencies -- барьер модерации неотделим от публикации; мост держим ЗДЕСЬ одной точкой (как gitPort в actions/shared), а не по копии в каждом входе
 import { MODERATE_DAILY_CAP, gateListPublication } from '@/features/moderation/moderate-list'
@@ -44,6 +44,12 @@ export interface PublishReport {
   published: number
   /** Сколько ждёт проверки — их пока не видит никто, кроме владельца. */
   pending: number
+  /**
+   * Сколько снято модерацией. Отдельно от `pending` нарочно: снятый список не ждёт
+   * проверку — он заблокирован, пока не решит админ, и сказать про него «на проверке»
+   * значит обещать то, чего не будет (находка авто-ревью).
+   */
+  blocked: number
   /** Сколько пропущено (чужое, уже опубликовано). */
   skipped: number
   /** Сколько черновиков не поместилось в пачку и осталось черновиками. */
@@ -58,11 +64,17 @@ export interface PublishReport {
  */
 export async function publishOwnedDrafts(userId: string, ids: string[], opts: { dryRun?: boolean } = {}): Promise<PublishReport> {
   const wanted = [...new Set(ids.filter(Boolean))]
-  const report: PublishReport = { outcomes: [], published: 0, pending: 0, skipped: 0, overflow: 0 }
+  const report: PublishReport = { outcomes: [], published: 0, pending: 0, blocked: 0, skipped: 0, overflow: 0 }
   if (!wanted.length) return report
 
   const rows = await db
-    .select({ id: templates.id, ownerId: templates.ownerId, status: templates.status, visibility: templates.visibility })
+    .select({
+      id: templates.id,
+      ownerId: templates.ownerId,
+      status: templates.status,
+      visibility: templates.visibility,
+      moderation: templates.moderation,
+    })
     .from(templates)
     .where(inArray(templates.id, wanted))
   const byId = new Map(rows.map((r) => [r.id, r]))
@@ -92,16 +104,31 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
     return report
   }
 
-  await db
-    .update(templates)
-    .set({ status: 'published', updatedAt: new Date() })
-    .where(inArray(templates.id, go.map((r) => r.id)))
-  // Барьер — по одному: он решает судьбу каждого списка отдельно (доверенный автор, снятое
-  // модерацией, исчерпанный суточный кап) и заведомо не сводится к одному запросу.
-  for (const row of go) if (row.visibility === 'public') await gateListPublication(row.id)
+  for (const row of go) {
+    // ПУБЛИКУЕМ ПО ОДНОМУ И СРАЗУ С УДЕРЖАНИЕМ.
+    //
+    // Пока это была общая запись «все → published» и барьер следом, публичные списки
+    // недоверенного автора успевали побыть видимыми всем, а прерванный запрос оставлял
+    // непроверенный остаток открытым насовсем (находка авто-ревью, P1).
+    //
+    // Поэтому публичный список рождается опубликованным СРАЗУ в `pending` — то есть
+    // видимым только владельцу, — а барьер следом решает, отпустить удержание (автору
+    // доверяем / проверки в этой сборке нет) или оставить и поставить проверку в очередь.
+    // Так же устроен путь СОЗДАНИЯ: состояние решается до появления видимой строки, а не
+    // догоняет её отдельным шагом (shared/moderation/publication-state).
+    //
+    // Приватный не трогаем: наружу он не выставлен, проверять в нём нечего. Снятое
+    // модерацией — тем более: его судьбу решает только админ.
+    const hold = row.visibility === 'public' && row.moderation !== 'flagged' && row.moderation !== 'hidden'
+    await db
+      .update(templates)
+      .set(hold ? { status: 'published', moderation: 'pending', updatedAt: new Date() } : { status: 'published', updatedAt: new Date() })
+      .where(eq(templates.id, row.id))
+    if (row.visibility === 'public') await gateListPublication(row.id)
+  }
 
-  // Состояние читаем ПОСЛЕ барьера, а не предполагаем: списку могло достаться pending —
-  // тогда он опубликован, но виден пока только владельцу, и человек обязан это узнать.
+  // Итог читаем ИЗ БАЗЫ, а не предполагаем: решение принял барьер, и только он знает,
+  // отпущено удержание или список ждёт проверки. Одним запросом на всю пачку.
   const after = await db
     .select({ id: templates.id, moderation: templates.moderation })
     .from(templates)
@@ -110,8 +137,12 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
   for (const row of go) {
     const moderation = modOf.get(row.id) ?? null
     report.outcomes.push({ id: row.id, skip: null, moderation })
-    if (moderation === 'active') report.published++
-    else report.pending++
+    // Считаем по видимости: у приватного отметка модерации может остаться с прошлой
+    // публичной жизни, и «на проверке» про список, которого никто не видит, — чепуха.
+    if (row.visibility !== 'public') report.published++
+    else if (moderation === 'flagged' || moderation === 'hidden') report.blocked++
+    else if (moderation === 'pending') report.pending++
+    else report.published++
   }
   return report
 }

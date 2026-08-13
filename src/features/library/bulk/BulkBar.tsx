@@ -107,6 +107,9 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
         [
           res.published ? fill('bulk.published', lang, { n: res.published }) : '',
           res.pending ? fill('bulk.pendingReview', lang, { n: res.pending }) : '',
+          // Снятое модерацией называем своим именем: «на проверке» обещало бы проверку,
+          // которой не будет — там решает админ.
+          res.blocked ? fill('bulk.blocked', lang, { n: res.blocked }) : '',
         ]
           .filter(Boolean)
           .join(' · '),
