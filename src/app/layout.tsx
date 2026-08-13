@@ -8,6 +8,7 @@ import { getLang } from '@/shared/i18n/server'
 import { avatarSrc } from '@/shared/media'
 import { getBrowserNotifyEnabled, getNotifications, getUnreadCount } from '@/features/notifications/queries'
 import { getUserTemplates } from '@/features/library/queries'
+import { listVisibilityState } from '@/features/library/list-visibility'
 import { getUserAppearance } from '@/features/settings/appearance'
 import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
 import { HydrationSignal } from '@/shared/ui/HydrationSignal'
@@ -107,13 +108,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       ])
     : [0, [], false, [], { accent: '', font: '', scale: '' }]
   // «Top lists» в боковом меню: недавние списки пользователя (по updatedAt), минимум
-  // полей. Замок у приватных — тот же признак, что в шапке и в переключателе.
+  // полей. Значок состояния — тот же признак, что в шапке и в переключателе, и
+  // считается одним правилом (list-visibility): у черновика поле visibility говорит
+  // лишь о будущем, поэтому по нему рисовать нельзя.
   const topLists = ownLists.slice(0, 10).map((l) => ({
     handle: l.ownerHandle,
     slug: l.slug,
     title: l.title,
     avatarUrl: l.ownerAvatarUrl,
-    visibility: l.visibility,
+    visibility: listVisibilityState(l),
   }))
   // Резолвим аватар для шапки: сессия может хранить storage_key — превращаем в imgproxy-URL.
   const navUser = user ? { ...user, avatarUrl: (await avatarSrc(user.avatarUrl, 60)) ?? undefined } : null

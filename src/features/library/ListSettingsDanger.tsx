@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useId, useRef, useState, useTransition } from 'react'
-import { Archive, Globe, Link2, Lock, Snowflake, Trash2, UserRoundPlus } from 'lucide-react'
+import { Archive, Globe, Link2, Lock, Rocket, Snowflake, Trash2, UserRoundPlus } from 'lucide-react'
 import { slugify } from '@/shared/lib/slugify'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -13,6 +13,7 @@ import { cancelTransfer, initiateTransfer, type TransferResult } from '@/feature
 // библиотеки разом (react-doctor/no-barrel-import).
 import { deleteListAction, setListArchived, setListFrozen, setListVisibility } from './actions/list-settings'
 import { renameList, type RenameResult } from './actions/rename'
+import { publishList } from './actions/versions'
 
 // Опасная зона списка (аналог GitHub Danger Zone): опасные действия собраны
 // в одном месте, каждое — через модалку. Удаление подтверждается вводом
@@ -23,6 +24,7 @@ export function ListSettingsDanger({
   slug,
   title,
   visibility,
+  status,
   moderation,
   archived,
   frozen,
@@ -35,6 +37,8 @@ export function ListSettingsDanger({
   /** Заголовок на текущем языке — только чтобы предложить адрес по кнопке. */
   title: string
   visibility: 'public' | 'private'
+  /** Черновик ещё не опубликован: visibility у него — НАМЕРЕНИЕ, а не факт. */
+  status: 'draft' | 'published'
   moderation: string
   archived: boolean
   frozen: boolean
@@ -42,7 +46,7 @@ export function ListSettingsDanger({
   lang: Lang
 }) {
   const [pending, start] = useTransition()
-  const [dialog, setDialog] = useState<null | 'visibility' | 'delete' | 'archive' | 'freeze' | 'transfer' | 'rename'>(null)
+  const [dialog, setDialog] = useState<null | 'publish' | 'visibility' | 'delete' | 'archive' | 'freeze' | 'transfer' | 'rename'>(null)
   // Кнопка отправки живёт в футере окна, вне формы: связываем их атрибутом form.
   const transferFormId = useId()
   const renameFormId = useId()
@@ -52,6 +56,7 @@ export function ListSettingsDanger({
 
   const fullName = `${handle}/${slug}` // видимый идентификатор для подтверждения
   const isPublic = visibility === 'public'
+  const isDraft = status === 'draft'
   // Снятый модерацией список владелец удалить не может (сервер блокирует — стирание
   // fingerprint'а открывало бы отмывку повторной заливкой). Показываем причину.
   const lockedByModeration = moderation === 'flagged' || moderation === 'hidden'
@@ -62,10 +67,29 @@ export function ListSettingsDanger({
 
       {/* Опасная зона: обведённая красным рамка со строками-действиями. */}
       <DangerZone title={t('dangerZone', lang)}>
-        {/* Видимость */}
+        {/* Публикация черновика — та же ось, что видимость (кто увидит список), и
+            такой же необратимости шаг, поэтому живёт здесь же и первой строкой,
+            а не уговорами-баннером над списком. */}
+        {isDraft && (
+          <ActionRow title={t('publishList', lang)} sub={t('draftHint', lang)}>
+            <Button variant="danger" size="md" onClick={() => setDialog('publish')} className="border border-danger/40">
+              <Rocket size={14} /> {t('publish', lang)}
+            </Button>
+          </ActionRow>
+        )}
+
+        {/* Видимость. У ЧЕРНОВИКА visibility — ещё не факт, а намерение: показать
+            «сейчас список публичный» значило бы соврать (canViewList не пускает к
+            черновику никого, кроме владельца и соавторов). Поэтому подпись говорит
+            про то, что будет ПОСЛЕ публикации, а сам выбор остаётся — чтобы список
+            можно было опубликовать сразу приватным. */}
         <ActionRow
           title={t('changeVisibility', lang)}
-          sub={`${t('visibilityCurrent', lang)} ${t(isPublic ? 'publicLabel' : 'privateLabel', lang).toLowerCase()}.`}
+          sub={
+            isDraft
+              ? t(isPublic ? 'visibilityAfterPublishPublic' : 'visibilityAfterPublishPrivate', lang)
+              : `${t('visibilityCurrent', lang)} ${t(isPublic ? 'publicLabel' : 'privateLabel', lang).toLowerCase()}.`
+          }
         >
           <Button variant="danger" size="md" onClick={() => setDialog('visibility')} className="border border-danger/40">
             {isPublic ? <Lock size={14} /> : <Globe size={14} />} {t(isPublic ? 'makePrivate' : 'makePublic', lang)}
@@ -240,12 +264,30 @@ export function ListSettingsDanger({
         </form>
       </OverlayPanel>
 
-      {/* Модалка смены видимости — с последствиями, без ввода имени. */}
+      {/* Модалка публикации черновика. Экшен сам уводит на страницу списка, поэтому
+          диалог не закрываем руками — как у удаления ниже. */}
+      <ConfirmDialog
+        open={dialog === 'publish'}
+        onClose={() => setDialog(null)}
+        title={t('publishList', lang)}
+        intro={t('publishListEffects', lang)}
+        confirmLabel={t('publish', lang)}
+        cancelLabel={t('cancel', lang)}
+        busy={pending}
+        onConfirm={() => start(() => publishList(templateId))}
+      />
+
+      {/* Модалка смены видимости — с последствиями, без ввода имени. Черновику
+          последствия описываем будущим временем: сейчас его и так никто не видит. */}
       <ConfirmDialog
         open={dialog === 'visibility'}
         onClose={() => setDialog(null)}
         title={t(isPublic ? 'makePrivate' : 'makePublic', lang)}
-        intro={t(isPublic ? 'makePrivateEffects' : 'makePublicEffects', lang)}
+        intro={
+          isDraft
+            ? t(isPublic ? 'visibilityAfterPublishPrivate' : 'visibilityAfterPublishPublic', lang)
+            : t(isPublic ? 'makePrivateEffects' : 'makePublicEffects', lang)
+        }
         confirmLabel={t(isPublic ? 'makePrivate' : 'makePublic', lang)}
         cancelLabel={t('cancel', lang)}
         busy={pending}
