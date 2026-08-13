@@ -110,6 +110,11 @@ export function blockMatchKey(b: BlockContent): string {
   return type === 'step' ? `step:${stableJson(b.title)}` : `${type}:${stableJson(b.content)}`
 }
 
+// Идентичность блока — доменное знание (её спрашивают и `git`, и `library`),
+// поэтому определение живёт в `@/core`. Реэкспорт оставлен для потребителей,
+// которые уже импортируют сопоставление отсюда.
+export { blockIdentities, blockIdentity } from '@/core'
+
 /** Найденное соответствие блока в предыдущем наборе. */
 export interface BlockMatch {
   i: number
@@ -130,27 +135,39 @@ export interface BlockMatch {
 export function matchBlocks<T>(
   from: T[],
   to: T[],
-  identity: (b: T) => string | null | undefined,
+  identity: (b: T) => string | string[] | null | undefined,
   fallbackKey: (b: T) => string,
 ): (BlockMatch | null)[] {
+  // Идентичностей у блока может быть НЕСКОЛЬКО, и это не роскошь, а переход:
+  // легаси-блок хранит bid в `content.bid`, а редактор при первом же сохранении
+  // выдаёт ему ещё и uuid в колонку (editor.ts: «в колонку кладём ТОЛЬКО uuid»).
+  // Старая версия тогда опознаётся по bid, новая — по uuid, и если считать
+  // идентичность одним значением, блок читается как «удалён + добавлен» ровно в
+  // момент перехода. Совпадение ЛЮБОГО ключа = тот же блок.
+  const keys = (b: T): string[] => {
+    const v = identity(b)
+    return (Array.isArray(v) ? v : [v]).filter((x): x is string => !!x)
+  }
   const byId = new Map<string, number>()
   const byKey = new Map<string, number[]>()
   // Отдельная очередь источников БЕЗ идентичности: только они годятся в
   // фолбэк блоку, у которого идентичность есть.
   const byKeyIdless = new Map<string, number[]>()
   from.forEach((s, i) => {
-    const id = identity(s)
-    if (id) byId.set(id, i)
+    const ids = keys(s)
+    // Первый источник с этим ключом побеждает: дубли ключа разбираются фолбэком
+    // в порядке следования, как и раньше.
+    for (const id of ids) if (!byId.has(id)) byId.set(id, i)
     const k = fallbackKey(s)
     byKey.set(k, [...(byKey.get(k) ?? []), i])
-    if (!id) byKeyIdless.set(k, [...(byKeyIdless.get(k) ?? []), i])
+    if (!ids.length) byKeyIdless.set(k, [...(byKeyIdless.get(k) ?? []), i])
   })
 
   const taken = new Set<number>()
 
   return to.map((s) => {
-    const id = identity(s)
-    if (id) {
+    const ids = keys(s)
+    for (const id of ids) {
       const i = byId.get(id)
       if (i != null && !taken.has(i)) {
         taken.add(i)
@@ -163,7 +180,7 @@ export function matchBlocks<T>(
     // данные отбирает источник у настоящего владельца и меняет местами их даты.
     // Совсем без фолбэка тоже нельзя: первая запись после появления идентичностей
     // читалась бы как «всё удалено и всё добавлено» — весь список переписан заново.
-    const queue = (id ? byKeyIdless : byKey).get(fallbackKey(s)) ?? []
+    const queue = (ids.length ? byKeyIdless : byKey).get(fallbackKey(s)) ?? []
     for (const i of queue) {
       if (!taken.has(i)) {
         taken.add(i)

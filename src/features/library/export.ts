@@ -1,5 +1,6 @@
 // Экспорт списка в Markdown / автономный HTML (для скачивания и печати).
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { blockIdentity } from '@/core'
 import type { StepLevel } from '@/shared/db'
 import { safeHref } from '@/shared/lib/safe-url'
 import { escapeHtml as esc } from '@/shared/lib/escape'
@@ -77,9 +78,9 @@ export function toExportList(detail: TemplateDetail): ExportList {
       n: s.n,
       type: s.type,
       content: s.content,
-      // Идентичность блока: колонка — источник правды, content.bid — легаси-дом
-      // не-step блоков (тот же порядок, что у редактора и MCP).
-      bid: s.blockId || (typeof s.content?.bid === 'string' ? s.content.bid : null),
+      // Идентичность блока — одна функция на приложение (`@/core`): колонка
+      // сильнее, content.bid — легаси-дом не-step блоков.
+      bid: blockIdentity(s),
       title: s.title,
       desc: s.desc,
       command: s.command,

@@ -14,6 +14,8 @@
 // Порядок результата: ours-порядок; добавленное в theirs — после его
 // theirs-предшественника (или в конец).
 
+import { blockIdentity } from '@/core/domain/block-identity'
+
 export interface TwStep {
   // Не-step блоки несут type/content; у шага — undefined (byte-compat).
   type?: string
@@ -65,17 +67,47 @@ export interface ThreeWayResult {
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
 
-const stepEq = (a: TwStep | null, b: TwStep | null): boolean => JSON.stringify(a) === JSON.stringify(b)
+/**
+ * Сравнение блоков — по СОДЕРЖИМОМУ, без идентичности.
+ *
+ * `blockId` и `content.bid` отвечают на вопрос «тот же это блок», а не «что в
+ * нём написано». Пока они входили в сравнение целиком, появление колонки у
+ * легаси-блока (её выдаёт редактор при первом же сохранении) читалось как
+ * правка содержимого: merge видел, что изменились ОБЕ стороны, и выдавал
+ * конфликт там, где ветка правила текст, а main всего лишь получил uuid.
+ * То же различение, что в `block-identity.ts`: идентичность отдельно, отпечаток
+ * содержимого отдельно. Замечание авто-ревью на fe#769 (P1).
+ */
+const body = (s: TwStep | null): unknown => {
+  if (!s) return s
+  const { blockId: _id, content, ...rest } = s
+  if (!content) return rest
+  const { bid: _bid, ...payload } = content
+  return { ...rest, content: payload }
+}
+
+const stepEq = (a: TwStep | null, b: TwStep | null): boolean => JSON.stringify(body(a)) === JSON.stringify(body(b))
 
 /** Ключ идентичности блока. Сильнейший — стабильный blockId: с ним
  *  ПЕРЕИМЕНОВАНИЕ шага читается как modify, а не add+remove, и merge перестаёт
  *  выдумывать конфликты там, где просто поправили заголовок. Дальше — легаси
  *  content.bid не-step блоков, затем фолбэк по title/контенту (старые данные). */
 function blockKey(s: TwStep): string {
+  const c = s.content ?? {}
+  const legacy = typeof c.bid === 'string' && c.bid ? c.bid : null
+  // ⚠️ Здесь `content.bid` СИЛЬНЕЕ колонки — обратно приоритету `blockIdentity`,
+  // и это не описка. Merge сравнивает снимки git, а колонка `block_id` в канон
+  // НЕ сериализуется (schema.ts: «В git пока НЕ сериализуется») — значит общий
+  // знаменатель всех трёх сторон именно `content.bid`.
+  //
+  // Без этого переход ломал merge: база сделана до появления колонки и опознана
+  // как `text#<legacy>`, а main после первого сохранения — как `id#<uuid>`, хотя
+  // несёт тот же legacy-bid. Правка такого блока в ветке давала «добавление» и
+  // конфликт удаления вместо одного изменённого блока. Замечание авто-ревью
+  // на fe#769 (P1).
+  if (legacy) return `${s.type ?? 'step'}#${legacy}`
   if (s.blockId) return `id#${s.blockId}`
   if (!s.type || s.type === 'step') return norm(s.title)
-  const c = s.content ?? {}
-  if (typeof c.bid === 'string' && c.bid) return `${s.type}#${c.bid}`
   if (s.type === 'text') return `text:${norm(String(c.md ?? ''))}`
   if (s.type === 'image') return `image:${String(c.ref ?? '')}:${norm(String(c.caption ?? ''))}`
   return `${s.type}:${norm(JSON.stringify(c))}`

@@ -241,6 +241,42 @@ describe('дифф по стабильному blockId', () => {
   })
 })
 
+// Идентичность презентационного блока живёт в ДВУХ местах: колонка `steps.block_id`
+// и легаси-дом `content.bid`. На каноне 12.08 у 51 блока из 494 (31 text + 20 quiz)
+// заполнен только `content.bid`, колонка пуста. Такие блоки дифф не сопоставлял:
+// фолбэк для не-step блоков считается ПО СОДЕРЖИМОМУ, а содержимое и меняется
+// правкой — поэтому правка читалась как «удалён + добавлен»: комментарий привязать
+// не к чему. При этом merge веток (three-way.ts) и экспорт `content.bid` знают, то
+// есть на один вопрос «тот ли это блок» было три разных ответа. Линза 05, D1.
+describe('идентичность блока: колонка ИЛИ content.bid', () => {
+  const textWithBid = (bid: string, md: string): CmpStep => ({
+    type: 'text',
+    content: { bid, md },
+    title: '',
+    desc: '',
+    command: '',
+    level: 'required',
+    why: '',
+    subtasks: [],
+  })
+
+  it('правка текстового блока с идентичностью только в content.bid — «изменён»', () => {
+    const { summary } = diffSteps([textWithBid('t1', 'Было')], [textWithBid('t1', 'Стало')])
+    expect(summary).toMatchObject({ added: 0, removed: 0, changed: 1 })
+  })
+
+  it('колонка сильнее content.bid: тот же blockId при разных bid — тот же блок', () => {
+    const from = [step('', { blockId: 'b1', type: 'text', content: { bid: 'old', md: 'Было' } })]
+    const to = [step('', { blockId: 'b1', type: 'text', content: { bid: 'new', md: 'Стало' } })]
+    expect(diffSteps(from, to).summary).toMatchObject({ added: 0, removed: 0, changed: 1 })
+  })
+
+  it('разные content.bid — разные блоки, а не переписанный один', () => {
+    const { summary } = diffSteps([textWithBid('t1', 'Один')], [textWithBid('t2', 'Один')])
+    expect(summary).toMatchObject({ added: 1, removed: 1, changed: 0 })
+  })
+})
+
 describe('переход к идентичностям не читается как переписанный список', () => {
   const step = (title: string, blockId?: string) => ({ title, desc: '', command: '', level: 'required', why: '', section: '', subtasks: [], refs: [], blockId }) as never
 
@@ -260,5 +296,32 @@ describe('переход к идентичностям не читается к�
     const to = [step('Сварить бульон', 'id-1'), step('Сварить бульон', 'id-new')]
     const d = diffSteps(from, to)
     expect(d.summary.added, 'дубль заголовка слился со старым вместо «добавлен»').toBe(1)
+  })
+})
+
+// ПЕРЕХОД легаси-блока на uuid. Редактор при первом сохранении выдаёт блоку
+// uuid в колонку, а старый нераспознанный bid оставляет в content.bid
+// (editor.ts: «в колонку кладём ТОЛЬКО uuid»). Тогда старая версия опознаётся по
+// bid, новая — по uuid: если считать идентичность ОДНИМ значением, блок читается
+// как «удалён + добавлен» ровно в момент перехода. Замечание авто-ревью на fe#769.
+describe('переход легаси-bid на uuid не читается как замена блока', () => {
+  const legacy = (md: string): CmpStep => ({
+    type: 'text', content: { bid: 'legacy-7', md }, title: '', desc: '',
+    command: '', level: 'required', why: '', subtasks: [],
+  })
+  const migrated = (md: string): CmpStep => ({
+    type: 'text', blockId: '11111111-2222-3333-4444-555555555555',
+    content: { bid: 'legacy-7', md }, title: '', desc: '',
+    command: '', level: 'required', why: '', subtasks: [],
+  })
+
+  it('блок получил колонку, содержимое не трогали — изменений нет', () => {
+    const { summary } = diffSteps([legacy('Текст')], [migrated('Текст')])
+    expect(summary).toMatchObject({ added: 0, removed: 0, changed: 0 })
+  })
+
+  it('блок получил колонку и правку — это «изменён», а не замена', () => {
+    const { summary } = diffSteps([legacy('Было')], [migrated('Стало')])
+    expect(summary).toMatchObject({ added: 0, removed: 0, changed: 1 })
   })
 })
