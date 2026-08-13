@@ -8,6 +8,7 @@ import {
   parseIndexSpace,
   resolveTargetSpace,
   sameSpace,
+  spaceDim,
 } from '@/shared/ai/embed-space'
 
 describe('resolveTargetSpace', () => {
@@ -39,10 +40,27 @@ describe('resolveTargetSpace', () => {
     expect(EMBED_PROVIDERS).toContain(s.provider)
   })
 
-  it('любой провайдер списка просит мерность КОЛОНКИ — своей цифры на провайдера нет', () => {
+  it('мерность берётся ИЗМЕРЕННАЯ у модели, а не потолком колонки', () => {
+    // Яндекс v2 отдаёт 768 — пространство 768-мерное, в колонку ляжет с паддингом.
+    expect(resolveTargetSpace({ [EMBED_TARGET_SETTING]: 'yandex' }, {}, 768).dim).toBe(768)
+    // Модель шире колонки — просим срез ровно по колонке.
+    expect(resolveTargetSpace({}, {}, COLUMN_DIM + 1536).dim).toBe(COLUMN_DIM)
+  })
+
+  it('не измерено — считаем, что модель заполняет колонку целиком', () => {
     for (const p of EMBED_PROVIDERS) {
       expect(resolveTargetSpace({ [EMBED_TARGET_SETTING]: p }, {}).dim).toBe(COLUMN_DIM)
     }
+  })
+})
+
+describe('spaceDim', () => {
+  it('родная мерность — как есть, но не шире колонки; неизвестная — колонка', () => {
+    expect(spaceDim(768)).toBe(768)
+    expect(spaceDim(COLUMN_DIM)).toBe(COLUMN_DIM)
+    expect(spaceDim(COLUMN_DIM * 2)).toBe(COLUMN_DIM)
+    expect(spaceDim(null)).toBe(COLUMN_DIM)
+    expect(spaceDim(0)).toBe(COLUMN_DIM)
   })
 })
 

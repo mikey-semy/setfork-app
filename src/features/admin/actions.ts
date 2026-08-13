@@ -336,9 +336,10 @@ export async function getEmbedSpaceInfo(): Promise<{
   // нечитаем; помощник server-only, а панель клиентская — прибираем здесь.
   index: { provider: string; docModel: string; docLabel: string; dim: number; at?: number }
   target: { provider: string; docModel: string; docLabel: string; dim: number }
-  /** Мерность колонки embeddings.embedding (её просим у любого провайдера). Панель
-   *  показывает её ЧИСЛОМ ИЗ СХЕМЫ: вписанное руками разъезжается с базой. */
+  /** ПОТОЛОК колонки embeddings.embedding — числом ИЗ СХЕМЫ: вписанное руками разъезжается. */
   columnDim: number
+  /** Мерность цели известна измерением, а не взята потолком (панель не выдаёт догадку за факт). */
+  targetMeasured: boolean
   /** Какие провайдеры вообще бывают — список пунктов селекта родом отсюда. */
   providers: string[]
   inSync: boolean
@@ -352,7 +353,9 @@ export async function getEmbedSpaceInfo(): Promise<{
     import('drizzle-orm'),
     import('@/shared/ai/models'),
   ])
-  const { index, target, inSync } = await ensureFreshSpace()
+  // measure=false: панель опрашивает это раз в 1.5 с — проба у провайдера здесь была бы
+  // сетевым вызовом на каждый тик. Меряем при сохранении модели и при старте реиндекса.
+  const { index, target, inSync, targetMeasured } = await ensureFreshSpace()
   const [stats] = await db
     .select({
       rows: sql<number>`count(*)::int`,
@@ -363,6 +366,7 @@ export async function getEmbedSpaceInfo(): Promise<{
     index: { provider: index.provider, docModel: index.docModel, docLabel: prettyModelName(index.docModel), dim: index.dim, at: index.at },
     target: { provider: target.provider, docModel: target.docModel, docLabel: prettyModelName(target.docModel), dim: target.dim },
     columnDim: COLUMN_DIM,
+    targetMeasured,
     providers: [...EMBED_PROVIDERS],
     inSync,
     rows: stats?.rows ?? 0,

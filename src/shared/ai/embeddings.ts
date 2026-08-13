@@ -156,9 +156,17 @@ async function requestEmbeddings(
 }
 
 /**
- * ПРОБА СОВМЕСТИМОСТИ: один короткий вызов, который отвечает на вопрос «что эта модель
- * реально отдаёт, когда просишь мерность колонки». Стоит доли цента и заменяет собой список
+ * ПРОБА СОВМЕСТИМОСТИ: один короткий вызов без параметра dimensions — он отвечает на
+ * вопрос «какая у этой модели РОДНАЯ мерность». Стоит доли цента и заменяет собой список
  * «известных» моделей в коде — тот устаревает молча и врал про 31 модель каталога.
+ *
+ * Раньше проба просила мерность колонки и запоминала ответ как свойство модели. Пока
+ * колонка совпадала с моделью, разницы не было; с потолком шире модели такой факт означал
+ * бы «модель умеет столько», хотя это лишь «столько попросили».
+ *
+ * Умеет ли модель dimensions, выясняется там, где это нужно, — когда родная мерность
+ * ШИРЕ колонки и срез неизбежен (второй короткий вызов). Модели уже колонки резать
+ * незачем: они ложатся с паддингом.
  */
 export async function probeEmbedModel(
   provider: EmbedProvider,
@@ -167,9 +175,15 @@ export async function probeEmbedModel(
   const ep = await endpointFor({ provider, docModel: model, queryModel: model, dim: COLUMN_DIM })
   if (!ep) return { error: 'no-key' }
   try {
-    const r = await requestEmbeddings(ep, model, ['probe'], COLUMN_DIM)
-    if (!r || !r.vectors[0]?.length) return { error: 'no-vector' }
-    return { dim: r.vectors[0].length, dimsAccepted: r.dimsAccepted }
+    // Без dimensions — так видно РОДНУЮ мерность. Провайдер, которому параметр обязателен,
+    // на такой запрос ответит отказом: тогда спрашиваем с мерностью колонки, и родной
+    // считается длина того, что он отдал (у 768-мерного Яндекса это те же 768).
+    const r = (await requestEmbeddings(ep, model, ['probe'], null)) ?? (await requestEmbeddings(ep, model, ['probe'], COLUMN_DIM))
+    const dim = r?.vectors[0]?.length
+    if (!dim) return { error: 'no-vector' }
+    if (dim <= COLUMN_DIM) return { dim, dimsAccepted: true }
+    const cut = await requestEmbeddings(ep, model, ['probe'], COLUMN_DIM)
+    return { dim, dimsAccepted: cut?.dimsAccepted ?? false }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'network error' }
   }
@@ -186,8 +200,10 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
     const hit = cacheGet(cacheKey)
     if (hit) return [hit]
   }
-  // dimensions просим ВСЕГДА: не знает модель этого параметра — узнаем из её же ответа
-  // (requestEmbeddings переспросит без него), а не из списка «кто умеет» в коде.
+  // Просим ровно мерность ПРОСТРАНСТВА (родная мерность модели, ограниченная колонкой):
+  // модель шире колонки отдаст MRL-срез, остальным параметр ничего не меняет. Не знает
+  // модель dimensions — узнаем из её же ответа (requestEmbeddings переспросит без него),
+  // а не из списка «кто умеет» в коде.
   const dims = space.dim
   try {
     let raw: number[][]
@@ -217,8 +233,11 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
       costUsd = r.costUsd
       dimsAccepted = r.dimsAccepted
     }
-    // Что модель ответила — ФАКТ: запоминаем (без сети) и приводим к колонке.
-    if (raw[0]?.length) void rememberCapability(space.provider, model, raw[0].length, dimsAccepted)
+    // Что модель ответила — ФАКТ: запоминаем (без сети) и приводим к колонке. Но ТОЛЬКО
+    // когда ответ родной: если dimensions приняли, длина вектора равна запрошенной, и
+    // записывать её как свойство модели значило бы затереть измеренную родную мерность
+    // тем, что мы сами же и попросили.
+    if (raw[0]?.length && !dimsAccepted) void rememberCapability(space.provider, model, raw[0].length, false)
     const out = raw.map(fitToColumn)
     // Эмбеддинги готовы — фиксируем их ДО учёта расхода, чтобы результат не зависел
     // от записи в ai_usage (recordUsage к тому же гасит свои ошибки и не бросает).

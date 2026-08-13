@@ -1,6 +1,6 @@
 import 'server-only'
 import { getSettings, saveSettings } from '@/shared/settings/kv'
-import { embeddings } from '@/shared/db'
+import { EMBEDDING_COLUMN_DIM } from '@/shared/db/schema'
 import { defaultEmbeddingModel } from '@/shared/settings/ai'
 
 // «Пространство» эмбеддингов = провайдер + модели (doc/query) + мерность.
@@ -9,11 +9,15 @@ import { defaultEmbeddingModel } from '@/shared/settings/ai'
 // пространством, иначе близость — мусор. Цель (embed.provider) меняется в
 // админке и вступает в силу ТОЛЬКО через полный реиндекс.
 //
-// Мерность колонки задана СХЕМОЙ (halfvec, P4 анализа поиска) и читается из неё же.
-// У всех провайдеров просим ровно её (параметр dimensions). Что модель на это ответит —
-// ФАКТ, который мы измеряем и запоминаем (embed-capability), а не угадываем по имени
-// вендора: вернула столько же — идеально; вернула больше — усечение + L2-нормализация
-// (осознанная деградация, о ней говорим вслух); меньше — паддинг нулями (косинус точен).
+// МЕРНОСТЬ — СВОЙСТВО МОДЕЛИ, а не колонки: у OpenRouter/text-embedding-3-small она
+// 1536, у Яндекс v2 — 768, и каждая работает в своей. Колонка — лишь потолок: вектор
+// уже её ложится с паддингом нулями (косинус точен), шире — у модели просят срез
+// (MRL, штатный параметр dimensions). Родную мерность мы ИЗМЕРЯЕМ и запоминаем
+// (embed-capability), а не угадываем по имени вендора.
+//
+// Так было до разворота на РФ; на РФ потолок ужали до 768 под Яндекс — и все,
+// включая OpenRouter, стали получать 768-мерный срез. Прод вернулся на .com —
+// вернулось и правило «мерность от модели».
 
 /** Провайдеры эмбеддингов — ОДИН список: из него и тип, и проверка чужого ввода, и набор
  *  пунктов в админке. Пара 'openrouter' | 'yandex' была переписана руками в разборе
@@ -27,34 +31,43 @@ export function isEmbedProvider(v: unknown): v is EmbedProvider {
 }
 
 /**
- * Мерность колонки — ЧИТАЕТСЯ ИЗ СХЕМЫ, а не повторяется числом. Пока это была отдельная
- * константа, она разъехалась со схемой (в каталоге моделей жило 1536 при колонке 768) и
- * подпись поля в админке говорила владельцу неправду. Схема — единственный источник.
+ * ПОТОЛОК колонки — из схемы (одна константа на halfvec и на весь код), а не число,
+ * повторённое рядом с запросом. Пока оно жило отдельно, оно разъехалось со схемой: в
+ * каталоге моделей стояло 1536 при колонке 768, и админка говорила владельцу неправду.
  */
-// Тип PgColumn мерность не раскрывает (она в конфиге колонки), поэтому доступ узко
-// типизирован здесь — один раз и с проверкой. Это по-прежнему ЧТЕНИЕ СХЕМЫ: поменяли
-// halfvec в schema.ts — поменялось всё, что ниже, без правок в других файлах.
-const columnDimensions = (embeddings.embedding as unknown as { dimensions?: number }).dimensions
-if (!columnDimensions) throw new Error('embeddings.embedding: не удалось прочитать мерность колонки из схемы')
-export const COLUMN_DIM: number = columnDimensions
+export const COLUMN_DIM: number = EMBEDDING_COLUMN_DIM
 
 export interface EmbedSpace {
   provider: EmbedProvider
   docModel: string
   queryModel: string
-  /** Мерность, которую просим у провайдера; вектор приводится к колонке (fitToColumn). */
+  /** Мерность пространства = родная мерность модели, ограниченная потолком колонки. */
   dim: number
   /** Момент старта реиндекса, unix ms (нет у legacy-пространства). */
   at?: number
 }
 
+/**
+ * Мерность пространства по ИЗМЕРЕННОЙ родной мерности модели: сколько модель отдаёт,
+ * столько и берём — но не шире колонки (шире — просим у модели срез).
+ *
+ * Не измерили — считаем, что модель заполняет колонку целиком: для дефолтной
+ * text-embedding-3-small это ровно так, а первый же вызов запишет факт.
+ */
+export function spaceDim(nativeDim?: number | null): number {
+  return nativeDim && nativeDim > 0 ? Math.min(nativeDim, COLUMN_DIM) : COLUMN_DIM
+}
+
 export const EMBED_TARGET_SETTING = 'embed.provider'
 export const EMBED_SPACE_SETTING = 'embed.index_space'
 
-/** Чистый резолв ЦЕЛЕВОГО пространства (юнит-тестируется). */
+/** Чистый резолв ЦЕЛЕВОГО пространства (юнит-тестируется).
+ *  nativeDim — измеренная родная мерность выбранной модели (embed-capability); её
+ *  добывает вызывающий, чтобы функция осталась чистой и не ходила ни в БД, ни в сеть. */
 export function resolveTargetSpace(
   m: Record<string, string | undefined>,
   env: Record<string, string | undefined> = process.env,
+  nativeDim?: number | null,
 ): EmbedSpace {
   // Настройка и env — чужой ввод: неизвестное значение падает на openrouter, а не
   // просачивается в EmbedSpace.provider под видом типа (раньше здесь стоял голый as).
@@ -67,12 +80,11 @@ export function resolveTargetSpace(
       // Пара doc/query — у Яндекса это РАЗНЫЕ модели одного пространства.
       docModel: `emb://${folder}/text-embeddings-v2-doc/latest`,
       queryModel: `emb://${folder}/text-embeddings-v2-query/latest`,
-      // Просим мерность колонки у ЛЮБОГО провайдера — своей цифры на провайдера больше нет.
-      dim: COLUMN_DIM,
+      dim: spaceDim(nativeDim),
     }
   }
   const model = m['ai.embedding_model']?.trim() || defaultEmbeddingModel()
-  return { provider: 'openrouter', docModel: model, queryModel: model, dim: COLUMN_DIM }
+  return { provider: 'openrouter', docModel: model, queryModel: model, dim: spaceDim(nativeDim) }
 }
 
 /** Разбор сохранённого embed.index_space; null = легаси (индекс до этой фичи). */
@@ -110,9 +122,30 @@ export async function getIndexSpace(): Promise<EmbedSpace> {
   return space
 }
 
-/** Целевое пространство (что выбрано в админке; реиндекс переводит индекс в него). */
+/**
+ * Родная мерность выбранной модели. `measure: true` разрешает короткую пробу у провайдера
+ * (доли цента), `false` — только то, что уже измерено.
+ *
+ * Пробу зовёт не всякий читатель: панель админки опрашивает пространство раз в 1.5 с, и
+ * проба оттуда молотила бы в провайдера на каждом тике. Меряем там, где решение принимается:
+ * при сохранении модели и при старте реиндекса.
+ *
+ * Импорт динамический: embed-capability берёт отсюда COLUMN_DIM — статическая пара дала бы цикл.
+ */
+async function nativeDimOf(space: EmbedSpace, measure: boolean): Promise<number | null> {
+  const { ensureCapability, getCapability } = await import('./embed-capability')
+  const cap = measure
+    ? await ensureCapability(space.provider, space.docModel)
+    : await getCapability(space.provider, space.docModel)
+  return cap?.dim ?? null
+}
+
+/** Целевое пространство (что выбрано в админке; реиндекс переводит индекс в него).
+ *  Меряет модель пробой, если факта ещё нет. */
 export async function getTargetSpace(): Promise<EmbedSpace> {
-  return resolveTargetSpace(await readSpaceSettings())
+  const m = await readSpaceSettings()
+  const base = resolveTargetSpace(m)
+  return resolveTargetSpace(m, process.env, await nativeDimOf(base, true))
 }
 
 /** Зафиксировать пространство индекса (вызывается при СТАРТЕ полного реиндекса). */
@@ -145,11 +178,22 @@ export function sameSpace(a: EmbedSpace, b: EmbedSpace): boolean {
   return a.provider === b.provider && a.docModel === b.docModel && a.dim === b.dim
 }
 
-export async function ensureFreshSpace(): Promise<{ index: EmbedSpace; target: EmbedSpace; inSync: boolean }> {
+/**
+ * Индекс, цель и сходятся ли они.
+ *
+ * `measure` = мерить ли модель пробой у провайдера: реиндекс — да (он фиксирует
+ * пространство и обязан знать настоящую мерность), опрос панели — нет.
+ * `targetMeasured` = мерность цели известна фактом, а не взята потолком колонки;
+ * панель на этом говорит «не измерено» вместо красивого, но выдуманного числа.
+ */
+export async function ensureFreshSpace(
+  measure = false,
+): Promise<{ index: EmbedSpace; target: EmbedSpace; inSync: boolean; targetMeasured: boolean }> {
   const m = await readSpaceSettings()
   const index =
     parseIndexSpace(m[EMBED_SPACE_SETTING]) ??
     resolveTargetSpace({ ...m, [EMBED_TARGET_SETTING]: 'openrouter' })
-  const target = resolveTargetSpace(m)
-  return { index, target, inSync: sameSpace(index, target) }
+  const native = await nativeDimOf(resolveTargetSpace(m), measure)
+  const target = resolveTargetSpace(m, process.env, native)
+  return { index, target, inSync: sameSpace(index, target), targetMeasured: native !== null }
 }

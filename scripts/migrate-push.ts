@@ -33,6 +33,7 @@ import { spawnSync } from 'node:child_process'
 import { Pool } from 'pg'
 import { plannedDrops, type Schema, type TableColumns } from './migrate-drops'
 import { bootstrapPost, bootstrapPre } from './db-bootstrap'
+import { EMBEDDING_COLUMN_DIM } from '@/shared/db/schema'
 
 // Unique-колонки существующих таблиц: [таблица, колонка, тип, констрейнт]
 const PREFLIGHT_UNIQUE: Array<[string, string, string, string]> = [
@@ -41,11 +42,14 @@ const PREFLIGHT_UNIQUE: Array<[string, string, string, string]> = [
   ['users', 'telegram_id', 'bigint', 'users_telegram_id_unique'],
 ]
 
-// Вектор-колонки, пережившие смену типа (P4: vector(1536) → halfvec(768)).
-// Данные НЕ конвертируются (размерность другая, эмбеддинги пересчитывает
-// реиндекс) — колонка пересоздаётся пустой, индекс — с правильным opclass.
+// Вектор-колонки, пережившие смену типа (P4: vector(1536) → halfvec(768)) И смену
+// мерности (возврат потолка на 1536, когда прод вернулся с Яндекса на OpenRouter).
+// Данные НЕ конвертируются: pgvector не приводит вектор одной мерности к другой, и
+// ALTER TYPE на непустой колонке просто падает. Колонка пересоздаётся пустой, индекс —
+// с правильным opclass, эмбеддинги пересчитывает следующий полный реиндекс.
+// Мерность — из схемы, чтобы preflight и halfvec() не разъехались.
 const PREFLIGHT_HALFVEC: Array<{ table: string; column: string; dims: number; index: string }> = [
-  { table: 'embeddings', column: 'embedding', dims: 768, index: 'embeddings_hnsw_idx' },
+  { table: 'embeddings', column: 'embedding', dims: EMBEDDING_COLUMN_DIM, index: 'embeddings_hnsw_idx' },
 ]
 
 // Типы, которые проверяем ОТДЕЛЬНО: наличия колонки мало, важен udt (push умеет
@@ -156,15 +160,31 @@ async function main() {
   }
 
   for (const { table, column, dims, index } of PREFLIGHT_HALFVEC) {
-    const { rows } = await pool.query(
-      `SELECT udt_name FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
+    // format_type, а не udt_name: udt_name отдаёт «halfvec» без мерности, и смена
+    // halfvec(768) → halfvec(1536) выглядела бы как «уже переведена». Такой push падает
+    // на непустой колонке («expected 768 dimensions») — то есть миграция встала бы намертво.
+    const { rows } = await pool.query<{ type: string }>(
+      `SELECT format_type(a.atttypid, a.atttypmod) AS type
+         FROM pg_attribute a
+         JOIN pg_class c ON c.oid = a.attrelid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = $1 AND a.attname = $2 AND a.attnum > 0 AND NOT a.attisdropped`,
       [table, column],
     )
-    if (rows.length === 0 || rows[0].udt_name === 'halfvec') continue // новой БД/уже переведена — push разберётся
+    const want = `halfvec(${dims})`
+    if (rows.length === 0 || rows[0].type === want) continue // новой БД/уже переведена — push разберётся
+    const { rows: filled } = await pool.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM ${table} WHERE ${column} IS NOT NULL`,
+    )
     await pool.query(`DROP INDEX IF EXISTS ${index}`)
-    await pool.query(`ALTER TABLE ${table} ALTER COLUMN ${column} TYPE halfvec(${dims}) USING NULL`)
+    await pool.query(`ALTER TABLE ${table} ALTER COLUMN ${column} TYPE ${want} USING NULL`)
     await pool.query(`CREATE INDEX IF NOT EXISTS ${index} ON ${table} USING hnsw (${column} halfvec_cosine_ops)`)
-    console.log(`[preflight] ${table}.${column}: ${rows[0].udt_name} → halfvec(${dims}), индекс пересоздан`)
+    // Говорим вслух, сколько векторов обнулилось: молча опустевший индекс читается как
+    // «поиск сломался», хотя это запланированный шаг — до реиндекса работает лексика.
+    console.log(
+      `[preflight] ${table}.${column}: ${rows[0].type} → ${want}, индекс пересоздан;` +
+        ` векторов обнулено: ${filled[0]?.n ?? '?'} — нужен полный реиндекс (/admin → Search index)`,
+    )
   }
 
   // ── барьер против удаления ──────────────────────────────────────────

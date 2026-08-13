@@ -164,11 +164,15 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
             </Select>
             {switching && <Loader2 size={13} className="animate-spin text-muted" />}
           </div>
-          {/* Мерность у пунктов не пишем, а объясняем один раз: она общая для всех
-              провайдеров и берётся из схемы. Раньше в пункте стояло «· 1536» при
-              колонке 768 — владелец читал это как мерность индекса. */}
+          {/* Мерность — свойство ВЫБРАННОЙ МОДЕЛИ, поэтому у пунктов её нет (раньше там
+              стояло вписанное руками «· 1536» при колонке 768). Здесь — измеренный факт
+              для текущей цели, а пока не измерен — так и сказано. */}
           <p className="mt-1.5 text-[0.78125rem] text-muted">
-            {t('admin.columnDimHint', lang).replace('{n}', String(space.columnDim))}
+            {space.targetMeasured
+              ? t('admin.targetDimMeasured', lang)
+                  .replace('{d}', String(space.target.dim))
+                  .replace('{c}', String(space.columnDim))
+              : t('admin.targetDimUnknown', lang).replace('{c}', String(space.columnDim))}
           </p>
         </div>
       )}

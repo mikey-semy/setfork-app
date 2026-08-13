@@ -642,7 +642,24 @@ export const starFolderItems = pgTable(
   (t) => [uniqueIndex('star_folder_items_pair').on(t.folderId, t.templateId), index('star_folder_items_folder_idx').on(t.folderId)],
 )
 
-// ── Embeddings (RAG, pgvector 1536) ──────────────────────────────────
+// ── Embeddings (RAG, pgvector) ───────────────────────────────────────
+/**
+ * ПОТОЛОК вектор-колонки — не мерность модели. В колонку ложится вектор любого
+ * пространства: короче — паддинг нулями (косинус от этого не меняется), длиннее —
+ * у модели просят срез (см. embed-space).
+ *
+ * 1536 = родная мерность text-embedding-3-small (OpenRouter); Яндекс v2 (768)
+ * ложится с паддингом. При развороте на РФ потолок ужали до 768 под Яндекс — и это
+ * молча резало OpenRouter вдвое MRL-срезом; вернули обратно, когда прод вернулся
+ * на .com. Тип halfvec (а не vector): вдвое меньше памяти и быстрее HNSW, потолок
+ * индекса — 4000 измерений против 2000 у vector.
+ *
+ * ⚠️ Смена этого числа на проде = колонка пересоздаётся ПУСТОЙ (preflight в
+ * scripts/migrate-push.ts) и следом обязателен полный реиндекс; до него поиск
+ * живёт на лексической ветке гибрида (#377).
+ */
+export const EMBEDDING_COLUMN_DIM = 1536
+
 export const embeddings = pgTable(
   'embeddings',
   {
@@ -650,12 +667,7 @@ export const embeddings = pgTable(
     kind: text('kind').notNull(), // 'list'
     refId: uuid('ref_id'), // template.id
     content: text('content').notNull(),
-    // halfvec(768): вдвое меньше памяти и быстрее HNSW (анализ поиска P4); 768 —
-    // родная мерность Яндекс v2 и MRL-срез text-embedding-3-small. Смена типа
-    // на проде = drop+add колонки (push --force), данные индекса пропадают —
-    // ЗАПЛАНИРОВАННО: следом идёт полный реиндекс, до него поиск живёт на
-    // лексической ветке гибрида (#377).
-    embedding: halfvec('embedding', { dimensions: 768 }),
+    embedding: halfvec('embedding', { dimensions: EMBEDDING_COLUMN_DIM }),
     metadata: jsonb('metadata'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
