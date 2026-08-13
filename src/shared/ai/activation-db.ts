@@ -14,22 +14,6 @@ import { log } from '@/shared/observability'
  * совете (generation_messages) и собственные действия петли (agent_actions). Считать только
  * первое значило бы, что самогенерация «не считается работой» — и очередь бы её игнорировала.
  */
-/**
- * Время из СЫРОГО sql в Date.
- *
- * `sql<Date>` — это обещание типа, а не приведение: результат произвольного выражения
- * drizzle не разбирает, и `max(timestamptz)` приезжает СТРОКОЙ. Любая арифметика по датам
- * после этого падает с «getTime is not a function», причём падает не при написании кода,
- * а в день, когда ветку наконец исполнили: очередь работы читается только проходом
- * самогенерации, а он был выключен настройкой до 13.08.2026 — первый же живой проход и лёг.
- */
-const asDate = (v: Date | string | null): Date | null => {
-  if (!v) return null
-  if (v instanceof Date) return v
-  const d = new Date(v)
-  return Number.isNaN(d.getTime()) ? null : d
-}
-
 async function attemptsAndLastWork(): Promise<Map<string, { attempts: number; last: Date | null }>> {
   const out = new Map<string, { attempts: number; last: Date | null }>()
   const bump = (id: string, n: number, raw: Date | string | null) => {
