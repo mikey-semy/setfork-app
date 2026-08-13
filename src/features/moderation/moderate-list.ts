@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, ne, notInArray, sql } from 'drizzle-orm'
 import { db, jobs, steps, templates, templateVersions } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { captureError } from '@/shared/observability'
@@ -32,7 +32,9 @@ function contentStrings(v: unknown): string[] {
 
 // Кап LLM-проверок на автора в сутки: защита от расхода OpenRouter циклом
 // publish/save (git push пропускает до 240 запросов/мин — без капа это деньги).
-const MODERATE_DAILY_CAP = 20
+// Экспортируется затем, что из него выведен предел пакетной публикации: смысла публиковать
+// за раз больше, чем проверка успевает за сутки, нет (см. library/publish-draft).
+export const MODERATE_DAILY_CAP = 20
 
 interface LoadedList {
   signals: ListSignals
@@ -124,6 +126,15 @@ async function enqueueModerate(templateId: string, gate: boolean, ownerId: strin
   return 'queued'
 }
 
+/** Отпустить удержание: только `pending` → `active`. Снятое админом (flagged/hidden) под
+ *  это условие не подпадает и остаётся снятым. */
+async function releaseHold(templateId: string): Promise<void> {
+  await db
+    .update(templates)
+    .set({ moderation: 'active', moderationReason: null, moderationSeverity: 0 })
+    .where(and(eq(templates.id, templateId), eq(templates.moderation, 'pending')))
+}
+
 /** Кап расхода исчерпан: список, ждущий проверку, остаётся pending — но с внятной
  *  причиной, иначе в очереди модерации он выглядит просто «висящим». Пометка нужна
  *  ОБОИМ путям: и публикации существующего списка, и созданию нового (там состояние
@@ -146,7 +157,11 @@ async function markCapped(templateId: string): Promise<void> {
  * (`initialModeration`) ДО записи, и в ядро оно уезжает значением вставки —
  * иначе между insert и этим апдейтом список недоверенного автора публичен.
  */
-export async function gateListPublication(templateId: string): Promise<void> {
+export async function gateListPublication(templateId: string, opts: { preHeld?: boolean } = {}): Promise<void> {
+  // Успел ли барьер сам решить «держим». От этого зависит, что делать при сбое ниже:
+  // решение состоялось — удержание законно и остаётся даже без очереди; не состоялось —
+  // держать нечем, и заранее выставленное вызывающим удержание надо снять.
+  let decided = false
   try {
     const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
     if (!tpl) return
@@ -157,19 +172,52 @@ export async function gateListPublication(templateId: string): Promise<void> {
     // копия правила в двух путях публикации разъезжается, и одна из веток начинает
     // пускать непроверенное в паблик.
     const decision = await publicationDecision(tpl.ownerId, templateId)
-    if (decision === 'gate-off') return
+    // Снимаем удержание, если проверка не нужна. Вызывающий вправе выставить `pending` ДО
+    // того, как список стал видимым (так делает пакетная публикация: иначе между «уже
+    // опубликован» и «барьер решил» список открыт всем). Тогда именно барьер обязан
+    // удержание отпустить — а `where moderation = 'pending'` следит, чтобы этим нельзя было
+    // отмыть flagged/hidden, даже если проверки выше однажды переставят.
+    if (decision === 'gate-off') {
+      await releaseHold(templateId)
+      return
+    }
     if (decision === 'trusted') {
+      await releaseHold(templateId)
       await enqueueModerate(templateId, false, tpl.ownerId)
       return
     }
-    await db
+    const [held] = await db
       .update(templates)
       .set({ moderation: 'pending', moderationReason: null, moderationSeverity: 0 })
-      .where(eq(templates.id, templateId))
+      // Решение админа не затираем ни при каком раскладе.
+      //
+      // Обычный вход (кнопка, смена видимости) удержание СТАВИТ, поэтому пишет, только если
+      // состояние осталось тем, которое гейт видел.
+      //
+      // Вход с `preHeld` (пакетная публикация) удержание уже поставил ДО нас, и наша задача
+      // — не поднять его заново, а лишь подтвердить. Тут мало сравнения со снимком: админ
+      // успевает одобрить список и до того, как гейт прочитал строку, — тогда снимок сам
+      // окажется `active`, сравнение сойдётся, и одобрение уедет обратно в очередь (находка
+      // авто-ревью). Поэтому условие жёстче: держим только то, что уже удержано.
+      .where(and(eq(templates.id, templateId), opts.preHeld ? eq(templates.moderation, 'pending') : eq(templates.moderation, tpl.moderation)))
+      .returning({ id: templates.id })
+    decided = true
+    // Удержание не наше — значит и проверку ставить не за чем. Джоба с `gate: true` считает
+    // себя хозяйкой вердикта и позже перекрыла бы одобрение админа своим (находка
+    // авто-ревью): решение человека сильнее не только этой записи, но и всей очереди.
+    if (!held) return
     if ((await enqueueModerate(templateId, true, tpl.ownerId)) === 'capped') await markCapped(templateId)
   } catch (e) {
-    // гейт не должен ронять публикацию; список остаётся active — но след оставляем
     captureError(e, { where: 'moderation.gate', templateId })
+    // Гейт не должен ронять публикацию. Вызывающий вправе поставить удержание ЗАРАНЕЕ
+    // (пакетная публикация так и делает, чтобы список не побыл видимым до решения), и если
+    // решение НЕ состоялось — снимаем: иначе сбой проверки навсегда прячет опубликованный
+    // список, а очередь модерации о нём не знает (находка авто-ревью).
+    //
+    // А вот когда решение состоялось и упала только постановка в очередь, удержание
+    // законно: список действительно не проверен, и снимать его нельзя — это давнее
+    // поведение, за ним следит отдельный тест про счёт доверия.
+    if (!decided) await releaseHold(templateId).catch(() => {})
   }
 }
 

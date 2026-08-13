@@ -56,6 +56,16 @@ describe('свои черновики', () => {
     expect(res.drafts.map((d) => d.ref).sort()).toEqual(['drafts-me/mine-one', 'drafts-me/mine-two'])
   })
 
+  it('в перечень не попадает то, что публикация всё равно не возьмёт', async () => {
+    // Архивный и замороженный список read-only: предложить ассистенту такой адрес — значит
+    // отправить его работать по кругу вместо отказа сразу.
+    await draft(meId, 'ok-one')
+    await draft(meId, 'archived-one', { archivedAt: new Date() })
+    await draft(meId, 'frozen-one', { frozenAt: new Date() })
+
+    expect((await mcpMyDrafts(meId)).drafts.map((d) => d.ref)).toEqual(['drafts-me/ok-one'])
+  })
+
   it('фильтр по тегу разбирает семейство целиком', async () => {
     await draft(meId, 'a-skill', { tags: ['skill'] })
     await draft(meId, 'a-hook', { tags: ['hook'] })
@@ -105,6 +115,16 @@ describe('публикация пачкой', () => {
     await mcpPublishLists(meId, ['drafts-me/no-gate'], false)
 
     expect((await statusOf('no-gate')).moderation).toBe('active')
+  })
+
+  it('план не обещает публикацию тому, что снято модерацией', async () => {
+    // Сухой прогон — это обещание. Если он говорит «опубликую», а исполнение оставляет
+    // список скрытым, ассистент принимает решение по неверной картине.
+    await draft(meId, 'plan-flagged', { moderation: 'flagged' })
+
+    const res = await mcpPublishLists(meId, ['drafts-me/plan-flagged'])
+
+    expect('lists' in res && res.lists[0].reason).toContain('blocked by moderation')
   })
 
   it('снятое модерацией не отмывается повторной публикацией', async () => {

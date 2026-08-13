@@ -1,8 +1,8 @@
 import 'server-only'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, steps, templates, templateVersions, users } from '@/shared/db'
-import { gateListPublication } from '@/features/moderation/moderate-list'
 import { tr } from '@/shared/i18n'
+import { PUBLISH_BATCH_MAX, publishOwnedDrafts, type PublishSkip } from '@/features/library/publish-draft'
 
 /**
  * РАЗБОР ЧЕРНОВИКОВ ЧЕРЕЗ MCP.
@@ -17,8 +17,14 @@ import { tr } from '@/shared/i18n'
  * любой второй путь публикации его бы и обошёл.
  */
 
-/** Сколько списков публикуем за один вызов: пачка должна оставаться обозримой человеку. */
-export const MCP_PUBLISH_MAX = 25
+/**
+ * Сколько списков публикуем за один вызов.
+ *
+ * Прежде здесь стояло собственное число «чтобы пачка была обозримой». Теперь предел общий с
+ * сайтом и выведен из суточного капа авто-проверки: публиковать больше, чем модерация
+ * успевает проверить, — значит копить списки, видимые одному владельцу.
+ */
+export const MCP_PUBLISH_MAX = PUBLISH_BATCH_MAX
 
 export interface DraftRow {
   ref: string
@@ -36,7 +42,11 @@ export async function mcpMyDrafts(userId: string, opts: { tag?: string; limit?: 
   const where = and(
     eq(templates.ownerId, userId),
     eq(templates.status, 'draft'),
+    // Архив И заморозка: публикация такой список не возьмёт (он read-only), а перечень без
+    // этого условия предлагал бы ассистенту адрес, по которому ничего сделать нельзя —
+    // работа по кругу вместо отказа сразу (находка авто-ревью).
     sql`${templates.archivedAt} is null`,
+    sql`${templates.frozenAt} is null`,
     tag ? sql`${tag} = any(${templates.tags})` : sql`true`,
   )
   const [[total], rows, [owner]] = await Promise.all([
@@ -95,44 +105,87 @@ export interface McpPublishResult {
   lists: PublishOutcome[]
 }
 
+/** Что станет со списком по плану — по состоянию модерации, которое обещает общий слой. */
+const PLAN_NOTE: Record<string, string | undefined> = {
+  flagged: 'blocked by moderation — publishing changes nothing',
+  hidden: 'blocked by moderation — publishing changes nothing',
+  pending: 'will go to moderation before anyone else sees it',
+}
+
+/** Причина отказа словами: коды общего слоя → фраза ассистенту. */
+const SKIP_REASON: Record<PublishSkip, string> = {
+  'not-yours': 'not found among your lists',
+  'not-draft': 'already published',
+  'over-limit': `over the batch limit of ${PUBLISH_BATCH_MAX}`,
+  'read-only': 'archived or frozen — read-only',
+  'changed-meanwhile': 'changed while publishing — read it again',
+}
+
 /**
  * Опубликовать свои черновики пачкой.
  *
  * Сухой прогон по умолчанию — как у массового создания: план обязан быть виден до того,
  * как в библиотеке что-то изменится.
+ *
+ * Само правило публикации — в `features/library/publish-draft`, общее с кнопкой на сайте и
+ * пакетным действием профиля. Здесь остаётся разбор адресов (`handle/slug` → id) и ответ на
+ * языке ассистента.
  */
 export async function mcpPublishLists(userId: string, refs: string[], dryRun = true): Promise<McpPublishResult | { error: string }> {
-  const list = (refs ?? []).map((r) => r.trim()).filter(Boolean)
+  // Повтор адреса в наборе схлопываем СРАЗУ. Список публикуется один раз в любом случае, но
+  // отчёт по повторам насчитал бы «опубликовано 2» на одну запись — ассистент читает эти
+  // числа как результат, а не как эхо запроса (находка авто-ревью).
+  const list = [...new Set((refs ?? []).map((r) => r.trim()).filter(Boolean))]
   if (!list.length) return { error: 'nothing to publish: pass refs from my_drafts' }
-  if (list.length > MCP_PUBLISH_MAX) return { error: `too many lists in one call: ${list.length} > ${MCP_PUBLISH_MAX}` }
+  if (list.length > PUBLISH_BATCH_MAX) return { error: `too many lists in one call: ${list.length} > ${PUBLISH_BATCH_MAX}` }
+
+  // Дедуп идёт по КАНОНИЧЕСКОМУ адресу, а не по строке: `owner/foo`, `foo` и `other/foo`
+  // указывают на один и тот же список (владельца определяет токен, не префикс). Схлопывать
+  // надо после приведения — иначе отчёт снова насчитает «опубликовано 2» на одну запись
+  // (находка авто-ревью).
+  const slugs = list.map((ref) => (ref.includes('/') ? ref.split('/').slice(1).join('/') : ref))
+  const firstRefOf = new Map<string, string>()
+  for (let i = 0; i < list.length; i++) if (!firstRefOf.has(slugs[i])) firstRefOf.set(slugs[i], list[i])
+  const rows = slugs.length
+    ? await db
+        .select({ id: templates.id, slug: templates.slug })
+        .from(templates)
+        .where(and(eq(templates.ownerId, userId), inArray(templates.slug, slugs)))
+    : []
+  const idBySlug = new Map(rows.map((r) => [r.slug, r.id]))
+  // Промах по адресу — не «чужое», а «нет такого»: для общего слоя это один код отказа,
+  // и подставлять ему несуществующий id не нужно.
+  const ids = slugs.map((s) => idBySlug.get(s)).filter((id): id is string => !!id)
+  const report = await publishOwnedDrafts(userId, ids, { dryRun })
+  const byId = new Map(report.outcomes.map((o) => [o.id, o]))
 
   const out: McpPublishResult = { dryRun, planned: list.length, published: 0, skipped: 0, lists: [] }
-  for (const ref of list) {
-    const slug = ref.includes('/') ? ref.split('/').slice(1).join('/') : ref
-    const [tpl] = await db
-      .select({ id: templates.id, status: templates.status, visibility: templates.visibility, moderation: templates.moderation })
-      .from(templates)
-      .where(and(eq(templates.ownerId, userId), eq(templates.slug, slug)))
-      .limit(1)
-    if (!tpl) {
+  list.forEach((ref, i) => {
+    if (firstRefOf.get(slugs[i]) !== ref) {
       out.skipped++
-      out.lists.push({ ref, status: 'skipped', reason: 'not found among your lists' })
-      continue
+      out.lists.push({ ref, status: 'skipped', reason: `same list as ${firstRefOf.get(slugs[i])}` })
+      return
     }
-    if (tpl.status !== 'draft') {
+    const id = idBySlug.get(slugs[i])
+    const outcome = id ? byId.get(id) : null
+    if (!outcome || outcome.skip) {
       out.skipped++
-      out.lists.push({ ref, status: 'skipped', reason: `already ${tpl.status}` })
-      continue
+      out.lists.push({ ref, status: 'skipped', reason: SKIP_REASON[outcome?.skip ?? 'not-yours'] })
+      return
     }
     if (dryRun) {
-      out.lists.push({ ref, status: 'would-publish' })
-      continue
+      // План обязан обещать то же, что и запись: снятое модерацией так и останется скрытым,
+      // а публичное недоверенного автора уйдёт на проверку. Молчаливое «would-publish» на
+      // снятом списке — обещание, которое исполнение не выполнит (находка авто-ревью).
+      out.lists.push({ ref, status: 'would-publish', reason: PLAN_NOTE[outcome.moderation ?? ''] })
+      return
     }
-    await db.update(templates).set({ status: 'published', updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-    // Тот же барьер, что и у кнопки на сайте: публичный список идёт через модерацию.
-    if (tpl.visibility === 'public') await gateListPublication(tpl.id)
     out.published++
-    out.lists.push({ ref, status: 'published', reason: tpl.visibility === 'public' ? 'sent to moderation' : undefined })
-  }
+    // «Снято модерацией» и «ждёт проверки» — разные вещи: первое админ решает руками, и
+    // обещать ассистенту проверку там нельзя.
+    const blocked = outcome.moderation === 'flagged' || outcome.moderation === 'hidden'
+    const reason = blocked ? 'blocked by moderation — only an admin can lift it' : outcome.moderation === 'pending' ? 'sent to moderation' : undefined
+    out.lists.push({ ref, status: 'published', reason })
+  })
   return out
 }

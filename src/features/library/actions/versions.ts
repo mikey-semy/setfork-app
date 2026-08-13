@@ -12,11 +12,11 @@ import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, editBlockReason } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { isCollaborator } from '@/features/collab/queries'
-import { gateListPublication } from '@/features/moderation/moderate-list'
 import { registerTags } from '@/features/tags/service'
 import { ensureWatch } from '@/features/watch/actions'
 import { parseEditorItems, toProposedItems } from '../editor'
 import { getDraft, getVersionSteps } from '../queries'
+import { publishOwnedDraft } from '../publish-draft'
 import { deleteDraft, publishDraftFor, upsertDraft, type PublishResult } from '../draft'
 import { listStore } from '../list-store'
 import { parseTags, slugify } from '../slug'
@@ -262,11 +262,11 @@ export async function revertToVersion(templateId: string, version: number): Prom
 export async function publishList(templateId: string): Promise<void> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
-  if (!tpl || tpl.ownerId !== session.userId || tpl.status !== 'draft') return
-
-  await db.update(templates).set({ status: 'published', updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-  // Публикуем публичный список → гейт: pending до авто-проверки (приватный не трогаем).
-  if (tpl.visibility === 'public') await gateListPublication(tpl.id)
+  if (!tpl) return
+  // Само правило (твоё ли, черновик ли, гейт модерации) — в publish-draft: у кнопки,
+  // MCP и пакетного действия профиля оно обязано быть ОДНО.
+  const { skip } = await publishOwnedDraft(session.userId, tpl.id)
+  if (skip) return
 
   revalidatePath('/', 'layout')
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
