@@ -182,6 +182,9 @@ export const en = {
   'digest.editsFrom': '{n} {edits} from {authors}',
   'digest.awaitingReview': '{n} awaiting your review',
   // Отписка от писем (заголовок List-Unsubscribe и страница по ссылке из письма).
+  'profile.catalogAll': 'All catalogs',
+  'profile.catalogFilter': 'Filter by catalog',
+  'profile.catalogNone': 'No catalog',
   'unsubscribe.title': 'Unsubscribe',
   'unsubscribe.confirm': 'Turn off email from SetFork?',
   'unsubscribe.confirmHint': 'Notifications inside the site keep working — only email stops.',
