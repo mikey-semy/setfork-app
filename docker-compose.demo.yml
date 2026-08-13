@@ -74,7 +74,20 @@ services:
     networks: [dokploy-network]
 
   app:
-    build: { context: ., target: runner }
+    build:
+      context: .
+      target: runner
+      # NEXT_PUBLIC_* вшиваются в бандл на СБОРКЕ, а не читаются из окружения
+      # готового контейнера: подавать их ниже в `environment:` бесполезно.
+      # Без этих аргументов демо-стенд собирался с дефолтом канона, и его
+      # метаданные, robots.txt и ссылки вели на setfork.com — поисковик получал
+      # канонические ссылки чужого сайта, а пользователь демо уезжал на прод.
+      # На проде это не замечалось: там дефолт и есть правильное значение.
+      # R13 линзы 08.
+      args:
+        NEXT_PUBLIC_SITE_URL: ${DEMO_SITE_URL:-https://demo.sethub.ru}
+        NEXT_PUBLIC_DOCS_URL: ${DEMO_DOCS_URL:-}
+        NEXT_PUBLIC_ABOUT_URL: ${DEMO_ABOUT_URL:-}
     container_name: setfork-demo
     restart: always
     env_file: .env
