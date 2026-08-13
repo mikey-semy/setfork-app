@@ -449,6 +449,13 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
     return arr.map((it) => ({
       type: asBlockType(it?.type),
       bid: String(it?.bid ?? ''),
+      // Колонка `steps.block_id` — ОТДЕЛЬНО от алиаса payload'а. Через этот
+      // парсер идёт КАЖДОЕ обычное сохранение (ListEditor кладёт элементы в
+      // скрытое поле формы, серверные действия читают их отсюда), поэтому без
+      // переноса `blockId` разделение полей ничего не даёт: у легаси-блока
+      // `newBlockId()` снова срабатывал бы на каждом сохранении. Замечание
+      // авто-ревью на fe#780 (P1).
+      blockId: it?.blockId ? String(it.blockId) : undefined,
       text: String(it?.text ?? ''),
       caption: String(it?.caption ?? ''),
       videoUrl: String(it?.videoUrl ?? ''),

@@ -352,3 +352,28 @@ describe('легаси-блок: алиас и колонка переживаю
     expect(saved.blockId).toMatch(/^[0-9a-f-]{36}$/)
   })
 })
+
+// Через parseEditorItems идёт КАЖДОЕ обычное сохранение: ListEditor сериализует
+// элементы в скрытое поле формы, серверные действия читают их отсюда. Пока
+// парсер копировал только `bid`, разделение полей не работало вовсе — колонка
+// приходила пустой и рождалась заново при каждом сохранении. Замечание
+// авто-ревью на fe#780.
+describe('путь через форму сохраняет обе идентичности', () => {
+  it('parseEditorItems переносит и алиас, и колонку', () => {
+    const serialized = JSON.stringify([
+      { type: 'text', bid: 'legacy-42', blockId: '11111111-2222-3333-4444-555555555555', text: 'Текст', section: '' },
+    ])
+    const [parsed] = parseEditorItems(serialized)
+    expect(parsed.bid, 'алиас потерян при разборе формы').toBe('legacy-42')
+    expect(parsed.blockId, 'колонка потеряна при разборе формы').toBe('11111111-2222-3333-4444-555555555555')
+  })
+
+  it('полный круг «форма → запись»: колонка не перегенерируется', () => {
+    const serialized = JSON.stringify([
+      { type: 'text', bid: 'legacy-42', blockId: '11111111-2222-3333-4444-555555555555', text: 'Текст', section: '' },
+    ])
+    const [saved] = toProposedItems(parseEditorItems(serialized), 'ru')
+    expect(saved.content?.bid).toBe('legacy-42')
+    expect(saved.blockId).toBe('11111111-2222-3333-4444-555555555555')
+  })
+})
