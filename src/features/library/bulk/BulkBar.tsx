@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { FolderInput, Globe, Loader2, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Input } from '@/shared/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { PAGE_X } from '@/shared/ui/control'
@@ -140,7 +141,7 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
               <div className="flex flex-1 items-center justify-end gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="md" disabled={!count || pending} aria-label={t('bulk.toCatalog', lang)} className="h-11 sm:h-8">
+                    <Button variant="outline" size="md" disabled={!count || pending} aria-label={t('bulk.toCatalog', lang)}>
                       <FolderInput size={15} />
                       <span className="max-sm:hidden">{t('bulk.toCatalog', lang)}</span>
                     </Button>
@@ -157,14 +158,16 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button variant="primary" size="md" onClick={askPlan} disabled={!count || pending} aria-label={t('bulk.publish', lang)} className="h-11 sm:h-8">
+                <Button variant="primary" size="md" onClick={askPlan} disabled={!count || pending} aria-label={t('bulk.publish', lang)}>
                   {pending ? <Loader2 size={15} className="animate-spin" /> : <Globe size={15} />}
                   <span className="max-sm:hidden">{t('bulk.publish', lang)}</span>
                 </Button>
 
-                <Button variant="ghost" size="md" onClick={() => sel.stop()} disabled={pending} aria-label={t('cancel', lang)} className="h-11 sm:h-8">
+                {/* Выход из режима — квадратный крестик. `hit` вместо `grow`: высоту полосы
+                    задают соседние кнопки, а растущий квадрат раздувал бы её сверх них. */}
+                <IconButton variant="ghost" size="md" touch="hit" onClick={() => sel.stop()} disabled={pending} label={t('cancel', lang)}>
                   <X size={16} />
-                </Button>
+                </IconButton>
               </div>
             </>
           ) : (
@@ -183,12 +186,12 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
                 aria-label={t('bulk.newCatalog', lang)}
                 className="min-w-0 flex-1"
               />
-              <Button type="submit" variant="primary" size="md" disabled={!newCatalog.trim() || pending} className="h-11 shrink-0 sm:h-8">
+              <Button type="submit" variant="primary" size="md" disabled={!newCatalog.trim() || pending} className="shrink-0">
                 {pending ? <Loader2 size={15} className="animate-spin" /> : t('create', lang)}
               </Button>
-              <Button variant="ghost" size="md" onClick={() => setNewCatalog(null)} aria-label={t('cancel', lang)} className="h-11 shrink-0 sm:h-8">
+              <IconButton variant="ghost" size="md" touch="hit" onClick={() => setNewCatalog(null)} label={t('cancel', lang)}>
                 <X size={16} />
-              </Button>
+              </IconButton>
             </form>
           )}
         </div>
