@@ -6,6 +6,7 @@ import { captureError } from '@/shared/observability'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { loopPolicy, recordAgentAction, type AgentActionInput } from '@/shared/agents/policy'
+import { autonomyHealthy } from '@/shared/agents/canary'
 import type { Lang } from '@/shared/i18n'
 import { CHANGELOG } from './seed'
 
@@ -115,6 +116,11 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
   // Пауза и предохранитель эту петлю останавливали и раньше: они живут в claimJob,
   // и до сервиса дело просто не доходит. Не хватало ровно сухого прогона и журнала.
   const loop = await loopPolicy('changelog')
+  // Предохранитель спрашиваем ДО работы, как остальные петли. Без этого записи об ошибках,
+  // добавленные ниже, никого бы не остановили: `claimJob` уважает уже сорванный
+  // предохранитель, но срывать его умеет только сам проход, спросив канарейку. Пять
+  // неудачных проходов подряд иначе повторялись бы вечно. Замечание авто-ревью на fe#800 (P2).
+  if (!(await autonomyHealthy('changelog'))) return { added: 0, skipped: 'circuit tripped' }
   if (loop.dryRun) {
     await recordAgentAction({
       loop: 'changelog',

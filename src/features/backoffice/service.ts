@@ -91,6 +91,22 @@ async function tellOwner(subject: string, body: string): Promise<{ sent: number;
   return { sent, skipped: sent ? '' : MAIL_OFF }
 }
 
+/**
+ * ЗАЯВКА НЕ РАВНА ДОСТАВКЕ — и статус записи обязан это различать.
+ *
+ * Все три письмописателя заявляют ключ ДО отправки, чтобы два инстанса не послали одно
+ * письмо дважды. Дозор ИИ пишет такую заявку со статусом `skipped` («попытка начата»), а
+ * `ok` ставит отдельной записью, когда письмо дошло. Бухгалтер и летописец ставили `ok`
+ * сразу на заявке — и по журналу нельзя было отличить доставленную тревогу от только
+ * начатой попытки: детектор холостого хода считал бы прогрессом ровно то, что могло
+ * оказаться неудачей. Замечания авто-ревью на fe#800 (два P2).
+ *
+ * Приведено к форме дозора, а не к третьей своей: канон в проекте уже есть.
+ */
+async function подтвердитьДоставку(loop: string, action: string, decision: Record<string, unknown>, policyVersion: number): Promise<void> {
+  await recordAgentAction({ loop, action, resultStatus: 'ok', decision: { ...decision, stage: 'delivered' }, policyVersion })
+}
+
 /** Деньги за сегодня и за неделю — то, из чего бухгалтер делает вывод. */
 async function money(): Promise<Money> {
   const [today] = await db
@@ -148,9 +164,9 @@ export async function runFinanceSweep(): Promise<FinanceResult> {
     const claimed = await recordAgentAction({
       loop: 'finance',
       action: 'money.alert',
-      resultStatus: 'ok',
+      resultStatus: 'skipped', // «попытка начата»; доставку подтверждает отдельная запись
       signal: { ...m },
-      decision: { kind: a.kind, text: a.text },
+      decision: { kind: a.kind, text: a.text, stage: 'claim' },
       idempotencyKey: `finance:${a.kind}:${day}`,
       policyVersion: policy.policyVersion,
     })
@@ -158,6 +174,7 @@ export async function runFinanceSweep(): Promise<FinanceResult> {
     out.alerts++
     const delivery = await tellOwner(`SetFork: ${a.subject}`, `<p>${a.text}</p>${developmentDashboardLink()}`)
     out.sent += delivery.sent
+    if (delivery.sent) await подтвердитьДоставку('finance', 'money.alert', { kind: a.kind, sent: delivery.sent }, policy.policyVersion)
     // Не дошло — записываем ОТДЕЛЬНОЙ строкой без ключа: заявка уже занята, но факт «тревога
     // не доставлена» обязан быть виден, иначе журнал врал бы бодрым 'ok'.
     if (!delivery.sent) {
@@ -260,9 +277,9 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   const claimed = await recordAgentAction({
     loop: 'chronicle',
     action: 'day.report',
-    resultStatus: 'ok',
+    resultStatus: 'skipped', // «попытка начата»; доставку подтверждает отдельная запись
     signal: { date, ...Object.fromEntries(rows) },
-    decision: { day: date },
+    decision: { day: date, stage: 'claim' },
     idempotencyKey: `chronicle:${date}`,
     policyVersion: policy.policyVersion,
   })
@@ -274,6 +291,7 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   const delivery = await tellOwner(`SetFork: день компании ${date}`, html)
   out.sent = delivery.sent
   out.skipped = delivery.skipped
+  if (delivery.sent) await подтвердитьДоставку('chronicle', 'day.report', { day: date, sent: delivery.sent }, policy.policyVersion)
   if (!delivery.sent) {
     await recordAgentAction({
       loop: 'chronicle',

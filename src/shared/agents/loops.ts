@@ -56,11 +56,11 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/backoffice/service',
     ensure: 'ensureFinanceScheduled',
     paid: false,
-    // money.alert со статусом ok в прогресс НЕ входит: эта запись — ЗАЯВКА на право
-    // отправить письмо (резерв идемпотентного ключа), а не факт доставки. Недоставленная
-    // тревога дописывается отдельной строкой 'skipped', и засчитай мы заявку за дело,
-    // прогрессом считался бы как раз провал. Замечание авто-ревью на fe#800 (P2).
-    progress: ['money.watch'],
+    // money.watch — спокойный проход (тревог нет), money.alert со статусом ok —
+    // ДОСТАВЛЕННАЯ тревога. Заявка на право отправить пишется тем же действием, но со
+    // статусом skipped, а прогрессом считается только ok — поэтому «отправили и не дошло»
+    // за дело не засчитывается. Замечания авто-ревью на fe#800 (два P2).
+    progress: ['money.watch', 'money.alert'],
     what: { en: 'watches spend and warns the owner', ru: 'следит за расходом и предупреждает владельца' },
   },
   {
@@ -71,6 +71,8 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/backoffice/service',
     ensure: 'ensureChronicleScheduled',
     paid: false,
+    // day.report со статусом ok — доставленная сводка; заявка на отправку пишется тем же
+    // действием со статусом skipped. Замечание авто-ревью на fe#800 (P2).
     progress: ['day.report'],
     what: { en: 'sends the company day summary to the owner', ru: 'отправляет владельцу сводку дня компании' },
   },
