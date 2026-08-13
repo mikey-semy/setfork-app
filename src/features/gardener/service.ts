@@ -194,6 +194,14 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       continue
     }
 
+    // Бюджет перепроверяем ПЕРЕД каждым платным вызовом, а не только на входе в
+    // проход. Комментарий выше обещал, что «бюджет и квота проверяются по ходу», но
+    // по ходу проверялась только квота: расхождение форком и гейт готовности бюджет
+    // спрашивали, а сам refine — самый дорогой шаг — нет. Находка A3 линзы 06.
+    if (!(await globalBudgetOk())) {
+      log.info('gardener: budget exhausted mid-batch, stopping', { proposed, planned: candidates.length })
+      break
+    }
     const refined = await generateListRefine(current, instruction, lang, {
       userId: tenderId,
       feature: 'refine',

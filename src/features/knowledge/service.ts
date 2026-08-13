@@ -66,6 +66,15 @@ export async function runTriplesSweep(): Promise<{ mined: number; skipped: numbe
   let mined = 0
   let skipped = 0
   for (const tpl of batch) {
+    // Бюджет перепроверяем НА КАЖДОМ списке, а не только на входе в проход: добыча
+    // зовёт платную модель, и к середине партии денег может уже не быть. Так это
+    // сделано у самогенерации; уход и рудник проверяли только вход — находка A3
+    // линзы 06. Партия здесь до TRIPLES_BATCH списков, и её размер задаётся
+    // переменной окружения, поэтому цена промаха растёт вместе с ней.
+    if (!(await globalBudgetOk())) {
+      log.info('triples: budget exhausted mid-batch, stopping', { mined, planned: batch.length })
+      break
+    }
     const [ver] = await db
       .select({ id: templateVersions.id })
       .from(templateVersions)
