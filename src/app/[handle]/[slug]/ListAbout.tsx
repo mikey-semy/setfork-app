@@ -53,6 +53,7 @@ export function ListAbout({ tpl, base, branches, currentVersion, watchers, lang,
           branches={Math.max(1, branches.length)}
           version={currentVersion?.version ?? tpl.currentVersion}
           visibility={tpl.visibility}
+          status={tpl.status}
         />
       </div>
     </>

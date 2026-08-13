@@ -28,7 +28,12 @@ export async function setListVisibility(templateId: string, visibility: 'public'
     await db.update(templates).set({ visibility, ...reset }).where(eq(templates.id, templateId))
   } else {
     await db.update(templates).set({ visibility }).where(eq(templates.id, templateId))
-    await gateListPublication(templateId) // публикация → гейт: pending до авто-проверки
+    // Гейт — на момент, когда список СТАНОВИТСЯ ВИДИМЫМ. У черновика этот момент
+    // ещё не наступил: его не видит никто, кроме владельца и соавторов, а проверку
+    // он всё равно пройдёт при публикации (publishList). Без этой оговорки выбор
+    // «опубликую публичным» тратил бы LLM-проверку (кап 20/сутки на автора) на
+    // список, которого никто не видит, и гейт срабатывал бы дважды подряд.
+    if (tpl.status !== 'draft') await gateListPublication(templateId)
   }
   revalidatePath(`/${session.handle}/${tpl.slug}`)
   revalidatePath('/explore')

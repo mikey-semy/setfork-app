@@ -6,6 +6,8 @@ import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { CommitBar } from '@/features/library/CommitBar'
 import { ListActionsMenu } from '@/features/library/ListActionsMenu'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { buttonClass } from '@/shared/ui/button-style'
+import { TOUCH_BOX } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import type { ListPageData } from './load'
 
@@ -75,7 +77,7 @@ export function ListToolbar({
               <Tooltip label={t('list.useTemplateHint', lang)}>
                 <button
                   type="submit"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-[0.8125rem] font-semibold text-ink hover:border-border-strong"
+                  className={buttonClass()}
                 >
                   <LayoutTemplate size={14} /> <span className="hidden md:inline">{t('list.useTemplate', lang)}</span>
                 </button>
@@ -83,14 +85,19 @@ export function ListToolbar({
             </form>
           )}
           <CloneDropdown base={base} slug={slug} lang={lang} />
-          {/* Вторичное (правка/перевод/история/blame) — одним «...»-меню,
-              а не россыпью разновысоких иконок (эталон: секции настроек). */}
+          {/* Вторичное (правка/перевод/публикация черновика) — одним «...»-меню,
+              а не россыпью разновысоких иконок (эталон: секции настроек). Ряд на
+              390px и так занят «Получить» и прогоном: ещё одна кнопка его распирает,
+              поэтому публикация уходит сюда, а меню помечается точкой.
+              Публикацию предлагаем только владельцу и только на текущей версии: на
+              снимке прошлой версии она опубликовала бы не то, что человек видит. */}
           <ListActionsMenu
             base={base}
             isOwner={isOwner}
             templateId={tpl.id}
             lang={lang}
             canTranslate={canManageBranches && !readOnlyView && titleIsForeign}
+            canPublish={isOwner && tpl.status === 'draft' && !readOnlyView}
             targetLang={lang}
           />
           {/* Run — первичное действие (прогон): к ПРАВОМУ КРАЮ ряда (thumb-зона, по
@@ -100,7 +107,7 @@ export function ListToolbar({
           {viewer && !readOnlyView && (
             <form action={startRun.bind(null, tpl.id)} className="inline-flex">
               <Tooltip label={t('runStart', lang)}>
-                <button type="submit" aria-label={t('runStart', lang)} className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-fg hover:opacity-90">
+                <button type="submit" aria-label={t('runStart', lang)} className={buttonClass({ variant: 'primary', className: `p-0 size-8 ${TOUCH_BOX}` })}>
                   <PlayCircle size={16} />
                 </button>
               </Tooltip>

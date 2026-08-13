@@ -2,6 +2,7 @@ import 'server-only'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSession } from '@/shared/auth/session'
 import { searchTemplatesByOwnerHandle } from '@/features/library/queries'
+import { listVisibilityState } from '@/features/library/list-visibility'
 
 // Списки автора для переключателя в бредкрамбе шапки: открыт список человека —
 // показываем и ищем по ЕГО спискам. Приватные видит только он сам: гейт — единый
@@ -21,7 +22,9 @@ export async function GET(req: NextRequest) {
         slug: l.slug,
         title: l.title,
         avatarUrl: l.ownerAvatarUrl,
-        visibility: l.visibility,
+        // Состояние, а не поле visibility: у черновика оно про будущее, и в
+        // переключателе он получал бы значок «публичный» (list-visibility).
+        visibility: listVisibilityState(l),
       })),
     },
     // no-store, а НЕ private+max-age: в ответе есть приватные списки владельца, и

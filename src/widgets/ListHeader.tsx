@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Archive, Eye, GitFork, Globe, Lock, Snowflake, Star } from 'lucide-react'
+import { Archive, Eye, GitFork, Snowflake, Star } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -10,6 +10,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Alert } from '@/shared/ui/Alert'
 import { PinButton } from '@/features/library/PinButton'
+import { LIST_VISIBILITY_BADGE, listVisibilityState } from '@/features/library/list-visibility'
 import { StarSplit } from './StarSplit'
 import { SplitButton } from '@/shared/ui/SplitButton'
 import { splitSegment } from '@/shared/ui/split-segment'
@@ -25,7 +26,8 @@ import { isCollaborator } from '@/features/collab/queries'
 import { humanModerationReason } from '@/features/moderation/reason'
 import { ListTabs } from './ListTabs'
 import { ShowOnListRoot } from './ShowOnListRoot'
-import { PAGE_X } from '@/shared/ui/control'
+import { PAGE_X, TOUCH_BOX } from '@/shared/ui/control'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /** Общая шапка страницы списка (= «репозиторий»): owner/name, действия, вкладки.
  *  Живёт в персистентном [handle]/[slug]/layout.tsx — не перемонтируется между
@@ -51,6 +53,10 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
     getDiscussionCount(meta.id),
   ])
   const base = `/${owner}/${slug}`
+  // Значок у названия описывает ОБА поля сразу (см. list-visibility): у черновика
+  // visibility — ещё намерение, и глобус здесь врал бы про публичность.
+  const visBadge = LIST_VISIBILITY_BADGE[listVisibilityState(meta)]
+  const visLabel = t(visBadge.labelKey, lang)
 
   return (
     <div>
@@ -73,17 +79,23 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
 
       <div className={`${PAGE_X} pt-4`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          {/* Название скрыто на узких экранах — оно уже в бредкрамбе шапки. На
-              под-вкладках (Задачи/Предложения/…) скрыто и на широких: там оно
-              дублировало бредкрамб сверху, отнимая экран у самого содержимого.
-              Тот же приём, что у действий репозитория ниже — как GitHub, где на
-              под-вкладках видны только табы. */}
+          {/* НАЗВАНИЕ ЦЕЛИКОМ, и на узком экране тоже. Раньше здесь его прятали —
+              «оно уже в бредкрамбе шапки», — но в бредкрамбе оно обрезано до
+              «Де…», и переключатель по клику обрезает так же: полного названия
+              на телефоне нельзя было увидеть НИГДЕ (замечание владельца).
+              Поэтому на мобиле оно встаёт отдельной строкой ПОД рядом кнопок и
+              над описанием (order-2) и переносится, а не обрезается; на sm+
+              порядок и обрезка прежние — слева от действий, в одну строку.
+              На под-вкладках (Задачи/Предложения/…) название по-прежнему скрыто
+              целиком — как GitHub, где на под-вкладках видны только табы. */}
           <ShowOnListRoot base={base}>
-          <div className="hidden min-w-0 items-center gap-2.5 sm:flex">
-            <Link href={`/${meta.ownerHandle}`} aria-label={meta.ownerHandle} className="shrink-0">
+          <div className="order-2 flex w-full min-w-0 items-start gap-2.5 sm:order-none sm:w-auto sm:items-center">
+            {/* Аватар автора — только на широком: на телефоне он и так в бредкрамбе
+                и в строке коммита, а 36px ширины нужнее самому названию. */}
+            <Link href={`/${meta.ownerHandle}`} aria-label={meta.ownerHandle} className="hidden shrink-0 sm:block">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
             </Link>
-            <h1 className="min-w-0 truncate text-[1.125rem] font-bold text-ink">{tr(meta.title, lang)}</h1>
+            <h1 className="min-w-0 text-[1.125rem] font-bold text-ink [overflow-wrap:anywhere] sm:truncate">{tr(meta.title, lang)}</h1>
             {/* Версию у заголовка НЕ показываем: она живёт в сайдбаре Releases (как у GitHub —
                 номер версии/релиза только в блоке Releases, а не рядом с именем). Убран дубль. */}
             {/* Видимость — ТОЛЬКО ИКОНКОЙ, подпись в тултипе: слово рядом с названием
@@ -91,12 +103,9 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                 видно значком. Пока этот значок на экране, статус НЕ дублируется в
                 сводке показателей (см. ListStats) — как у GitHub, где бейдж стоит у
                 имени, а строка статистики его не повторяет. */}
-            <Tooltip label={meta.visibility === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}>
-              <span
-                className="grid size-6 shrink-0 place-items-center rounded-md border border-border bg-surface-2 text-ink-2"
-                aria-label={meta.visibility === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}
-              >
-                {meta.visibility === 'private' ? <Lock size={12} /> : <Globe size={12} />}
+            <Tooltip label={visLabel}>
+              <span className={`grid size-6 shrink-0 place-items-center rounded-md border bg-surface-2 ${visBadge.tone}`} aria-label={visLabel}>
+                <visBadge.Icon size={12} />
               </span>
             </Tooltip>
             {/* Ограниченные состояния — рядом с видимостью (архив строже заморозки). */}
@@ -113,9 +122,11 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
           </ShowOnListRoot>
 
           {/* Действия репозитория — только на корне «Список» (как GitHub: на
-              под-вкладках видны только табы, без Watch/Fork/Star). */}
+              под-вкладках видны только табы, без Watch/Fork/Star). На мобиле —
+              своя строка ПЕРВОЙ (order-1), под ней название: кнопки у верхнего
+              края остаются там, где их ждёт большой палец после табов. */}
           <ShowOnListRoot base={base}>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="order-1 flex w-full flex-wrap items-center gap-2 sm:order-none sm:w-auto">
             {/* Pin — свой публичный. Кнопкой ВЕЗДЕ: на мобиле она иконкой, и «...»-меню
                 ради одного пункта больше не нужно (владелец: «Поделиться влезла бы»). */}
             {isOwner && meta.visibility === 'public' && (
@@ -217,7 +228,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               copyLinkLabel={t('copyLink', lang)}
               shareViaLabel={t('shareVia', lang)}
               qrHint={t('qrHint', lang)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-[0.8125rem] font-semibold text-ink hover:border-border-strong sm:w-auto sm:gap-2 sm:px-3.5"
+              className={buttonClass({ className: `size-8 p-0 ${TOUCH_BOX} sm:size-auto sm:h-8 sm:px-3.5` })}
             />
             {/* Use (клон) и Edit/Suggest переехали в область списка (version-bar) — как
                 зелёная Code и карандаш у GitHub живут в контенте, не в шапке. */}
