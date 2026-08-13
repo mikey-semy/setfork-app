@@ -532,11 +532,19 @@ jobs:
         with:
           script: |
             // Обе тревоги про одно состояние «прод не свежий»: успешная выкатка
-            // снимает и ту, что про падение деплоя, и ту, что про пропущенный запуск.
-            const TITLES = ['🔴 Деплой на прод падает', '🟠 Прод отстаёт от master: CI не зелёный']
+            // снимает и ту, что про падение деплоя, и ту, что про отставание.
+            // Тревогу об отставании заводит prod-stale.yml, поэтому узнаём её по
+            // МЕТКЕ: пока идентичностью служил заголовок, он жил в двух файлах и при
+            // переименовании молча разъехался — закрыватель перестал её находить, и
+            // она висела бы до следующей почасовой проверки. Своя, деплойная, тревога
+            // заводится и закрывается здесь же, поэтому ей хватает заголовка.
+            // Замечание авто-ревью на fe#787 (P2).
+            const TITLES = ['🔴 Деплой на прод падает']
+            const LABEL = 'alert:prod-stale'
+            const наша = (x) => TITLES.includes(x.title) || (x.labels || []).some((l) => (l.name ?? l) === LABEL)
             try {
               const open = await github.paginate(github.rest.issues.listForRepo, { ...context.repo, state: 'open', per_page: 100 })
-              for (const i of open.filter((x) => TITLES.includes(x.title) && !x.pull_request)) {
+              for (const i of open.filter((x) => наша(x) && !x.pull_request)) {
                 await github.rest.issues.createComment({
                   ...context.repo, issue_number: i.number,
                   body: `Деплой прошёл на \`${context.sha.slice(0, 7)}\` — прод снова свежий.`,

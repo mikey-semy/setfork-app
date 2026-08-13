@@ -40,6 +40,12 @@ jobs:
         with:
           script: |
             const TITLE = '🟠 Прод отстаёт от master'
+            // Тревогу узнаём по МЕТКЕ, а не по заголовку: закрывает её ещё и джоба
+            // деплоя в ci.yml, и пока идентичностью служил текст, он жил в двух
+            // файлах и молча разъехался при переименовании — закрыватель перестал
+            // находить тревогу. Метка переживает любую правку названия.
+            // Замечание авто-ревью на fe#787 (P2).
+            const LABEL = 'alert:prod-stale'
             const STALE_HOURS = Number(process.env.STALE_ALERT_HOURS || 6)
 
             const { data: ref } = await github.rest.git.getRef({ ...context.repo, ref: 'heads/master' })
@@ -51,21 +57,24 @@ jobs:
             // неудачные попытки, поэтому в затяжной аварии успешная уезжает вниз.
             // Промахнуться глубиной нельзя — исчерпание поиска само поднимает тревогу
             // (ниже), а не оставляет тишину. Замечание авто-ревью на core#97 (P1).
-            const { data: deps } = await github.rest.repos.listDeployments({
-              ...context.repo, environment: 'production', per_page: 100,
-            })
-            let live = null
-            for (const d of deps) {
-              const { data: st } = await github.rest.repos.listDeploymentStatuses({
-                ...context.repo, deployment_id: d.id, per_page: 1,
+            const выкатки = async () => {
+              const { data: deps } = await github.rest.repos.listDeployments({
+                ...context.repo, environment: 'production', per_page: 100,
               })
-              if (st[0]?.state === 'success') { live = d; break }
+              for (const d of deps) {
+                const { data: st } = await github.rest.repos.listDeploymentStatuses({
+                  ...context.repo, deployment_id: d.id, per_page: 1,
+                })
+                if (st[0]?.state === 'success') return { deps, live: d }
+              }
+              return { deps, live: null }
             }
+            const { deps, live } = await выкатки()
 
             const открытые = await github.paginate(github.rest.issues.listForRepo, {
-              ...context.repo, state: 'open', per_page: 100,
+              ...context.repo, state: 'open', labels: LABEL, per_page: 100,
             })
-            const тревога = открытые.find((i) => i.title === TITLE && !i.pull_request)
+            const тревога = открытые.find((i) => !i.pull_request)
 
             const снять = async (почему) => {
               if (!тревога) return core.notice(почему)
@@ -85,7 +94,32 @@ jobs:
                 await github.rest.issues.update({ ...context.repo, issue_number: тревога.number, body })
                 return core.notice(`обновил тревогу #${тревога.number} (${чем})`)
               }
-              const { data: made } = await github.rest.issues.create({ ...context.repo, title: TITLE, body })
+              // Перед тем как ЗАВЕСТИ новую тревогу, перечитываем витрину. Снимок выше
+              // мог быть сделан за секунды до успешной выкатки — тогда джоба деплоя уже
+              // прошла свой шаг снятия тревог (ей нечего было снимать), а мы завели бы
+              // ложную, и она провисела бы до следующего часа. Ничто не упорядочивает
+              // эти два воркфлоу между собой, поэтому единственная защита — свежий
+              // взгляд в последний момент. Замечание авто-ревью на fe#787 (P2).
+              const { live: свежая } = await выкатки()
+              if (свежая?.sha === tip) {
+                return core.notice(`пока считали, прод догнал master (\`${tip.slice(0, 7)}\`) — тревогу не заводим`)
+              }
+              // Метку заводим явно и идемпотентно. Документация REST обещает лишь,
+              // что метки «тихо отбрасываются» без прав, и НЕ обещает создавать
+              // отсутствующие. Отброшенная метка здесь означала бы, что следующая
+              // проверка не найдёт эту тревогу и заведёт вторую, потом третью —
+              // отказ ровно в сторону шума. 422 = метка уже есть, это норма.
+              try {
+                await github.rest.issues.createLabel({
+                  ...context.repo, name: LABEL, color: 'D93F0B',
+                  description: 'Автотревога: прод отстаёт от master',
+                })
+              } catch (e) {
+                if (e.status !== 422) throw e
+              }
+              const { data: made } = await github.rest.issues.create({
+                ...context.repo, title: TITLE, body, labels: [LABEL],
+              })
               core.notice(`завёл тревогу #${made.number} (${чем})`)
             }
 
