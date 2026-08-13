@@ -8,7 +8,6 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { toast } from '@/shared/ui/toast'
 import { translateList } from './actions/ai'
 import { buttonClass } from '@/shared/ui/button-style'
-import { TOUCH_BOX } from '@/shared/ui/control'
 
 // Кнопка «Перевести» (ADR-0009): AI-перевод полей списка на язык зрителя, ДОБАВЛЯЕТ
 // языковой ключ (оригинал остаётся) → новая версия. Икон-онли (как x.com), подпись —
@@ -42,8 +41,8 @@ export function TranslateButton({ templateId, targetLang, lang, iconOnly }: { te
         aria-label={label}
         className={
           iconOnly
-            ? buttonClass({ variant: 'ghost', size: 'sm', className: `size-7 shrink-0 p-0 text-muted ${TOUCH_BOX}` })
-            : buttonClass({ className: `size-8 shrink-0 p-0 ${TOUCH_BOX}` })
+            ? buttonClass({ variant: 'ghost', size: 'sm', className: 'size-7 shrink-0 p-0 text-muted' })
+            : buttonClass({ className: 'size-8 shrink-0 p-0' })
         }
       >
         {pending ? <Loader2 size={15} className="animate-spin" /> : <Languages size={15} />}

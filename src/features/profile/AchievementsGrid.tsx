@@ -5,7 +5,6 @@ import { Trophy, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
-import { TOUCH_BOX } from '@/shared/ui/control'
 
 // Одна ачивка для отображения: только заработанные и только с картинкой (картинка —
 // обязательный атрибут; без неё ачивка не показывается вовсе — гейт в AchievementsCard).
@@ -73,7 +72,7 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
                 type="button"
                 onClick={() => setOpen(null)}
                 aria-label={ru ? 'Закрыть' : 'Close'}
-                className={buttonClass({ variant: 'ghost', size: 'sm', className: `absolute right-2 top-2 size-7 rounded-full bg-black/40 p-0 text-white hover:bg-black/60 ${TOUCH_BOX}` })}
+                className={buttonClass({ variant: 'ghost', size: 'sm', className: 'absolute right-2 top-2 size-7 rounded-full bg-black/40 p-0 text-white hover:bg-black/60' })}
               >
                 <X size={15} />
               </button>

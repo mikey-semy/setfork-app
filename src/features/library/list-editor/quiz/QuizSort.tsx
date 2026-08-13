@@ -26,10 +26,10 @@ export function QuizSort({ quiz, set, lang, nth }: QuizKindProps) {
             <span className="w-4 text-right font-mono text-[0.6875rem] text-muted">{ii + 1}</span>
             {/* Стрелки — общие иконочные кнопки: пальцем по 13px значку не попасть. */}
             <div className="flex flex-col">
-              <IconButton size="xs" variant="ghost" onClick={() => move(ii, -1)} disabled={ii === 0} label={t('editor.moveUp', lang)}>
+              <IconButton size="xs" variant="ghost" touch="grow" onClick={() => move(ii, -1)} disabled={ii === 0} label={t('editor.moveUp', lang)}>
                 <ChevronUp size={iconSizeFor('xs')} />
               </IconButton>
-              <IconButton size="xs" variant="ghost" onClick={() => move(ii, 1)} disabled={ii === items.length - 1} label={t('editor.moveDown', lang)}>
+              <IconButton size="xs" variant="ghost" touch="grow" onClick={() => move(ii, 1)} disabled={ii === items.length - 1} label={t('editor.moveDown', lang)}>
                 <ChevronDown size={iconSizeFor('xs')} />
               </IconButton>
             </div>

@@ -51,7 +51,9 @@ if [ "$FAST" = 0 ]; then step "build"; npm run build; fi
 
 # ── integration ──
 step "drizzle-kit push (эфемерная схема)"; npx drizzle-kit push --force
-step "test:integration";                   npm run test:integration
+# ITEST_PG_CONTAINER — тестам, которые гасят базу и проверяют поведение при
+# мёртвой (readiness). Без него такой тест молча пропускается.
+step "test:integration";                   ITEST_PG_CONTAINER="$PG" npm run test:integration
 step "redis rate-limit test";              REDIS_URL="$REDIS_URL_LOCAL" npx vitest run tests/shared/rate-limit-store.redis.test.ts
 
 # ── coverage ──

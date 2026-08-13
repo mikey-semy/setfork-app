@@ -7,7 +7,6 @@ import { Languages, MoreHorizontal, Pencil, Rocket, type LucideIcon } from 'luci
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
-import { TOUCH_BOX } from '@/shared/ui/control'
 import { LANG_META, t, type Lang } from '@/shared/i18n'
 import { toast } from '@/shared/ui/toast'
 // Прямые модули, а не фасад './actions': бочка тянет в клиентский бандл все
@@ -71,7 +70,7 @@ export function ListActionsMenu({
 
   const editHref = isOwner ? `${base}/edit` : `${base}/suggest`
   const editLabel = isOwner ? t('edit', lang) : t('suggestEdit', lang)
-  const btn = buttonClass({ className: `shrink-0 p-0 size-8 ${TOUCH_BOX}` })
+  const btn = buttonClass({ className: 'shrink-0 p-0 size-8' })
 
   // Пункты СПИСКОМ, а не лесенкой условий в разметке: новое действие = новая строка,
   // а решение «меню или одна кнопка» считается по длине и не переписывается заново.

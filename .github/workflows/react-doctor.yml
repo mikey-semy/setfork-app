@@ -33,8 +33,18 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          # Токен не остаётся в .git/config переиспользуемого раннера; доктору
+          # нужна история, а не право писать в репозиторий (комментарии он ставит
+          # своим токеном из окружения шага).
+          persist-credentials: false
 
-      - uses: millionco/react-doctor@v2
+      # Закреплено хешем, а не `@v2`: подвижный тег стороннего автора — это
+      # обещание, что завтра там будет тот же код, а не гарантия; наш раннер не
+      # одноразовая песочница GitHub (docker.sock хоста, ключ выкатки). Сам
+      # анализатор при этом не замораживается: версию react-doctor экшен тянет
+      # отдельно (input `version`, по умолчанию latest).
+      # Обновлять: gh api repos/millionco/react-doctor/git/matching-refs/tags/v2
+      - uses: millionco/react-doctor@01820bb4fd4d0a4aebcd8df2b2a143a098649cb2 # v2
         # Advisory by default: React Doctor reports findings on every PR — a
         # sticky summary comment, inline review comments, and a commit status
         # with the health score — but never fails the check, so it won't red-X

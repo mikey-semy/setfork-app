@@ -99,13 +99,21 @@ export async function middleware(req: NextRequest) {
   const legacy = legacyExploreTarget(req.nextUrl)
   if (legacy) return NextResponse.redirect(new URL(legacy, req.url), 308)
 
-  if (!(await maintenanceEnabled())) return pass(req)
-
-  const { pathname } = req.nextUrl
-  // /api/health — liveness-проба Docker-контейнера: ДОЛЖНА отдавать 200 даже в
-  // ремонте. Иначе healthcheck валит контейнер (unhealthy → Traefik выкидывает
+  // ПРОБЫ ПРОПУСКАЕМ ДО обращения к БД. `maintenanceEnabled()` ходит в ту же
+  // базу и своего потолка ожидания не имеет: при исчерпанном пуле или зависшем
+  // (а не отказавшем) соединении запрос ждёт до таймаута получения клиента —
+  // и проба готовности, чей смысл в быстром ответе, зависла бы, не дойдя до
+  // хендлера. Проверка пути дешевле запроса, поэтому она и идёт первой.
+  //
+  // /api/health — liveness Docker-контейнера: ДОЛЖНА отдавать 200 даже в
+  // ремонте, иначе healthcheck валит контейнер (unhealthy → Traefik выкидывает
   // из роутинга → 404 на весь сайт, и заглушка «ремонт» даже не показывается).
-  if (pathname === '/api/health') return pass(req)
+  // /api/ready — readiness для внешнего монитора: она обязана отвечать САМА,
+  // в том числе когда база мертва (в этом её работа), и в ремонте тоже.
+  const { pathname } = req.nextUrl
+  if (pathname === '/api/health' || pathname === '/api/ready') return pass(req)
+
+  if (!(await maintenanceEnabled())) return pass(req)
   // Дверь для админа: страница входа и auth-эндпоинты (GitHub OAuth, POST
   // server actions самого /login) остаются открыты.
   if (pathname === '/login' || pathname.startsWith('/api/auth/')) return pass(req)
