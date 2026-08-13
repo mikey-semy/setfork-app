@@ -3,6 +3,7 @@
 import { type Lang } from '@/shared/i18n'
 import { useEffect, useState } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
+import { Meter } from '@/shared/ui/Meter'
 import { Alert } from '@/shared/ui/Alert'
 import { fetchOpenRouterCredits } from './actions'
 
@@ -18,8 +19,13 @@ export function CreditsWidget({ lang }: { lang: Lang }) {
   const load = async () => {
     setLoading(true)
     setError(null)
-    const res = await fetchOpenRouterCredits()
-    setLoading(false)
+    let res
+    try {
+      res = await fetchOpenRouterCredits()
+    } finally {
+      // Без finally сорвавшийся запрос оставлял бы вечный спиннер.
+      setLoading(false)
+    }
     if ('error' in res) {
       setError(res.error)
       return
@@ -60,7 +66,7 @@ export function CreditsWidget({ lang }: { lang: Lang }) {
   }
 
   const pctUsed = c.total > 0 ? Math.min(100, Math.round((c.used / c.total) * 100)) : 0
-  const barColor = c.remaining < 1 ? 'var(--danger)' : c.remaining < 5 ? 'var(--warn)' : 'var(--ok)'
+  const barTone = c.remaining < 1 ? 'danger' : c.remaining < 5 ? 'warn' : 'ok'
 
   return (
     <div className="space-y-2">
@@ -74,9 +80,7 @@ export function CreditsWidget({ lang }: { lang: Lang }) {
         </div>
         {refresh}
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-(--border)">
-        <div className="h-full transition-all" style={{ width: `${pctUsed}%`, background: barColor }} />
-      </div>
+      <Meter value={pctUsed / 100} tone={barTone} className="h-2" />
       <p className="text-[0.78125rem] text-muted">
         {ru ? 'Использовано' : 'Used'} ${c.used.toFixed(2)} ({pctUsed}%).
       </p>

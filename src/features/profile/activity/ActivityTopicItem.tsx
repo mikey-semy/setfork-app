@@ -1,11 +1,15 @@
-import Link from 'next/link'
+'use client'
+
 import { CircleDot, GitCommitHorizontal, GitPullRequest, Rocket, type LucideIcon } from 'lucide-react'
-import { fill, plural, tr, type Lang } from '@/shared/i18n'
+import { useState } from 'react'
+import { fill, plural, type Lang } from '@/shared/i18n'
+import { DisclosureToggle } from '@/shared/ui/DisclosureToggle'
 import { fmtNumber } from '@/shared/lib/count'
+import { TopicLists } from './TopicDetails'
 import type { ActivityKind, ActivityTopic } from './types'
 
-// Одна тема ленты активности: кружок с иконкой на полоске таймлайна, сводка и —
-// там, где есть что перечислить, — сами списки.
+// Одна тема ленты активности: кружок с иконкой на полоске таймлайна, сводка —
+// и раскрытие вглубь, к спискам и самим событиям.
 
 /** Иконка темы. Новый вид работы = строка здесь плюс ветка в Summary. */
 const ICON: Record<ActivityKind, LucideIcon> = {
@@ -15,8 +19,22 @@ const ICON: Record<ActivityKind, LucideIcon> = {
   suggestions: GitPullRequest,
 }
 
-export function ActivityTopicItem({ topic, handle, lang }: { topic: ActivityTopic; handle: string; lang: Lang }) {
+export function ActivityTopicItem({
+  topic,
+  handle,
+  windowKey,
+  lang,
+}: {
+  topic: ActivityTopic
+  handle: string
+  /** Окно ленты (`YYYY-MM` или `YYYY-MM-DD`) — с ним идут запросы деталей. */
+  windowKey: string
+  lang: Lang
+}) {
   const Icon = ICON[topic.kind]
+  // Раскрытием владеет тема; перечень списков грузится, когда блок смонтирован.
+  const [open, setOpen] = useState(false)
+
   return (
     <li className="flex gap-3">
       {/* Кружок непрозрачный — он перекрывает полоску таймлайна, а не висит поверх. */}
@@ -24,70 +42,36 @@ export function ActivityTopicItem({ topic, handle, lang }: { topic: ActivityTopi
         <Icon size={15} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-[0.8125rem] font-medium text-ink">
-          <Summary topic={topic} lang={lang} />
-        </div>
-        {topic.kind === 'versions' && (
-          <ul className="mt-2 flex flex-col gap-1">
-            {topic.lists.map((v) => (
-              <li key={v.slug} className="flex items-center justify-between gap-3 text-[0.8125rem]">
-                <Link href={`/${handle}/${v.slug}`} className="truncate text-accent hover:underline">
-                  {tr(v.title, lang)}
-                </Link>
-                <span className="shrink-0 font-mono text-[0.6875rem] text-muted">
-                  {fmtNumber(v.count, lang)} {plural(v.count, 'versions', lang)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {topic.kind === 'lists' && (
-          <ul className="mt-2 flex flex-col gap-1">
-            {topic.lists.map((l) => (
-              <li key={l.slug}>
-                {/* Название списка пишет человек: слово без пробелов иначе уносит
-                    страницу за край. Перенос, а не truncate — строка тут одна, места
-                    под неё хватает, и обрезать название незачем. */}
-                <Link href={`/${handle}/${l.slug}`} className="text-[0.8125rem] text-accent hover:underline [overflow-wrap:anywhere]">
-                  {tr(l.title, lang)}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <DisclosureToggle open={open} onToggle={() => setOpen((was) => !was)} label={summaryText(topic, lang)}>
+          <span className="min-w-0 flex-1 text-[0.8125rem] font-medium text-ink">{summaryText(topic, lang)}</span>
+        </DisclosureToggle>
+        {open && <TopicLists handle={handle} kind={topic.kind} windowKey={windowKey} lang={lang} />}
       </div>
     </li>
   )
 }
 
 /** Сводка темы одной строкой — счётчики со склонением по языку профиля. */
-function Summary({ topic, lang }: { topic: ActivityTopic; lang: Lang }) {
+function summaryText(topic: ActivityTopic, lang: Lang): string {
+  const n = fmtNumber(topic.total, lang)
   switch (topic.kind) {
     case 'versions':
-      return (
-        <>
-          {fill('profile.activity.publishedVersions', lang, {
-            n: fmtNumber(topic.total, lang),
-            versions: plural(topic.total, 'versions', lang),
-            m: fmtNumber(topic.listsTotal, lang),
-            lists: plural(topic.listsTotal, 'listsIn', lang),
-          })}
-        </>
-      )
+      return fill('profile.activity.publishedVersions', lang, {
+        n,
+        versions: plural(topic.total, 'versions', lang),
+        m: fmtNumber(topic.listsTotal, lang),
+        lists: plural(topic.listsTotal, 'listsIn', lang),
+      })
     case 'lists':
-      return <>{fill('profile.activity.createdLists', lang, { n: fmtNumber(topic.total, lang), lists: plural(topic.total, 'lists', lang) })}</>
+      return fill('profile.activity.createdLists', lang, { n, lists: plural(topic.total, 'lists', lang) })
     case 'issues':
-      return (
-        <>
-          {fill('profile.activity.openedIssues', lang, {
-            n: fmtNumber(topic.total, lang),
-            issues: plural(topic.total, 'issues', lang),
-            m: fmtNumber(topic.listsTotal, lang),
-            lists: plural(topic.listsTotal, 'listsIn', lang),
-          })}
-        </>
-      )
+      return fill('profile.activity.openedIssues', lang, {
+        n,
+        issues: plural(topic.total, 'issues', lang),
+        m: fmtNumber(topic.listsTotal, lang),
+        lists: plural(topic.listsTotal, 'listsIn', lang),
+      })
     case 'suggestions':
-      return <>{fill('profile.activity.proposedSuggestions', lang, { n: fmtNumber(topic.total, lang), suggestions: plural(topic.total, 'suggestions', lang) })}</>
+      return fill('profile.activity.proposedSuggestions', lang, { n, suggestions: plural(topic.total, 'suggestions', lang) })
   }
 }

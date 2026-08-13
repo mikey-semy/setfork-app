@@ -105,7 +105,7 @@ export function ContributionGrid({
                 // День без вкладов фильтровать нечем: подсказку показываем, кнопкой не делаем.
                 <div
                   key={di}
-                  className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] transition-opacity duration-(--dur-fast) ${LEVEL[0]} ${selected ? 'opacity-30' : 'opacity-100'}`}
+                  className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] transition-opacity duration-(--dur-base) ${LEVEL[0]} ${selected ? 'opacity-30' : 'opacity-100'}`}
                   onMouseEnter={(e) => showTip(e.currentTarget, cell)}
                   onMouseLeave={() => setTip(null)}
                 />
@@ -132,7 +132,7 @@ export function ContributionGrid({
                   // уходят в фон — видно, какой срез сейчас показывает лента.
                   // Кольцо БЕЗ offset: с зазором оно у крайних клеток вылезало за
                   // окно прокрутки и срезалось. Место под сами 2px даёт p-0.5 сетки.
-                  className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] touch-manipulation transition-[opacity,box-shadow] duration-(--dur-fast) ${LEVEL[level(cell.count, calendar.scale)]} ${
+                  className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] touch-manipulation transition-[opacity,box-shadow] duration-(--dur-base) ${LEVEL[level(cell.count, calendar.scale)]} ${
                     selected === cell.date ? 'opacity-100 ring-2 ring-accent' : selected ? 'opacity-30 hover:opacity-60' : 'opacity-100'
                   }`}
                 />
