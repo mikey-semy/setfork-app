@@ -176,7 +176,9 @@ async function runLoop(spreadMs: number, startDone: number): Promise<void> {
     // параллельно с реиндексом) и поисковые запросы сразу идут новым пространством.
     // Старые векторы стираем целиком: смесь пространств в HNSW = мусорная близость,
     // честнее временно деградировать поиск до текстового, чем отдавать шум.
-    const { target, inSync } = await ensureFreshSpace()
+    // measure=true: пространство фиксируется здесь и живёт до следующего реиндекса —
+    // мерность модели берём измерением, а не потолком колонки «на всякий случай».
+    const { target, inSync } = await ensureFreshSpace(true)
     if (!inSync && startDone === 0) {
       await setIndexSpace(target)
       await db.execute(sql`truncate table ${embeddings}`)

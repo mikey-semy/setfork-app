@@ -13,6 +13,22 @@ type SpaceInfo = Awaited<ReturnType<typeof getEmbedSpaceInfo>>
 
 const ROWS = 7
 
+/** Как называем провайдера эмбеддингов — одна таблица на панель: тот же тернарник
+ *  стоял в трёх местах и в каждом писал своё («Yandex v2 🇷🇺», «Yandex v2»,
+ *  «Yandex v2 · 768 🇷🇺»). Незнакомого показываем как есть, а не чужим именем.
+ *  Мерность в подпись не вписываем — она приходит из схемы (columnDim). */
+const PROVIDER_LABEL: Record<string, string> = { openrouter: 'OpenRouter', yandex: 'Yandex v2 🇷🇺' }
+const providerLabel = (provider: string) => PROVIDER_LABEL[provider] ?? provider
+
+/** Что сказать про мерность цели. Число берём РОДНОЕ (targetNativeDim), а не target.dim:
+ *  у модели шире колонки второе уже урезано, и усечение выглядело бы точным попаданием. */
+function targetDimText(space: NonNullable<SpaceInfo>, lang: Lang): string {
+  const native = space.targetNativeDim
+  if (native === null) return t('admin.targetDimUnknown', lang).replace('{c}', String(space.columnDim))
+  const key = native > space.columnDim ? 'admin.targetDimTruncated' : 'admin.targetDimMeasured'
+  return t(key, lang).replace('{d}', String(native)).replace('{c}', String(space.columnDim))
+}
+
 /** Переиндексация эмбеддингов: прогресс сеткой-прямоугольником (как контрибуции
  *  на GitHub) — клетки наполняются долей прогресса; серый — ждёт, красный — ошибка. */
 export function ReindexPanel({ lang }: { lang: Lang }) {
@@ -115,7 +131,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
               <div className="flex flex-wrap items-center gap-x-2 text-[0.8125rem] font-medium text-ink">
                 {t('admin.indexSpace', lang)}
                 <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[0.6875rem] font-semibold">
-                  {space.index.provider === 'yandex' ? 'Yandex v2 🇷🇺' : 'OpenRouter'}
+                  {providerLabel(space.index.provider)}
                 </span>
                 <Tooltip label={space.index.docModel}>
                   <span className="truncate font-mono text-[0.6875rem] text-ink-2">{space.index.docLabel}</span>
@@ -129,7 +145,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
           </div>
           {!space.inSync && (
             <div className="mt-2 text-[0.78125rem] font-medium text-warn">
-              {t('admin.targetChanged', lang).replace('{p}', space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter').replace('{d}', String(space.target.dim))}
+              {t('admin.targetChanged', lang).replace('{p}', providerLabel(space.target.provider)).replace('{d}', String(space.target.dim))}
             </div>
           )}
           <div className="mt-2.5 flex items-center gap-2">
@@ -149,12 +165,21 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="openrouter">OpenRouter · 1536</SelectItem>
-                <SelectItem value="yandex">Yandex v2 · 768 🇷🇺</SelectItem>
+                {space.providers.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {providerLabel(p)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             {switching && <Loader2 size={13} className="animate-spin text-muted" />}
           </div>
+          {/* Мерность — свойство ВЫБРАННОЙ МОДЕЛИ, поэтому у пунктов её нет (раньше там
+              стояло вписанное руками «· 1536» при колонке 768). Здесь — измеренный факт
+              для текущей цели, а пока не измерен — так и сказано. */}
+          <p className="mt-1.5 text-[0.78125rem] text-muted">
+            {targetDimText(space, lang)}
+          </p>
         </div>
       )}
 

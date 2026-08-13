@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest'
-import { capKey, fitOf } from '@/shared/ai/embed-capability'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { CAPABILITY_SETTING, capKey, clearCapabilityCache, fitOf, getCapability } from '@/shared/ai/embed-capability'
 import { COLUMN_DIM } from '@/shared/ai/embed-space'
+
+const stored = vi.fn(async (_keys: string[]) => ({}) as Record<string, string>)
+vi.mock('@/shared/settings/kv', () => ({
+  getSettings: (keys: string[]) => stored(keys),
+  saveSettings: async () => {},
+}))
 
 /**
  * Совместимость эмбеддинг-модели — ИЗМЕРЕННЫЙ факт, а не список «известных» моделей в коде.
@@ -30,5 +36,22 @@ describe('fitOf: как измеренная мерность ляжет в ко
 describe('capKey: факт привязан к провайдеру, а не только к имени модели', () => {
   it('одинаковое имя у разных провайдеров — разные записи', () => {
     expect(capKey('openrouter', 'm')).not.toBe(capKey('yandex', 'm'))
+  })
+})
+
+describe('записи прежнего формата не выдаются за измеренный факт', () => {
+  beforeEach(() => clearCapabilityCache())
+
+  it('без флага native запись игнорируется (там эхо нашего запроса, а не мерность модели)', async () => {
+    const legacy = { provider: 'openrouter', model: 'old', dim: 768, dimsAccepted: true, at: 1 }
+    const fresh = { provider: 'openrouter', model: 'new', dim: 1536, dimsAccepted: true, at: 2, native: true }
+    stored.mockResolvedValueOnce({
+      [CAPABILITY_SETTING]: JSON.stringify({
+        [capKey('openrouter', 'old')]: legacy,
+        [capKey('openrouter', 'new')]: fresh,
+      }),
+    })
+    expect(await getCapability('openrouter', 'old')).toBeUndefined()
+    expect((await getCapability('openrouter', 'new'))?.dim).toBe(1536)
   })
 })

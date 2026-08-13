@@ -21,15 +21,26 @@ import { COLUMN_DIM, type EmbedProvider } from './embed-space'
 export interface EmbedCapability {
   provider: EmbedProvider
   model: string
-  /** Длина вектора, которую модель отдала на запрос с dimensions = мерность колонки. */
+  /** РОДНАЯ мерность модели: длина вектора, когда dimensions не просили. В ней и строится
+   *  пространство индекса, если она влезает в колонку (spaceDim в embed-space). */
   dim: number
-  /** Приняла ли модель параметр dimensions (false = пришлось звать без него). */
+  /** Приняла ли модель параметр dimensions. Важно только для моделей ШИРЕ колонки: им срез
+   *  неизбежен, и false означает «режем и нормализуем сами» (осознанная деградация). */
   dimsAccepted: boolean
   /** Момент измерения, unix ms. */
   at: number
+  /**
+   * Мерность измерена БЕЗ параметра dimensions, то есть это правда о модели, а не эхо
+   * нашего же запроса. Записи без флага остались от прежнего правила «просим мерность
+   * колонки у всех»: на стенде с колонкой 768 они говорят «модель 768-мерная» про
+   * text-embedding-3-small, у которой родных 1536. Такие факты считаем неизмеренными
+   * и перемеряем — иначе после расширения колонки стенд продолжил бы просить срез.
+   */
+  native: true
 }
 
-/** Как вектор ляжет в колонку. Вычисляется из измеренного, не задаётся руками. */
+/** Как РОДНОЙ вектор модели ляжет в колонку: ровно, с паддингом нулями или со срезом.
+ *  Вычисляется из измеренного, не задаётся руками. */
 export type EmbedFit = 'exact' | 'truncated' | 'padded'
 
 export const CAPABILITY_SETTING = 'embed.capabilities'
@@ -57,7 +68,13 @@ export async function getCapabilities(): Promise<CapMap> {
   const raw = (await getSettings([CAPABILITY_SETTING]))[CAPABILITY_SETTING]
   let map: CapMap = {}
   try {
-    if (raw) map = JSON.parse(raw) as CapMap
+    if (raw) {
+      // Отсеиваем записи прежнего формата (без native): там записана не родная мерность
+      // модели, а та, что мы сами просили. Отброшенное перемеряется пробой в доли цента.
+      map = Object.fromEntries(
+        Object.entries(JSON.parse(raw) as Record<string, EmbedCapability>).filter(([, c]) => c?.native === true),
+      )
+    }
   } catch {
     map = {} // битый JSON = знаний нет, измерим заново
   }
@@ -70,8 +87,9 @@ export async function getCapability(provider: EmbedProvider, model: string): Pro
 }
 
 /**
- * Запомнить измеренное. Пишем в БД ТОЛЬКО при изменении: попутный вызов случается на каждом
- * эмбеддинге, и запись на каждый из них была бы лишней нагрузкой ради одной и той же строки.
+ * Запомнить измеренную РОДНУЮ мерность (вызывать только когда вектор пришёл без применённого
+ * dimensions — иначе запишется эхо нашего же запроса). Пишем в БД ТОЛЬКО при изменении:
+ * попутный вызов случается на каждом эмбеддинге, и запись на каждый была бы лишней нагрузкой.
  */
 export async function rememberCapability(
   provider: EmbedProvider,
@@ -85,7 +103,7 @@ export async function rememberCapability(
     const key = capKey(provider, model)
     const prev = map[key]
     if (prev && prev.dim === dim && prev.dimsAccepted === dimsAccepted) return
-    const next: CapMap = { ...map, [key]: { provider, model, dim, dimsAccepted, at: Date.now() } }
+    const next: CapMap = { ...map, [key]: { provider, model, dim, dimsAccepted, at: Date.now(), native: true } }
     await saveSettings({ [CAPABILITY_SETTING]: JSON.stringify(next) })
     cache = { at: Date.now(), map: next }
   } catch (e) {

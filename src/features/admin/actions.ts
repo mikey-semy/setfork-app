@@ -336,18 +336,28 @@ export async function getEmbedSpaceInfo(): Promise<{
   // нечитаем; помощник server-only, а панель клиентская — прибираем здесь.
   index: { provider: string; docModel: string; docLabel: string; dim: number; at?: number }
   target: { provider: string; docModel: string; docLabel: string; dim: number }
+  /** ПОТОЛОК колонки embeddings.embedding — числом ИЗ СХЕМЫ: вписанное руками разъезжается. */
+  columnDim: number
+  /** РОДНАЯ мерность модели цели (до ограничения колонкой); null = ещё не измерена.
+   *  Панель показывает именно её: у модели шире колонки target.dim уже урезан, и на нём
+   *  усечение выглядело бы как точное попадание. */
+  targetNativeDim: number | null
+  /** Какие провайдеры вообще бывают — список пунктов селекта родом отсюда. */
+  providers: string[]
   inSync: boolean
   rows: number
   vectorized: number
 } | null> {
   if (!(await getAdmin())) return null
-  const [{ ensureFreshSpace }, { db, embeddings }, { sql }, { prettyModelName }] = await Promise.all([
+  const [{ ensureFreshSpace, COLUMN_DIM, EMBED_PROVIDERS }, { db, embeddings }, { sql }, { prettyModelName }] = await Promise.all([
     import('@/shared/ai/embed-space'),
     import('@/shared/db'),
     import('drizzle-orm'),
     import('@/shared/ai/models'),
   ])
-  const { index, target, inSync } = await ensureFreshSpace()
+  // measure=false: панель опрашивает это раз в 1.5 с — проба у провайдера здесь была бы
+  // сетевым вызовом на каждый тик. Меряем при сохранении модели и при старте реиндекса.
+  const { index, target, inSync, targetNativeDim } = await ensureFreshSpace()
   const [stats] = await db
     .select({
       rows: sql<number>`count(*)::int`,
@@ -357,6 +367,9 @@ export async function getEmbedSpaceInfo(): Promise<{
   return {
     index: { provider: index.provider, docModel: index.docModel, docLabel: prettyModelName(index.docModel), dim: index.dim, at: index.at },
     target: { provider: target.provider, docModel: target.docModel, docLabel: prettyModelName(target.docModel), dim: target.dim },
+    columnDim: COLUMN_DIM,
+    targetNativeDim,
+    providers: [...EMBED_PROVIDERS],
     inSync,
     rows: stats?.rows ?? 0,
     vectorized: stats?.vectorized ?? 0,
@@ -366,11 +379,11 @@ export async function getEmbedSpaceInfo(): Promise<{
 /** Цель эмбеддингов (провайдер); вступает в силу полным реиндексом. */
 export async function setEmbedTarget(provider: string): Promise<{ ok: true } | { error: string }> {
   if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
-  if (provider !== 'openrouter' && provider !== 'yandex') return { error: 'Неизвестный провайдер.' }
-  const [{ EMBED_TARGET_SETTING, clearEmbedSpaceCache }, { saveSettings }] = await Promise.all([
+  const [{ EMBED_TARGET_SETTING, clearEmbedSpaceCache, isEmbedProvider }, { saveSettings }] = await Promise.all([
     import('@/shared/ai/embed-space'),
     import('@/shared/settings/kv'),
   ])
+  if (!isEmbedProvider(provider)) return { error: 'Неизвестный провайдер.' }
   await saveSettings({ [EMBED_TARGET_SETTING]: provider })
   clearEmbedSpaceCache()
   return { ok: true }

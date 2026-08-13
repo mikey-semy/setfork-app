@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   COLUMN_DIM,
+  EMBED_PROVIDERS,
   EMBED_TARGET_SETTING,
   fitToColumn,
+  isEmbedProvider,
   parseIndexSpace,
   resolveTargetSpace,
   sameSpace,
+  spaceDim,
 } from '@/shared/ai/embed-space'
 
 describe('resolveTargetSpace', () => {
@@ -29,6 +32,43 @@ describe('resolveTargetSpace', () => {
   it('env EMBED_PROVIDER работает как фолбэк, folder из env', () => {
     const s = resolveTargetSpace({}, { EMBED_PROVIDER: 'yandex', YC_AI_FOLDER_ID: 'b1genv' })
     expect(s.docModel).toContain('b1genv')
+  })
+
+  it('незнакомый провайдер в настройке не просачивается в пространство — откат на openrouter', () => {
+    const s = resolveTargetSpace({ [EMBED_TARGET_SETTING]: 'gigachat' }, {})
+    expect(s.provider).toBe('openrouter')
+    expect(EMBED_PROVIDERS).toContain(s.provider)
+  })
+
+  it('мерность берётся ИЗМЕРЕННАЯ у модели, а не потолком колонки', () => {
+    // Яндекс v2 отдаёт 768 — пространство 768-мерное, в колонку ляжет с паддингом.
+    expect(resolveTargetSpace({ [EMBED_TARGET_SETTING]: 'yandex' }, {}, 768).dim).toBe(768)
+    // Модель шире колонки — просим срез ровно по колонке.
+    expect(resolveTargetSpace({}, {}, COLUMN_DIM + 1536).dim).toBe(COLUMN_DIM)
+  })
+
+  it('не измерено — считаем, что модель заполняет колонку целиком', () => {
+    for (const p of EMBED_PROVIDERS) {
+      expect(resolveTargetSpace({ [EMBED_TARGET_SETTING]: p }, {}).dim).toBe(COLUMN_DIM)
+    }
+  })
+})
+
+describe('spaceDim', () => {
+  it('родная мерность — как есть, но не шире колонки; неизвестная — колонка', () => {
+    expect(spaceDim(768)).toBe(768)
+    expect(spaceDim(COLUMN_DIM)).toBe(COLUMN_DIM)
+    expect(spaceDim(COLUMN_DIM * 2)).toBe(COLUMN_DIM)
+    expect(spaceDim(null)).toBe(COLUMN_DIM)
+    expect(spaceDim(0)).toBe(COLUMN_DIM)
+  })
+})
+
+describe('isEmbedProvider', () => {
+  it('пропускает только значения из списка', () => {
+    expect(EMBED_PROVIDERS.every(isEmbedProvider)).toBe(true)
+    expect(isEmbedProvider('gigachat')).toBe(false)
+    expect(isEmbedProvider(undefined)).toBe(false)
   })
 })
 
