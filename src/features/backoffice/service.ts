@@ -335,6 +335,27 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
     return out
   }
 
+  const action = down ? 'ai.down' : 'ai.recovered'
+  // ЗАЯВКА НА ПОПЫТКУ. Ключ занимается ДО отправки — иначе два прохода (второй инстанс,
+  // перезапуск) увидят одно состояние и пришлют одно письмо дважды. Но ключ включает
+  // НОМЕР попытки, а не только эпизод: недоставленное письмо оставляет эпизод открытым,
+  // и следующий проход берёт свободный ключ и пробует снова. Так дубль исключён, а
+  // потерянная тревога — нет; между этими двумя бедами вторая хуже.
+  const attempt = await attemptsFor(action, episode)
+  const claimed = await recordAgentAction({
+    loop: 'aiwatch',
+    action,
+    resultStatus: 'skipped', // «попытка начата»; доставку подтверждает отдельная запись
+    signal: { model: state.lastModel, episode, attempt },
+    decision: { verdict: out.verdict, stage: 'claim' },
+    idempotencyKey: `aiwatch:${out.verdict}:${episode}:${attempt}`,
+    policyVersion: policy.policyVersion,
+  })
+  if (!claimed) {
+    out.skipped = ALREADY_SENT
+    return out
+  }
+
   const calls = await callsLastDay()
   const subject = down ? CHANNEL_DOWN_SUBJECT : CHANNEL_UP_SUBJECT
   const body = down
@@ -346,20 +367,36 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   const delivery = await tellOwner(`SetFork: ${subject}`, `${body}${developmentDashboardLink()}`)
   out.sent = delivery.sent
   out.skipped = delivery.skipped
-  // Пишем ПОСЛЕ попытки, статусом по факту: недоставленное письмо не должно закрывать
-  // эпизод. Иначе один сбой SMTP оставлял бы владельца в уверенности, что канал лежит,
-  // и повторить сообщение было бы уже нечем — следующий проход считал бы его отправленным.
-  await recordAgentAction({
-    loop: 'aiwatch',
-    action: down ? 'ai.down' : 'ai.recovered',
-    resultStatus: delivery.sent ? 'ok' : 'skipped',
-    signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes, calls, episode },
-    decision: { verdict: out.verdict },
-    error: delivery.sent ? '' : delivery.skipped,
-    policyVersion: policy.policyVersion,
-  })
-  log.info('aiwatch sweep done', { ...out, failStreak: state.failStreak })
+  // Состояние меняет только ДОСТАВЛЕННОЕ сообщение: запись 'ok' и есть закрытие вопроса.
+  // Не дошло — остаётся заявка со 'skipped' и причиной, эпизод открыт, попытка повторится.
+  if (delivery.sent) {
+    await recordAgentAction({
+      loop: 'aiwatch',
+      action,
+      resultStatus: 'ok',
+      signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes, calls, episode },
+      decision: { verdict: out.verdict },
+      policyVersion: policy.policyVersion,
+    })
+  }
+  log.info('aiwatch sweep done', { ...out, failStreak: state.failStreak, attempt })
   return out
+}
+
+/** Сколько раз уже пробовали сообщить об этом эпизоде — номер следующей попытки. */
+async function attemptsFor(action: string, episode: string): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(agentActions)
+    .where(
+      and(
+        eq(agentActions.loop, 'aiwatch'),
+        eq(agentActions.action, action),
+        sql`${agentActions.signal}->>'episode' = ${episode}`,
+        sql`${agentActions.decision}->>'stage' = 'claim'`,
+      ),
+    )
+  return row?.n ?? 0
 }
 
 /**

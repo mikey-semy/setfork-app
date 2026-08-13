@@ -154,6 +154,17 @@ describe('сторож канала к модели', () => {
 
   // Недоставленная тревога тревогой не была: иначе владелец однажды получит «канал
   // восстановлен» без предшествующего «канал лёг» — сообщение, которое непонятно как читать.
+  // Заявка на попытку занимается до отправки, поэтому одновременные проходы (второй
+  // инстанс, перезапуск) не пришлют одно письмо дважды.
+  it('два прохода разом — письмо одно', async () => {
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 30 - i })
+
+    const [a, b] = await Promise.all([runAiWatchSweep(), runAiWatchSweep()])
+
+    expect([a.sent, b.sent].sort()).toEqual([0, 1])
+    expect(mail.sent).toHaveLength(1)
+  })
+
   it('тревога не дошла — «восстановлен» потом не шлём', async () => {
     await db.delete(users) // адресата нет: письмо уйти не может
     for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 30 - i })
