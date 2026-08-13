@@ -133,6 +133,9 @@ export async function bulkRestoreCatalog(groups: RestoreGroup[]): Promise<{ chan
   const session = await requireSession()
   const mine = new Set(await ownIds(session.userId, groups.flatMap((g) => g.ids)))
   let changed = 0
+  // Полок в возврате столько, сколько их было у пачки, — единицы. Раскладывать эти
+  // несколько запросов параллельно нечего: выигрыш микроскопический, а порядок записи
+  // перестаёт быть предсказуемым.
   for (const group of groups) {
     const ids = group.ids.filter((id) => mine.has(id))
     if (!ids.length) continue
