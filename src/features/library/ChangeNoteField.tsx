@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { generateChangeNoteAction } from './actions'
+import { generateChangeNoteAction } from './actions/ai'
 import { buttonClass } from '@/shared/ui/button-style'
 import { TOUCH_HIT } from '@/shared/ui/control'
 

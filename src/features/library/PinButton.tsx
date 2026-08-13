@@ -4,7 +4,7 @@ import { useOptimistic, useTransition } from 'react'
 import { Pin, PinOff } from 'lucide-react'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
-import { setListPinned } from './actions'
+import { setListPinned } from './actions/list-settings'
 
 /** Pin/Unpin списка на профиль владельца (как Pin у GitHub-репозитория). Показывается
  *  только своим ПУБЛИЧНЫМ спискам — приватные к публичному профилю не прикрепляем. */

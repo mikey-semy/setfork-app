@@ -6,7 +6,7 @@ import { Languages, Loader2 } from 'lucide-react'
 import { LANG_META, t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { toast } from '@/shared/ui/toast'
-import { translateList } from './actions'
+import { translateList } from './actions/ai'
 import { buttonClass } from '@/shared/ui/button-style'
 import { TOUCH_BOX } from '@/shared/ui/control'
 

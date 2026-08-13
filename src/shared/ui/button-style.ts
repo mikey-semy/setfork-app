@@ -1,5 +1,5 @@
 import { cn } from '@/shared/lib/cn'
-import { CONTROL_H, CONTROL_TEXT, TOUCH_MIN_H, type ControlSize } from './control'
+import { CONTROL_H, CONTROL_TEXT, TOUCH_HIT, TOUCH_MIN_H, type ControlSize } from './control'
 
 // Вид кнопки живёт ОТДЕЛЬНО от самой кнопки: те же классы нужны ссылке-кнопке
 // (навигация, которая обязана выглядеть кнопкой, но остаться ссылкой — открываться
@@ -35,7 +35,24 @@ const SIZES: Record<ButtonSize, string> = {
   lg: 'px-4 gap-2',
 }
 
-export function buttonClass({ variant = 'outline', size = 'md', className }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}): string {
+/**
+ * Чем добирается тач-цель 44px. `grow` (по умолчанию) растит саму кнопку; `hit`
+ * растит только невидимую зону нажатия.
+ *
+ * Живёт ЗДЕСЬ, а не в обёртке: TOUCH_MIN_H подмешивается этой функцией, и обёртка
+ * снаружи его не отменяет — классы не конфликтуют, а складываются. Из-за этого
+ * первая версия `IconButton touch="hit"` не работала вовсе: крестик всё равно
+ * дорастал до 44px и раздувал шапку панели до 60px на телефоне — ровно то, что
+ * режим и должен был предотвратить (находка авто-ревью по fe#788).
+ */
+export type ButtonTouch = 'grow' | 'hit'
+
+export function buttonClass({
+  variant = 'outline',
+  size = 'md',
+  touch = 'grow',
+  className,
+}: { variant?: ButtonVariant; size?: ButtonSize; touch?: ButtonTouch; className?: string } = {}): string {
   return cn(
     'inline-flex items-center justify-center rounded-md font-semibold outline-hidden transition-colors focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50',
     VARIANTS[variant],
@@ -43,7 +60,8 @@ export function buttonClass({ variant = 'outline', size = 'md', className }: { v
     // Шкала 24/28/32 — про ВИД под мышью. Пальцу нужна цель 44 (Apple HIG, у
     // Material 48dp), и кнопка с текстом до неё дорастает высотой: на телефоне
     // ряд кнопок такой высоты — норма мобильных интерфейсов, а не раздутие.
-    TOUCH_MIN_H,
+    // Исключение — `hit`: там высоту полосы задаёт не кнопка (шапка панели).
+    touch === 'hit' ? TOUCH_HIT : TOUCH_MIN_H,
     CONTROL_TEXT[size],
     SIZES[size],
     className,
