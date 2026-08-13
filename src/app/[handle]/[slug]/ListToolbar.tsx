@@ -10,8 +10,6 @@ import { buttonClass } from '@/shared/ui/button-style'
 import { TOUCH_BOX } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import type { ListPageData } from './load'
-import { buttonClass } from '@/shared/ui/button-style'
-import { TOUCH_BOX } from '@/shared/ui/control'
 
 type Props = Pick<
   ListPageData,
