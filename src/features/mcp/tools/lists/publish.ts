@@ -101,6 +101,13 @@ export interface McpPublishResult {
   lists: PublishOutcome[]
 }
 
+/** Что станет со списком по плану — по состоянию модерации, которое обещает общий слой. */
+const PLAN_NOTE: Record<string, string | undefined> = {
+  flagged: 'blocked by moderation — publishing changes nothing',
+  hidden: 'blocked by moderation — publishing changes nothing',
+  pending: 'will go to moderation before anyone else sees it',
+}
+
 /** Причина отказа словами: коды общего слоя → фраза ассистенту. */
 const SKIP_REASON: Record<PublishSkip, string> = {
   'not-yours': 'not found among your lists',
@@ -163,7 +170,10 @@ export async function mcpPublishLists(userId: string, refs: string[], dryRun = t
       return
     }
     if (dryRun) {
-      out.lists.push({ ref, status: 'would-publish' })
+      // План обязан обещать то же, что и запись: снятое модерацией так и останется скрытым,
+      // а публичное недоверенного автора уйдёт на проверку. Молчаливое «would-publish» на
+      // снятом списке — обещание, которое исполнение не выполнит (находка авто-ревью).
+      out.lists.push({ ref, status: 'would-publish', reason: PLAN_NOTE[outcome.moderation ?? ''] })
       return
     }
     out.published++

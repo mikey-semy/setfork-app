@@ -300,6 +300,23 @@ describe('публикация пачкой', () => {
     expect(res.skipped).toBe(1)
   })
 
+  it('открытие приватного посреди пачки не проносит его мимо барьера', async () => {
+    // Второй список прочитан приватным — значит барьер для него будет пропущен. Если в этот
+    // момент соседняя вкладка сделает его публичным, безусловная запись выпустила бы его
+    // наружу опубликованным и БЕЗ проверки — навсегда.
+    const first = await seed({ status: 'draft', visibility: 'public' })
+    const second = await seed({ status: 'draft', visibility: 'private' })
+    const mod = await import('@/features/moderation/moderate-list')
+    vi.spyOn(mod, 'gateListPublication').mockImplementation(async () => {
+      await db.update(templates).set({ visibility: 'public' }).where(eq(templates.id, second))
+    })
+
+    await bulkPublish([first, second], false)
+    vi.restoreAllMocks()
+
+    expect((await rowOf(second)).status).toBe('draft')
+  })
+
   it('архивное и замороженное не публикуется даже адресно', async () => {
     // Пакетное действие отсекало такое своим отбором, но MCP и кнопка адресуют список
     // напрямую — проверка обязана стоять в общем слое публикации.

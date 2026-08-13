@@ -107,6 +107,16 @@ describe('публикация пачкой', () => {
     expect((await statusOf('no-gate')).moderation).toBe('active')
   })
 
+  it('план не обещает публикацию тому, что снято модерацией', async () => {
+    // Сухой прогон — это обещание. Если он говорит «опубликую», а исполнение оставляет
+    // список скрытым, ассистент принимает решение по неверной картине.
+    await draft(meId, 'plan-flagged', { moderation: 'flagged' })
+
+    const res = await mcpPublishLists(meId, ['drafts-me/plan-flagged'])
+
+    expect('lists' in res && res.lists[0].reason).toContain('blocked by moderation')
+  })
+
   it('снятое модерацией не отмывается повторной публикацией', async () => {
     await draft(meId, 'was-flagged', { moderation: 'flagged' })
 

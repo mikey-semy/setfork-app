@@ -161,6 +161,11 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
         and(
           eq(templates.id, row.id),
           eq(templates.status, 'draft'),
+          // Видимость — в условие наравне со статусом. Пока пачка идёт по списку, соседняя
+          // вкладка успевает открыть приватный список: прочитан он был приватным, значит
+          // барьер для него пропустят, и публичным он стал бы БЕЗ проверки и навсегда
+          // (находка авто-ревью, P1). Раз состояние изменилось — не публикуем вовсе.
+          eq(templates.visibility, row.visibility),
           hold ? notInArray(templates.moderation, ['flagged', 'hidden']) : sql`true`,
         ),
       )
