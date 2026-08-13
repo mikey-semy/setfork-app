@@ -107,12 +107,19 @@ jobs:
               'Что делать: посмотреть последний прогон CI на master. Если упал флейк — `gh run rerun <id> --failed`,',
               'зелёный прогон утянет выкатку. Выкатить текущий master без нового коммита: `gh workflow run ci.yml --ref master`.',
               '',
-              'Эта тревога закроется сама, как только прод догонит master.',
+              'Эта тревога закроется сама, как только прод догонит master. Пока простой длится,',
+              `цифры выше переписываются почасовой проверкой — [последняя](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).`,
             ].join('\n')
 
+            // Открытую тревогу ОБНОВЛЯЕМ, а не комментируем: иначе суточный простой
+            // даст 24 комментария и 24 уведомления подписчикам — ровно та усталость
+            // от тревог, ради которой всё и затевалось. Редактирование тела письма не
+            // шлёт, а цифры в нём всегда свежие; это же и обычная форма у ботов
+            // GitHub («sticky comment»: обновить существующее, не плодить новые).
+            // Замечание авто-ревью на fe#787 (P2).
             if (тревога) {
-              await github.rest.issues.createComment({ ...context.repo, issue_number: тревога.number, body })
-              return core.notice(`дописал в тревогу #${тревога.number}`)
+              await github.rest.issues.update({ ...context.repo, issue_number: тревога.number, body })
+              return core.notice(`обновил тревогу #${тревога.number} (${ageH.toFixed(1)} ч, ${behind} коммитов)`)
             }
             const { data: made } = await github.rest.issues.create({ ...context.repo, title: TITLE, body })
             core.notice(`завёл тревогу #${made.number}`)
