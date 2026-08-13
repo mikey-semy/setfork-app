@@ -5,6 +5,7 @@ import { getChangelogSettings, getChangelogToken } from '@/shared/settings/chang
 import { captureError } from '@/shared/observability'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 import { enqueueJob } from '@/shared/jobs/queue'
+import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import type { Lang } from '@/shared/i18n'
 import { CHANGELOG } from './seed'
 
@@ -106,6 +107,25 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
   if (!s.enabled) return { added: 0, skipped: 'disabled' }
   if (!s.repo) return { added: 0, skipped: 'no repo' }
 
+  // СУХОЙ ПРОГОН — как у остальных десяти петель. Эта единственная его не читала:
+  // человек включал в админке «считай и объясняй, но не делай», видел переключатель
+  // включённым — а петля шла в сеть и звала модель на перевод. Рубильник, обещающий
+  // безопасность, которой нет, хуже отсутствующего (находка A1 линзы 06).
+  //
+  // Пауза и предохранитель эту петлю останавливали и раньше: они живут в claimJob,
+  // и до сервиса дело просто не доходит. Не хватало ровно сухого прогона и журнала.
+  const loop = await loopPolicy('changelog')
+  if (loop.dryRun) {
+    await recordAgentAction({
+      loop: 'changelog',
+      action: 'changelog.refresh',
+      resultStatus: 'dry-run',
+      decision: { mode: 'skip-live-run', repo: s.repo, source: s.source },
+      policyVersion: loop.policyVersion,
+    })
+    return { added: 0, skipped: 'dry run' }
+  }
+
   const items = await pull(s.repo, s.source)
   if (items.length === 0) return { added: 0, skipped: 'nothing pulled' }
 
@@ -134,6 +154,19 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
       captureError(e, { where: 'changelog.insert' })
     }
   }
+  // След в журнале автономии — по той же причине, что и у остальных петель. Журнал
+  // здесь не отчётность: по нему предохранитель считает серию ошибок, квота —
+  // автопубликации, правило остановки — «список устоялся». Петля без журнала
+  // невидима для всего этого (находка A1 линзы 06).
+  await recordAgentAction({
+    loop: 'changelog',
+    action: 'changelog.refresh',
+    resultStatus: added > 0 ? 'ok' : 'skipped',
+    signal: { pulled: items.length, fresh: fresh.length },
+    decision: { repo: s.repo, source: s.source, translate: s.translate, added },
+    resultRef: s.repo.slice(0, 300),
+    policyVersion: loop.policyVersion,
+  })
   return { added, skipped: '' }
 }
 
