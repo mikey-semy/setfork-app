@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, gte, inArray, sql } from 'drizzle-orm'
 import { agentActions, aiUsage, db, jobs, users } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
@@ -308,10 +308,14 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   // Хвост журнала и открытый эпизод друг от друга не зависят — читаем разом.
   const [state, alarm] = await Promise.all([channelState(), openAlarm()])
   const down = channelDown(state)
-  // «Канал вернулся» говорим ТОЛЬКО при доказательстве — успешном вызове после тревоги.
-  // Пустой хвост доказательством не является: отказы могли просто состариться, а звать
-  // модель с тех пор было некому, и «работает снова» мы бы выдумали.
-  const recovered = !down && !!alarm && (await successAfter(alarm.at))
+  // «Канал вернулся» говорим ТОЛЬКО при доказательстве — успешном вызове ПОСЛЕ НАЧАЛА
+  // ЭПИЗОДА. Пустой хвост доказательством не является: отказы могли просто состариться,
+  // а звать модель с тех пор было некому, и «работает снова» мы бы выдумали.
+  //
+  // Отсчёт именно от эпизода, а не от времени записи тревоги: вызов, прошедший между
+  // снимком состояния и отправкой письма, иначе не считался бы доказательством, и эпизод
+  // остался бы открытым навсегда — канал жив, а компания об этом молчит.
+  const recovered = !down && !!alarm && (await successAfter(alarm.since))
   out.verdict = down ? 'down' : recovered ? 'recovered' : 'ok'
 
   if (policy.dryRun || out.verdict === 'ok') {
@@ -341,6 +345,14 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   // НОМЕР попытки, а не только эпизод: недоставленное письмо оставляет эпизод открытым,
   // и следующий проход берёт свободный ключ и пробует снова. Так дубль исключён, а
   // потерянная тревога — нет; между этими двумя бедами вторая хуже.
+  // Предыдущая попытка могла ещё не закончиться: заявка занята, письмо в полёте, записи
+  // об успехе пока нет. Начинать вторую в этот момент значит слать дубль — ждём, пока
+  // первая договорит. Своих таймаутов SMTP у отправителя нет, поэтому окно берём с запасом.
+  const inFlight = await claimFresh(action, episode, DELIVERY_IN_FLIGHT_MS)
+  if (inFlight) {
+    out.skipped = ALREADY_SENT
+    return out
+  }
   const attempt = await attemptsFor(action, episode)
   const claimed = await recordAgentAction({
     loop: 'aiwatch',
@@ -383,6 +395,27 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   return out
 }
 
+/** Свежая заявка = доставка ещё идёт. Пять минут — с запасом на любой SMTP. */
+const DELIVERY_IN_FLIGHT_MS = 5 * 60_000
+
+/** Есть ли заявка по этому эпизоду моложе окна — то есть письмо ещё в полёте. */
+async function claimFresh(action: string, episode: string, windowMs: number): Promise<boolean> {
+  const [row] = await db
+    .select({ id: agentActions.id })
+    .from(agentActions)
+    .where(
+      and(
+        eq(agentActions.loop, 'aiwatch'),
+        eq(agentActions.action, action),
+        sql`${agentActions.signal}->>'episode' = ${episode}`,
+        sql`${agentActions.decision}->>'stage' = 'claim'`,
+        gt(agentActions.occurredAt, new Date(Date.now() - windowMs)),
+      ),
+    )
+    .limit(1)
+  return !!row
+}
+
 /** Сколько раз уже пробовали сообщить об этом эпизоде — номер следующей попытки. */
 async function attemptsFor(action: string, episode: string): Promise<number> {
   const [row] = await db
@@ -408,7 +441,7 @@ async function attemptsFor(action: string, episode: string): Promise<number> {
  * больше не повторялось; а второй обрыв в те же сутки не отличался бы от первого, потому
  * что ключом был календарный день.
  */
-async function openAlarm(): Promise<{ at: Date; episode: string } | null> {
+async function openAlarm(): Promise<{ at: Date; since: Date; episode: string } | null> {
   const rows = await db
     .select({ action: agentActions.action, at: agentActions.occurredAt, signal: agentActions.signal })
     .from(agentActions)
@@ -423,7 +456,11 @@ async function openAlarm(): Promise<{ at: Date; episode: string } | null> {
     .limit(1)
   const row = rows[0]
   if (row?.action !== 'ai.down') return null
-  return { at: row.at, episode: String((row.signal as { episode?: unknown })?.episode ?? '') }
+  const episode = String((row.signal as { episode?: unknown })?.episode ?? '')
+  // Начало эпизода — момент последнего успеха ПЕРЕД обрывом. Он и есть точка отсчёта для
+  // доказательства восстановления; время самой записи для этого не годится (см. вызов).
+  const since = Number.isNaN(Date.parse(episode)) ? new Date(0) : new Date(episode)
+  return { at: row.at, since, episode }
 }
 
 export async function runFinanceJob(): Promise<void> {
