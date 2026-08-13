@@ -48,6 +48,7 @@ export interface FeedItem {
   updatedAt: Date
   accent?: string | null
   coverImage?: string | null // после withAvatar — готовый URL обложки (null/undef → авто-баннер)
+  repositoryId?: string | null // каталог-«полка»; null = список ещё не разложен
 }
 
 export interface TagRow {

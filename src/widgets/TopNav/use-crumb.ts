@@ -4,6 +4,7 @@ import type { LocaleText } from '@/shared/i18n'
 // Роуты, чей первый сегмент — НЕ handle пользователя: общий список под тестом-синхроном
 // с src/app (разъезд давал «SF guilds»).
 import { RESERVED_TOP } from '@/shared/nav/reserved-top'
+import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/features/library/list-visibility'
 
 export interface Crumb {
   handle: string
@@ -11,8 +12,13 @@ export interface Crumb {
   slug?: string
 }
 
-/** Видимость списка в крамбе: null — роут ещё не ответил, и значка быть не должно. */
-export type CrumbVisibility = 'public' | 'private' | null
+/** Состояние списка в крамбе: null — роут ещё не ответил, и значка быть не должно. */
+export type CrumbVisibility = ListVisibilityState | null
+
+/** Значение из сети доверия не заслуживает: сверяем его с известными состояниями. */
+function parseVisibility(v: unknown): CrumbVisibility {
+  return typeof v === 'string' && Object.hasOwn(LIST_VISIBILITY_BADGE, v) ? (v as ListVisibilityState) : null
+}
 
 /**
  * Бредкрамб шапки (как owner/repo у GitHub): чей профиль или список открыт.
@@ -41,10 +47,10 @@ export function useCrumb(pathname: string): { crumb: Crumb | null; title: Locale
     fetch(`/api/list-title?h=${encodeURIComponent(handle)}&s=${encodeURIComponent(slug)}`)
       // Ошибку не разбираем как ответ: тело ошибки — не название списка.
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { title?: LocaleText | null; visibility?: 'public' | 'private' } | null) => {
+      .then((d: { title?: LocaleText | null; visibility?: unknown } | null) => {
         if (!alive || !d) return
         setTitle(d.title ?? null)
-        setVisibility(d.visibility === 'private' ? 'private' : d.visibility === 'public' ? 'public' : null)
+        setVisibility(parseVisibility(d.visibility))
       })
       .catch(() => {})
     return () => {

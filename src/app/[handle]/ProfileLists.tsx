@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { t } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Pagination } from '@/shared/ui/Pagination'
 import { FeedList } from '@/features/library/FeedList'
@@ -25,6 +25,9 @@ type Props = Pick<
   | 'rawQuery'
   | 'sort'
   | 'listType'
+  | 'catalogs'
+  | 'catalogFilter'
+  | 'unfiledCount'
 >
 
 /**
@@ -37,6 +40,9 @@ export function ProfileLists({
   tab,
   isOwner,
   viewer,
+  catalogs,
+  catalogFilter,
+  unfiledCount,
   items,
   pageItems,
   page,
@@ -115,7 +121,18 @@ export function ProfileLists({
         </form>
       )}
 
-      {tab === 'lists' && <ListsToolbar lang={lang} isOwner={isOwner} q={rawQuery} type={listType} sort={sort} />}
+      {tab === 'lists' && (
+        <ListsToolbar
+          lang={lang}
+          isOwner={isOwner}
+          q={rawQuery}
+          type={listType}
+          sort={sort}
+          catalogs={catalogs.map((c) => ({ name: c.name, title: tr(c.title, lang), count: c.listCount }))}
+          catalog={catalogFilter}
+          unfiledCount={unfiledCount}
+        />
+      )}
 
       {items.length === 0 ? (
         <EmptyState hint={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />

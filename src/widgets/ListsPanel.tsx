@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Check, ChevronDown, ListChecks, Lock, Plus } from 'lucide-react'
+import { Check, ChevronDown, ListChecks, Plus } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { SearchField } from '@/shared/ui/SearchField'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/features/library/list-visibility'
 
 // Единый модуль «панель списков» (правило: переиспользуем и сложные модули).
 // Используется дашбордом (Your lists) и drawer'ом (Top lists) — части
@@ -25,7 +26,8 @@ export interface ListsPanelItem {
   avatarUrl: string | null
   version?: number
   /** Приватный список помечается замком — и в строке, и в заголовке шапки (как у GitHub). */
-  visibility?: 'public' | 'private'
+  /** Состояние, а не поле БД: черновик закрыт так же, как приватный (list-visibility). */
+  visibility?: ListVisibilityState
 }
 
 export function ListsPanel({
@@ -78,6 +80,21 @@ export function ListsPanel({
       if (storageKey) localStorage.setItem(storageKey, v ? '0' : '1')
       return !v
     })
+
+  // Значок только у ЗАКРЫТЫХ состояний (приватный, черновик): в узкой рейке значок
+  // у каждой строки ничего не различал бы, а закрытость — как раз различие. Сам
+  // значок и подпись берём из общей таблицы, чтобы черновик выглядел одинаково
+  // здесь, в шапке и в переключателе.
+  const restrictedIcon = (state: ListVisibilityState | undefined) => {
+    if (!state || state === 'public') return null
+    const { Icon, labelKey } = LIST_VISIBILITY_BADGE[state]
+    const visLabel = t(labelKey, lang)
+    return (
+      <span role="img" title={visLabel} aria-label={visLabel} className="shrink-0 text-muted">
+        <Icon size={12} />
+      </span>
+    )
+  }
 
   const query = q.trim().toLowerCase()
   // Поиск по всем спискам (переключатель в шапке): дёргаем сервер с задержкой ввода.
@@ -180,8 +197,8 @@ export function ListsPanel({
                   ) : (
                     <ListChecks size={16} className="shrink-0 text-muted" />
                   )}
-                  {/* Замок = приватный: видно и здесь, и в бредкрамбе шапки — один признак в двух местах. */}
-                  {l.visibility === 'private' && <Lock size={12} className="shrink-0 text-muted" />}
+                  {/* Замок/черновик: тот же признак, что в бредкрамбе шапки. */}
+                  {restrictedIcon(l.visibility)}
                   {/* НАЗВАНИЕ ПЕРВЫМ, ник — после и приглушённо. В рейке шириной ~200px
                       префикс «ник/» съедал больше половины строки, и от названия
                       оставалось «Приготовле…» — то есть список нельзя было узнать. Ник

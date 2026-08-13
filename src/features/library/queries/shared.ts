@@ -49,6 +49,9 @@ export const FEED_COLS = {
   updatedAt: templates.updatedAt,
   accent: templates.accent,
   coverImage: templates.coverImage,
+  // Каталог («полка») списка: по нему профиль фильтрует свою библиотеку, а «без каталога»
+  // отвечает на вопрос «что ещё не разложено» — это и есть очередь разбора.
+  repositoryId: templates.repositoryId,
 }
 
 export const tagFilter = (tag: string): SQL => sql`${templates.tags} @> ARRAY[${tag}]::text[]`

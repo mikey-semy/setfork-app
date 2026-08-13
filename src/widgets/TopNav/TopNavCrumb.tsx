@@ -1,11 +1,12 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Globe, Lock, MoreHorizontal } from 'lucide-react'
+import { MoreHorizontal } from 'lucide-react'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
+import { LIST_VISIBILITY_BADGE } from '@/features/library/list-visibility'
 import { ListSwitcher } from '../ListSwitcher'
 import type { Crumb, CrumbVisibility } from './use-crumb'
 
@@ -46,7 +47,8 @@ export function TopNavCrumb({
   }
 
   const listPath = `/${crumb.handle}/${crumb.slug}`
-  const visLabel = visibility === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)
+  const visBadge = visibility ? LIST_VISIBILITY_BADGE[visibility] : null
+  const visLabel = visBadge ? t(visBadge.labelKey, lang) : ''
 
   return (
     <nav className="ml-2 flex min-w-0 items-center gap-1 text-[0.875rem]" aria-label="breadcrumb">
@@ -67,14 +69,15 @@ export function TopNavCrumb({
       </Link>
       <span className="shrink-0 text-muted">/</span>
 
-      {/* Значок видимости у названия — как бейдж Public/Private у GitHub, но только
+      {/* Значок состояния у названия — как бейдж Public/Private у GitHub, но только
           иконкой: слово в шапке съедает место, которое нужно самому названию.
-          Подпись отдаём тултипом (и aria-label для скринридера). */}
-      {visibility && (
+          Подпись отдаём тултипом (и aria-label для скринридера). Черновик здесь —
+          третье состояние, а не «публичный»: см. features/library/list-visibility. */}
+      {visBadge && (
         <Tooltip label={visLabel}>
           {/* span без роли не может нести aria-label (aria-prohibited-attr) — иконке нужна role="img". */}
           <span role="img" className="grid size-5 shrink-0 place-items-center text-muted" aria-label={visLabel}>
-            {visibility === 'private' ? <Lock size={13} /> : <Globe size={13} />}
+            <visBadge.Icon size={13} />
           </span>
         </Tooltip>
       )}

@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { SearchField } from '@/shared/ui/SearchField'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { buttonClass } from '@/shared/ui/button-style'
 
 /** Тулбар вкладки «Списки» профиля (как шапка репозиториев GitHub): поиск + фильтр
@@ -18,12 +18,20 @@ export function ListsToolbar({
   q,
   type,
   sort,
+  catalogs = [],
+  catalog,
+  unfiledCount = 0,
 }: {
   lang: Lang
   isOwner: boolean
   q: string
   type: 'all' | 'public' | 'private' | 'forks'
   sort: 'recent' | 'name' | 'stars'
+  /** Полки владельца со счётчиками; у чужого профиля фильтр не показываем. */
+  catalogs?: { name: string; title: string; count: number }[]
+  catalog?: string
+  /** Сколько списков ещё не разложено — «Без каталога» и есть очередь разбора. */
+  unfiledCount?: number
 }) {
   const ru = lang === 'ru'
   const router = useRouter()
@@ -63,6 +71,29 @@ export function ListsToolbar({
           ariaLabel={ru ? 'Найти список' : 'Find a list'}
         />
       </form>
+
+      {/* Полка: показываем, только когда полки есть или есть что разбирать — пустой
+          фильтр на профиле новичка занимал бы место и ничего не объяснял. */}
+      {isOwner && (catalogs.length > 0 || unfiledCount > 0) && (
+        <Select value={catalog ?? 'all'} onValueChange={(v) => navigate({ catalog: v === 'all' ? '' : v })}>
+          <SelectTrigger className="w-auto min-w-[6.5rem] gap-1.5" aria-label={t('profile.catalogFilter', lang)}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('profile.catalogAll', lang)}</SelectItem>
+            {unfiledCount > 0 && (
+              <SelectItem value="none">
+                {t('profile.catalogNone', lang)} <span className="font-mono text-[0.6875rem] text-muted">{unfiledCount}</span>
+              </SelectItem>
+            )}
+            {catalogs.map((c) => (
+              <SelectItem key={c.name} value={c.name}>
+                <span className="truncate">{c.title || c.name}</span> <span className="font-mono text-[0.6875rem] text-muted">{c.count}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       <Select value={type} onValueChange={(v) => navigate({ type: v === 'all' ? '' : v })}>
         <SelectTrigger className="w-auto min-w-[6.5rem] gap-1.5">

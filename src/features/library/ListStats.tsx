@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { Eye, GitBranch, GitFork, Globe, Lock, PlayCircle, Star, Tag } from 'lucide-react'
+import { Eye, GitBranch, GitFork, PlayCircle, Star, Tag } from 'lucide-react'
 import { fmtCount } from '@/shared/lib/count'
 import { plural, t, type Lang } from '@/shared/i18n'
+import { LIST_VISIBILITY_BADGE, listVisibilityState } from './list-visibility'
 
 /**
  * Показатели списка одной строкой (как сводка под описанием репозитория у GitHub):
@@ -10,7 +11,7 @@ import { plural, t, type Lang } from '@/shared/i18n'
  * Один компонент на оба места — сводку на мобиле (ряд с переносом) и About-сайдбар
  * на десктопе (колонка): цифры на одной странице должны совпадать по составу и виду.
  *
- * ВИДИМОСТЬ (публичный/приватный) — исключение из этого правила, и намеренное: значок
+ * ВИДИМОСТЬ (черновик/приватный/публичный) — исключение из этого правила, и намеренное: значок
  * стоит у названия списка, а название видно от sm и только на корне. Значит в сводке
  * статус нужен ровно там, где заголовка нет, — на узком экране; в сайдбаре (он живёт с
  * lg, где заголовок точно на экране) его нет вовсе. Иначе одна и та же подпись
@@ -31,6 +32,7 @@ export function ListStats({
   branches,
   version,
   visibility,
+  status,
 }: {
   base: string
   lang: Lang
@@ -43,7 +45,10 @@ export function ListStats({
   branches: number
   version: number
   visibility: 'public' | 'private'
+  /** Вместе с visibility даёт то состояние, которое видит человек (list-visibility). */
+  status: 'draft' | 'published'
 }) {
+  const visBadge = LIST_VISIBILITY_BADGE[listVisibilityState({ status, visibility })]
   const num = (n: number, key: Parameters<typeof plural>[1]) => (
     <>
       <b className="text-ink">{fmtCount(n)}</b> {plural(n >= 1000 ? 0 : n, key, lang)}
@@ -91,15 +96,7 @@ export function ListStats({
           показан значком у названия, а в сайдбаре (lg+) заголовок тем более на экране. */}
       {layout === 'row' && (
         <span className={`${item} sm:hidden`}>
-          {visibility === 'private' ? (
-            <>
-              <Lock size={14} className="text-muted" /> {t('privateLabel', lang)}
-            </>
-          ) : (
-            <>
-              <Globe size={14} className="text-muted" /> {t('publicLabel', lang)}
-            </>
-          )}
+          <visBadge.Icon size={14} className="text-muted" /> {t(visBadge.labelKey, lang)}
         </span>
       )}
     </div>

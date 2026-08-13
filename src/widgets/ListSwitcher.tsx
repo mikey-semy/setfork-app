@@ -1,7 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { ChevronDown, Globe, ListChecks, Lock } from 'lucide-react'
+import { ChevronDown, ListChecks } from 'lucide-react'
+import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/features/library/list-visibility'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -27,7 +28,8 @@ export interface SwitcherList {
   slug: string
   title: LocaleText
   avatarUrl: string | null
-  visibility?: 'public' | 'private'
+  /** Состояние, а не поле БД: черновик закрыт так же, как приватный (list-visibility). */
+  visibility?: ListVisibilityState
 }
 
 async function fetchLists(handle: string, q: string): Promise<SwitcherList[]> {
@@ -58,6 +60,20 @@ export function ListSwitcher({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const label = t('switchList', lang)
   const activeKey = `${current.handle}/${current.slug}`
+
+  // Значок состояния в строке. Подпись нативным title: строка сама кнопка,
+  // вкладывать в неё триггер тултипа нельзя.
+  const visIcon = (state: ListVisibilityState | undefined) => {
+    if (!state) return undefined
+    const { Icon, labelKey } = LIST_VISIBILITY_BADGE[state]
+    const visLabel = t(labelKey, lang)
+    // span без роли не может нести aria-label (aria-prohibited-attr) — иконке нужна role="img".
+    return (
+      <span role="img" title={visLabel} aria-label={visLabel} className="shrink-0 text-muted">
+        <Icon size={12} />
+      </span>
+    )
+  }
 
   // Грузим В ОТВЕТ НА СОБЫТИЕ (открытие панели, ввод в поиске), а не эффектом на
   // изменение состояния: у эффекта тут нет внешней системы, с которой он
@@ -153,21 +169,10 @@ export function ListSwitcher({
                 )
               }
               label={tr(l.title, lang)}
-              // Видимость показываем У КАЖДОЙ строки, а не только у приватных: раньше
+              // Состояние показываем У КАЖДОЙ строки, а не только у приватных: раньше
               // отсутствие замка означало сразу и «публичный», и «мы не знаем» — по такой
-              // подписи нельзя понять, что список открыт всему свету. Подпись нативным
-              // title: строка сама кнопка, вкладывать в неё триггер тултипа нельзя.
-              right={
-                l.visibility ? (
-                  <span
-                    title={l.visibility === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}
-                    aria-label={l.visibility === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}
-                    className="shrink-0 text-muted"
-                  >
-                    {l.visibility === 'private' ? <Lock size={12} /> : <Globe size={12} />}
-                  </span>
-                ) : undefined
-              }
+              // подписи нельзя понять, что список открыт всему свету.
+              right={visIcon(l.visibility)}
               onClick={() => {
                 setOpen(false)
                 router.push(`/${l.handle}/${l.slug}`)
