@@ -82,6 +82,20 @@ export function sameTopic(stepScore: number, topicScore: number): boolean {
   return topicScore >= TOPIC_TO_STEPS_RATIO * stepScore
 }
 
+/**
+ * Сходство ТЕМЫ: лучшее из «заголовок с тегами» и «только заголовок».
+ *
+ * Почему максимум, а не просто заголовок с тегами: теги — это метаданные, и различие в них
+ * не должно ВЫЧИТАТЬСЯ из сходства. Два одинаковых списка, у которых проставлены разные
+ * дополнительные теги, по общей мере дают тему втрое ниже реальной и перестают быть
+ * дублями — то есть чужая небрежность в тегах прячет копию (находка авто-ревью на #784).
+ * Замер: на 54 403 парах максимум добавляет 2 ложных срабатывания (44 против 42) и
+ * закрывает этот случай целиком.
+ */
+export function topicSimilarity(a: { topic: Set<string>; title: Set<string> }, b: { topic: Set<string>; title: Set<string> }): number {
+  return Math.max(jaccard(a.topic, b.topic), jaccard(a.title, b.title))
+}
+
 /** Значимые слова текста: без регистра, пунктуации, коротких обрывков; с грубым стеммингом. */
 function stems(text: string): string[] {
   return text
@@ -153,30 +167,34 @@ export function findNearDuplicate(
   const mine = wordSet(freshText)
   const minePhrases = shingles(freshText)
   const myTopic = wordSet(topicText(fresh))
+  const myTitle = wordSet(fresh.title)
   let best = 0
   let match: NearDupVerdict['match'] = null
+  let matchScore = 0
   for (const cand of existing) {
     const candText = listText(cand)
     const theirs = wordSet(candText)
     const score = jaccard(mine, theirs)
-    const topic = jaccard(myTopic, wordSet(topicText(cand)))
+    const topic = topicSimilarity({ topic: myTopic, title: myTitle }, { topic: wordSet(topicText(cand)), title: wordSet(cand.title) })
     // Порог адаптивный: короткому тексту веры меньше (см. MIN_STEMS_FOR_SOFT_THRESHOLD).
     const need = Math.min(mine.size, theirs.size) < MIN_STEMS_FOR_SOFT_THRESHOLD ? Math.max(threshold, SHORT_TEXT_THRESHOLD) : threshold
-    if (score > best) {
-      best = score
-      match =
-        score >= need && sameTopic(score, topic)
-          ? {
-              id: cand.id,
-              title: cand.title,
-              score: Number(score.toFixed(3)),
-              phrases: Number(jaccard(minePhrases, shingles(candText)).toFixed(3)),
-              topic: Number(topic.toFixed(3)),
-            }
-          : match
+    // «Самый похожий» и «совпавший» считаются РАЗДЕЛЬНО. Пока это было одним условием,
+    // сосед по жанру с высшим сходством шагов закрывал собой настоящий дубль, идущий
+    // следом с чуть меньшим: он поднимал планку `best`, а до проверки темы дело не
+    // доходило вовсе (находка авто-ревью на #784).
+    if (score > best) best = score
+    if (score >= need && sameTopic(score, topic) && score > matchScore) {
+      matchScore = score
+      match = {
+        id: cand.id,
+        title: cand.title,
+        score: Number(score.toFixed(3)),
+        phrases: Number(jaccard(minePhrases, shingles(candText)).toFixed(3)),
+        topic: Number(topic.toFixed(3)),
+      }
     }
   }
-  // Ближайший ниже порога не отменяет ранее найденное совпадение: match хранит именно
-  // сработавшее, best — максимум по всем (это разные вопросы, и путать их нельзя).
+  // best — максимум сходства по шагам среди ВСЕХ кандидатов (в журнал: «еле прошёл» или
+  // «и близко нет»), match — лучший среди тех, кто прошёл оба условия. Это разные вопросы.
   return { match, best: Number(best.toFixed(3)) }
 }

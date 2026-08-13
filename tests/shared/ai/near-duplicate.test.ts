@@ -158,6 +158,40 @@ describe('соседи по жанру дублями не считаются', 
     expect(findNearDuplicate(a, [{ id: 'b', ...b }]).match).toBeNull()
   })
 
+
+  // Обе находки авто-ревью: они про случаи, когда правило «тема против шагов» само себе
+  // мешает — и оба про ТИХУЮ потерю, то есть дубль проходит незамеченным.
+  it('сосед по жанру с высшим сходством не заслоняет настоящий дубль', () => {
+    // Первый кандидат похож по шагам сильнее (жанр), но темой не совпадает; второй —
+    // настоящий дубль с чуть меньшим сходством. Пока «лучший» и «совпавший» считались
+    // одним условием, первый поднимал планку и до второго дело не доходило.
+    const fresh = {
+      title: 'Accessibility checker subagent',
+      tags: ['subagent', 'accessibility'],
+      items: subagentSteps('accessibility report'),
+    }
+    const genreNeighbour = { id: 'api', title: 'API designer subagent', tags: ['subagent', 'api-design'], items: subagentSteps('API design') }
+    const realDuplicate = {
+      id: 'a11y-copy',
+      title: 'Accessibility checker subagent',
+      tags: ['subagent', 'accessibility'],
+      items: [...subagentSteps('accessibility report').slice(0, 4), 'Ship it'],
+    }
+
+    const v = findNearDuplicate(fresh, [genreNeighbour, realDuplicate])
+
+    expect(v.match?.id).toBe('a11y-copy')
+  })
+
+  it('разные теги при одинаковом заголовке и составе не отменяют дубль', () => {
+    // Теги — метаданные: их различие не должно вычитаться из сходства, иначе небрежность
+    // в тегах прячет копию.
+    const a = { title: 'Деплой', tags: ['vps'], items: subagentSteps('deploy') }
+    const b = { id: 'same', title: 'Деплой', tags: ['docker'], items: subagentSteps('deploy') }
+
+    expect(findNearDuplicate(a, [b]).match?.id).toBe('same')
+  })
+
   it('соотношение считается честно: тема наравне с шагами — дубль', () => {
     expect(sameTopic(0.88, 0.23)).toBe(false) // соседи по жанру
     expect(sameTopic(0.3, 0.67)).toBe(true) // «Auto-stage edited files» ↔ «Auto-Stage Every File…»
