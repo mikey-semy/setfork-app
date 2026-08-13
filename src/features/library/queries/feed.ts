@@ -140,15 +140,41 @@ export async function getPinnedTemplates(userId: string, viewerId?: string): Pro
   return withAvatar(rows as FeedItem[])
 }
 
-/** Списки пользователя. viewerId = кто смотрит: владелец видит и приватные. */
-export async function getUserTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
-  const rows = await db
+/**
+ * Списки пользователя. viewerId = кто смотрит: владелец видит и приватные.
+ *
+ * ОКНО ОБЯЗАТЕЛЬНО, и вот почему. До 13.08.2026 функция отдавала ВСЁ без предела,
+ * а звали её четыре поверхности, включая корневой layout — то есть на КАЖДОЙ
+ * странице сайта из базы поднимались все списки владельца (у владельца их 518)
+ * со всеми колонками ленты и резолвом аватара, чтобы показать десять. Дашборд
+ * при этом отправлял всю пачку в браузер, и кнопка «Показать ещё» просто
+ * раскрывала уже загруженное — отсюда жалоба «открывает весь список, это ужасно».
+ *
+ * Курсор здесь не нужен: сортировка по updatedAt, а окно небольшое и
+ * листается вперёд. Смещение считает вызывающий.
+ */
+export async function getUserTemplates(
+  userId: string,
+  viewerId?: string,
+  window?: { limit: number; offset?: number },
+): Promise<FeedItem[]> {
+  const q = db
     .select(FEED_COLS)
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(templates.ownerId, userId), visibleFilter(viewerId)))
     .orderBy(desc(templates.updatedAt))
+  const rows = window ? await q.limit(window.limit).offset(window.offset ?? 0) : await q
   return withAvatar(rows as FeedItem[])
+}
+
+/** Сколько всего списков у пользователя видно этому зрителю — для «показать ещё». */
+export async function countUserTemplates(userId: string, viewerId?: string): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(templates)
+    .where(and(eq(templates.ownerId, userId), visibleFilter(viewerId)))
+  return r?.n ?? 0
 }
 
 /** Списки автора для переключателя в шапке: чей список открыт — того и набор.

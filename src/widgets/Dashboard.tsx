@@ -1,13 +1,14 @@
 import Link from 'next/link'
 import { Sparkles } from 'lucide-react'
-import { getActivity, getUserTemplates } from '@/features/library/queries'
+import { countUserTemplates, getActivity, getUserTemplates } from '@/features/library/queries'
 import { getImprovementFeed } from '@/features/improve/queries'
 import { getFollowingIds } from '@/features/follows/queries'
 import { getWatchedIds } from '@/features/watch/queries'
 import { getFeedEvents, getRecommended, getStarredIds, type FeedEvent } from '@/features/feed/queries'
 import { Feed } from '@/features/feed/Feed'
 import type { Lang } from '@/shared/i18n'
-import { ListsPanel } from './ListsPanel'
+import { DASHBOARD_LISTS, ListsPanel } from './ListsPanel'
+import { loadMyLists } from '@/features/library/actions/my-lists'
 import { t, tr } from '@/shared/i18n'
 import { PromoCard } from './PromoCard'
 import { ChangelogCard } from './ChangelogCard'
@@ -18,8 +19,9 @@ import { ChangelogCard } from './ChangelogCard'
 //   справа — промо-слот + публичный changelog.
 
 export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }) {
-  const [mine, following, watched, starred] = await Promise.all([
-    getUserTemplates(userId, userId),
+  const [mine, mineTotal, following, watched, starred] = await Promise.all([
+    getUserTemplates(userId, userId, { limit: DASHBOARD_LISTS }),
+    countUserTemplates(userId, userId),
     getFollowingIds(userId),
     getWatchedIds(userId),
     getStarredIds(userId),
@@ -70,6 +72,9 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
           lang={lang}
           title={t('yourLists', lang)}
           items={mine.map((m) => ({ handle: m.ownerHandle, slug: m.slug, title: m.title, avatarUrl: m.ownerAvatarUrl, version: m.version }))}
+          total={mineTotal}
+          loadMore={loadMyLists}
+          initialLimit={DASHBOARD_LISTS}
           showNew
           showVersion
           emptyText={t('emptyMyLists', lang)}

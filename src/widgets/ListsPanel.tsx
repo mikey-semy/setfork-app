@@ -19,6 +19,16 @@ import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/features/libr
 //   showVersion — vN справа
 //   initialLimit — рез до N + кнопка «Показать ещё (M)» (поиск показывает все совпадения)
 
+/**
+ * Сколько строк поднимает КАЖДАЯ поверхность. Числа живут здесь, потому что это
+ * свойство панели, а не случайный аргумент запроса у вызывающего: разъедутся —
+ * и «показать ещё» начнёт просить не тот кусок.
+ */
+/** Рейка сайдбара: показывает ровно столько и не листается. */
+export const SIDEBAR_LISTS = 10
+/** Панель дашборда: первая порция и шаг «показать ещё». */
+export const DASHBOARD_LISTS = 12
+
 export interface ListsPanelItem {
   handle: string
   slug: string
@@ -46,6 +56,8 @@ export function ListsPanel({
   headerStyle = 'mono',
   activeKey,
   remoteSearch,
+  loadMore,
+  total,
 }: {
   items: ListsPanelItem[]
   lang: Lang
@@ -65,6 +77,14 @@ export function ListsPanel({
   /** Поиск на сервере — по ВСЕМ спискам, а не только по переданным в `items`.
    *  Функция обязана быть стабильной (модульная или useCallback). */
   remoteSearch?: (q: string) => Promise<ListsPanelItem[]>
+  /**
+   * Подгрузка СЛЕДУЮЩЕЙ порции с сервера. Без неё «показать ещё» просто
+   * раскрывает то, что уже прислали, — так и было до 13.08.2026, и на 518
+   * списках это вываливало на экран всё разом (жалоба владельца).
+   */
+  loadMore?: (offset: number, limit: number) => Promise<ListsPanelItem[]>
+  /** Сколько всего есть на сервере — чтобы знать, когда прятать кнопку. */
+  total?: number
 }) {
   const ru = lang === 'ru'
   // Свёрнутость: ленивый init из LS безопасен — до маунта секция не рендерится с сервера иначе, чем '1'.
@@ -74,6 +94,10 @@ export function ListsPanel({
   })
   const [q, setQ] = useState('')
   const [expanded, setExpanded] = useState(false)
+  // Догруженные порции лежат ОТДЕЛЬНО от items: сервер может прислать items заново
+  // (ревалидация), и подмешивать их в один массив значило бы терять или дублировать.
+  const [more, setMore] = useState<ListsPanelItem[]>([])
+  const [loadingMore, setLoadingMore] = useState(false)
 
   const toggle = () =>
     setOpen((v) => {
@@ -125,10 +149,14 @@ export function ListsPanel({
   const localFiltered = query
     ? items.filter((l) => `${tr(l.title, lang)} ${l.handle}/${l.slug}`.toLowerCase().includes(query))
     : items
-  const filtered = remoteSearch && query ? (remote ?? []) : localFiltered
+  // Порционная подгрузка приходит ВСЛЕД за items, поиск её не касается.
+  const withMore = query ? localFiltered : [...items, ...more]
+  const filtered = remoteSearch && query ? (remote ?? []) : withMore
   // Поиск показывает все совпадения; без поиска — рез до initialLimit.
-  const cut = !query && !expanded && filtered.length > initialLimit
+  const cut = !query && !expanded && !loadMore && filtered.length > initialLimit
   const shown = cut ? filtered.slice(0, initialLimit) : filtered
+  // Сколько ещё лежит на сервере. Без total считать нечего — значит и кнопки нет.
+  const restOnServer = loadMore && total !== undefined ? Math.max(0, total - (items.length + more.length)) : 0
   const hasSearch = searchable === true || (searchable === 'auto' && items.length > initialLimit)
 
   const header =
@@ -216,8 +244,28 @@ export function ListsPanel({
               })}
             </nav>
           )}
-          {/* Раскрыли — должно быть чем и свернуть обратно: тот же тумблер, не тупик. */}
-          {(cut || (expanded && !query && filtered.length > initialLimit)) && (
+          {/* ПОРЦИЯМИ, когда вызывающий дал loadMore: кнопка приносит следующий кусок
+              и показывает, сколько ещё осталось на сервере, — а не вываливает всё
+              разом. Свернуть тут нечего: показанное не «раскрыто», а догружено. */}
+          {loadMore && restOnServer > 0 && !query && (
+            <Button
+              variant="ghost"
+              size="xs"
+              disabled={loadingMore}
+              onClick={() => {
+                setLoadingMore(true)
+                loadMore(items.length + more.length, initialLimit)
+                  .then((next) => setMore((p) => [...p, ...next]))
+                  .finally(() => setLoadingMore(false))
+              }}
+              className="mt-1 w-full justify-center text-accent"
+            >
+              {loadingMore ? t('loadingMore', lang) : `${t('showMore', lang)} (${Math.min(initialLimit, restOnServer)})`}
+            </Button>
+          )}
+          {/* Раскрыли — должно быть чем и свернуть обратно: тот же тумблер, не тупик.
+              Ветка без loadMore: панель получила весь набор и просто режет его. */}
+          {!loadMore && (cut || (expanded && !query && filtered.length > initialLimit)) && (
             <Button
               variant="ghost"
               size="xs"
