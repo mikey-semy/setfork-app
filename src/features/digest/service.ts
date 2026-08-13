@@ -86,6 +86,17 @@ export async function runWeeklyDigestSweep(): Promise<{ sent: number; empty: num
     await db.insert(digests).values({ userId: r.id, items })
     sent++
   }
+  // След ЖИВОГО прохода: до этой правки в журнале автономии была только запись сухого
+  // прогона, и объявленный в реестре прогресс `send` не появился бы никогда. По журналу
+  // же считается холостой ход петли. Замечание авто-ревью на fe#800 (P2).
+  await recordAgentAction({
+    loop: 'digest',
+    action: 'send',
+    resultStatus: sent > 0 ? 'ok' : 'skipped',
+    signal: { recipients: recipients.length },
+    decision: { sent, empty },
+    policyVersion: loop.policyVersion,
+  })
   log.info('digest sweep done', { recipients: recipients.length, sent, empty })
   return { sent, empty }
 }

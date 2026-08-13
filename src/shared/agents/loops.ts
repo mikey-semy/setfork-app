@@ -56,7 +56,11 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/backoffice/service',
     ensure: 'ensureFinanceScheduled',
     paid: false,
-    progress: ['money.watch', 'money.alert'],
+    // money.alert со статусом ok в прогресс НЕ входит: эта запись — ЗАЯВКА на право
+    // отправить письмо (резерв идемпотентного ключа), а не факт доставки. Недоставленная
+    // тревога дописывается отдельной строкой 'skipped', и засчитай мы заявку за дело,
+    // прогрессом считался бы как раз провал. Замечание авто-ревью на fe#800 (P2).
+    progress: ['money.watch'],
     what: { en: 'watches spend and warns the owner', ru: 'следит за расходом и предупреждает владельца' },
   },
   {
@@ -78,7 +82,10 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/backoffice/service',
     ensure: 'ensureAiWatchScheduled',
     paid: false,
-    progress: ['ai.watch'],
+    // ai.watch пишется на спокойном проходе и в сухом прогоне, а доставленное извещение
+    // о падении канала и о возврате — это ai.down / ai.recovered. Замечание авто-ревью
+    // на fe#800 (P2).
+    progress: ['ai.watch', 'ai.down', 'ai.recovered'],
     what: { en: 'tells the owner when the model channel goes down and when it is back', ru: 'сообщает владельцу, когда канал к модели лёг и когда вернулся' },
   },
   {

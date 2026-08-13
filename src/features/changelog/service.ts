@@ -5,7 +5,7 @@ import { getChangelogSettings, getChangelogToken } from '@/shared/settings/chang
 import { captureError } from '@/shared/observability'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 import { enqueueJob } from '@/shared/jobs/queue'
-import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
+import { loopPolicy, recordAgentAction, type AgentActionInput } from '@/shared/agents/policy'
 import type { Lang } from '@/shared/i18n'
 import { CHANGELOG } from './seed'
 
@@ -126,8 +126,30 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
     return { added: 0, skipped: 'dry run' }
   }
 
+  /**
+   * След прохода в журнале автономии. Журнал здесь не отчётность: по нему предохранитель
+   * считает серию ошибок, а детектор — холостой ход (находка A1 линзы 06).
+   *
+   * Пишем и на ХОЛОСТЫХ ветках — «ничего не пришло», «всё уже знаем». Это нормальное
+   * состояние петли, и именно оно у неё основное; записывай мы только успешные добавления,
+   * `hasActions('changelog')` оставался бы ложным месяцами и петля выглядела бы никогда не
+   * работавшей. Замечание авто-ревью на fe#800 (P2).
+   */
+  const след = (status: AgentActionInput['resultStatus'], decision: Record<string, unknown>) =>
+    recordAgentAction({
+      loop: 'changelog',
+      action: 'changelog.refresh',
+      resultStatus: status,
+      decision: { repo: s.repo, source: s.source, translate: s.translate, ...decision },
+      resultRef: s.repo.slice(0, 300),
+      policyVersion: loop.policyVersion,
+    })
+
   const items = await pull(s.repo, s.source)
-  if (items.length === 0) return { added: 0, skipped: 'nothing pulled' }
+  if (items.length === 0) {
+    await след('skipped', { reason: 'nothing pulled' })
+    return { added: 0, skipped: 'nothing pulled' }
+  }
 
   const ids = items.map((i) => i.externalId)
   const known = new Set(
@@ -136,12 +158,16 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
       .filter((x): x is string => !!x),
   )
   const fresh = items.filter((i) => !known.has(i.externalId))
-  if (fresh.length === 0) return { added: 0, skipped: 'up to date' }
+  if (fresh.length === 0) {
+    await след('skipped', { reason: 'up to date', pulled: items.length })
+    return { added: 0, skipped: 'up to date' }
+  }
 
   // Переводы идут ПОСЛЕДОВАТЕЛЬНО намеренно (react-doctor предлагает Promise.all).
   // Это платные вызовы модели: пачка из 30 разом бьёт в лимиты провайдера и
   // проскакивает мимо суточного потолка, который проверяется перед каждым.
   let added = 0
+  let сорвалось = 0
   for (const it of fresh.slice(0, 30)) {
     const { en, ru } = await bilingual(it.title, s.translate)
     try {
@@ -151,21 +177,19 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
         .onConflictDoNothing()
       added++
     } catch (e) {
+      сорвалось++
       captureError(e, { where: 'changelog.insert' })
     }
   }
-  // След в журнале автономии — по той же причине, что и у остальных петель. Журнал
-  // здесь не отчётность: по нему предохранитель считает серию ошибок, квота —
-  // автопубликации, правило остановки — «список устоялся». Петля без журнала
-  // невидима для всего этого (находка A1 линзы 06).
-  await recordAgentAction({
-    loop: 'changelog',
-    action: 'changelog.refresh',
-    resultStatus: added > 0 ? 'ok' : 'skipped',
-    signal: { pulled: items.length, fresh: fresh.length },
-    decision: { repo: s.repo, source: s.source, translate: s.translate, added },
-    resultRef: s.repo.slice(0, 300),
-    policyVersion: loop.policyVersion,
+  // Провал вставок — это ОШИБКА, а не «пропустили». Статус выводился из одного лишь
+  // счётчика добавленных, а исключения глушит catch выше: полный отказ записи попадал бы
+  // в журнал бодрым 'skipped', и предохранитель, считающий серию ошибок, никогда бы не
+  // сработал на сломанной петле. Замечание авто-ревью на fe#800 (P2).
+  await след(сорвалось > 0 ? 'error' : added > 0 ? 'ok' : 'skipped', {
+    pulled: items.length,
+    fresh: fresh.length,
+    added,
+    failed: сорвалось,
   })
   return { added, skipped: '' }
 }

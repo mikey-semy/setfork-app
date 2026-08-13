@@ -95,6 +95,19 @@ export async function runTriplesSweep(): Promise<{ mined: number; skipped: numbe
     // Маркер — ВСЕГДА, даже при нулевом урожае: рудник не возвращается впустую.
     await db.update(templates).set({ triplesMinedAt: new Date() }).where(eq(templates.id, tpl.id))
   }
+  // След ЖИВОГО прохода. До этой правки рудник писал в журнал только сухой прогон:
+  // реальная добыча оставляла лишь строку в логе контейнера, а она теряется. Журнал же
+  // здесь рабочее состояние — по нему считается холостой ход, и объявленный в реестре
+  // прогресс `mine` без этой записи не появился бы никогда.
+  // Замечание авто-ревью на fe#800 (P2).
+  await recordAgentAction({
+    loop: 'triples',
+    action: 'mine',
+    resultStatus: mined > 0 ? 'ok' : 'skipped',
+    signal: { batch: batch.length },
+    decision: { mined, skipped },
+    policyVersion: loop.policyVersion,
+  })
   log.info('triples sweep done', { batch: batch.length, mined, skipped })
   return { mined, skipped }
 }

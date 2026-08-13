@@ -146,6 +146,18 @@ export async function runLinkcheckSweep(payload: LinkcheckPayload = {}, probe: P
   } catch {
     // журнал вторичен — свип не роняем
   }
+  // Аудит выше — ОБЩИЙ журнал системы, а этот — журнал автономии: разные таблицы и разные
+  // читатели. По второму считается холостой ход петли, и до этой правки живой проход в нём
+  // не оставлял ничего (была только запись сухого прогона), поэтому объявленный в реестре
+  // прогресс `linkcheck.sweep` не появился бы никогда. Замечание авто-ревью на fe#800 (P2).
+  await recordAgentAction({
+    loop: 'linkcheck',
+    action: 'linkcheck.sweep',
+    resultStatus: probed > 0 ? 'ok' : 'skipped',
+    signal: { probed },
+    decision: { broken, unreachable, rest, chained },
+    policyVersion: loop.policyVersion,
+  })
   log.info('linkcheck sweep done', { probed, broken, unreachable, rest, chained })
   return { probed, chained }
 }
