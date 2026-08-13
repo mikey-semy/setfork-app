@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ListHealth } from './health'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * Панель здоровья списков (HQ §11): светофор «где болит прямо сейчас».
@@ -18,7 +19,7 @@ export function HealthBoard({ items, lang, ownerHandle }: { items: ListHealth[];
   const attention = items.filter((i) => i.status !== 'green')
 
   return (
-    <div className="mb-5 rounded-lg border border-border bg-surface p-3.5">
+    <div className={cardClass({ className: 'mb-5' })}>
       <div className="mb-2 flex items-baseline gap-2">
         <span className="text-[0.78125rem] font-semibold uppercase tracking-wide text-muted">{t('library.listHealth', lang)}</span>
         <span className="text-[0.6875rem] text-muted">

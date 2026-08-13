@@ -10,6 +10,7 @@ import { TrendChart } from '@/shared/ui/TrendChart'
 import { getModerationCounts } from '@/features/moderation/queries'
 import { getReportsCounts } from '@/features/reports/queries'
 import { getFeedbackCounts } from '@/features/feedback/queries'
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -72,7 +73,7 @@ export default async function AdminDashboardPage() {
         </h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {charts.map((c) => (
-            <div key={c.title} className="rounded-lg border border-border bg-surface p-4">
+            <div key={c.title} className={cardClass()}>
               <div className="mb-2 flex items-baseline justify-between">
                 <span className="text-[0.78125rem] font-medium text-ink-2">{c.title}</span>
                 <span className="font-mono text-[0.8125rem] font-semibold text-ink">{c.total}</span>

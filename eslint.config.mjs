@@ -4,40 +4,11 @@ import boundaries from 'eslint-plugin-boundaries'
 // Flat-config для ESLint 9 / Next 16 (eslint-config-next — готовый flat-массив).
 // Экспериментальные react-compiler-правила Next 16 приглушены до warn: они агрессивно
 // флагают валидные паттерны (guard-эффекты, запись cookie); чистка под них — отдельная задача.
-export default [
-  { ignores: ['.next/**', 'node_modules/**', 'src/shared/gen/**', 'drizzle/**', 'public/**', '.claude/**'] },
-  ...next,
-  {
-    rules: {
-      // preview react-compiler набор (Next 16) — агрессивен на валидных паттернах; держим как warn.
-      'react-hooks/immutability': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/refs': 'warn',
-      'react-hooks/static-components': 'warn',
-      'react-hooks/purity': 'warn',
-      // Барьер видимости: сырые getListMeta/getTemplateDetail отдают данные БЕЗ canViewList.
-      // Забытый гейт = утечка приватного/черновика/снятого модерацией (так родились дыры
-      // blame/versions/insights/suggest). Чтение списка идёт ТОЛЬКО через чокпоинт guard.ts.
-      // guard.ts импортит из relative './queries' и правилом не задевается (это его законный дом).
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            {
-              name: '@/features/library/queries',
-              importNames: ['getListMeta', 'getTemplateDetail'],
-              message:
-                'Сырой загрузчик не гейтит видимость. Используй requireViewableMeta/requireViewableDetail из @/features/library/guard. Иная модель доступа (анонимный isPubliclyVisible, owner-only, git/MCP-скоуп) — оставь // eslint-disable-next-line no-restricted-imports с причиной.',
-            },
-          ],
-        },
-      ],
-      // i18n-барьер: инлайновый двуязычный тернарник (кириллица в ветке) = строка мимо
-      // словаря. 696 таких в 129 файлах заморожены в baseline (eslint-suppressions.json);
-      // НОВЫЕ — ошибка. Чинишь старые → `npx eslint . --prune-suppressions`. Ложняков нет:
-      // кириллица в литерале тернарника — это почти всегда UI-текст.
-      'no-restricted-syntax': [
-        'error',
+// Запреты синтаксиса живут КОНСТАНТОЙ, потому что flat-config заменяет запись
+// правила целиком: блок ниже, добавляющий узду карточки для кода вне shared/ui,
+// обязан перечислить и все остальные — иначе фичи молча теряют i18n-барьер и
+// прочее (поймано `eslint --print-config` при разведении правил по областям).
+const RESTRICTED = [
         {
           selector: 'ConditionalExpression:matches([consequent.value=/[а-яА-ЯёЁ]/], [alternate.value=/[а-яА-ЯёЁ]/])',
           message:
@@ -127,7 +98,58 @@ export default [
           message:
             'Рукописная кнопка (h-* + rounded-md) не получает ни шкалы, ни тач-цели 44px. Возьми Button/IconButton или buttonClass() из @/shared/ui/button-style — вид, высота и фокус придут оттуда.',
         },
+
+]
+
+// Узда карточки: внутри shared/ui рамка+фон+отступ — это работа примитива
+// (SettingsSection, PageAside, dropdown-menu, DataTableV2…), запрещать нечего.
+const CARD_RULE = // ── Узда карточки (Ф13, замер 13.08.2026) ─────────────────────────────
+        // Примитива под роль «рамка + фон + отступ» не было вовсе, поэтому её
+        // писали руками: 35 рецептов в 94 местах, семь внутренних отступов на
+        // одну роль. Теперь рецепт один — cardClass из @/shared/ui/card-style.
+        //
+        // Без классов символов: `[` ломает разбор селектора, а [ значит
+        // ЛИТЕРАЛЬНУЮ скобку. «Что угодно между» — только (?:.|\s)*.
+        {
+          selector:
+            "JSXAttribute[name.name='className'] :matches(Literal[value=/rounded-(?:.|\\s)*\\sborder(?:.|\\s)*\\sp-\\d|(?:^|\\s)p-\\d(?:.|\\s)*\\srounded-(?:.|\\s)*\\sborder/], TemplateElement[value.cooked=/rounded-(?:.|\\s)*\\sborder(?:.|\\s)*\\sp-\\d|(?:^|\\s)p-\\d(?:.|\\s)*\\srounded-(?:.|\\s)*\\sborder/])",
+          message:
+            'Карточка (рамка + фон + внутренний отступ) рисуется ТОЛЬКО через cardClass из @/shared/ui/card-style: tone задаёт смысл блока, pad — ступень отступа. Нужен новый тон или ступень — добавь в примитив, а не рядом с ним. Роль не карточка (обводка-группировка, рамка картинки, сегментированный контрол) — точечный disable с причиной.',
+        }
+
+export default [
+  { ignores: ['.next/**', 'node_modules/**', 'src/shared/gen/**', 'drizzle/**', 'public/**', '.claude/**'] },
+  ...next,
+  {
+    rules: {
+      // preview react-compiler набор (Next 16) — агрессивен на валидных паттернах; держим как warn.
+      'react-hooks/immutability': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-hooks/purity': 'warn',
+      // Барьер видимости: сырые getListMeta/getTemplateDetail отдают данные БЕЗ canViewList.
+      // Забытый гейт = утечка приватного/черновика/снятого модерацией (так родились дыры
+      // blame/versions/insights/suggest). Чтение списка идёт ТОЛЬКО через чокпоинт guard.ts.
+      // guard.ts импортит из relative './queries' и правилом не задевается (это его законный дом).
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/features/library/queries',
+              importNames: ['getListMeta', 'getTemplateDetail'],
+              message:
+                'Сырой загрузчик не гейтит видимость. Используй requireViewableMeta/requireViewableDetail из @/features/library/guard. Иная модель доступа (анонимный isPubliclyVisible, owner-only, git/MCP-скоуп) — оставь // eslint-disable-next-line no-restricted-imports с причиной.',
+            },
+          ],
+        },
       ],
+      // i18n-барьер: инлайновый двуязычный тернарник (кириллица в ветке) = строка мимо
+      // словаря. 696 таких в 129 файлах заморожены в baseline (eslint-suppressions.json);
+      // НОВЫЕ — ошибка. Чинишь старые → `npx eslint . --prune-suppressions`. Ложняков нет:
+      // кириллица в литерале тернарника — это почти всегда UI-текст.
+      'no-restricted-syntax': ['error', ...RESTRICTED],
       // Узда Ф7: <button> без явного type в форме сабмитит её случайно (дефолт
       // submit). Отдельным rule id (не no-restricted-syntax) — чтобы счётные
       // суппрессии i18n-baseline не маскировали кнопочные грехи (Codex #622).
@@ -196,6 +218,18 @@ export default [
           ],
         },
       ],
+    },
+  },
+  // ── Узда карточки — ВНЕ shared/ui ─────────────────────────────────────────
+  // Внутри shared/ui рамка+фон+отступ — это и есть работа примитива (SettingsSection,
+  // PageAside, dropdown-menu, DataTableV2, BubbleToolbar…), запрещать там нечего.
+  // Поэтому правило вынесено отдельным блоком с ignores, а не добавлено в общий
+  // массив: иначе каждый примитив пришлось бы глушить точечным disable.
+  {
+    files: ['src/**/*.tsx'],
+    ignores: ['src/shared/ui/**'],
+    rules: {
+      'no-restricted-syntax': ['error', ...RESTRICTED, CARD_RULE],
     },
   },
 ]

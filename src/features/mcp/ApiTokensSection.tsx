@@ -7,6 +7,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import type { TokenRow } from './queries'
 import { createApiToken, revokeApiToken } from './actions'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Чистая — на модульном уровне, а не в теле компонента (react-doctor:
 // пересборка на каждый рендер ломает мемоизацию детей).
@@ -68,7 +69,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
   return (
     <div className="space-y-4">
       {/* Эндпоинт */}
-      <div className="rounded-md border border-border bg-surface-2 p-3">
+      <div className={cardClass({ tone: 'inset', pad: 'sm' })}>
         <div className="mb-1 text-[0.78125rem] font-medium text-ink">{ru ? 'MCP-эндпоинт' : 'MCP endpoint'}</div>
         <div className="flex flex-wrap items-center gap-2">
           <code className="rounded-md bg-surface px-2 py-1 font-mono text-[0.78125rem] text-accent">{mcpUrl}</code>
@@ -83,7 +84,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
 
       {/* Показ только что созданного токена */}
       {created && (
-        <div className="rounded-md border border-warn bg-surface p-3">
+        <div className={cardClass({ tone: 'warn', pad: 'sm' })}>
           <div className="mb-1 flex items-center gap-1.5 text-[0.78125rem] font-semibold text-warn">
             <TriangleAlert size={14} /> {ru ? 'Скопируй сейчас — больше не покажем' : 'Copy it now — shown only once'}
           </div>

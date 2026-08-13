@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { CONTROL_H } from '@/shared/ui/control'
 import { ScrollRow } from '@/shared/ui/ScrollRow'
 import { MessagesSquare, FileDiff, CircleCheck, GitCommitHorizontal, Eye } from 'lucide-react'
+import { cardClass } from '@/shared/ui/card-style'
 
 export type SuggestionTab = 'conversation' | 'commits' | 'checks' | 'files' | 'result'
 
@@ -61,7 +62,7 @@ export function SuggestionTabs({
     // Ряд листается В СВОЁМ контейнере (страница горизонтально не едет) и ПОКАЗЫВАЕТ,
     // что листается: тем же ScrollRow, что и верхние вкладки списка. Без стрелок
     // пятая вкладка на мобиле выглядела просто обрезанной.
-    <ScrollRow outerClassName="mb-4" className="flex gap-1 rounded-lg border border-border bg-surface p-1" label={arrows}>
+    <ScrollRow outerClassName="mb-4" className={cardClass({ pad: 'xs', className: 'flex gap-1' })} label={arrows}>
       {item('conversation', <MessagesSquare size={14} />, labels.conversation, conversationCount)}
       {commitsCount !== null && item('commits', <GitCommitHorizontal size={14} />, labels.commits, commitsCount)}
       {item('checks', <CircleCheck size={14} />, labels.checks, checksFailed)}

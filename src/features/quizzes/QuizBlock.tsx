@@ -8,6 +8,7 @@ import type { QuizState } from './queries'
 import { Button } from '@/shared/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, matchRights, shuffleSort, quizKind, type QuizBlockContent } from '@/core'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -193,7 +194,7 @@ export function QuizBlock({
     : (reveal ?? '')
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className={cardClass()}>
       <div className="mb-2.5 flex items-center gap-2">
         <GraduationCap size={15} className="shrink-0 text-accent" />
         {/* Вопрос пишет автор списка, длина не ограничена — без переноса блок уносит страницу. */}

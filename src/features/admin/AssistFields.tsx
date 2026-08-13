@@ -5,6 +5,7 @@ import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Поля «Помощи на шаге» внутри формы AI-настроек (submit через setAiSettings).
 // Тумблер — controlled Switch с name (submit 'on'/выкл), как в CouncilFields.
@@ -18,7 +19,7 @@ export function AssistFields({ v, lang }: { v: AssistValues; lang: Lang }) {
   const [enabled, setEnabled] = useState(v.enabled)
 
   return (
-    <div className="space-y-4 rounded-md border border-border bg-surface-2 p-3">
+    <div className={cardClass({ tone: 'inset', pad: 'sm', className: 'space-y-4' })}>
       <div>
         <div className="text-[0.8125rem] font-medium text-ink">{t('admin.stepAssistHelpWhen', lang)}</div>
         <p className="mt-0.5 text-[0.78125rem] text-muted">

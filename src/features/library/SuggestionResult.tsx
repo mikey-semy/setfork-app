@@ -5,6 +5,7 @@ import { CodeCard } from '@/shared/ui/CodeCard'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * ИТОГ ПРАВКИ — как список будет выглядеть, ЕСЛИ её принять.
@@ -90,7 +91,7 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
         const refs = (it.refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url }))
         const md = typeof it.content?.md === 'string' ? it.content.md : ''
         return (
-          <div key={i} className="rounded-lg border border-border bg-surface p-4">
+          <div key={i} className={cardClass()}>
             {!isStep && md ? (
               <Markdown>{md}</Markdown>
             ) : !isStep ? (

@@ -4,6 +4,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { checkResetToken } from '@/features/auth/email-flows'
 import { ResetPasswordForm } from '@/features/auth/PasswordResetForms'
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -18,7 +19,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
   if (!valid) {
     return (
       <div className="flex flex-1 items-center justify-center px-4 py-16">
-        <div className="w-full max-w-[26.25rem] rounded-lg border border-border bg-surface p-6 text-center">
+        <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[26.25rem] text-center' })}>
           <div className="mb-2 flex justify-center">
             <XCircle size={22} className="text-danger" />
           </div>

@@ -27,6 +27,7 @@ import { toast } from '@/shared/ui/toast'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CONTROL_H, CONTROL_TEXT, ICON_SIZE, LAYER, TEXT, type ControlSize } from '@/shared/ui/control'
 import { t } from '@/shared/i18n'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Эталон интерфейса: все примитивы shared/ui во всех размерах и состояниях.
 // Смысл страницы — РАЗНОБОЙ ВИДЕН ГЛАЗАМИ: контролы одного размера стоят в одном
@@ -44,7 +45,7 @@ type DemoRow = { name: string; role: string; score: number }
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-border bg-surface p-5">
+    <section className={cardClass({ pad: 'lg' })}>
       <h2 className="mb-1 text-[0.875rem] font-bold text-ink">{title}</h2>
       {hint && <p className="mb-4 text-[0.78125rem] text-muted">{hint}</p>}
       <div className="flex flex-col gap-4">{children}</div>
@@ -222,7 +223,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         title={t('admin.pageHeader', lang)}
         hint={t('admin.onePrimitiveInstead27', lang)}
       >
-        <div className="rounded-md border border-dashed border-border p-3">
+        <div className={cardClass({ pad: 'sm', dashed: true })}>
           <PageHeader
             title={t('admin.veryLongPageTitle', lang)}
             subtitle={t('admin.subtitleExplainsPageOne', lang)}
@@ -382,7 +383,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         title={t('admin.settingsRowEtalon', lang)}
         hint={t('admin.bottomRightSectionOne', lang)}
       >
-        <div className="flex items-center justify-end gap-2 rounded-md border border-dashed border-border p-3">
+        <div className={cardClass({ pad: 'sm', dashed: true, className: 'flex items-center justify-end gap-2' })}>
           <Tooltip label={t('common.delete', lang)}>
             <Button size="sm" variant="danger" aria-label={t('common.delete', lang)}>
               <Trash2 size={15} />

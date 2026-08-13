@@ -12,6 +12,7 @@ import type { FeedEvent } from './queries'
 import type { RecommendedList } from './queries'
 import { DEFAULT_PREFS, type FeedPrefs } from './prefs'
 import { FeedFilter } from './FeedFilter'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Лента dashboard: сервер отдаёт все события (page.tsx), фильтр — клиентский
 // по localStorage-настройкам (FeedFilter). В конце — «Recommended for you».
@@ -92,7 +93,7 @@ export function Feed({
             if (e.type === 'version') return <ReleaseCard key={eventKey(e)} e={e} lang={lang} ru={ru} />
             const Icon = ICONS[e.type as keyof typeof ICONS] ?? Tag
             return (
-              <div key={eventKey(e)} className="flex gap-3 rounded-lg border border-border bg-surface p-3.5">
+              <div key={eventKey(e)} className={cardClass({ className: 'flex gap-3' })}>
                 <Link href={`/${e.actorHandle}`} aria-label={e.actorHandle} className="shrink-0">
                   <Avatar handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size={34} />
                 </Link>
@@ -128,7 +129,7 @@ export function Feed({
       )}
 
       {prefs.events.recommended && recommended.length > 0 && (
-        <div className="mt-4 rounded-lg border border-border bg-surface p-3.5">
+        <div className={cardClass({ className: 'mt-4' })}>
           <div className="mb-2 flex items-center gap-1.5 text-[0.78125rem] font-semibold text-ink">
             <Star size={13} className="text-muted" /> {ru ? 'Рекомендации для тебя' : 'Recommended for you'}
           </div>

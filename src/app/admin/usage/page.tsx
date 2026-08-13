@@ -10,6 +10,7 @@ import { getUsageByUser, getUsageTotals } from '@/shared/ai/usage'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { isQuarantined, modelHealth, QUARANTINE_WINDOW_MS } from '@/shared/ai/health'
 import { prettyModelName } from '@/shared/ai/models'
+import { cardClass } from '@/shared/ui/card-style'
 
 const WINDOWS = [
   { days: 1, en: '24h', ru: '24ч' },
@@ -63,7 +64,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
         title={t('admin.draftUsage', lang)}
         subtitle={t('admin.whoConsumedWhatTokens', lang)}
         actions={
-          <div className="flex gap-1 rounded-md border border-border bg-surface-2 p-0.5">
+          <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'flex gap-1' })}>
             {WINDOWS.map((w) => (
               <Link
                 key={w.days}
@@ -88,7 +89,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
 
       {/* Осязаемость: остаток OpenRouter → на сколько генераций хватит (по средней за период) */}
       {(credits || avgPerGen != null) && (
-        <div className="rounded-lg border border-border bg-surface p-4">
+        <div className={cardClass()}>
           <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
             {credits && (
               <div>

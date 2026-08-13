@@ -30,6 +30,7 @@ import { getUserSessions } from '@/features/sessions/queries'
 import { SessionsList } from '@/features/sessions/SessionsList'
 import { PAGE_X } from '@/shared/ui/control'
 import { appOrigin } from '@/shared/auth/app-origin'
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -225,7 +226,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               { k: t('aiUsageTokens', lang), v: new Intl.NumberFormat('en').format(usage.totalTokens) },
               { k: t('aiUsageCost', lang), v: '$' + usage.costUsd.toFixed(usage.costUsd < 1 ? 4 : 2) },
             ].map((x) => (
-              <div key={x.k} className="rounded-md border border-border bg-surface-2 p-3">
+              <div key={x.k} className={cardClass({ tone: 'inset', pad: 'sm' })}>
                 <div className="text-[0.6875rem] uppercase tracking-wide text-muted">{x.k}</div>
                 <div className="mt-1 text-[1rem] font-bold text-ink">{x.v}</div>
               </div>

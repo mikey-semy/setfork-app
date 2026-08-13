@@ -13,6 +13,7 @@ import { checkProvider, loadProviderCatalog } from './model-catalog-action'
 import { CUR_SIGN, type Currency } from './model-options'
 import { catalogProblem } from './catalog-problem'
 import { t, type Lang } from '@/shared/i18n'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * ПРОВАЙДЕР, ЕГО МОДЕЛИ И ЕГО ДЕНЬГИ — одним блоком, потому что это одна связка.
@@ -252,7 +253,7 @@ export function AiProviderModels({
 
       {/* Порог живёт у провайдера, поэтому и подпись, и валюта — от ВЫБРАННОГО, а не сохранённого. */}
       {(prov === 'openrouter' || prov === 'yandex') && (
-        <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
+        <div className={cardClass({ tone: 'inset', pad: 'sm', className: 'space-y-3' })}>
           <div className="text-[0.8125rem] font-medium text-ink">
             {prov === 'openrouter' ? t('admin.openRouterCostControl', lang) : t('admin.yandexCostControl', lang)}
           </div>

@@ -5,6 +5,7 @@ import { computeAchievements, type AchievementInput } from './achievements'
 import { ACH_META } from './achievement-meta'
 import type { AchDisplayMap } from './achievement-config'
 import { AchievementsGrid, type AchTileData } from './AchievementsGrid'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Достижения на профиле (левый сайдбар): квадратные плитки-картинки без подписей;
  *  клик открывает модалку с историей. Картинка — ОБЯЗАТЕЛЬНЫЙ атрибут: показываем
@@ -30,7 +31,7 @@ export function AchievementsCard({ input, lang, config }: { input: AchievementIn
   })
 
   return (
-    <div className="mt-6 rounded-lg border border-border bg-surface p-4">
+    <div className={cardClass({ className: 'mt-6' })}>
       <div className="mb-3 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-ink">
         <Award size={14} className="text-muted" /> {t('ach.title', lang)}
         <Badge variant="soft" className="ml-1">

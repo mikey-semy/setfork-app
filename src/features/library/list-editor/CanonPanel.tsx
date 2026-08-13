@@ -9,6 +9,7 @@ import { TEXT } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import { parseCanonAction, renderCanonAction } from '../actions/canon'
 import type { EditorItem } from '../editor'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Придирка ядра к тексту. Текст выбирает ИНТЕРФЕЙС по коду: язык читателя знает
  *  он, а не ядро (та же дисциплина, что у отказов пуша). */
@@ -118,7 +119,7 @@ export function CanonPanel({
     <div className="flex flex-col gap-2">
       <p className={`${TEXT.bodySm} text-muted`}>{t('canon.hint', lang)}</p>
       {text === null ? (
-        <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 p-4 text-[0.8125rem] text-muted">
+        <div className={cardClass({ tone: 'inset', className: 'flex items-center gap-2 text-[0.8125rem] text-muted' })}>
           <Loader2 size={14} className="animate-spin" /> {t('canon.loading', lang)}
         </div>
       ) : (

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Code2, List } from 'lucide-react'
 import { CONTROL_H } from '@/shared/ui/control'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * Переключатель вида диффа «код / список» — ОДИН на сравнение версий и на правку.
@@ -49,7 +50,7 @@ export function DiffViewToggle({
     </Link>
   )
   return (
-    <div className="flex items-center gap-1 rounded-md border border-border bg-surface-2 p-0.5">
+    <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'flex items-center gap-1' })}>
       {item('code', <Code2 size={14} />, labels.code)}
       {item('list', <List size={14} />, labels.list)}
     </div>

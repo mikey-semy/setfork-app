@@ -6,12 +6,13 @@ import { t, type Lang } from '@/shared/i18n'
 import { newOptionId } from '../blocks'
 import type { EditorPoll } from '../editor'
 import { AddLink, CheckLabel, FieldRow, LineField, RemoveBtn } from './block-fields'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Poll-блок: вопрос, варианты, мультивыбор и дедлайн. Голоса считает страница списка. */
 export function PollBlockBody({ poll, onChange, lang }: { poll: EditorPoll; onChange: (p: EditorPoll) => void; lang: Lang }) {
   const set = (p: Partial<EditorPoll>) => onChange({ ...poll, ...p })
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
+    <div className={cardClass({ tone: 'inset', pad: 'sm', className: 'flex flex-col gap-2' })}>
       <LineField value={poll.question} onChange={(question) => set({ question })} lang={lang} className="" label={t('poll.questionPh', lang)} />
       <div className="flex flex-col gap-1.5">
         {poll.options.map((o, oi) => (

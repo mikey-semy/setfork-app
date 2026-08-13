@@ -6,6 +6,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { AvatarCropper } from '@/shared/ui/AvatarCropper'
 import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
+import { cardClass } from '@/shared/ui/card-style'
 
 const ACCEPT = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 const MAX_BYTES = 2 * 1024 * 1024
@@ -112,9 +113,12 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        className={`flex cursor-pointer items-center gap-4 rounded-lg border border-dashed p-4 transition-colors ${
-          dragOver ? 'border-accent bg-(--accent-soft)' : 'border-border-strong hover:border-accent hover:bg-surface-2'
-        }`}
+        className={cardClass({
+          dashed: true,
+          className: `flex cursor-pointer items-center gap-4 transition-colors ${
+            dragOver ? 'border-accent bg-(--accent-soft)' : 'border-border-strong hover:border-accent hover:bg-surface-2'
+          }`,
+        })}
       >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element

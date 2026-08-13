@@ -15,6 +15,7 @@ import { assignGnomeNames, createGnomeAccounts, hireGnome, selfGenerateNow } fro
 import { Button } from '@/shared/ui/button'
 import { Signature, Sparkles, UserPlus } from 'lucide-react'
 import type { Option } from '@/features/admin/ModelSelect'
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -94,7 +95,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
       {/* Найм (HQ §4в): темы, по которым 30 дней подряд отдувается универсал. Кнопка рождает
           гнома ВЫКЛЮЧЕННЫМ (LLM-черновик по признанному профстандарту) — включаешь после ревью. */}
       {signals.length > 0 && (
-        <div className="mb-4 rounded-lg border border-(--accent)/40 bg-(--accent-soft) p-3.5">
+        <div className={cardClass({ tone: 'accent', className: 'mb-4' })}>
           <div className="mb-2 text-[0.78125rem] font-semibold text-accent">
             {t('admin.hiringSignalGeneralistKeeps', lang)}
           </div>
@@ -121,7 +122,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
           предлагает правки наравне с людьми (ADR-0004 — помечен как служебный). Кнопка
           ЯВНАЯ: аккаунт публичен (профиль, авторство), побочным эффектом его не заводят. */}
       {noAccounts > 0 && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3.5">
+        <div className={cardClass({ className: 'mb-4 flex flex-wrap items-center justify-between gap-3' })}>
           <div className="min-w-0">
             <div className="text-[0.78125rem] font-semibold text-ink">
               {t('admin.accountsMissing', lang)}
@@ -141,7 +142,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
           «Web Designer»). Кнопка раздаёт собственные имена двергов, а роль переносит в
           профессию — обе колонки живут на странице специалиста. */}
       {unnamed > 0 && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3.5">
+        <div className={cardClass({ className: 'mb-4 flex flex-wrap items-center justify-between gap-3' })}>
           <div className="min-w-0">
             <div className="text-[0.78125rem] font-semibold text-ink">
               {t('admin.namesMissing', lang)}

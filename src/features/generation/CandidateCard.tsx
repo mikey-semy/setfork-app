@@ -36,6 +36,7 @@ export function CandidateCard({
       }}
       aria-pressed={selected}
       aria-expanded={open}
+      // eslint-disable-next-line no-restricted-syntax -- реплика чата: скруглениями изображает «хвостик» пузыря, это не карточка
       className={`w-full rounded-2xl rounded-bl-md border bg-(--surface) p-4 text-left transition-colors ${
         selected ? 'border-(--accent)' : 'border-border hover:border-border-strong'
       }`}

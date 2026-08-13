@@ -15,6 +15,7 @@ import { StatTile } from '@/shared/ui/StatTile'
 import { TagChip } from '@/shared/ui/TagChip'
 import { AUTONOMOUS_LOOPS, allLoopPolicies } from '@/shared/agents/policy'
 import { stallReports } from '@/shared/agents/stall'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * Дашборд РАЗВИТИЯ (Ф-D0) — компания гномов, видимая сверху: куда движемся, а не
@@ -123,7 +124,7 @@ export default async function AdminDevelopmentPage() {
 
         {/* ПОЧЕМУ не прошло планку — «не прошло» без причины это та же vanity-метрика. */}
         {today.holdReasons.length > 0 && (
-          <div className="rounded-lg border border-border bg-surface p-3">
+          <div className={cardClass({ pad: 'sm' })}>
             <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
               {t('admin.whyListsDidNot', lang)}
             </div>

@@ -14,6 +14,7 @@ import { ProductBlockBody } from './ProductBlockBody'
 import { QuizBlockBody } from './QuizBlockBody'
 import { StepBlockBody } from './StepBlockBody'
 import type { DropKind } from './FileDrop'
+import { cardClass } from '@/shared/ui/card-style'
 
 export type CardDrag = {
   dragging: boolean
@@ -112,7 +113,7 @@ function BlockBody({
 export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, onInsertBelow, onRetype, isUploading, onUpload, insertAfter, onChat, chatActive }: BlockCardProps) {
   return (
     // `group/card` — для жёлоба: он проявляется, когда указатель на ЭТОЙ карточке.
-    <div data-i={index} data-uid={uid} className={`group/card relative rounded-lg border border-border bg-surface p-4 ${drag.dragging ? 'opacity-50' : ''}`}>
+    <div data-i={index} data-uid={uid} className={cardClass({ className: `group/card relative ${drag.dragging ? 'opacity-50' : ''}` })}>
       {/* Линия места вставки: отвечает на вопрос «выше или ниже встанет», которого
           подсветка рамки не решала. */}
       {drag.line && (

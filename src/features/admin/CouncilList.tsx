@@ -10,6 +10,7 @@ import { cn } from '@/shared/lib/cn'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { selfGenerateNow } from '@/features/admin/actions'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * СПИСОК СПЕЦИАЛИСТОВ — ровными столбцами, а настройки у каждого на своей странице.
@@ -111,7 +112,7 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
       {/* Поручить список — действие над СОСТАВОМ, поэтому здесь, а не в настройках каждого.
           Кнопки только когда самогенерация включена: иначе обещали бы запрещённое настройками. */}
       {canAssign && (
-        <div className="rounded-lg border border-border bg-surface p-3.5">
+        <div className={cardClass()}>
           <div className="mb-1 text-[0.78125rem] font-semibold text-ink">{t('admin.assignList', lang)}</div>
           <p className="mb-2.5 text-[0.6875rem] text-ink-2">
             {t('admin.theSpecialistPicksWhat', lang)}

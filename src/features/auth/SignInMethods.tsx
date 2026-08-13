@@ -9,6 +9,7 @@ import { ProviderMark } from '@/shared/ui/ProviderMark'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import type { OauthProvider } from '@/shared/auth/oauth'
 import { unlinkSignInMethod, type UnlinkState } from './link-actions'
+import { cardClass } from '@/shared/ui/card-style'
 
 export interface SignInMethodRow {
   provider: OauthProvider
@@ -38,7 +39,7 @@ export function SignInMethods({ rows, lang, notice }: { rows: SignInMethodRow[];
       {state?.error && <Alert variant="warn">{t(state.error, lang)}</Alert>}
 
       {shown.map((r) => (
-        <div key={r.provider} className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-surface p-3">
+        <div key={r.provider} className={cardClass({ pad: 'sm', className: 'flex min-w-0 items-center gap-3' })}>
           <ProviderMark provider={r.provider} size={18} />
           <div className="min-w-0 flex-1">
             <div className="truncate text-[0.8125rem] text-ink">{t(r.labelKey as TKey, lang)}</div>

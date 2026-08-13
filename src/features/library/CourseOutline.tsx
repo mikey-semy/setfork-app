@@ -1,6 +1,7 @@
 import { Check, ListTree } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
+import { cardClass } from '@/shared/ui/card-style'
 
 export interface OutlineLesson {
   title: string
@@ -15,7 +16,7 @@ export function CourseOutline({ lessons, showProgress, lang }: { lessons: Outlin
   if (lessons.length < 2) return null
   const ru = lang === 'ru'
   return (
-    <nav className="rounded-lg border border-border bg-surface p-4">
+    <nav className={cardClass()}>
       <SectionLabel className="mb-2 flex items-center gap-1.5">
         <ListTree size={12} /> {ru ? 'Содержание' : 'Contents'}
       </SectionLabel>

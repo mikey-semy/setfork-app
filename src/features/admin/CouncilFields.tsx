@@ -7,6 +7,7 @@ import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import { ModelSelect, type Option } from './ModelSelect'
 import { t, type Lang } from '@/shared/i18n'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Поля «Совета гномов» внутри формы AI-настроек (submit через setAiSettings).
 // Тумблеры — controlled Switch с name (submit 'on'/выкл), как в AiKeyAndSwitch.
@@ -39,7 +40,7 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
   const [clarify, setClarify] = useState(v.clarify)
 
   return (
-    <div className="space-y-4 rounded-md border border-border bg-surface-2 p-3">
+    <div className={cardClass({ tone: 'inset', pad: 'sm', className: 'space-y-4' })}>
       <div>
         <div className="text-[0.8125rem] font-medium text-ink">{t('admin.expertCouncilMultiModel', lang)}</div>
         <p className="mt-0.5 text-[0.78125rem] text-muted">

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Copy } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import type { Lang } from '@/shared/i18n'
+import { cardClass } from '@/shared/ui/card-style'
 
 const KINDS = ['stars', 'forks', 'runs', 'version'] as const
 
@@ -20,7 +21,7 @@ export function BadgesCard({ owner, slug, origin, lang }: { owner: string; slug:
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className={cardClass()}>
       <div className="mb-1 text-[0.8125rem] font-semibold text-ink">{ru ? 'Бейджи' : 'Badges'}</div>
       <p className="mb-3 text-[0.78125rem] text-muted">
         {ru ? 'Живой бейдж списка — вставь в README проекта, доки или блог.' : 'A live badge for this list — drop it in your project README, docs or blog.'}

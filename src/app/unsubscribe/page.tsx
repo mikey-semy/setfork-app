@@ -4,6 +4,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { unsubscribeAction } from './actions'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Страница по ссылке «Отписаться» из письма: подтверждение и результат. */
 export async function generateMetadata() {
@@ -21,7 +22,7 @@ export default async function UnsubscribePage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-[26.25rem] rounded-lg border border-border bg-surface p-6 text-center">
+      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[26.25rem] text-center' })}>
         {state === 'confirm' ? (
           <>
             <div className="text-[1rem] font-bold text-ink">{t('unsubscribe.confirm', lang)}</div>

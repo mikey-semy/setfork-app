@@ -11,6 +11,7 @@ import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
+import { cardClass } from '@/shared/ui/card-style'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +37,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
       </div>
 
       {/* Метаданные */}
-      <form action={updateCollection} className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5">
+      <form action={updateCollection} className={cardClass({ pad: 'lg', className: 'flex flex-col gap-4' })}>
         <input type="hidden" name="id" value={c.id} />
         <Field label={ru ? 'Название' : 'Title'}>
           <Input name="title" required defaultValue={tr(c.title, lang)} maxLength={120} />

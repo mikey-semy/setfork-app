@@ -13,6 +13,7 @@ import { addFeedSource, pullFeedNow, removeFeedSource, setFeedSourceEnabled } fr
 import type { FeedSourceRow } from '@/features/admin/feed-queries'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Input } from '@/shared/ui/input'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * ПОДПИСКИ НА ПОТОК — состав ровными столбцами, как состав специалистов.
@@ -42,7 +43,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
 
       {/* ДОБАВИТЬ. Тема — обязательное поле рядом с адресом: подписка без темы бесполезна,
           материал из неё никому не достанется. */}
-      <form action={addFeedSource} className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3.5 sm:flex-row sm:items-end">
+      <form action={addFeedSource} className={cardClass({ className: 'flex flex-col gap-2 sm:flex-row sm:items-end' })}>
         <label className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{t('admin.feedAddress', lang)}</span>
           <Input
