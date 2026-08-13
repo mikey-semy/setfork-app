@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findNearDuplicate, jaccard, listText, shingles, wordSet, NEAR_DUP_THRESHOLD } from '@/shared/ai/near-duplicate'
+import { sameTopic, findNearDuplicate, jaccard, listText, shingles, wordSet, NEAR_DUP_THRESHOLD } from '@/shared/ai/near-duplicate'
 
 // Почти-дубли — главный риск массовой генерации: «Как испечь хлеб дома» и «Печём хлеб дома
 // своими руками» с теми же шагами другими словами это ОДИН список, а дедуп по заголовку его
@@ -102,5 +102,99 @@ describe('поиск почти-дубля', () => {
     // Порядок кандидатов не должен решать: сначала совпавший, потом «просто похожий».
     const v = findNearDuplicate(breadReworded, [{ id: 'dup', ...bread }, { id: 'topic', ...sourdough }])
     expect(v.match?.id).toBe('dup')
+  })
+})
+
+// ─── ЖАНР ПРОТИВ ПРЕДМЕТА ──────────────────────────────────────────────────────
+//
+// Реальный отказ: 13.08.2026 при переносе 496 списков ИИ-инструментария детектор отбросил
+// 85 законных как «почти-дубли». Все — соседи по ЖАНРУ: у любого субагента шаги устроены
+// одинаково («опиши роль», «ограничь инструменты», «проверь вывод»), и сходство по шагам
+// меряло каркас жанра, а не предмет списка. Числа в кейсах — с того самого корпуса.
+describe('соседи по жанру дублями не считаются', () => {
+  const subagentSteps = (what: string) => [
+    'Define the role and when to call it',
+    'Limit the tools it may use',
+    `Describe the ${what} it must produce`,
+    'Set the output contract',
+    'Test it on a real task',
+    'Iterate on the prompt',
+  ]
+  const accessibility = {
+    title: 'Accessibility checker subagent',
+    tags: ['subagent', 'claude-code', 'accessibility', 'a11y'],
+    items: subagentSteps('accessibility report'),
+  }
+  const apiDesigner = {
+    title: 'API designer subagent',
+    tags: ['subagent', 'claude-code', 'api-design', 'rest'],
+    items: subagentSteps('API design'),
+  }
+
+  it('разные субагенты: шаги почти совпадают, предмет — нет', () => {
+    const v = findNearDuplicate(accessibility, [{ id: 'api', ...apiDesigner }])
+    expect(v.best).toBeGreaterThan(NEAR_DUP_THRESHOLD) // по шагам они «похожи»…
+    expect(v.match).toBeNull() // …но дублем не являются
+  })
+
+  it('тот же субагент, переписанный другими словами, дублем остаётся', () => {
+    const reworded = {
+      title: 'Accessibility checking subagent',
+      tags: ['subagent', 'accessibility', 'a11y', 'claude-code'],
+      items: [
+        'Describe the role and when it is called',
+        'Restrict which tools it may use',
+        'Say what accessibility report it returns',
+        'Fix the output contract',
+        'Try it on a real page',
+      ],
+    }
+    expect(findNearDuplicate(reworded, [{ id: 'a11y', ...accessibility }]).match?.id).toBe('a11y')
+  })
+
+  it('без тегов правило работает по заголовку — предмет всё равно виден', () => {
+    const a = { title: 'Block rm -rf and force-push', items: subagentSteps('guard') }
+    const b = { title: 'Announce which model is active', items: subagentSteps('notice') }
+    expect(findNearDuplicate(a, [{ id: 'b', ...b }]).match).toBeNull()
+  })
+
+
+  // Обе находки авто-ревью: они про случаи, когда правило «тема против шагов» само себе
+  // мешает — и оба про ТИХУЮ потерю, то есть дубль проходит незамеченным.
+  it('сосед по жанру с высшим сходством не заслоняет настоящий дубль', () => {
+    // Первый кандидат похож по шагам сильнее (жанр), но темой не совпадает; второй —
+    // настоящий дубль с чуть меньшим сходством. Пока «лучший» и «совпавший» считались
+    // одним условием, первый поднимал планку и до второго дело не доходило.
+    const fresh = {
+      title: 'Accessibility checker subagent',
+      tags: ['subagent', 'accessibility'],
+      items: subagentSteps('accessibility report'),
+    }
+    const genreNeighbour = { id: 'api', title: 'API designer subagent', tags: ['subagent', 'api-design'], items: subagentSteps('API design') }
+    const realDuplicate = {
+      id: 'a11y-copy',
+      title: 'Accessibility checker subagent',
+      tags: ['subagent', 'accessibility'],
+      items: [...subagentSteps('accessibility report').slice(0, 4), 'Ship it'],
+    }
+
+    const v = findNearDuplicate(fresh, [genreNeighbour, realDuplicate])
+
+    expect(v.match?.id).toBe('a11y-copy')
+  })
+
+  it('разные теги при одинаковом заголовке и составе не отменяют дубль', () => {
+    // Теги — метаданные: их различие не должно вычитаться из сходства, иначе небрежность
+    // в тегах прячет копию.
+    const a = { title: 'Деплой', tags: ['vps'], items: subagentSteps('deploy') }
+    const b = { id: 'same', title: 'Деплой', tags: ['docker'], items: subagentSteps('deploy') }
+
+    expect(findNearDuplicate(a, [b]).match?.id).toBe('same')
+  })
+
+  it('соотношение считается честно: тема наравне с шагами — дубль', () => {
+    expect(sameTopic(0.88, 0.23)).toBe(false) // соседи по жанру
+    expect(sameTopic(0.3, 0.67)).toBe(true) // «Auto-stage edited files» ↔ «Auto-Stage Every File…»
+    expect(sameTopic(0.5, 0.3)).toBe(true) // ровно на границе 0.6×
   })
 })
