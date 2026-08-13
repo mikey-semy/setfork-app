@@ -40,8 +40,13 @@ type Sort = (typeof SORTS)[number]
 const FOLDER_SORTS = ['name', 'count'] as const
 type FolderSort = (typeof FOLDER_SORTS)[number]
 
+/** Значение фильтра «без каталога»: слово вместо пустой строки — иначе `?catalog=` в
+ *  адресе неотличимо от «фильтр не задан», и ссылку нельзя ни отправить, ни сохранить. */
+export const NO_CATALOG = 'none'
+
 export type ProfileSearchParams = {
   tab?: string
+  catalog?: string
   folder?: string
   q?: string
   sort?: string
@@ -135,10 +140,22 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   const sort: Sort = SORTS.find((s) => s === sp.sort) ?? 'recent'
   // Вкладка «Списки»: поиск + фильтр по типу + сортировка (тулбар как у репо GitHub).
   const listType: ListType = LIST_TYPES.find((t) => t === sp.type) ?? 'all'
+  // Фильтр по полке: имя каталога или NO_CATALOG. Неизвестное имя фильтром не считаем —
+  // иначе опечатка в адресе показывает пустую библиотеку без объяснения.
+  const catalogFilter = sp.catalog === NO_CATALOG ? NO_CATALOG : catalogs.find((c) => c.name === sp.catalog)?.name
   // Set, а не includes внутри фильтра: у активного пользователя и папка, и выдача —
   // сотни строк, и поиск по массиву в цикле превращается в перебор на перебор.
   const inFolder = folderIds ? new Set(folderIds) : null
-  const items = selectItems({ items: inFolder ? rawItems.filter((it) => inFolder.has(it.id)) : rawItems, tab, query, sort, listType })
+  const catalogIdByName = new Map(catalogs.map((c) => [c.name, c.id]))
+  const items = selectItems({
+    items: inFolder ? rawItems.filter((it) => inFolder.has(it.id)) : rawItems,
+    tab,
+    query,
+    sort,
+    listType,
+    catalog: catalogFilter,
+    catalogId: catalogFilter && catalogFilter !== NO_CATALOG ? catalogIdByName.get(catalogFilter) : undefined,
+  })
 
   // Пагинация вкладок со списками (много списков = боль без страниц).
   const totalPages = Math.max(1, Math.ceil(items.length / PER_PAGE))
@@ -151,6 +168,9 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     if (sp.q) qs.set('q', sp.q)
     if (sp.sort) qs.set('sort', sp.sort)
     if (sp.type) qs.set('type', sp.type)
+    // Фильтр полки переживает переход по страницам: иначе со второй страницы человек
+    // молча возвращается ко всей библиотеке и не понимает, куда делся отбор.
+    if (catalogFilter) qs.set('catalog', catalogFilter)
     if (p > 1) qs.set('page', String(p))
     return `/${handle}?${qs.toString()}`
   }
@@ -172,6 +192,9 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     received,
     pinned,
     catalogs,
+    catalogFilter,
+    /** Сколько списков ещё не разложено по полкам — очередь разбора одним числом. */
+    unfiledCount: rawItems.filter((it) => !it.repositoryId).length,
     achDisplay,
     people,
     ownLight,
@@ -205,21 +228,41 @@ function asTab(raw: string | undefined): ProfileTab {
   return tabs.find((t) => t === raw) ?? 'overview'
 }
 
-/** Поиск, фильтр по типу и порядок — ровно для той вкладки, где они есть. */
-function selectItems<T extends { id: string; slug: string; title: Record<string, string | undefined>; starsCount: number; visibility: string; origin: string | null }>(ctx: {
+/**
+ * Поиск, фильтр по типу и полке, порядок — ровно для той вкладки, где они есть.
+ *
+ * Экспортируется ради теста: это ПРАВИЛА выдачи, и проверять их надо отдельно от
+ * страницы, которая тянет БД и сессию. Внутри — чистая функция над массивом.
+ */
+export function selectItems<
+  T extends {
+    id: string
+    slug: string
+    title: Record<string, string | undefined>
+    starsCount: number
+    visibility: string
+    origin: string | null
+    repositoryId?: string | null
+  },
+>(ctx: {
   items: T[]
   tab: ProfileTab
   query: string
   sort: Sort
   listType: ListType
+  catalog?: string
+  catalogId?: string
 }): T[] {
-  const { tab, query, sort, listType } = ctx
+  const { tab, query, sort, listType, catalog, catalogId } = ctx
   if (tab !== 'lists' && tab !== 'starred') return ctx.items
 
   let items = ctx.items
   if (query) items = items.filter((it) => it.slug.toLowerCase().includes(query) || Object.values(it.title).some((v) => v?.toLowerCase().includes(query)))
   if (tab === 'lists' && listType !== 'all') {
     items = items.filter((it) => (listType === 'forks' ? it.origin === 'forked' : it.visibility === listType))
+  }
+  if (tab === 'lists' && catalog) {
+    items = catalog === NO_CATALOG ? items.filter((it) => !it.repositoryId) : items.filter((it) => it.repositoryId === catalogId)
   }
   if (sort === 'name') items = [...items].sort((a, b) => a.slug.localeCompare(b.slug))
   else if (sort === 'stars') items = [...items].sort((a, b) => b.starsCount - a.starsCount)
