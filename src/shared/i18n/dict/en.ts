@@ -186,6 +186,7 @@ export const en = {
   'profile.catalogFilter': 'Filter by catalog',
   'profile.catalogNone': 'No catalog',
   // Пакетные действия над своими списками (режим выбора на вкладке «Списки»).
+  'catalog.guessWhy': 'Suggested by shared tags: {tags}',
   'bulk.select': 'Select',
   'bulk.selectedSuffix': 'selected',
   'bulk.selectAll': 'Select all {n}',
