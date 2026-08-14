@@ -11,6 +11,7 @@ import { FeedList } from '@/features/library/FeedList'
 import { getCollectionDetail } from '@/features/collections/queries'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PAGE } from '@/shared/ui/control'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const [{ slug }, lang] = await Promise.all([params, getLang()])
@@ -60,7 +61,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
               <Link
                 key={cat.id}
                 href={`/${cat.ownerHandle}/catalogs/${cat.name}`}
-                className="group rounded-lg border border-border bg-surface px-4 py-3 hover:border-border-strong"
+                className={buttonClass({ size: 'lg', className: 'group' })}
               >
                 <div className="flex items-center gap-2">
                   <FolderGit2 size={15} className="text-muted" />

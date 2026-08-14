@@ -153,7 +153,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         <button
           type="button"
           onClick={() => setRules((xs) => [...xs, { match: '', param: '', value: '', rowId: `n${++nextRow.current}` }])}
-          className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[0.78125rem] text-ink hover:border-border-strong"
+          className={buttonClass({ className: 'mt-2' })}
         >
           <Plus size={13} /> {t('monRuleAdd', lang)}
         </button>

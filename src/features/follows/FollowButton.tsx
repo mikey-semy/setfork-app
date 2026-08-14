@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Check, Loader2, UserPlus } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { toggleFollow } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export function FollowButton({ targetUserId, following, lang }: { targetUserId: string; following: boolean; lang: Lang }) {
   const [isFollowing, setIsFollowing] = useState(following)
@@ -19,7 +20,7 @@ export function FollowButton({ targetUserId, following, lang }: { targetUserId: 
       type="button"
       onClick={onClick}
       disabled={pending}
-      className={`inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-[0.8125rem] font-semibold disabled:opacity-70 ${
+      className={`${buttonClass({ className: 'w-full' })} disabled:opacity-70 ${
         isFollowing ? 'border border-border text-ink hover:border-danger hover:text-danger' : 'bg-primary text-primary-fg'
       }`}
     >

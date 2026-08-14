@@ -13,6 +13,7 @@ import { getDiscussions } from '@/features/discussions/queries'
 import { DISCUSSION_CATEGORIES, categoryLabel, categoryMeta } from '@/features/discussions/constants'
 import { PAGE } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -57,7 +58,7 @@ export default async function DiscussionsPage({
             ))}
           </div>
           {session && (
-            <Link href={`${base}/new`} className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[0.8125rem] font-semibold text-primary-fg">
+            <Link href={`${base}/new`} className={buttonClass({ variant: 'primary' })}>
               <Plus size={15} /> {ru ? 'Новое обсуждение' : 'New discussion'}
             </Link>
           )}

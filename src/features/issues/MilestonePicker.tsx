@@ -4,6 +4,7 @@ import { ChevronDown, Milestone as MilestoneIcon, X } from 'lucide-react'
 import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { setIssueMilestone } from '@/features/milestones/actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 type Opt = { id: string; title: string; closed: boolean }
 
@@ -44,7 +45,7 @@ export function MilestonePicker({
             align="right"
             width={240}
             button={(toggle) => (
-              <button type="button" onClick={toggle} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[0.78125rem] text-muted hover:bg-surface-2 hover:text-ink">
+              <button type="button" onClick={toggle} className={buttonClass({ variant: 'ghost', className: 'hover:bg-surface-2' })}>
                 <ChevronDown size={14} />
               </button>
             )}

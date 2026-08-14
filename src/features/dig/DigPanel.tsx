@@ -6,6 +6,7 @@ import type { Lang } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { digDeeper, type DigLayerRow } from './actions'
 import { t } from '@/shared/i18n'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /**
  * «Копать глубже» под шагом (HQ §8): аккордеон слоёв + кнопка следующего слоя.
@@ -64,7 +65,7 @@ export function DigPanel({
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex items-center gap-1 rounded-md py-0.5 text-[0.6875rem] text-muted hover:text-ink-2"
+            className={buttonClass({ variant: 'ghost', className: 'hover:text-ink-2' })}
           >
             <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
             {t('dig.mineN', lang).replace('{n}', String(layers.length))}
@@ -75,7 +76,7 @@ export function DigPanel({
             type="button"
             onClick={dig}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[0.6875rem] text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50"
+            className={buttonClass({ className: 'disabled:opacity-50' })}
           >
             {pending ? <Loader2 size={12} className="animate-spin" /> : <Pickaxe size={12} />}
             {layers.length === 0 ? t('dig.digDeeper2', lang) : t('dig.digLowerN', lang).replace('{a}', String(layers.length)).replace('{b}', String(MAX_LEVEL))}

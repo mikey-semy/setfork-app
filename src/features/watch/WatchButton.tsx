@@ -9,6 +9,7 @@ import { SplitButton } from '@/shared/ui/SplitButton'
 import { splitSegment } from '@/shared/ui/split-segment'
 import type { WatchEvents, WatchLevel, WatchState } from '@/core'
 import { setWatch } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export interface WatchLabels {
   watch: string
@@ -148,7 +149,7 @@ export function WatchButton({
                 setCustomOpen(false)
               }}
               disabled={pending}
-              className="rounded-md border border-accent bg-accent px-3.5 py-2 text-[0.8125rem] font-semibold text-white disabled:opacity-50"
+              className={buttonClass({ className: 'border-accent bg-accent text-white disabled:opacity-50' })}
             >
               {labels.apply}
             </button>

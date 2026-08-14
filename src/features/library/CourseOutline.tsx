@@ -2,6 +2,7 @@ import { Check, ListTree } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export interface OutlineLesson {
   title: string
@@ -25,7 +26,7 @@ export function CourseOutline({ lessons, showProgress, lang }: { lessons: Outlin
           const done = showProgress && l.quizTotal > 0 && l.quizPassed >= l.quizTotal
           return (
             <li key={`${l.anchor}-${i}`}>
-              <a href={`#${l.anchor}`} className="flex items-center gap-2 rounded-md px-1 py-1 text-[0.8125rem] text-ink-2 hover:text-accent">
+              <a href={`#${l.anchor}`} className={buttonClass({ variant: 'ghost', className: 'hover:text-accent' })}>
                 <span className="w-4 shrink-0 text-right font-mono text-[0.6875rem] text-muted">{i + 1}</span>
                 <span className="min-w-0 flex-1 truncate">{l.title}</span>
                 {showProgress && l.quizTotal > 0 && (

@@ -12,6 +12,7 @@ import type { Lang } from '@/shared/i18n'
 import { dismissSuggestionReview, submitSuggestionReview, withdrawSuggestionReview } from './review-actions'
 import type { ReviewView, Verdict } from './review-model'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export interface ReviewLabels {
   title: string
@@ -141,7 +142,7 @@ export function ReviewPanel({
               onChange={(e) => setDraft(e.target.value)}
               placeholder={labels.placeholder}
               rows={3}
-              className="w-full resize-y rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[0.8125rem] text-ink outline-hidden focus-visible:border-border-strong"
+              className={buttonClass({ className: 'w-full resize-y bg-surface-2 outline-hidden focus-visible:border-border-strong' })}
             />
             {/* Ряд вердиктов: одна высота, к правому краю (thumb-зона). На мобиле
                 подписи короткие — иконка + одно-два слова. */}

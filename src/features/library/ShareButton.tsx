@@ -5,6 +5,7 @@ import QRCode from 'qrcode'
 import { Check, Copy, Share2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { buttonClass } from '@/shared/ui/button-style'
 
 // Бренд-иконки (24×24, single-path, currentColor) — в lucide их нет.
 const P = (d: string) => (
@@ -85,7 +86,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
         <button
           type="button"
           onClick={nativeShare}
-          className="mb-1 flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-[0.8125rem] text-ink-2 hover:bg-surface-2 hover:text-ink"
+          className={buttonClass({ variant: 'ghost', className: 'mb-1 w-full hover:bg-surface-2' })}
         >
           <Share2 size={15} /> {label}
         </button>
@@ -93,7 +94,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
       <button
         type="button"
         onClick={copy}
-        className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-[0.8125rem] text-ink-2 hover:bg-surface-2 hover:text-ink"
+        className={buttonClass({ variant: 'ghost', className: 'w-full hover:bg-surface-2' })}
       >
         {copied ? <Check size={15} className="text-ok" /> : <Copy size={15} />}
         {copied ? (copiedLabel ?? copyLinkLabel) : copyLinkLabel}
@@ -111,7 +112,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
               target="_blank"
               rel="noreferrer"
               aria-label={n.name}
-              className="flex flex-col items-center gap-1 rounded-md px-1 py-2 text-muted hover:bg-surface-2 hover:text-ink"
+              className={buttonClass({ variant: 'ghost', className: 'flex-col hover:bg-surface-2' })}
             >
               {ICON[n.name]}
               <span className="text-[0.6875rem] leading-none">{n.name}</span>

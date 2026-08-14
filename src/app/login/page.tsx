@@ -9,6 +9,7 @@ import { Alert } from "@/shared/ui/Alert";
 import { LoginForm } from "@/features/auth/AuthForms";
 import { PasskeyLoginButton } from "@/features/auth/PasskeyLoginButton";
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from "@/shared/ui/button-style"
 
 export async function generateMetadata() {
   const lang = await getLang();
@@ -79,7 +80,7 @@ export default async function LoginPage({
         {oauth.yandex && (
           <Link
             href="/api/auth/yandex"
-            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[0.875rem] font-semibold text-primary-fg"
+            className={buttonClass({ variant: "primary", size: "lg", className: "mb-3 w-full" })}
           >
             <YandexMark /> {t("signInYandex", lang)}
           </Link>
@@ -88,7 +89,7 @@ export default async function LoginPage({
         {oauth.telegram && (
           <Link
             href="/api/auth/telegram"
-            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[0.875rem] font-semibold text-primary-fg"
+            className={buttonClass({ variant: "primary", size: "lg", className: "mb-3 w-full" })}
           >
             <TelegramMark /> {t("signInTelegram", lang)}
           </Link>
@@ -97,7 +98,7 @@ export default async function LoginPage({
         {oauth.vk && (
           <Link
             href="/api/auth/vk"
-            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[0.875rem] font-semibold text-primary-fg"
+            className={buttonClass({ variant: "primary", size: "lg", className: "mb-3 w-full" })}
           >
             <VkMark /> {t("signInVk", lang)}
           </Link>
@@ -106,7 +107,7 @@ export default async function LoginPage({
         {oauth.github && (
           <Link
             href="/api/auth/github"
-            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[0.875rem] font-semibold text-primary-fg"
+            className={buttonClass({ variant: "primary", size: "lg", className: "mb-3 w-full" })}
           >
             <GithubMark /> {t("signInGithub", lang)}
           </Link>
@@ -115,11 +116,9 @@ export default async function LoginPage({
         {demoSite ? (
           <a
             href={demoSite}
-            className={`flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-[0.875rem] font-semibold ${
-              hasOauth
-                ? "border border-border text-ink"
-                : "bg-primary text-primary-fg"
-            }`}
+            // Ступень lg — та же, что у кнопок входа рядом: ряд входа обязан быть
+            // одной высоты, а не собираться из py-3 на глаз.
+            className={buttonClass({ variant: hasOauth ? "outline" : "primary", size: "lg", className: "w-full" })}
           >
             {t("tryLiveDemo", lang)}
           </a>
@@ -129,7 +128,8 @@ export default async function LoginPage({
               <Button
                 type="submit"
                 variant={hasOauth ? "outline" : "primary"}
-                className={`w-full gap-2 px-4 py-3 text-[0.875rem] ${hasOauth ? "bg-transparent" : ""}`}
+                size="lg"
+                className={`w-full ${hasOauth ? "bg-transparent" : ""}`}
               >
                 {t("signInDemo", lang)}
               </Button>

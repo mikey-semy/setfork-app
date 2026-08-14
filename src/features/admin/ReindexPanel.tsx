@@ -7,6 +7,7 @@ import { getEmbedSpaceInfo, getReindexStatus, purgeEmbeddings, setEmbedTarget, s
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
 type SpaceInfo = Awaited<ReturnType<typeof getEmbedSpaceInfo>>
@@ -193,7 +194,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
           value={spread}
           disabled={running}
           onChange={(e) => setSpread(Math.max(0, Math.min(120, Number(e.target.value) || 0)))}
-          className="w-24 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] text-ink outline-hidden"
+          className={buttonClass({ className: 'w-24 bg-surface-2 outline-hidden' })}
         />
       </div>
 

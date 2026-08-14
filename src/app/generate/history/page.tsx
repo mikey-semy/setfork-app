@@ -52,7 +52,7 @@ export default async function GenerationHistoryPage() {
             <li key={g.id}>
               <Link
                 href={`/generate/${g.id}`}
-                className="flex items-center gap-3 rounded-md border border-border bg-surface px-3.5 py-2.5 transition-colors hover:border-border-strong"
+                className={buttonClass({ size: 'lg' })}
               >
                 <StatusIcon status={g.status} accepted={!!g.chosenTemplateId} />
                 <span className="min-w-0 flex-1">

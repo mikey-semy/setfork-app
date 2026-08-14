@@ -8,6 +8,7 @@ import type { Lang } from '@/shared/i18n'
 import type { TokenRow } from './queries'
 import { createApiToken, revokeApiToken } from './actions'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 // Чистая — на модульном уровне, а не в теле компонента (react-doctor:
 // пересборка на каждый рендер ломает мемоизацию детей).
@@ -26,7 +27,7 @@ function Copyable({ text, label }: { text: string; label: string }) {
           setTimeout(() => setDone(false), 1500)
         } catch {}
       }}
-      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[0.78125rem] text-ink-2 hover:text-ink"
+      className={buttonClass()}
     >
       {done ? <Check size={12} className="text-ok" /> : <Copy size={12} />} {label}
     </button>
@@ -107,7 +108,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
             }
           }}
           placeholder="Claude Desktop"
-          className="min-w-[13.75rem] flex-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] text-ink outline-hidden focus:border-border-strong"
+          className={buttonClass({ className: 'min-w-[13.75rem] flex-1 bg-surface-2 outline-hidden focus:border-border-strong' })}
         />
         <Button variant="primary" size="md" onClick={create} disabled={pending || !name.trim()}>
           {pending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {ru ? 'Создать токен' : 'Create token'}
@@ -161,7 +162,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
               </div>
               <form action={revokeApiToken.bind(null, tk.id)}>
                 <Tooltip label={ru ? 'Отозвать' : 'Revoke'}>
-                  <button type="submit" className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted hover:text-danger">
+                  <button type="submit" className={buttonClass({ variant: 'danger', className: 'hover:text-danger' })}>
                     <Trash2 size={15} />
                   </button>
                 </Tooltip>

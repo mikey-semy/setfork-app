@@ -7,6 +7,7 @@ import type { Lang } from '@/shared/i18n'
 import { safeHref } from '@/shared/lib/safe-url'
 import { detectLang, LANG_LABEL } from '@/shared/ui/detect-lang'
 import { t } from '@/shared/i18n'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /**
  * Вариант списка карточкой. СВЁРНУТ по умолчанию (фидбек владельца: показывать
@@ -102,7 +103,7 @@ export function CandidateCard({
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-accent hover:underline"
+                          className={buttonClass({ className: 'bg-surface-2 text-accent hover:underline' })}
                         >
                           <Link2 size={11} /> {r.label}
                         </a>

@@ -6,6 +6,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { UserSession } from './queries'
 import { revokeOtherSessions, revokeSession } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang: Lang }) {
   const [pending, start] = useTransition()
@@ -52,7 +53,7 @@ export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang
               type="button"
               onClick={() => start(() => revokeSession(s.id))}
               disabled={pending}
-              className="shrink-0 rounded-md border border-border px-3 py-1.5 text-[0.78125rem] font-medium text-ink-2 hover:border-danger hover:text-danger disabled:opacity-60"
+              className={buttonClass({ variant: 'danger', className: 'hover:border-danger hover:text-danger disabled:opacity-60' })}
             >
               {t('revoke', lang)}
             </button>
@@ -66,7 +67,7 @@ export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang
           type="button"
           onClick={() => start(() => revokeOtherSessions())}
           disabled={pending}
-          className="mt-1 inline-flex w-fit items-center gap-2 rounded-md border border-danger/40 px-3.5 py-2 text-[0.8125rem] font-semibold text-danger hover:bg-danger/5 disabled:opacity-60"
+          className={buttonClass({ variant: 'dangerSolid', className: 'mt-1 w-fit hover:bg-danger/5 disabled:opacity-60' })}
         >
           {pending && <Loader2 size={14} className="animate-spin" />}
           {t('signOutOthers', lang)}

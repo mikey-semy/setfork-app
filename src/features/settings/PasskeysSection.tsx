@@ -5,6 +5,7 @@ import { startRegistration } from '@simplewebauthn/browser'
 import { Fingerprint, Loader2, Plus, Trash2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { beginPasskeyRegistration, deletePasskey, finishPasskeyRegistration, listPasskeys } from '@/features/auth/passkeys'
+import { buttonClass } from '@/shared/ui/button-style'
 
 type Row = { id: string; name: string; createdAt: Date; lastUsedAt: Date | null }
 
@@ -66,7 +67,7 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
                   {p.lastUsedAt ? ` · ${ru ? 'вход' : 'used'} ${fmt(p.lastUsedAt)}` : ''}
                 </div>
               </div>
-              <button type="button" onClick={() => remove(p.id)} aria-label={ru ? 'удалить' : 'remove'} className="shrink-0 rounded-md p-1 text-muted hover:bg-surface hover:text-danger">
+              <button type="button" onClick={() => remove(p.id)} aria-label={ru ? 'удалить' : 'remove'} className={buttonClass({ variant: 'danger', className: 'hover:bg-surface hover:text-danger' })}>
                 <Trash2 size={15} />
               </button>
             </div>
@@ -79,7 +80,7 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
           type="button"
           onClick={add}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-[0.8125rem] font-semibold text-ink hover:border-border-strong disabled:opacity-60"
+          className={buttonClass({ className: 'disabled:opacity-60' })}
         >
           {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {ru ? 'Добавить passkey' : 'Add a passkey'}
         </button>

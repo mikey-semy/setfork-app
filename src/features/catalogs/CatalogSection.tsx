@@ -7,6 +7,7 @@ import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { createCatalogAndAssign, setListCatalog } from './actions'
 import type { CatalogRow } from './queries'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /** Управление каталогом списка (только владелец; settings уже owner-gated). */
 export function CatalogSection({
@@ -54,9 +55,9 @@ export function CatalogSection({
         <input
           name="name"
           placeholder={t('newCatalogPh', lang)}
-          className="w-[15rem] rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] text-ink outline-hidden focus:border-border-strong"
+          className={buttonClass({ className: 'w-[15rem] bg-surface-2 outline-hidden focus:border-border-strong' })}
         />
-        <button type="submit" className="rounded-md border border-border px-3.5 py-2 text-[0.8125rem] font-semibold text-ink hover:border-border-strong">
+        <button type="submit" className={buttonClass()}>
           {t('createCatalogBtn', lang)}
         </button>
       </form>

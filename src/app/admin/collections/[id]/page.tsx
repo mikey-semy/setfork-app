@@ -12,6 +12,7 @@ import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,8 +54,8 @@ export default async function EditCollectionPage({ params, searchParams }: { par
             <input type="checkbox" name="published" defaultChecked={c.published} /> {ru ? 'Опубликовано' : 'Published'}
           </label>
         </div>
-        <div className="flex justify-end">
-          <button type="submit" className="rounded-md bg-primary px-5 py-2 text-[0.8125rem] font-semibold text-primary-fg">{ru ? 'Сохранить' : 'Save'}</button>
+        <div className={buttonClass({ variant: 'ghost', className: 'justify-end' })}>
+          <button type="submit" className={buttonClass({ variant: 'primary' })}>{ru ? 'Сохранить' : 'Save'}</button>
         </div>
       </form>
 
@@ -70,8 +71,8 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         </div>
         <form action={setCollectionCover} className="flex items-center gap-2">
           <input type="hidden" name="id" value={c.id} />
-          <input type="file" name="file" accept="image/*" required className="text-[0.8125rem] text-ink-2" />
-          <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[0.8125rem] font-semibold text-ink hover:border-border-strong">
+          <input type="file" name="file" accept="image/*" required className={buttonClass({ variant: 'ghost' })} />
+          <button type="submit" className={buttonClass()}>
             <ImagePlus size={14} /> {ru ? 'Загрузить' : 'Upload'}
           </button>
         </form>
@@ -94,8 +95,8 @@ export default async function EditCollectionPage({ params, searchParams }: { par
               <input type="radio" name="kind" value="catalog" className="sr-only" /> {ru ? 'Каталог' : 'Catalog'}
             </label>
           </div>
-          <Input name="ref" required placeholder="owner/slug" className="min-w-0 flex-1 font-mono" />
-          <button type="submit" className="rounded-md bg-primary px-4 py-2 text-[0.8125rem] font-semibold text-primary-fg">{ru ? 'Добавить' : 'Add'}</button>
+          <Input name="ref" required placeholder="owner/slug" className={buttonClass({ variant: 'ghost', className: 'min-w-0 flex-1 font-mono' })} />
+          <button type="submit" className={buttonClass({ variant: 'primary' })}>{ru ? 'Добавить' : 'Add'}</button>
         </form>
 
         <div className="flex flex-col gap-1.5">
@@ -107,7 +108,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
                 <span className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[0.6875rem] uppercase text-muted">{it.kind}</span>
                 <span className={`min-w-0 flex-1 truncate font-mono text-[0.78125rem] ${it.ok ? 'text-ink' : 'text-danger line-through'}`}>{it.label}</span>
                 <form action={remove}>
-                  <button type="submit" aria-label="remove" className="rounded-md p-1 text-muted hover:text-danger">
+                  <button type="submit" aria-label="remove" className={buttonClass({ variant: 'danger', className: 'hover:text-danger' })}>
                     <X size={14} />
                   </button>
                 </form>
@@ -118,8 +119,8 @@ export default async function EditCollectionPage({ params, searchParams }: { par
       </SettingsSection>
 
       {/* Удаление */}
-      <form action={deleteCollection.bind(null, c.id)} className="flex justify-end">
-        <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-danger/40 px-3 py-1.5 text-[0.8125rem] font-semibold text-danger hover:bg-danger/10">
+      <form action={deleteCollection.bind(null, c.id)} className={buttonClass({ variant: 'ghost', className: 'justify-end' })}>
+        <button type="submit" className={buttonClass({ variant: 'dangerSolid', className: 'hover:bg-danger/10' })}>
           <Trash2 size={14} /> {ru ? 'Удалить подборку' : 'Delete collection'}
         </button>
       </form>

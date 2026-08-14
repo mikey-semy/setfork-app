@@ -129,7 +129,7 @@ function AchRow({
           <button
             type="button"
             onClick={() => onClear(k)}
-            className="shrink-0 rounded-md p-1 text-muted hover:bg-surface hover:text-danger"
+            className={buttonClass({ variant: 'danger', className: 'hover:bg-surface hover:text-danger' })}
           >
             <X size={15} />
           </button>

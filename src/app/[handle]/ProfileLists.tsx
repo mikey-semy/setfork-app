@@ -5,6 +5,7 @@ import { Pagination } from '@/shared/ui/Pagination'
 import { FeedList } from '@/features/library/FeedList'
 import { ListsToolbar } from '@/features/profile/ListsToolbar'
 import type { ProfilePageData } from './load'
+import { buttonClass } from '@/shared/ui/button-style'
 
 type Props = Pick<
   ProfilePageData,
@@ -105,7 +106,7 @@ export function ProfileLists({
             name="q"
             defaultValue={rawQuery}
             placeholder={t('searchStarsPh', lang)}
-            className="min-w-[11.25rem] flex-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
+            className={buttonClass({ className: 'min-w-[11.25rem] flex-1 bg-surface-2 outline-hidden focus:border-border-strong' })}
           />
           <div className="flex gap-1 text-[0.78125rem]">
             {(['recent', 'name', 'stars'] as const).map((s) => (

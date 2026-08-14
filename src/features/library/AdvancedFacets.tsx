@@ -6,6 +6,7 @@ import { Check, ChevronDown, Layers, List, ListOrdered, Plus } from 'lucide-reac
 import { t, type Lang } from '@/shared/i18n'
 import { SearchField } from '@/shared/ui/SearchField'
 import { buildSearchQuery, parseSearchQuery, type ParsedQuery } from './search-query'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /**
  * Боковые фасеты в стиле GitHub: клик-переключатели (Type/Verified/Tags) дописывают
@@ -97,7 +98,7 @@ export function AdvancedFacets({
         <button
           type="button"
           onClick={() => setTagsOpen((v) => !v)}
-          className="mb-1 flex w-full items-center gap-2 rounded-md px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted outline-hidden hover:text-ink-2 focus-visible:ring-2 focus-visible:ring-border-strong"
+          className={buttonClass({ className: 'mb-1 w-full uppercase tracking-wider outline-hidden hover:text-ink-2 focus-visible:ring-2 focus-visible:ring-border-strong' })}
         >
           {t('tags', lang)}
           {parsed.tags.length > 0 && <span className="rounded-full bg-surface px-1.5 text-[0.6875rem] normal-case text-ink-2">{parsed.tags.length}</span>}

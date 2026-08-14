@@ -7,6 +7,7 @@ import { parseFailure, type AiFailCode } from '@/shared/ai/failure'
 import { Button } from '@/shared/ui/button'
 import { toast } from '@/shared/ui/toast'
 import { t } from '@/shared/i18n'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /**
  * «Почему не получилось» — свёрнуто по умолчанию.
@@ -87,7 +88,7 @@ export function FailureNote({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="inline-flex items-center gap-1 rounded-md py-2 text-[0.6875rem] text-muted hover:text-ink-2 max-sm:min-h-11"
+        className={buttonClass({ variant: 'ghost', className: 'hover:text-ink-2 max-sm:min-h-11' })}
       >
         <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
         {t('generation.details', lang)}

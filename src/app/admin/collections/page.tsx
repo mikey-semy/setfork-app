@@ -8,6 +8,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { getAdminCollections } from '@/features/collections/queries'
 import { createCollection } from '@/features/admin/collection-actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +40,7 @@ export default async function AdminCollectionsPage() {
           required
           maxLength={120}
           placeholder={ru ? 'Название новой подборки' : 'New collection title'}
-          className="flex-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] text-ink outline-hidden"
+          className={buttonClass({ className: 'flex-1 bg-surface-2 outline-hidden' })}
         />
         <Button type="submit" variant="primary" size="md">
           <Plus size={14} /> {ru ? 'Создать' : 'Create'}

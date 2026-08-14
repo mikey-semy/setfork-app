@@ -7,6 +7,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { TelegramLoginWatcher } from '@/features/auth/TelegramLoginWatcher'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -31,7 +32,7 @@ export default async function TelegramLoginPage() {
           href={botLink}
           target="_blank"
           rel="noreferrer"
-          className="mb-4 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[0.875rem] font-semibold text-primary-fg"
+          className={buttonClass({ variant: 'primary', size: 'lg', className: 'mb-4' })}
         >
           {t('tgLoginOpen', lang)}
         </a>

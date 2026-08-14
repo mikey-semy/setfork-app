@@ -6,6 +6,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { UserLine } from '@/shared/ui/UserLine'
 import { addCollaborator, removeCollaborator } from './actions'
 import type { CollaboratorRow } from './queries'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /** Управление соавторами (только владелец; страница settings уже owner-gated). */
 export function CollaboratorsSection({
@@ -29,7 +30,7 @@ export function CollaboratorsSection({
         <input
           name="handle"
           placeholder={t('addCollaboratorPh', lang)}
-          className="w-[13.75rem] rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] text-ink outline-hidden focus:border-border-strong"
+          className={buttonClass({ className: 'w-[13.75rem] bg-surface-2 outline-hidden focus:border-border-strong' })}
         />
         <Button type="submit" variant="primary" size="md">
           {t('addCollaborator', lang)}
@@ -48,7 +49,7 @@ export function CollaboratorsSection({
                 <Tooltip label={t('removeLabel', lang)}>
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-1 rounded-md p-1 text-muted hover:text-danger"
+                    className={buttonClass({ variant: 'danger', className: 'hover:text-danger' })}
                     aria-label={t('removeLabel', lang)}
                   >
                     <X size={15} />

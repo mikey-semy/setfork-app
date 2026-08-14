@@ -13,6 +13,7 @@ import type { RecommendedList } from './queries'
 import { DEFAULT_PREFS, type FeedPrefs } from './prefs'
 import { FeedFilter } from './FeedFilter'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 // Лента dashboard: сервер отдаёт все события (page.tsx), фильтр — клиентский
 // по localStorage-настройкам (FeedFilter). В конце — «Recommended for you».
@@ -138,7 +139,7 @@ export function Feed({
               <Link
                 key={`${r.ownerHandle}/${r.slug}`}
                 href={`/${r.ownerHandle}/${r.slug}`}
-                className="group flex items-center gap-2 rounded-md px-2 py-2 hover:bg-surface-2"
+                className={buttonClass({ variant: 'ghost', className: 'group hover:bg-surface-2' })}
               >
                 <span className="min-w-0">
                   <span className="block truncate text-[0.8125rem] font-semibold text-ink group-hover:text-accent">
@@ -157,7 +158,7 @@ export function Feed({
 
       <Link
         href="/explore"
-        className="mt-3 block rounded-lg border border-border py-2.5 text-center text-[0.8125rem] font-semibold text-accent hover:bg-surface"
+        className={buttonClass({ size: 'lg', className: 'mt-3 block text-center text-accent hover:bg-surface' })}
       >
         {ru ? 'Ещё' : 'More'}
       </Link>

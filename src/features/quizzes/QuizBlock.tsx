@@ -213,6 +213,7 @@ export function QuizBlock({
                 type="button"
                 disabled={checked || pending || readOnly}
                 onClick={() => toggle(o.id)}
+                // eslint-disable-next-line no-restricted-syntax -- карточка варианта ответа: высота от содержимого
                 className={`flex items-center gap-2.5 rounded-md border px-3 py-2 text-left text-[0.8125rem] transition-colors ${
                   showRight ? 'border-ok bg-ok/10' : showWrong ? 'border-danger bg-danger/10' : sel ? 'border-accent' : 'border-border'
                 } ${checked ? 'cursor-default' : 'hover:border-border-strong'}`}

@@ -6,6 +6,7 @@ import { Check, GitFork, Loader2 } from 'lucide-react'
 import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
 import { forkNameStatus, forkTemplate } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export interface ForkLabels {
   ownerLabel: string
@@ -74,7 +75,7 @@ export function ForkForm({
             }}
             spellCheck={false}
             autoCapitalize="off"
-            className="w-full rounded-md border border-border bg-surface px-2.5 py-2 font-mono text-[0.8125rem] text-ink outline-hidden focus:border-accent"
+            className={buttonClass({ className: 'w-full font-mono outline-hidden focus:border-accent' })}
           />
         </Field>
       </div>
@@ -107,21 +108,21 @@ export function ForkForm({
           rows={2}
           placeholder={labels.descPlaceholder}
           maxLength={350}
-          className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-2 text-[0.8125rem] text-ink outline-hidden focus:border-accent"
+          className={buttonClass({ className: 'w-full resize-none outline-hidden focus:border-accent' })}
         />
       </Field>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
       <div className="flex items-center justify-end gap-2 border-t border-border pt-3.5">
-        <Link href={cancelHref} className="rounded-md border border-border px-3 py-2 text-[0.8125rem] font-semibold text-ink hover:border-border-strong">
+        <Link href={cancelHref} className={buttonClass()}>
           {labels.cancel}
         </Link>
         <button
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="inline-flex items-center gap-2 rounded-md border border-accent bg-accent px-3.5 py-2 text-[0.8125rem] font-semibold text-white disabled:opacity-50"
+          className={buttonClass({ className: 'border-accent bg-accent text-white disabled:opacity-50' })}
         >
           {submitting && <Loader2 size={14} className="animate-spin" />}
           <GitFork size={14} /> {labels.create}

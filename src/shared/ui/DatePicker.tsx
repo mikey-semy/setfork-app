@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { AnchoredMenu } from './AnchoredMenu'
+import { buttonClass } from '@/shared/ui/button-style'
 
 // Свой календарь-пикер даты (вместо нативного <input type="date">, у которого
 // браузерный вид/локаль). Значение — 'YYYY-MM-DD' ('' = не задано). Пн-первый.
@@ -41,7 +42,7 @@ export function DatePicker({
           <button
             type="button"
             onClick={toggle}
-            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[0.78125rem] transition-colors ${
+            className={`${buttonClass({ size: 'sm' })} ${
               open ? 'border-border-strong' : 'border-border'
             } ${label ? 'text-ink' : 'text-muted'} hover:border-border-strong`}
           >
@@ -74,11 +75,11 @@ function Calendar({ selected, onPick, ru }: { selected: Date | null; onPick: (d:
   return (
     <div className="w-[15.5rem] p-2.5">
       <div className="mb-2 flex items-center justify-between">
-        <button type="button" onClick={() => shift(-1)} className="rounded-md p-1 text-muted hover:text-ink" aria-label="prev">
+        <button type="button" onClick={() => shift(-1)} className={buttonClass({ variant: 'ghost' })} aria-label="prev">
           <ChevronLeft size={16} />
         </button>
         <span className="text-[0.8125rem] font-semibold text-ink">{MONTHS[ru ? 'ru' : 'en'][m]} {y}</span>
-        <button type="button" onClick={() => shift(1)} className="rounded-md p-1 text-muted hover:text-ink" aria-label="next">
+        <button type="button" onClick={() => shift(1)} className={buttonClass({ variant: 'ghost' })} aria-label="next">
           <ChevronRight size={16} />
         </button>
       </div>

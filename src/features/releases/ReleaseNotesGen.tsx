@@ -5,6 +5,7 @@ import { Loader2, Sparkles } from 'lucide-react'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import type { Lang } from '@/shared/i18n'
 import { generateReleaseNotes } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /**
  * Поле заметок релиза с автогенерацией: кнопка «Сгенерировать из изменений»
@@ -57,7 +58,7 @@ export function ReleaseNotesGen({
           type="button"
           onClick={generate}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[0.78125rem] font-medium text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50"
+          className={buttonClass({ className: 'disabled:opacity-50' })}
         >
           {busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} className="text-accent" />}
           {labels.generate}

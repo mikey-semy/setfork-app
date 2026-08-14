@@ -6,6 +6,7 @@ import { Loader2, RefreshCw } from 'lucide-react'
 import { Meter } from '@/shared/ui/Meter'
 import { Alert } from '@/shared/ui/Alert'
 import { fetchOpenRouterCredits } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 type Credits = { total: number; used: number; remaining: number }
 
@@ -43,7 +44,7 @@ export function CreditsWidget({ lang }: { lang: Lang }) {
       type="button"
       onClick={load}
       disabled={loading}
-      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[0.78125rem] text-ink-2 hover:border-border-strong disabled:opacity-60"
+      className={buttonClass({ className: 'disabled:opacity-60' })}
     >
       {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
       {ru ? 'Обновить' : 'Refresh'}

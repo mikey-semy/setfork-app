@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { Terminal, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 // Промо-слот сайдбара (место под «свою рекламу», как Copilot-карточка у GitHub).
 // Одна активная кампания; id — для повторного показа после смены кампании.
@@ -40,7 +41,7 @@ export function PromoCard({ lang }: { lang: Lang }) {
   if (hidden) return null
   return (
     <div className={cardClass({ className: 'relative overflow-hidden bg-linear-to-br from-(--accent-soft) to-surface' })}>
-      <button type="button" onClick={dismiss} className="absolute right-2 top-2 rounded-md p-1 text-muted hover:text-ink" aria-label="Dismiss">
+      <button type="button" onClick={dismiss} className={buttonClass({ variant: 'ghost', size: 'sm', className: 'absolute right-2 top-2 size-7 p-0' })} aria-label="Dismiss">
         <X size={13} />
       </button>
       <span className="inline-block rounded-full bg-accent px-2 py-0.5 text-[0.6875rem] font-semibold text-white">{c.badge}</span>
@@ -50,7 +51,7 @@ export function PromoCard({ lang }: { lang: Lang }) {
       </div>
       <Link
         href={PROMO.href}
-        className="mt-3 block rounded-md border border-border bg-surface py-1.5 text-center text-[0.78125rem] font-semibold text-ink hover:border-border-strong"
+        className={buttonClass({ className: 'mt-3 block text-center' })}
       >
         {c.cta}
       </Link>

@@ -244,7 +244,7 @@ export function RunView({
           <span className="min-w-0 flex-1 text-[0.8125rem] font-medium text-ink">
             {total > 0 && done === total && blockedCount === 0 ? t('courseAllStepsDone', lang) : t('courseCompletedEarlier', lang)}
           </span>
-          <Link href={certificateHref} className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ok/40 bg-surface px-2.5 py-1.5 text-[0.78125rem] font-medium text-ok hover:bg-ok/15">
+          <Link href={certificateHref} className={buttonClass({ className: 'border-ok/40 text-ok hover:bg-ok/15' })}>
             <Award size={14} /> {t('courseCertificate', lang)}
           </Link>
         </div>
@@ -390,10 +390,10 @@ export function RunView({
                       rows={2}
                       aria-label={t('runReasonPh', lang)}
                       placeholder={t('runReasonPh', lang)}
-                      className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-1.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
+                      className={buttonClass({ className: 'w-full resize-none outline-hidden focus:border-border-strong' })}
                     />
                     <div className="mt-2 flex items-center gap-2">
-                      <button type="button" onClick={() => confirmBlock(i)} className="inline-flex items-center gap-1.5 rounded-md bg-danger px-3 py-1.5 text-[0.78125rem] font-semibold text-white">
+                      <button type="button" onClick={() => confirmBlock(i)} className={buttonClass({ variant: 'dangerSolid', className: 'bg-danger text-white' })}>
                         <Ban size={13} /> {t('runBlockAction', lang)}
                       </button>
                       <button
@@ -402,7 +402,7 @@ export function RunView({
                           setBlockingId(null)
                           setReasonDraft('')
                         }}
-                        className="rounded-md px-2.5 py-1.5 text-[0.78125rem] text-ink-2 hover:text-ink"
+                        className={buttonClass({ variant: 'ghost' })}
                       >
                         {t('cancel', lang)}
                       </button>
@@ -422,12 +422,12 @@ export function RunView({
                       <button
                         type="button"
                         onClick={() => start(() => reportBlockedStep(runId, s.id))}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-[0.78125rem] font-medium text-ink hover:border-border-strong"
+                        className={buttonClass()}
                       >
                         <Flag size={12} /> {t('runReport', lang)}
                       </button>
                       {!closed && (
-                        <button type="button" onClick={() => unblock(i)} className="rounded-md px-2.5 py-1.5 text-[0.78125rem] text-ink-2 hover:text-ink">
+                        <button type="button" onClick={() => unblock(i)} className={buttonClass({ variant: 'ghost' })}>
                           {t('runUnblock', lang)}
                         </button>
                       )}

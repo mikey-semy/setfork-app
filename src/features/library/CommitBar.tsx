@@ -7,6 +7,7 @@ import { AvatarStack } from '@/shared/ui/AvatarStack'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export interface CommitAuthor {
   handle: string
@@ -125,7 +126,7 @@ export function CommitBar({
           <Link
             href={versionsHref}
             aria-label={labels.history}
-            className="flex shrink-0 items-center gap-1 rounded-md px-1 py-0.5 text-muted hover:bg-surface-2 hover:text-ink"
+            className={buttonClass({ variant: 'ghost', className: 'hover:bg-surface-2' })}
           >
             <History size={15} />
             <span className="hidden font-mono text-[0.78125rem] md:inline">{commitsCount}</span>

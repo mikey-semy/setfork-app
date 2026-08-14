@@ -8,6 +8,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { getImprovementFeed } from '@/features/improve/queries'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -64,11 +65,11 @@ export default async function ImprovePage() {
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col gap-1.5">
-                    <Link href={`${base}/suggest`} className="rounded-md bg-primary px-3 py-1.5 text-center text-[0.78125rem] font-medium text-primary-fg hover:opacity-90">
+                    <Link href={`${base}/suggest`} className={buttonClass({ variant: 'primary', className: 'text-center' })}>
                       {ru ? 'Предложить правку' : 'Suggest edit'}
                     </Link>
                     {it.openIssues > 0 && (
-                      <Link href={`${base}/issues`} className="rounded-md border border-border px-3 py-1.5 text-center text-[0.78125rem] text-ink-2 hover:border-border-strong">
+                      <Link href={`${base}/issues`} className={buttonClass({ className: 'text-center' })}>
                         {ru ? 'Вопросы' : 'Issues'}
                       </Link>
                     )}

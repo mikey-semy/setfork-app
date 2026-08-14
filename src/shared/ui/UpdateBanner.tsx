@@ -6,6 +6,7 @@ import { APP_VERSION } from '@/shared/app-version'
 import type { Lang } from '@/shared/i18n'
 import { t } from '@/shared/i18n'
 import { useViewportBottom } from './use-viewport-bottom'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /**
  * «Вышло обновление» — детект устаревшей вкладки. После деплоя старые вкладки шлют
@@ -78,7 +79,7 @@ export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {
         onClick={() => window.location.reload()}
         aria-label={t('ui.reload', lang)}
         title={t('ui.reload', lang)}
-        className="shrink-0 self-center rounded-md bg-primary p-2 text-primary-fg transition-opacity hover:opacity-90"
+        className={buttonClass({ variant: 'primary', className: 'self-center transition-opacity' })}
       >
         <RefreshCw size={16} />
       </button>

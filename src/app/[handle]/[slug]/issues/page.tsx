@@ -19,6 +19,7 @@ import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { Tag } from 'lucide-react'
 import { PAGE } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -80,7 +81,7 @@ export default async function IssuesPage({
             <SearchForm initial={q ?? ''} placeholder={t('searchIssuesPh', lang)} />
           </form>
           {session && (
-            <Link href={`${base}/new`} className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[0.8125rem] font-semibold text-primary-fg">
+            <Link href={`${base}/new`} className={buttonClass({ variant: 'primary' })}>
               <Plus size={15} /> {t('newIssue', lang)}
             </Link>
           )}
@@ -97,7 +98,7 @@ export default async function IssuesPage({
             </Link>
           </div>
           <div className="flex items-center gap-1">
-            <Link href={`/${owner}/${slug}/milestones`} className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium text-ink-2 hover:bg-surface hover:text-ink">
+            <Link href={`/${owner}/${slug}/milestones`} className={buttonClass({ variant: 'ghost', className: 'hover:bg-surface' })}>
               <MilestoneIcon size={14} /> {t('milestonesTitle', lang)}
             </Link>
             {labels.length > 0 && (

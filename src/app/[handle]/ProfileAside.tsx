@@ -8,6 +8,7 @@ import { SocialIcon, socialLabel } from '@/features/settings/socials'
 import { displayUrl } from '@/shared/lib/link-label'
 import { monthYear } from '@/shared/lib/date'
 import type { ProfilePageData } from './load'
+import { buttonClass } from '@/shared/ui/button-style'
 
 type Props = Pick<
   ProfilePageData,
@@ -45,14 +46,14 @@ export function ProfileAside({ handle, lang, user, viewer, isOwner, bigAvatar, c
         {isOwner ? (
           <Link
             href="/settings"
-            className="inline-flex w-full items-center justify-center rounded-md border border-border px-4 py-2 text-[0.8125rem] font-semibold text-ink hover:border-border-strong"
+            className={buttonClass({ className: 'w-full' })}
           >
             {t('editProfile', lang)}
           </Link>
         ) : viewer ? (
           <FollowButton targetUserId={user.id} following={following} lang={lang} />
         ) : (
-          <Link href="/login" className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-[0.8125rem] font-semibold text-primary-fg">
+          <Link href="/login" className={buttonClass({ variant: 'primary', className: 'w-full' })}>
             {t('follow', lang)}
           </Link>
         )}

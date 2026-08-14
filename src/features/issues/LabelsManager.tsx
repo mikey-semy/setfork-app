@@ -6,6 +6,7 @@ import type { Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { chipColors, type CustomLabel } from '@/shared/lib/labels'
 import { createLabel, deleteLabel } from './label-actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 const PRESET = ['#2159d6', '#7c3aed', '#15803d', '#c2570c', '#be123c', '#0f766e', '#b45309', '#475569']
 
@@ -78,7 +79,7 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
           maxLength={30}
           placeholder={ru ? 'имя метки' : 'label name'}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())}
-          className="min-w-0 flex-1 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[0.8125rem] text-ink outline-hidden"
+          className={buttonClass({ className: 'min-w-0 flex-1 bg-surface-2 outline-hidden' })}
         />
         <Button variant="primary" onClick={add} disabled={pending || !name.trim()}>
           {pending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} {ru ? 'Добавить' : 'Add'}

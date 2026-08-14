@@ -6,6 +6,7 @@ import { startAuthentication } from '@simplewebauthn/browser'
 import { Fingerprint, Loader2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { beginPasskeyLogin, finishPasskeyLogin } from '@/features/auth/passkeys'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /** Кнопка «Войти по passkey» на /login (WebAuthn-аутентификация, discoverable). */
 export function PasskeyLoginButton({ lang }: { lang: Lang }) {
@@ -46,7 +47,7 @@ export function PasskeyLoginButton({ lang }: { lang: Lang }) {
         type="button"
         onClick={go}
         disabled={busy}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-[0.8125rem] font-semibold text-ink hover:border-border-strong disabled:opacity-60"
+        className={buttonClass({ className: 'w-full disabled:opacity-60' })}
       >
         {busy ? <Loader2 size={15} className="animate-spin" /> : <Fingerprint size={15} />} {ru ? 'Войти по passkey' : 'Sign in with a passkey'}
       </button>

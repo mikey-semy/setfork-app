@@ -5,6 +5,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { toggleIssueAssignee } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 
 type Person = { handle: string; avatarUrl: string | null }
@@ -68,7 +69,7 @@ export function AssigneePicker({
                 type="button"
                 onClick={toggleMenu}
                 aria-label={labels?.add ?? L('назначить', 'assign')}
-                className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[0.78125rem] text-muted hover:bg-surface-2 hover:text-ink"
+                className={buttonClass({ variant: 'ghost', className: 'hover:bg-surface-2' })}
               >
                 <UserPlus size={14} />
               </button>

@@ -9,6 +9,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { getUserRuns, type UserRunRow } from '@/features/runs/queries'
 import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
 import { PAGE } from '@/shared/ui/control'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -84,7 +85,7 @@ function RunCard({ r, lang, muted }: { r: UserRunRow; lang: Lang; muted?: boolea
       </Link>
       <Link
         href={`/runs/${r.id}`}
-        className="shrink-0 rounded-md border border-border px-3 py-1.5 text-[0.78125rem] font-semibold text-ink hover:border-border-strong"
+        className={buttonClass()}
       >
         {r.status === 'active' ? t('runResume', lang) : t('runOpen', lang)}
       </Link>

@@ -10,6 +10,7 @@ import { useConfirm } from '@/shared/ui/use-confirm'
 import { t, type Lang } from '@/shared/i18n'
 import type { TagRow } from './queries'
 import { deleteTag, mergeTags, refreshTagUsage, renameTag, setTagCurated } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 // Админ-реестр тегов: курирование, переименование, слияние, удаление, пересчёт usage.
 // Экшены (requireAdmin) — в ./actions; revalidatePath('/admin/tags') + router.refresh().
@@ -38,7 +39,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
           type="button"
           onClick={() => run(() => refreshTagUsage())}
           disabled={pending}
-          className="ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-surface px-3 py-1.5 text-[0.8125rem] font-medium text-ink hover:border-border-strong disabled:opacity-50"
+          className={buttonClass({ className: 'ml-auto disabled:opacity-50' })}
         >
           {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {t('tags.refreshUsage', lang)}
         </button>

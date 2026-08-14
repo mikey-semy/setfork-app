@@ -8,6 +8,7 @@ import { Field } from '@/shared/ui/Field'
 import { useConfirm } from '@/shared/ui/use-confirm'
 import { generateVapidKeys, setPushSubject } from './actions'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export interface PushFormValues {
   publicKey: string
@@ -66,7 +67,7 @@ export function PushSettingsForm({ lang, v }: { lang: Lang; v: PushFormValues })
           type="button"
           onClick={gen}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[0.8125rem] font-medium text-ink hover:border-border-strong disabled:opacity-50"
+          className={buttonClass({ className: 'disabled:opacity-50' })}
         >
           {busy ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />}
           {pub ? (ru ? 'Перегенерировать ключи' : 'Regenerate keys') : ru ? 'Сгенерировать ключи' : 'Generate keys'}

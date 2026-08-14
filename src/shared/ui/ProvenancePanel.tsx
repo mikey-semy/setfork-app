@@ -6,6 +6,7 @@ import type { Lang } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { prettyModelName } from '@/shared/ai/model-names'
 import { t } from '@/shared/i18n'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /**
  * «Как собран список» (HQ §6, объяснимость): прозрачность мастерской — какие
@@ -46,7 +47,7 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 rounded-md py-0.5 text-[0.6875rem] text-muted hover:text-ink-2"
+        className={buttonClass({ variant: 'ghost', className: 'hover:text-ink-2' })}
       >
         <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
         <ScrollText size={11} /> {t('ui.howListWasBuilt', lang)}

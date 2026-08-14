@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Loader2, Wrench } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { toggleMaintenance } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 /** Тумблер «сайт на ремонте». Админ при включённом режиме ходит по сайту
  *  свободно (байпас в middleware) и выключает режим здесь же. envOverride —
@@ -33,7 +34,7 @@ export function MaintenanceSection({ initialOn, envOverride, lang }: { initialOn
           type="button"
           onClick={flip}
           disabled={pending}
-          className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-[0.8125rem] font-semibold disabled:opacity-50 ${
+          className={`${buttonClass()} disabled:opacity-50 ${
             on ? 'bg-primary text-primary-fg' : 'bg-danger text-white hover:opacity-90'
           }`}
         >

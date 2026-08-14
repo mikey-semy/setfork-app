@@ -6,6 +6,7 @@ import { Pencil, Loader2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { editSuggestionNote } from './actions'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export interface TitleLabels {
   edit: string
@@ -54,7 +55,7 @@ export function SuggestionTitle({
           onChange={(e) => setDraft(e.target.value)}
           placeholder={labels.placeholder}
           maxLength={300}
-          className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[1rem] text-ink outline-hidden focus-visible:border-border-strong"
+          className={buttonClass({ className: 'min-w-0 flex-1 outline-hidden focus-visible:border-border-strong' })}
         />
         {/* Действия — вправо, одной высотой (стандарт кнопок). */}
         <Button variant="ghost" onClick={() => setEditing(false)} disabled={pending}>

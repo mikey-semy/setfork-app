@@ -8,6 +8,7 @@ import { DiffStat } from '@/shared/ui/DiffStat'
 import { SuggestionTitle } from '@/features/library/SuggestionTitle'
 import { branchLabel } from '@/features/git/branch-label'
 import type { loadSuggestionPage } from './load'
+import { buttonClass } from '@/shared/ui/button-style'
 
 type Loaded = Awaited<ReturnType<typeof loadSuggestionPage>>
 
@@ -85,7 +86,7 @@ export function SuggestionHeader({
             <>
               <Link
                 href={`/${owner}/${slug}?ref=${encodeURIComponent(sug.branchRef)}`}
-                className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[0.78125rem] text-ink hover:text-accent"
+                className={buttonClass({ variant: 'ghost', className: 'bg-surface-2 font-mono hover:text-accent' })}
               >
                 <GitBranch size={11} /> {branchLabel(sug.branchRef, lang)}
               </Link>{' '}

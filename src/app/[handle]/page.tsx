@@ -16,6 +16,7 @@ import { loadProfilePage, type ProfileSearchParams } from './load'
 import { ProfileAside } from './ProfileAside'
 import { ProfileLists } from './ProfileLists'
 import { ProfileOverview } from './ProfileOverview'
+import { buttonClass } from '@/shared/ui/button-style'
 
 // Заголовок вкладки: «Имя (handle)» как в GitHub (layout добавит « · SetFork»).
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
@@ -99,7 +100,7 @@ export default async function ProfilePage({
                     <Link
                       key={c.id}
                       href={`/${handle}/catalogs/${c.name}`}
-                      className="group rounded-lg border border-border bg-surface px-4 py-3 hover:border-border-strong"
+                      className={buttonClass({ size: 'lg', className: 'group' })}
                     >
                       <div className="flex items-center gap-2">
                         <FolderGit2 size={15} className="text-muted" />

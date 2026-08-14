@@ -73,6 +73,7 @@ export function PollBlock({
               type="button"
               disabled={!votable}
               onClick={() => votable && start(() => votePoll(templateId, bid, o.id))}
+              // eslint-disable-next-line no-restricted-syntax -- карточка варианта опроса: высота от содержимого
               className={`relative overflow-hidden rounded-md border px-3 py-2 text-left text-[0.8125rem] transition-colors ${
                 mine ? 'border-accent' : 'border-border'
               } ${votable ? 'hover:border-border-strong' : 'cursor-default'}`}

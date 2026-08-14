@@ -8,6 +8,7 @@ import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
 import { setEmailSettings, sendTestEmail } from './actions'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export interface EmailFormValues {
   host: string
@@ -98,7 +99,7 @@ export function EmailSettingsForm({ lang, v }: { lang: Lang; v: EmailFormValues 
           type="button"
           onClick={runTest}
           disabled={testing}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[0.8125rem] font-medium text-ink hover:border-border-strong disabled:opacity-50"
+          className={buttonClass({ className: 'disabled:opacity-50' })}
         >
           {testing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
           {ru ? 'Тест-письмо' : 'Send test'}

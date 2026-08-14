@@ -8,6 +8,7 @@ import { Button } from '@/shared/ui/button'
 import { SearchField } from '@/shared/ui/SearchField'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/features/library/list-visibility'
+import { buttonClass } from '@/shared/ui/button-style'
 
 // Единый модуль «панель списков» (правило: переиспользуем и сложные модули).
 // Используется дашбордом (Your lists) и drawer'ом (Top lists) — части
@@ -176,7 +177,7 @@ export function ListsPanel({
             type="button"
             onClick={toggle}
             aria-expanded={open}
-            className="flex w-full items-center justify-between rounded-md px-0.5 py-1 text-left hover:text-ink"
+            className={buttonClass({ variant: 'ghost', className: 'w-full justify-between text-left' })}
           >
             {header}
             <ChevronDown size={14} className={`shrink-0 text-muted transition-transform ${open ? '' : '-rotate-90'}`} />

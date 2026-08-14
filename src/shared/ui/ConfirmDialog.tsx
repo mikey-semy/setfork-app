@@ -6,6 +6,7 @@ import { OverlayPanel } from './OverlayPanel'
 import { Button } from './button'
 import { CopyButton } from './CopyButton'
 import { confirmMatches } from '@/shared/lib/confirm-phrase'
+import { buttonClass } from '@/shared/ui/button-style'
 
 // Общая модалка подтверждения опасного действия (type-to-confirm, как GitHub
 // «To confirm, type owner/repo»). Заменяет два инлайн-дубля (список/аккаунт).
@@ -75,7 +76,7 @@ export function ConfirmDialog({
             autoComplete="off"
             spellCheck={false}
             aria-label={typeof confirmHint === 'string' ? confirmHint : 'confirm'}
-            className="mt-0.5 w-full rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[0.8125rem] text-ink outline-hidden focus:border-danger"
+            className={buttonClass({ variant: 'danger', className: 'mt-0.5 w-full bg-surface-2 font-mono outline-hidden focus:border-danger' })}
           />
         </div>
       )}

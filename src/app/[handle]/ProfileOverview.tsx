@@ -5,6 +5,7 @@ import { ActivitySection } from '@/features/profile/activity/ActivitySection'
 import { PinsPicker } from '@/features/profile/PinsPicker'
 import { dayMonthYear } from '@/shared/lib/date'
 import type { ProfilePageData } from './load'
+import { buttonClass } from '@/shared/ui/button-style'
 
 type Props = Pick<
   ProfilePageData,
@@ -83,7 +84,7 @@ export function ProfileOverview({
                 <Link
                   key={it.id}
                   href={`/${it.ownerHandle}/${it.slug}`}
-                  className="group rounded-lg border border-border bg-surface px-3.5 py-3 hover:border-border-strong"
+                  className={buttonClass({ size: 'lg', className: 'group' })}
                 >
                   <div className="truncate text-[0.875rem] font-semibold text-accent group-hover:underline">{tr(it.title, lang)}</div>
                   {desc && <p className="mt-1 line-clamp-2 text-[0.78125rem] leading-snug text-ink-2">{desc}</p>}

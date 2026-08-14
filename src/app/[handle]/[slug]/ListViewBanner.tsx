@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/button'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { t, type Lang } from '@/shared/i18n'
 import type { ListPageData } from './load'
+import { buttonClass } from '@/shared/ui/button-style'
 
 type Props = Pick<
   ListPageData,
@@ -79,7 +80,7 @@ export function ListViewBanner({
               <form action={openBranchPr.bind(null, tpl.id, refBranch)}>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 font-semibold text-ink hover:border-border-strong"
+                  className={buttonClass()}
                 >
                   <GitPullRequest size={12} /> {t('list.openPullRequest', lang)}
                 </button>

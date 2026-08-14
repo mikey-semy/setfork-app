@@ -13,6 +13,7 @@ import { MilestoneForm } from '@/features/milestones/MilestoneForm'
 import { deleteMilestone, toggleMilestoneClosed } from '@/features/milestones/actions'
 import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -63,12 +64,12 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
                     {canManage && (
                       <div className="flex shrink-0 gap-1.5">
                         <form action={toggleMilestoneClosed.bind(null, owner, slug, m.id)}>
-                          <button type="submit" className="rounded-md border border-border px-2.5 py-1 text-[0.78125rem] font-semibold text-ink hover:border-border-strong">
+                          <button type="submit" className={buttonClass()}>
                             {m.closed ? t('reopen', lang) : t('close', lang)}
                           </button>
                         </form>
                         <form action={deleteMilestone.bind(null, owner, slug, m.id)}>
-                          <button type="submit" aria-label={t('delete', lang)} className="rounded-md border border-border px-2 py-1 text-muted hover:border-danger hover:text-danger">
+                          <button type="submit" aria-label={t('delete', lang)} className={buttonClass({ variant: 'danger', className: 'hover:border-danger hover:text-danger' })}>
                             <Trash2 size={14} />
                           </button>
                         </form>
