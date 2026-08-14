@@ -6,7 +6,9 @@ import { t } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
-import { getUserTemplates } from '@/features/library/queries'
+import { Pagination } from '@/shared/ui/Pagination'
+import { pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
+import { countUserTemplates, getUserTemplates } from '@/features/library/queries'
 import { applySavedQuery, listSavedQueries } from '@/features/library/saved-queries'
 import { PAGE } from '@/shared/ui/control'
 
@@ -15,17 +17,22 @@ export async function generateMetadata() {
   return { title: t('myLists', lang) }
 }
 
-export default async function MyListsPage({ searchParams }: { searchParams: Promise<{ sq?: string }> }) {
+export default async function MyListsPage({ searchParams }: { searchParams: Promise<{ sq?: string; page?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
-  let items = session ? await getUserTemplates(session.userId, session.userId) : []
-  const hadAny = items.length > 0
   // Сохранённые запросы (HQ §11): чипы-фильтры; ?sq=<id> применяется на сервере.
   const queries = session ? await listSavedQueries(session.userId) : []
   const activeQuery = sp.sq ? queries.find((q) => q.id === sp.sq) : undefined
-  if (session && activeQuery) {
-    const keep = await applySavedQuery(session.userId, activeQuery)
-    items = items.filter((it) => keep.has(it.id))
-  }
+  // Отбор сохранённым запросом считается ОТДЕЛЬНО и отдаёт только id — по ним же и режем
+  // страницу. Раньше страница грузила всю библиотеку (у владельца это полтысячи списков с
+  // аватарами), а фильтр применялся уже к загруженному.
+  const keep = session && activeQuery ? [...(await applySavedQuery(session.userId, activeQuery))] : undefined
+  const total = !session ? 0 : keep ? keep.length : await countUserTemplates(session.userId, session.userId)
+  const totalPages = pageCount(total)
+  const page = pageFromParam(sp.page, totalPages)
+  const items = session ? await getUserTemplates(session.userId, session.userId, pageWindow(page), keep) : []
+  // «Были ли списки вообще» — вопрос не про страницу: пустая вторая страница не означает
+  // пустую библиотеку, и предлагать «создайте первый» там было бы неправдой.
+  const hadAny = total > 0
   // Панель здоровья (HQ §11): «где болит прямо сейчас» — выше ленты.
 
   return (
@@ -60,7 +67,15 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
               {items.length === 0 ? (
                 <div className="py-10 text-center text-[0.8125rem] text-muted">{t('library.nothingMatchesQuery', lang)}</div>
               ) : (
-                <FeedList items={items} lang={lang} viewerId={session.userId} />
+                <>
+                  <FeedList items={items} lang={lang} viewerId={session.userId} />
+                  <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    makeHref={(p) => `/my-lists?${new URLSearchParams({ ...(sp.sq ? { sq: sp.sq } : {}), ...(p > 1 ? { page: String(p) } : {}) }).toString()}`}
+                    lang={lang}
+                  />
+                </>
               )}
             </>
           )}

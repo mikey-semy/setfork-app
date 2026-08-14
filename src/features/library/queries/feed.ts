@@ -52,6 +52,8 @@ export async function getFeed(
   } = {},
   viewerId?: string,
   viewerLang?: Lang,
+  /** Окно страницы. Для выдачи БЕЗ запроса уезжает прямо в SQL; при поиске см. ниже. */
+  window?: { limit: number; offset?: number },
 ): Promise<FeedItem[]> {
   const order =
     opts.sort === 'newest'
@@ -62,35 +64,46 @@ export async function getFeed(
 
   const extra = extraFilters(opts)
   const q = opts.q?.trim()
-  if (!q) return withAvatar(await keywordFeed(order, viewerId, opts.tag, undefined, extra, viewerLang))
+  if (!q) return withAvatar(await keywordFeed(order, viewerId, opts.tag, undefined, extra, viewerLang, window))
 
   const { mode, minScore, limit } = await getSearchSettings()
+  // ПОИСК режется в памяти, а не в SQL, и это не небрежность: гибридный режим склеивает
+  // две РАЗНЫЕ выдачи (точные совпадения и близкие по смыслу), а такой порядок в одном
+  // запросе не выражается. Безразмерным он от этого не становится: обе ветки ограничены
+  // потолком поиска из настроек, а окно применяется к уже склеенному.
+  const cap = { limit }
+  const page = (rows: FeedItem[]) => (window ? rows.slice(window.offset ?? 0, (window.offset ?? 0) + window.limit) : rows)
   // Семантика тратит embedding-вызов OpenRouter. Разрешаем её только залогиненным и
   // под rate-limit: иначе аноним в цикле GET /search?q=... жёг бы деньги без учёта.
   // Гость и превышенный лимит → keyword-поиск (0 токенов), тот же результат-фолбэк.
   const canSemantic = mode !== 'keyword' && !!viewerId && (await checkRateLimit(`search:${viewerId}`)).allowed
-  if (!canSemantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra, viewerLang))
+  if (!canSemantic) return withAvatar(page(await keywordFeed(order, viewerId, opts.tag, q, extra, viewerLang, cap)))
 
   const semantic = await semanticFeed(q, opts.tag, limit, minScore, viewerId, extra)
   // Нет вектора (нет ключа/эмбеддингов) → откат на ключевые слова.
-  if (!semantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra, viewerLang))
-  if (mode === 'semantic') return withAvatar(semantic)
+  if (!semantic) return withAvatar(page(await keywordFeed(order, viewerId, opts.tag, q, extra, viewerLang, cap)))
+  if (mode === 'semantic') return withAvatar(page(semantic))
 
   // hybrid: сначала ТОЧНЫЕ совпадения по словам (буквальное «ubuntu» точнее),
   // затем добираем по смыслу — чтобы семантически-похожее не всплывало над точным.
-  const keyword = await keywordFeed(order, viewerId, opts.tag, q, extra, viewerLang)
+  const keyword = await keywordFeed(order, viewerId, opts.tag, q, extra, viewerLang, cap)
   const seen = new Set(keyword.map((r) => r.id))
-  return withAvatar([...keyword, ...semantic.filter((r) => !seen.has(r.id))])
+  return withAvatar(page([...keyword, ...semantic.filter((r) => !seen.has(r.id))]))
 }
 
 /** Тренд за период: списки с наибольшим приростом звёзд за range (day/week/month),
  *  при равенстве — по суммарным звёздам+форкам. 'all' — просто trending. */
-export async function getTrendingFeed(range: TrendRange, viewerId?: string, viewerLang?: Lang): Promise<FeedItem[]> {
-  if (range === 'all') return getFeed({ sort: 'trending' }, viewerId, viewerLang)
+export async function getTrendingFeed(
+  range: TrendRange,
+  viewerId?: string,
+  viewerLang?: Lang,
+  window?: { limit: number; offset?: number },
+): Promise<FeedItem[]> {
+  if (range === 'all') return getFeed({ sort: 'trending' }, viewerId, viewerLang, window)
   const days = range === 'day' ? 1 : range === 'week' ? 7 : 30
   const gained = sql`(select count(*)::int from ${stars} s where s.template_id = ${templates.id} and s.created_at >= now() - make_interval(days => ${days}))`
   const order = desc(sql`${gained} * 1000 + ${templates.starsCount} + ${templates.forksCount}`)
-  return withAvatar(await keywordFeed(order, viewerId, undefined, undefined, [], viewerLang))
+  return withAvatar(await keywordFeed(order, viewerId, undefined, undefined, [], viewerLang, window))
 }
 
 export async function countLists(
@@ -157,12 +170,17 @@ export async function getUserTemplates(
   userId: string,
   viewerId?: string,
   window?: { limit: number; offset?: number },
+  /** Отбор сохранённым запросом: он считает подходящие id отдельно (там свои условия про
+   *  прогоны), и без этого фильтра страницу пришлось бы резать ПОСЛЕ загрузки — то есть
+   *  отдавать по двадцать штук из отфильтрованного вслепую. */
+  onlyIds?: string[],
 ): Promise<FeedItem[]> {
+  if (onlyIds && !onlyIds.length) return []
   const q = db
     .select(FEED_COLS)
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(and(eq(templates.ownerId, userId), visibleFilter(viewerId)))
+    .where(and(eq(templates.ownerId, userId), visibleFilter(viewerId), onlyIds ? inArray(templates.id, onlyIds) : undefined))
     .orderBy(desc(templates.updatedAt))
   const rows = window ? await q.limit(window.limit).offset(window.offset ?? 0) : await q
   return withAvatar(rows as FeedItem[])
@@ -205,13 +223,22 @@ export async function searchTemplatesByOwnerHandle(
 }
 
 /** Списки внутри каталога (repository). */
-export async function getListsInCatalog(repositoryId: string, viewerId?: string): Promise<FeedItem[]> {
-  const rows = await db
+export async function countListsInCatalog(repositoryId: string, viewerId?: string): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(templates)
+    .where(and(eq(templates.repositoryId, repositoryId), visibleFilter(viewerId)))
+  return r?.n ?? 0
+}
+
+export async function getListsInCatalog(repositoryId: string, viewerId?: string, window?: { limit: number; offset?: number }): Promise<FeedItem[]> {
+  const base = db
     .select(FEED_COLS)
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(templates.repositoryId, repositoryId), visibleFilter(viewerId)))
     .orderBy(desc(templates.updatedAt))
+  const rows = window ? await base.limit(window.limit).offset(window.offset ?? 0) : await base
   return withAvatar(rows as FeedItem[])
 }
 
