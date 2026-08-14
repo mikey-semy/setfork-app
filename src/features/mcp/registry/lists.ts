@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
+import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
 import { itemShape } from './block-schema'
 import { json, err, type ToolKit } from './kit'
 
@@ -116,6 +116,20 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
       const res = await mcpPublishDraft(userId, handle, slug, note, confirm === true)
       return 'error' in res ? err(res.error as string) : json(res)
     },
+  )
+
+  // ПОЛКИ. Без этого чтения параметр `catalog` был почти нерабочим: в интерфейсе полка
+  // подписана заголовком («Скиллы»), а раскладка ищет техническое имя (`skills`), и узнать
+  // его агенту было неоткуда — он раз за разом получал бы «нет такой полки».
+  readTool(
+    'my_catalogs',
+    {
+      title: 'My catalogs',
+      description:
+        'Your catalogs (shelves) with both names: the technical one to pass as "catalog" when creating a list, and the title shown on the site. Also how many lists each already holds — call this before create_list/bulk_create_lists if you intend to file the new lists.',
+      inputSchema: {},
+    },
+    async (userId) => json(await mcpMyCatalogs(userId)),
   )
 
   // РАЗБОР ЗАВАЛА. Черновики не видны ни поиску, ни ленте — значит через ассистента их

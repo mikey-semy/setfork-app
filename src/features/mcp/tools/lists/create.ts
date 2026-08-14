@@ -6,13 +6,13 @@
 // украшение, а условие её существования (см. комментарий у mcpBulkCreate).
 
 import 'server-only'
-import { and, eq, inArray } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db, repositories, templates, users } from '@/shared/db'
 import { listQuota } from '@/shared/quota'
 import { cleanText } from '@/shared/lib/text-input'
 import { detectTextLang } from '@/shared/lib/translit'
 import { listStore } from '@/features/library/list-store'
-import { assignCatalogByName } from '@/features/catalogs/assign'
+import { assignCatalogByName, matchCatalog } from '@/features/catalogs/assign'
 import { slugify, uniqueSlug } from '@/features/library/slug'
 import { recordAgentAction } from '@/shared/agents/policy'
 import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
@@ -120,16 +120,17 @@ export async function mcpBulkCreate(userId: string, lists: McpCreateInput[], dry
   // Имена полок сверяем ОДИН раз на всю пачку — и в сухом прогоне тоже. Опечатка в имени
   // иначе всплыла бы только после записи, причём сразу на всей сотне списков: план обязан
   // говорить правду и про полку (находка авто-ревью).
-  const wantedCatalogs = [...new Set(batch.map((l) => (l.catalog ?? '').trim()).filter(Boolean))]
-  const known = new Set(
-    wantedCatalogs.length
-      ? (await db.select({ name: repositories.name }).from(repositories).where(and(eq(repositories.ownerId, userId), inArray(repositories.name, wantedCatalogs)))).map((r) => r.name)
-      : [],
-  )
+  const wantsCatalog = batch.some((l) => (l.catalog ?? '').trim())
+  const myCatalogs = wantsCatalog
+    ? await db.select({ name: repositories.name, title: repositories.title }).from(repositories).where(eq(repositories.ownerId, userId))
+    : []
+  // Разбор имени — ТОТ ЖЕ, что и у записи (features/catalogs/assign): своя проверка здесь
+  // объявляла бы «нет такой полки» на видимый заголовок, который запись потом спокойно
+  // принимает. План, расходящийся с записью, хуже отсутствия плана.
   const catalogNote = (name: string | undefined) => {
     const want = (name ?? '').trim()
     if (!want) return undefined
-    return known.has(want) ? want : `not found among your catalogs: ${want}`
+    return matchCatalog(myCatalogs, want) ? want : `not found among your catalogs: ${want}`
   }
 
   const out: McpBulkResult = { dryRun, planned: batch.length, created: 0, duplicates: 0, failed: 0, quotaStopped: false, lists: [] }

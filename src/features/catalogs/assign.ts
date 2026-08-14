@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { db, repositories, templates } from '@/shared/db'
+import { slugify } from '@/shared/lib/slugify'
 
 /**
  * ПОЛОЖИТЬ СПИСОК НА ПОЛКУ ПО ИМЕНИ — одно правило на все входы.
@@ -23,14 +24,37 @@ export async function assignCatalogByName(listId: string, ownerId: string, rawNa
   const name = String(rawName ?? '').trim()
   if (!name) return false
   return db.transaction(async (tx) => {
-    const [cat] = await tx
-      .select({ id: repositories.id })
+    const mine = await tx
+      .select({ id: repositories.id, name: repositories.name, title: repositories.title })
       .from(repositories)
-      .where(and(eq(repositories.ownerId, ownerId), eq(repositories.name, name)))
-      .limit(1)
+      .where(eq(repositories.ownerId, ownerId))
       .for('update')
+    const cat = matchCatalog(mine, name)
     if (!cat) return false
     await tx.update(templates).set({ repositoryId: cat.id }).where(eq(templates.id, listId))
     return true
   })
+}
+
+/**
+ * Найти полку по тому, что человек (или ассистент) считает её именем.
+ *
+ * Имён у полки на деле два: техническое (`name`, слаг) и видимое (`title`, на языке
+ * автора). В интерфейсе всегда показано ВТОРОЕ — значит именно его и назовут. Требовать
+ * слаг и отвечать «нет такой» на «Скиллы» — это переложить на человека знание о внутреннем
+ * устройстве (находка авто-ревью: у ассистента и вовсе не было способа узнать слаг).
+ *
+ * Порядок разбора от точного к терпимому: слаг → тот же текст, приведённый к слагу →
+ * видимый заголовок без учёта регистра. Двусмысленность НЕ разрешаем: если под заголовок
+ * подходят две полки, честнее не выбрать никакую, чем угадать.
+ */
+export function matchCatalog<T extends { name: string; title: unknown }>(mine: T[], wanted: string): T | null {
+  const exact = mine.find((c) => c.name === wanted)
+  if (exact) return exact
+  const asSlug = slugify(wanted)
+  const bySlug = mine.find((c) => c.name === asSlug)
+  if (bySlug) return bySlug
+  const needle = wanted.toLowerCase()
+  const byTitle = mine.filter((c) => Object.values((c.title ?? {}) as Record<string, string>).some((v) => v?.trim().toLowerCase() === needle))
+  return byTitle.length === 1 ? byTitle[0] : null
 }

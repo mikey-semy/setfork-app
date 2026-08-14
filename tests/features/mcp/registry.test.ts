@@ -32,8 +32,8 @@ const EXPECTED = [
   'list_gnomes', 'ask_gnome', 'gnome_review', 'get_council_draft', 'council_draft',
   // списки
   'create_list', 'update_list', 'patch_list', 'publish_draft', 'discard_draft', 'delete_list', 'bulk_create_lists',
-  // разбор черновиков: что лежит неопубликованным и публикация пачкой
-  'my_drafts', 'publish_lists',
+  // полки и разбор черновиков: чем владелец раскладывает библиотеку
+  'my_catalogs', 'my_drafts', 'publish_lists',
   // предложения и проверки
   'pending_suggestions', 'apply_suggestion', 'suggest_edit', 'review_suggestion', 'merge_suggestion', 'revert_suggestion', 'report_check',
   // источники и прогоны
@@ -72,8 +72,9 @@ const READ_ONLY = [
   'search_lists', 'get_list', 'get_script', 'get_run',
   'list_gnomes', 'get_council_draft',
   'pending_suggestions', 'list_sources',
-  // «что у меня лежит неопубликованным» — чтение: ничего не меняет и денег не тратит
-  'my_drafts',
+  // «что у меня лежит неопубликованным» и «какие у меня полки» — чтение: ничего не
+  // меняют и денег не тратят
+  'my_catalogs', 'my_drafts',
 ]
 
 /**

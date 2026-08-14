@@ -8,7 +8,7 @@ import { resetTables } from '../../helpers/reset-db'
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 
 const { db, repositories, templates, users } = await import('@/shared/db')
-const { mcpBulkCreate, mcpCreateList } = await import('@/features/mcp/tools')
+const { mcpBulkCreate, mcpCreateList, mcpMyCatalogs } = await import('@/features/mcp/tools')
 
 let meId = ''
 let otherId = ''
@@ -74,6 +74,37 @@ describe('создание через MCP кладёт список на пол�
 
     expect('lists' in plan && plan.lists.map((l) => l.catalog)).toEqual(['skills', 'not found among your catalogs: sklls'])
     expect('lists' in done && done.lists.map((l) => l.catalog)).toEqual(['skills', 'not found among your catalogs: sklls'])
+  })
+
+  it('видимый заголовок полки годится не хуже технического имени', async () => {
+    // В интерфейсе полка подписана «Скиллы», а техническое имя — `skills`. Требовать слаг
+    // значит переложить на человека знание о внутреннем устройстве, а у ассистента до
+    // появления my_catalogs способа узнать слаг не было вовсе.
+    const [cat] = await db.insert(repositories).values({ ownerId: meId, name: 'skills', title: { ru: 'Скиллы' } }).returning({ id: repositories.id })
+
+    const res = await mcpCreateList(meId, { title: 'По заголовку', items, catalog: 'Скиллы' })
+
+    expect((await rowOf(res)).repositoryId).toBe(cat.id)
+  })
+
+  it('двусмысленный заголовок не разрешается наугад', async () => {
+    // Две полки с одинаковой подписью — данные не показывают, куда класть. Угадать здесь
+    // хуже, чем оставить список без полки: ошибку человек заметит нескоро.
+    await db.insert(repositories).values({ ownerId: meId, name: 'skills-a', title: { ru: 'Навыки' } })
+    await db.insert(repositories).values({ ownerId: meId, name: 'skills-b', title: { en: 'Навыки' } })
+
+    const res = await mcpCreateList(meId, { title: 'Двусмысленно', items, catalog: 'Навыки' })
+
+    expect((await rowOf(res)).repositoryId).toBeNull()
+  })
+
+  it('полки видны ассистенту обоими именами', async () => {
+    await db.insert(repositories).values({ ownerId: meId, name: 'skills', title: { ru: 'Скиллы' } })
+    await db.insert(repositories).values({ ownerId: otherId, name: 'theirs', title: { ru: 'Чужая' } })
+
+    const res = await mcpMyCatalogs(meId)
+
+    expect(res.catalogs).toEqual([{ name: 'skills', title: 'Скиллы', lists: 0 }])
   })
 
   it('без параметра всё как было', async () => {
