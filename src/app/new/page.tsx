@@ -3,7 +3,6 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
-import { TagInput } from '@/shared/ui/TagInput'
 import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
@@ -13,6 +12,8 @@ import { createTemplate } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
 import { GatedToggle, ListTypeToggle, VisibilityToggle } from '@/features/library/ListFormToggles'
 import { ListSettingsSheet } from '@/features/library/ListSettingsSheet'
+import { TagsAndCatalogFields } from '@/features/library/TagsAndCatalogFields'
+import { getCatalogTagProfiles } from '@/features/catalogs/queries'
 import { listQuota } from '@/shared/quota'
 import { PAGE_NARROW } from '@/shared/ui/control'
 
@@ -25,7 +26,11 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (!session) redirect('/login')
   const quotaHit = sp.e === 'list_quota'
-  const q = quotaHit ? await listQuota(session.userId, session.handle) : null
+  // Полки владельца с тегами их жильцов: из них форма подскажет, куда положить новый список.
+  const [q, catalogs] = await Promise.all([
+    quotaHit ? listQuota(session.userId, session.handle) : Promise.resolve(null),
+    getCatalogTagProfiles(session.userId, lang),
+  ])
 
   return (
     <div className={PAGE_NARROW}>
@@ -72,10 +77,10 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
               <Input name="desc" placeholder={t('listDescPh', lang)} />
             </Field>
 
-            {/* htmlFor: внутри TagInput чипы с кнопками удаления — оборачивание в label ловило бы их клики. */}
-            <Field label={t('tags', lang)} htmlFor="new-tags">
-              <TagInput lang={lang} />
-            </Field>
+            {/* Теги и полка идут ВМЕСТЕ: вторая выводится из первых, и порознь подсказка
+                либо подглядывает за чужим полем, либо спрашивает полку до того, как о
+                списке хоть что-то известно. */}
+            <TagsAndCatalogFields lang={lang} catalogs={catalogs} />
 
             {/* htmlFor: внутри каждого тумблера свои label — вложенные невалидны. */}
             <div className="flex flex-wrap items-end gap-x-4 gap-y-3">

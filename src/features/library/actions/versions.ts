@@ -3,7 +3,7 @@
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, steps, templates, type ProposedItem } from '@/shared/db'
+import { db, repositories, steps, templates, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { type LocaleText } from '@/shared/i18n'
@@ -31,6 +31,25 @@ import { ownerHandle } from './shared'
  * Одна причина меняться на весь файл — правила записи версии; предложения чужих
  * правок и настройки списка живут отдельно, хотя и зовут отсюда общее.
  */
+
+/**
+ * Положить новорождённый список на выбранную полку.
+ *
+ * Полка появилась в форме создания затем, что раньше её назначали только из настроек уже
+ * готового списка — то есть почти никогда: на полках лежало 3 списка из 523. Имя приходит
+ * из браузера, поэтому ищется СРЕДИ СВОИХ; не нашлось — список просто остаётся без полки,
+ * а не роняет создание.
+ */
+async function assignCatalogAtCreate(templateId: string, ownerId: string, raw: FormDataEntryValue | null): Promise<void> {
+  const name = String(raw ?? '').trim()
+  if (!name) return
+  const [cat] = await db
+    .select({ id: repositories.id })
+    .from(repositories)
+    .where(and(eq(repositories.ownerId, ownerId), eq(repositories.name, name)))
+    .limit(1)
+  if (cat) await db.update(templates).set({ repositoryId: cat.id }).where(eq(templates.id, templateId))
+}
 
 // ── Создание списка ───────────────────────────────────────────────────
 export async function createTemplate(formData: FormData): Promise<void> {
@@ -77,6 +96,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
     throw e
   }
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
+  await assignCatalogAtCreate(list.id, session.userId, formData.get('catalog'))
   await registerTags(tags) // новые теги → в реестр
   await ensureWatch(list.id) // владелец следит за своим списком
   // Гейта публикации здесь больше нет: состояние решено ДО записи и приехало значением

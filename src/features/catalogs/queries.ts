@@ -1,7 +1,8 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, repositories, templates, users } from '@/shared/db'
-import type { LocaleText } from '@/shared/i18n'
+import { tr, type Lang, type LocaleText } from '@/shared/i18n'
+import type { CatalogProfile } from '@/shared/lib/catalog-match'
 import { avatarSrc } from '@/shared/media'
 
 export interface PublicCatalog {
@@ -86,6 +87,32 @@ export async function getOwnerCatalogs(ownerId: string): Promise<CatalogRow[]> {
     .where(eq(repositories.ownerId, ownerId))
     .orderBy(asc(repositories.name))
   return rows
+}
+
+/**
+ * Полки владельца с тегами их жильцов — чтобы новому списку было что подсказать.
+ *
+ * Собираем одним запросом и складываем в памяти: полок у человека десятки, списков сотни,
+ * это один проход по выборке. `group by` с `unnest` был бы экономнее по трафику и
+ * непрозрачнее по смыслу — экономить тут пока не на чем (правило в shared/lib/catalog-match).
+ */
+export async function getCatalogTagProfiles(ownerId: string, lang: Lang): Promise<CatalogProfile[]> {
+  const rows = await db
+    .select({ name: repositories.name, title: repositories.title, tags: templates.tags })
+    .from(repositories)
+    .leftJoin(templates, eq(templates.repositoryId, repositories.id))
+    .where(eq(repositories.ownerId, ownerId))
+    .orderBy(asc(repositories.name))
+
+  const byName = new Map<string, { title: LocaleText; tags: Set<string> }>()
+  for (const row of rows) {
+    const entry = byName.get(row.name) ?? { title: row.title, tags: new Set<string>() }
+    for (const tag of row.tags ?? []) entry.tags.add(tag)
+    byName.set(row.name, entry)
+  }
+  // Заголовок отдаём уже на языке зрителя: подсказка попадает прямиком в интерфейс, и
+  // тащить туда сырой LocaleText значило бы решать про язык дважды.
+  return [...byName].map(([name, v]) => ({ name, title: tr(v.title, lang) || name, tags: [...v.tags] }))
 }
 
 export interface CatalogDetail {

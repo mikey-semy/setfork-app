@@ -178,6 +178,7 @@ export const ru: Record<DictKey, string> = {
   'profile.catalogFilter': 'Фильтр по каталогу',
   'profile.catalogNone': 'Без каталога',
   // Пакетные действия над своими списками (режим выбора на вкладке «Списки»).
+  'catalog.guessWhy': 'Подсказано по общим тегам: {tags}',
   'bulk.select': 'Выбрать',
   'bulk.selectedSuffix': 'выбрано',
   'bulk.selectAll': 'Выбрать все {n}',
