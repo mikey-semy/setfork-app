@@ -6,8 +6,8 @@
 // украшение, а условие её существования (см. комментарий у mcpBulkCreate).
 
 import 'server-only'
-import { eq } from 'drizzle-orm'
-import { db, templates, users } from '@/shared/db'
+import { and, eq, inArray } from 'drizzle-orm'
+import { db, repositories, templates, users } from '@/shared/db'
 import { listQuota } from '@/shared/quota'
 import { cleanText } from '@/shared/lib/text-input'
 import { detectTextLang } from '@/shared/lib/translit'
@@ -103,7 +103,9 @@ export interface McpBulkResult {
   duplicates: number
   failed: number
   quotaStopped: boolean
-  lists: { title: string; ref?: string; slug?: string; status: 'created' | 'would-create' | 'duplicate' | 'error'; reason?: string }[]
+  /** `catalog` — исход по полке: имя, если легла, или причина. Без него пачка выглядела бы
+   *  одинаково успешной и когда списки разложены, и когда все до одного лежат мимо полок. */
+  lists: { title: string; ref?: string; slug?: string; status: 'created' | 'would-create' | 'duplicate' | 'error'; reason?: string; catalog?: string }[]
 }
 
 export async function mcpBulkCreate(userId: string, lists: McpCreateInput[], dryRun = true): Promise<McpBulkResult | { error: string }> {
@@ -114,6 +116,21 @@ export async function mcpBulkCreate(userId: string, lists: McpCreateInput[], dry
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
   const mine = await db.select({ title: templates.title }).from(templates).where(eq(templates.ownerId, userId))
   const seen = new Set(mine.map((r) => titleKey(Object.values((r.title ?? {}) as Record<string, string>).find(Boolean) ?? '')).filter(Boolean))
+
+  // Имена полок сверяем ОДИН раз на всю пачку — и в сухом прогоне тоже. Опечатка в имени
+  // иначе всплыла бы только после записи, причём сразу на всей сотне списков: план обязан
+  // говорить правду и про полку (находка авто-ревью).
+  const wantedCatalogs = [...new Set(batch.map((l) => (l.catalog ?? '').trim()).filter(Boolean))]
+  const known = new Set(
+    wantedCatalogs.length
+      ? (await db.select({ name: repositories.name }).from(repositories).where(and(eq(repositories.ownerId, userId), inArray(repositories.name, wantedCatalogs)))).map((r) => r.name)
+      : [],
+  )
+  const catalogNote = (name: string | undefined) => {
+    const want = (name ?? '').trim()
+    if (!want) return undefined
+    return known.has(want) ? want : `not found among your catalogs: ${want}`
+  }
 
   const out: McpBulkResult = { dryRun, planned: batch.length, created: 0, duplicates: 0, failed: 0, quotaStopped: false, lists: [] }
   for (const input of batch) {
@@ -146,7 +163,7 @@ export async function mcpBulkCreate(userId: string, lists: McpCreateInput[], dry
     }
     if (dryRun) {
       seen.add(key)
-      out.lists.push({ title, status: 'would-create', slug: slugify(title) })
+      out.lists.push({ title, status: 'would-create', slug: slugify(title), catalog: catalogNote(input.catalog) })
       continue
     }
     const res = await mcpCreateList(userId, input)
@@ -157,7 +174,7 @@ export async function mcpBulkCreate(userId: string, lists: McpCreateInput[], dry
     }
     seen.add(key)
     out.created++
-    out.lists.push({ title, status: 'created', ref: res.ref })
+    out.lists.push({ title, status: 'created', ref: res.ref, catalog: res.catalog })
   }
 
   await recordAgentAction({

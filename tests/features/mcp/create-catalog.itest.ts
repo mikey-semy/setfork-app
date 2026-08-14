@@ -8,7 +8,7 @@ import { resetTables } from '../../helpers/reset-db'
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 
 const { db, repositories, templates, users } = await import('@/shared/db')
-const { mcpCreateList } = await import('@/features/mcp/tools')
+const { mcpBulkCreate, mcpCreateList } = await import('@/features/mcp/tools')
 
 let meId = ''
 let otherId = ''
@@ -58,6 +58,22 @@ describe('создание через MCP кладёт список на пол�
 
     expect(res).toMatchObject({ status: 'draft' })
     expect((await rowOf(res)).repositoryId).toBeNull()
+  })
+
+  it('пачка называет исход по полке — и в плане, и после записи', async () => {
+    // Опечатка в имени иначе всплыла бы только после записи, причём сразу на всей сотне:
+    // «создано 100» читается как успех, а списки лежат мимо полок.
+    await db.insert(repositories).values({ ownerId: meId, name: 'skills', title: { ru: 'Скиллы' } })
+    const batch = [
+      { title: 'Первый навык', items, catalog: 'skills' },
+      { title: 'Второй навык', items, catalog: 'sklls' },
+    ]
+
+    const plan = await mcpBulkCreate(meId, batch)
+    const done = await mcpBulkCreate(meId, batch, false)
+
+    expect('lists' in plan && plan.lists.map((l) => l.catalog)).toEqual(['skills', 'not found among your catalogs: sklls'])
+    expect('lists' in done && done.lists.map((l) => l.catalog)).toEqual(['skills', 'not found among your catalogs: sklls'])
   })
 
   it('без параметра всё как было', async () => {
