@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
+import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
 import { itemShape } from './block-schema'
 import { json, err, type ToolKit } from './kit'
 
@@ -17,6 +17,10 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
         lang: z.enum(['en', 'ru']).optional().describe('Content language; omit to auto-detect from the title/description'),
         desc: z.string().optional().describe('One-line description'),
         tags: z.array(z.string()).optional().describe('3-6 short tags'),
+        catalog: z
+          .string()
+          .optional()
+          .describe('Name of one of your catalogs (shelves) to file the list under. Unknown name = the list stays unfiled and the response says so.'),
         ordered: z.boolean().optional().describe('true = ordered steps, false = unordered set (default true)'),
         items: z.array(itemShape).min(1).describe('The blocks (steps and optionally text/image/poll/video/quiz/file)'),
       },
@@ -114,6 +118,20 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
     },
   )
 
+  // ПОЛКИ. Без этого чтения параметр `catalog` был почти нерабочим: в интерфейсе полка
+  // подписана заголовком («Скиллы»), а раскладка ищет техническое имя (`skills`), и узнать
+  // его агенту было неоткуда — он раз за разом получал бы «нет такой полки».
+  readTool(
+    'my_catalogs',
+    {
+      title: 'My catalogs',
+      description:
+        'Your catalogs (shelves) with both names: the technical one to pass as "catalog" when creating a list, and the title shown on the site. Also how many lists each already holds — call this before create_list/bulk_create_lists if you intend to file the new lists.',
+      inputSchema: {},
+    },
+    async (userId) => json(await mcpMyCatalogs(userId)),
+  )
+
   // РАЗБОР ЗАВАЛА. Черновики не видны ни поиску, ни ленте — значит через ассистента их
   // было не разобрать вовсе, а по одному через сайт сотня списков занимает часы.
   readTool(
@@ -205,6 +223,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
               lang: z.enum(['en', 'ru']).optional(),
               desc: z.string().optional(),
               tags: z.array(z.string()).optional(),
+              catalog: z.string().optional().describe('Name of one of your catalogs to file this list under'),
               ordered: z.boolean().optional(),
               items: z.array(itemShape).min(1),
             }),

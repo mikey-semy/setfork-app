@@ -91,6 +91,22 @@ async function tellOwner(subject: string, body: string): Promise<{ sent: number;
   return { sent, skipped: sent ? '' : MAIL_OFF }
 }
 
+/**
+ * ЗАЯВКА НЕ РАВНА ДОСТАВКЕ — и статус записи обязан это различать.
+ *
+ * Все три письмописателя заявляют ключ ДО отправки, чтобы два инстанса не послали одно
+ * письмо дважды. Дозор ИИ пишет такую заявку со статусом `skipped` («попытка начата»), а
+ * `ok` ставит отдельной записью, когда письмо дошло. Бухгалтер и летописец ставили `ok`
+ * сразу на заявке — и по журналу нельзя было отличить доставленную тревогу от только
+ * начатой попытки: детектор холостого хода считал бы прогрессом ровно то, что могло
+ * оказаться неудачей. Замечания авто-ревью на fe#800 (два P2).
+ *
+ * Приведено к форме дозора, а не к третьей своей: канон в проекте уже есть.
+ */
+async function подтвердитьДоставку(loop: string, action: string, decision: Record<string, unknown>, policyVersion: number): Promise<void> {
+  await recordAgentAction({ loop, action, resultStatus: 'ok', decision: { ...decision, stage: 'delivered' }, policyVersion })
+}
+
 /** Деньги за сегодня и за неделю — то, из чего бухгалтер делает вывод. */
 async function money(): Promise<Money> {
   const [today] = await db
@@ -141,6 +157,10 @@ export async function runFinanceSweep(): Promise<FinanceResult> {
   }
 
   const day = new Date().toISOString().slice(0, 10)
+  // Тревоги идут ПОСЛЕДОВАТЕЛЬНО намеренно (react-doctor предлагает Promise.all, как и в
+  // переводах changelog): каждая сперва заявляет уникальный ключ и только потом шлёт письмо.
+  // Параллельный запуск сломал бы эту защиту от дублей, а выигрыша нет — тревог за проход
+  // единицы, и упирается всё в SMTP, а не в нас.
   for (const a of alerts) {
     // Ключ заявляем ДО отправки: запись с уникальным ключом — это и есть заявка на право
     // отправить. Пиши мы журнал после письма, два инстанса (или проход после рестарта)
@@ -148,9 +168,9 @@ export async function runFinanceSweep(): Promise<FinanceResult> {
     const claimed = await recordAgentAction({
       loop: 'finance',
       action: 'money.alert',
-      resultStatus: 'ok',
+      resultStatus: 'skipped', // «попытка начата»; доставку подтверждает отдельная запись
       signal: { ...m },
-      decision: { kind: a.kind, text: a.text },
+      decision: { kind: a.kind, text: a.text, stage: 'claim' },
       idempotencyKey: `finance:${a.kind}:${day}`,
       policyVersion: policy.policyVersion,
     })
@@ -158,6 +178,7 @@ export async function runFinanceSweep(): Promise<FinanceResult> {
     out.alerts++
     const delivery = await tellOwner(`SetFork: ${a.subject}`, `<p>${a.text}</p>${developmentDashboardLink()}`)
     out.sent += delivery.sent
+    if (delivery.sent) await подтвердитьДоставку('finance', 'money.alert', { kind: a.kind, sent: delivery.sent }, policy.policyVersion)
     // Не дошло — записываем ОТДЕЛЬНОЙ строкой без ключа: заявка уже занята, но факт «тревога
     // не доставлена» обязан быть виден, иначе журнал врал бы бодрым 'ok'.
     if (!delivery.sent) {
@@ -260,9 +281,9 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   const claimed = await recordAgentAction({
     loop: 'chronicle',
     action: 'day.report',
-    resultStatus: 'ok',
+    resultStatus: 'skipped', // «попытка начата»; доставку подтверждает отдельная запись
     signal: { date, ...Object.fromEntries(rows) },
-    decision: { day: date },
+    decision: { day: date, stage: 'claim' },
     idempotencyKey: `chronicle:${date}`,
     policyVersion: policy.policyVersion,
   })
@@ -274,6 +295,7 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   const delivery = await tellOwner(`SetFork: день компании ${date}`, html)
   out.sent = delivery.sent
   out.skipped = delivery.skipped
+  if (delivery.sent) await подтвердитьДоставку('chronicle', 'day.report', { day: date, sent: delivery.sent }, policy.policyVersion)
   if (!delivery.sent) {
     await recordAgentAction({
       loop: 'chronicle',
@@ -385,15 +407,11 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   out.skipped = delivery.skipped
   // Состояние меняет только ДОСТАВЛЕННОЕ сообщение: запись 'ok' и есть закрытие вопроса.
   // Не дошло — остаётся заявка со 'skipped' и причиной, эпизод открыт, попытка повторится.
+  // Через общий помощник: форма записи о доставке была взята отсюда, и держать её здесь
+  // отдельной копией значило бы разъехаться при первой же правке — тем более что копии уже
+  // расходились по `stage`, а по нему идёт отбор заявок. Замечание авто-ревью на fe#800 (P2).
   if (delivery.sent) {
-    await recordAgentAction({
-      loop: 'aiwatch',
-      action,
-      resultStatus: 'ok',
-      signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes, calls, episode },
-      decision: { verdict: out.verdict },
-      policyVersion: policy.policyVersion,
-    })
+    await подтвердитьДоставку('aiwatch', action, { verdict: out.verdict, episode, calls }, policy.policyVersion)
   }
   log.info('aiwatch sweep done', { ...out, failStreak: state.failStreak, attempt })
   return out

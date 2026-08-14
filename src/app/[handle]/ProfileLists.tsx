@@ -3,6 +3,8 @@ import { t, tr } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Pagination } from '@/shared/ui/Pagination'
 import { FeedList } from '@/features/library/FeedList'
+import { BulkSelection } from '@/features/library/bulk/BulkSelection'
+import { BULK_MAX } from '@/features/library/bulk/limits'
 import { ListsToolbar } from '@/features/profile/ListsToolbar'
 import type { ProfilePageData } from './load'
 import { buttonClass } from '@/shared/ui/button-style'
@@ -57,6 +59,16 @@ export function ProfileLists({
   sort,
   listType,
 }: Props) {
+  // Набор для пакетных действий собираем ЗДЕСЬ и один раз: и признак «можно», и данные для
+  // полосы. Ниже остаётся один вопрос — есть он или нет.
+  const bulk =
+    isOwner && tab === 'lists'
+      ? {
+          catalogs: catalogs.map((c) => ({ name: c.name, title: tr(c.title, lang) })),
+          allIds: items.slice(0, BULK_MAX).map((i) => i.id),
+        }
+      : null
+
   return (
     <>
       {/* Stars как у GitHub: секция папок (карточки + сорт), ниже поиск+сорт звёзд. */}
@@ -137,6 +149,14 @@ export function ProfileLists({
 
       {items.length === 0 ? (
         <EmptyState hint={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
+      ) : bulk ? (
+        // Пакетные действия — только над своей библиотекой: раскладывать по полкам и
+        // публиковать можно лишь то, что твоё. «Все» — вся текущая выдача с фильтром, а не
+        // одна страница: разбирать полтысячи списков по двадцать штук бессмысленно.
+        <BulkSelection lang={lang} catalogs={bulk.catalogs} allIds={bulk.allIds}>
+          <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} selectable />
+          <Pagination page={page} totalPages={totalPages} makeHref={pageHref} lang={lang} />
+        </BulkSelection>
       ) : (
         <>
           <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} />

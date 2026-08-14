@@ -38,10 +38,20 @@ describe('холостой ход', () => {
     expect(r.sinceProgress).toBe(3)
   })
 
-  it('созданное, улучшенное, опубликованное, расхождение — прогресс', async () => {
-    for (const a of ['list.draft', 'list.improve', 'list.publish', 'list.fork']) await act(a)
+  it('предложенное, улучшенное, опубликованное, расхождение — прогресс', async () => {
+    // Именно эти действия уход и пишет; `list.draft` — не его, а самогенерации.
+    for (const a of ['list.suggest', 'list.improve', 'list.publish', 'list.fork']) await act(a)
     expect(await stallReport('gardener')).toMatchObject({ progress: 4, stalled: false, sinceProgress: 0 })
   })
+
+  it('наблюдательная петля не холостая: её работа — само наблюдение', async () => {
+    // До этой правки прогрессом считались только действия над библиотекой, поэтому
+    // бухгалтер, летописец, дозор ИИ и ревизия повестки показывались холостыми ВСЕГДА —
+    // на проде четыре петли из пяти живых. Находка A2 линзы 06.
+    await act('money.watch', 'ok', 'finance')
+    expect(await stallReport('finance')).toMatchObject({ progress: 1, stalled: false })
+  })
+
 
   it('прогресс был, потом тишина — считаем, сколько действий с тех пор', async () => {
     await act('list.improve')
@@ -57,7 +67,10 @@ describe('холостой ход', () => {
   })
 
   it('неудачная попытка прогрессом не считается', async () => {
-    await act('list.draft', 'error')
+    // Действие берём ИЗ прогресса садовника: с `list.draft` (он теперь у самогенерации)
+    // проверка стала бы вакуумной — отсекало бы по имени действия, и проверка статуса
+    // прошла бы даже будучи удалённой. Замечание авто-ревью на fe#800 (P2).
+    await act('list.suggest', 'error')
     expect(await stallReport('gardener')).toMatchObject({ progress: 0, stalled: true })
   })
 

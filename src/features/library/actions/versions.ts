@@ -3,7 +3,7 @@
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, steps, templates, type ProposedItem } from '@/shared/db'
+import { db, repositories, steps, templates, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { type LocaleText } from '@/shared/i18n'
@@ -12,11 +12,13 @@ import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, editBlockReason } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { isCollaborator } from '@/features/collab/queries'
-import { gateListPublication } from '@/features/moderation/moderate-list'
+// eslint-disable-next-line boundaries/dependencies -- полки принадлежат каталогам; правило «положить на полку» держим ОДНОЙ точкой на все три входа (форма, MCP, пачка MCP), а не копией здесь
+import { assignCatalogByName } from '@/features/catalogs/assign'
 import { registerTags } from '@/features/tags/service'
 import { ensureWatch } from '@/features/watch/actions'
 import { parseEditorItems, toProposedItems } from '../editor'
 import { getDraft, getVersionSteps } from '../queries'
+import { publishOwnedDraft } from '../publish-draft'
 import { deleteDraft, publishDraftFor, upsertDraft, type PublishResult } from '../draft'
 import { listStore } from '../list-store'
 import { parseTags, slugify } from '../slug'
@@ -77,6 +79,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
     throw e
   }
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
+  await assignCatalogByName(list.id, session.userId, String(formData.get('catalog') ?? ''))
   await registerTags(tags) // новые теги → в реестр
   await ensureWatch(list.id) // владелец следит за своим списком
   // Гейта публикации здесь больше нет: состояние решено ДО записи и приехало значением
@@ -262,11 +265,11 @@ export async function revertToVersion(templateId: string, version: number): Prom
 export async function publishList(templateId: string): Promise<void> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
-  if (!tpl || tpl.ownerId !== session.userId || tpl.status !== 'draft') return
-
-  await db.update(templates).set({ status: 'published', updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-  // Публикуем публичный список → гейт: pending до авто-проверки (приватный не трогаем).
-  if (tpl.visibility === 'public') await gateListPublication(tpl.id)
+  if (!tpl) return
+  // Само правило (твоё ли, черновик ли, гейт модерации) — в publish-draft: у кнопки,
+  // MCP и пакетного действия профиля оно обязано быть ОДНО.
+  const { skip } = await publishOwnedDraft(session.userId, tpl.id)
+  if (skip) return
 
   revalidatePath('/', 'layout')
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)

@@ -21,8 +21,27 @@ function normalize(s: string): string {
     .slice(0, 40)
 }
 
-export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?: string; initial?: string[]; lang: Lang; max?: number }) {
-  const [tags, setTags] = useState<string[]>(() => [...new Set(initial.map(normalize).filter(Boolean))].slice(0, max))
+export function TagInput({
+  name = 'tags',
+  initial = [],
+  lang,
+  max = 8,
+  onTagsChange,
+}: {
+  name?: string
+  initial?: string[]
+  lang: Lang
+  max?: number
+  /** Кому ещё нужны теги прямо во время набора (подсказка полки при создании).
+   *  Колбэк, а не подглядывание в скрытое поле: React пишет туда значение свойством,
+   *  DOM-события при этом не возникает, и «слушатель» выродился бы в опрос по таймеру. */
+  onTagsChange?: (tags: string[]) => void
+}) {
+  const [tags, setTagsState] = useState<string[]>(() => [...new Set(initial.map(normalize).filter(Boolean))].slice(0, max))
+  const setTags = (next: string[]) => {
+    setTagsState(next)
+    onTagsChange?.(next)
+  }
   const [q, setQ] = useState('')
   const [sugg, setSugg] = useState<Suggestion[]>([])
   const [open, setOpen] = useState(false)

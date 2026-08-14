@@ -5,6 +5,11 @@ import { PAGE } from '@/shared/ui/control'
 import { FeedList } from '@/features/library/FeedList'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { getTrendingFeed, type TrendRange } from '@/features/library/queries'
+
+/** Тренды — ВИТРИНА, а не листалка: смысл страницы в верхушке, и «страница 7 трендов» его
+ *  бы не имела. Потолок тот же, что показывался и раньше (30), но теперь он стоит в
+ *  запросе: до этого страница грузила весь видимый корпус и отрезала от него тридцатку. */
+const TREND_TOP = 30
 import { ExploreNav } from '@/widgets/explore/ExploreNav'
 import { TrendScope, TrendRanges, readRange } from '@/widgets/explore/TrendControls'
 
@@ -26,7 +31,7 @@ export default async function TrendingListsPage({
   // страницы. У GitHub ровно так же — `?since=weekly`.
   // Сам список ждёт всех троих: без периода, языка и зрителя его не построить.
   const trendRange: TrendRange = readRange(range)
-  const lists = await getTrendingFeed(trendRange, session?.userId, lang)
+  const lists = await getTrendingFeed(trendRange, session?.userId, lang, { limit: TREND_TOP })
 
   return (
     <div className="w-full">
@@ -39,7 +44,7 @@ export default async function TrendingListsPage({
         {lists.length === 0 ? (
           <EmptyState variant="plain" hint={t('noProfileLists', lang)} />
         ) : (
-          <FeedList items={lists.slice(0, 30)} lang={lang} viewerId={session?.userId} className="space-y-3" />
+          <FeedList items={lists} lang={lang} viewerId={session?.userId} className="space-y-3" />
         )}
       </div>
     </div>
