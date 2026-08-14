@@ -14,7 +14,7 @@ import { AdvancedFacets } from '@/features/library/AdvancedFacets'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
 import { ScopeSwitcher, type Scope } from '@/features/library/ScopeSwitcher'
 import { startGeneration } from '@/features/generation/actions'
-import { countLists, getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
+import { countLists, getSearchPage, getPopularTags, type FeedSort } from '@/features/library/queries'
 import { countPeople, searchPeople, type PeopleSort } from '@/features/profile/search'
 import { PeopleResults } from '@/features/profile/PeopleResults'
 import { countIssues, searchIssues, type IssueStateFilter } from '@/features/issues/search'
@@ -91,15 +91,20 @@ export default async function SearchPage({
 
   const [lang, session] = await Promise.all([getLang(), getSession()])
   // Бейджи scope-переключателя считаем всегда; полную выдачу — только активного scope.
-  const [tags, counts, feed, people, issueRows] = await Promise.all([
+  const [tags, counts, listsPage, people, issueRows] = await Promise.all([
     getPopularTags(),
     Promise.all([countLists(listOpts, session?.userId), countPeople(text), countIssues(text, 'all')]).then(
       ([lists, ppl, iss]) => ({ lists, people: ppl, issues: iss }),
     ),
-    scope === 'lists' ? getFeed({ ...listOpts, sort }, session?.userId, lang, pageWindow(rawPage)) : Promise.resolve([]),
+    scope === 'lists'
+      ? getSearchPage({ ...listOpts, sort }, session?.userId, lang, pageWindow(rawPage))
+      : Promise.resolve({ items: [], total: 0 }),
     scope === 'people' ? searchPeople({ q: text, sort: peopleSort }) : Promise.resolve([]),
     scope === 'issues' ? searchIssues({ q: text, state: issueState }) : Promise.resolve([]),
   ])
+  // Выдача и её объём приезжают вместе: число страниц обязано считаться по ТОМУ ЖЕ
+  // набору, который показан (см. getSearchPage).
+  const feed = listsPage.items
 
   // Отдаёт ПОЛНЫЙ адрес, а не хвост запроса (см. features/library/search-href).
   const qs = (over: Record<string, string | undefined>) =>
@@ -222,8 +227,11 @@ export default async function SearchPage({
                 {/* Поиск — листалка, а не витрина: найденное за первой страницей обязано
                     оставаться достижимым, иначе счётчик обещает больше, чем можно открыть. */}
                 <Pagination
-                  page={pageFromParam(sp.page, pageCount(counts.lists))}
-                  totalPages={pageCount(counts.lists)}
+                  // Число страниц — по ТОЙ ЖЕ выдаче, что и показана. `counts.lists` для
+                  // этого не годится: он считает буквальные совпадения, а в гибридном
+                  // режиме показывается ещё и смысловое — оно осталось бы за краем.
+                  page={pageFromParam(sp.page, pageCount(listsPage.total))}
+                  totalPages={pageCount(listsPage.total)}
                   // `qs` отдаёт УЖЕ готовый адрес со всеми действующими фильтрами — его и
                   // берём целиком. Подставить его как строку запроса значило бы собрать
                   // `/search?/search?q=…`, то есть ссылку в никуда.

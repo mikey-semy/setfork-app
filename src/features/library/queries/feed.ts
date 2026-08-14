@@ -94,6 +94,34 @@ export async function getFeed(
   return withAvatar(page([...keyword, ...semantic.filter((r) => !seen.has(r.id))]))
 }
 
+/**
+ * Страница ВЫДАЧИ ПОИСКА: что показать и сколько всего страниц — одним ответом.
+ *
+ * Считать их порознь нельзя, и это не удобство, а правильность. При запросе словами
+ * гибридный режим склеивает точные совпадения со смысловыми, и склеенных ЗАКОНОМЕРНО
+ * больше, чем находит `countLists` (тот считает только буквальные). Возьми число страниц
+ * оттуда — и смысловой хвост окажется за несуществующей второй страницей, то есть
+ * недостижим (находка авто-ревью).
+ *
+ * Поэтому при запросе словами общее число — это размер склеенной выдачи, а она ограничена
+ * потолком поиска из настроек. Без запроса (просмотр по тегу/фильтрам) всё наоборот:
+ * выдача безразмерна, окно уезжает в SQL, а счёт даёт `countLists`.
+ */
+export async function getSearchPage(
+  opts: NonNullable<Parameters<typeof getFeed>[0]>,
+  viewerId: string | undefined,
+  lang: Lang | undefined,
+  window: { limit: number; offset?: number },
+): Promise<{ items: FeedItem[]; total: number }> {
+  if (opts.q?.trim()) {
+    const merged = await getFeed(opts, viewerId, lang)
+    const from = window.offset ?? 0
+    return { items: merged.slice(from, from + window.limit), total: merged.length }
+  }
+  const [items, total] = await Promise.all([getFeed(opts, viewerId, lang, window), countLists(opts, viewerId)])
+  return { items, total }
+}
+
 /** Тренд за период: списки с наибольшим приростом звёзд за range (day/week/month),
  *  при равенстве — по суммарным звёздам+форкам. 'all' — просто trending. */
 export async function getTrendingFeed(
