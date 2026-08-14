@@ -12,6 +12,7 @@ import { listQuota } from '@/shared/quota'
 import { cleanText } from '@/shared/lib/text-input'
 import { detectTextLang } from '@/shared/lib/translit'
 import { listStore } from '@/features/library/list-store'
+import { assignCatalogByName } from '@/features/catalogs/assign'
 import { slugify, uniqueSlug } from '@/features/library/slug'
 import { recordAgentAction } from '@/shared/agents/policy'
 import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
@@ -28,6 +29,8 @@ export interface McpCreateInput {
   items: McpItemInput[]
   /** Язык контента ('ru'|'en'); не задан — детект по заголовку/описанию. */
   lang?: string
+  /** Имя полки владельца, на которую положить список. Нет такой — список остаётся без полки. */
+  catalog?: string
 }
 
 /** Создать список от имени пользователя. Всегда как ЧЕРНОВИК — публикует потом владелец на сайте. */
@@ -46,7 +49,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
   const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
 
-  await listStore.create({
+  const list = await listStore.create({
     ownerId: userId,
     slug,
     title: { [lang]: title },
@@ -60,9 +63,14 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
     steps: stepInput(proposed),
   })
 
+  // Полка — тем же правилом, что и в форме сайта (features/catalogs/assign): своя,
+  // под замком, и молчаливо ничего не выдумывает. Отчёт называет исход: имя, которого
+  // у владельца нет, иначе выглядело бы как принятое.
+  const filed = await assignCatalogByName(list.id, userId, input.catalog)
   return {
     ref: `${u.handle}/${slug}`,
     status: 'draft',
+    catalog: input.catalog ? (filed ? input.catalog : `not found among your catalogs: ${input.catalog}`) : undefined,
     note: 'Created as a private draft — the owner publishes it on the site to make it public.',
   }
 }

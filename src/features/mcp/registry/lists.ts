@@ -17,6 +17,10 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
         lang: z.enum(['en', 'ru']).optional().describe('Content language; omit to auto-detect from the title/description'),
         desc: z.string().optional().describe('One-line description'),
         tags: z.array(z.string()).optional().describe('3-6 short tags'),
+        catalog: z
+          .string()
+          .optional()
+          .describe('Name of one of your catalogs (shelves) to file the list under. Unknown name = the list stays unfiled and the response says so.'),
         ordered: z.boolean().optional().describe('true = ordered steps, false = unordered set (default true)'),
         items: z.array(itemShape).min(1).describe('The blocks (steps and optionally text/image/poll/video/quiz/file)'),
       },
@@ -205,6 +209,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
               lang: z.enum(['en', 'ru']).optional(),
               desc: z.string().optional(),
               tags: z.array(z.string()).optional(),
+              catalog: z.string().optional().describe('Name of one of your catalogs to file this list under'),
               ordered: z.boolean().optional(),
               items: z.array(itemShape).min(1),
             }),
