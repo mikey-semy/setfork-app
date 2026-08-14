@@ -13,8 +13,9 @@ export async function runChangelogJob(): Promise<void> {
   try {
     await refreshChangelog()
   } catch (e) {
-    // Витрина не бизнес-процесс: сбой сети GitHub не должен ронять джобу в
-    // ретраи с backoff — следующий проход и так по расписанию.
+    // Витрина не бизнес-процесс: сбой не должен ронять джобу в ретраи с backoff —
+    // следующий проход и так по расписанию. Недоступность GitHub сюда уже не долетает:
+    // сервис ловит её сам и пишет в журнал причину, так что здесь остаётся неожиданное.
     captureError(e, { where: 'changelog.refresh' })
   } finally {
     await scheduleNextChangelog()
