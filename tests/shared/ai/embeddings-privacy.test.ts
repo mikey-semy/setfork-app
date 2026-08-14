@@ -48,6 +48,20 @@ describe('политика данных для эмбеддингов', () => {
     expect(sentBody(spy).provider).toEqual({ data_collection: 'allow' })
   })
 
+  it('кеш запросов привязан к ПРОСТРАНСТВУ: после реиндекса в другой мерности вектор берётся заново', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(okBody), { status: 200 }))
+
+    await embedTexts(['одна и та же формулировка'], 'query')
+    await embedTexts(['одна и та же формулировка'], 'query') // то же пространство — берём из кеша
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    // Реиндекс перевёл индекс в 1536: старый 768-мерный вектор запроса несравним со
+    // свежими документами, и отдать его из кеша значило бы тихо испортить ранжирование.
+    space.mockResolvedValueOnce({ provider: 'openrouter', docModel: 'openai/text-embedding-3-small', queryModel: 'openai/text-embedding-3-small', dim: 1536 })
+    await embedTexts(['одна и та же формулировка'], 'query')
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
   it('Яндексу наших полей не шлём — он их не понимает', async () => {
     space.mockResolvedValueOnce({ provider: 'yandex', docModel: 'emb-doc', queryModel: 'emb-query', dim: 768 })
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(okBody), { status: 200 }))

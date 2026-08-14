@@ -195,7 +195,14 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
   const ep = await endpointFor(space)
   if (!ep) return null
   const model = purpose === 'query' ? space.queryModel : space.docModel
-  const cacheKey = purpose === 'query' && texts.length === 1 ? `${model}\u0000${texts[0]}` : null
+  // Ключ включает ПРОСТРАНСТВО, а не только модель: та же модель после реиндекса в другой
+  // мерности (768 -> 1536) даёт вектор, несравнимый со свежими документами, а запись живёт
+  // в кеше до вытеснения — поиск тихо ранжировал бы хуже. Чистить кеш в setIndexSpace мало:
+  // процессов на проде несколько, чужую память так не достанешь (находка авто-ревью).
+  const cacheKey =
+    purpose === 'query' && texts.length === 1
+      ? `${space.provider}\u0000${model}\u0000${space.dim}\u0000${texts[0]}`
+      : null
   if (cacheKey) {
     const hit = cacheGet(cacheKey)
     if (hit) return [hit]
