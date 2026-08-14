@@ -98,6 +98,18 @@ describe('создание через MCP кладёт список на пол�
     expect((await rowOf(res)).repositoryId).toBeNull()
   })
 
+  it('спор между подписью и транслитерацией не решается молча', async () => {
+    // «Скиллы» транслитерируется в `skilly` — и это имя чужой полки. Будь у слага
+    // приоритет, список уехал бы в «Другое», куда никто не просил. Тихая ошибка раскладки
+    // замечается нескоро, поэтому «не нашлось» здесь лучше.
+    await db.insert(repositories).values({ ownerId: meId, name: 'skilly', title: { ru: 'Другое' } })
+    await db.insert(repositories).values({ ownerId: meId, name: 'skills', title: { ru: 'Скиллы' } })
+
+    const res = await mcpCreateList(meId, { title: 'Спорное имя', items, catalog: 'Скиллы' })
+
+    expect((await rowOf(res)).repositoryId).toBeNull()
+  })
+
   it('полки видны ассистенту обоими именами', async () => {
     await db.insert(repositories).values({ ownerId: meId, name: 'skills', title: { ru: 'Скиллы' } })
     await db.insert(repositories).values({ ownerId: otherId, name: 'theirs', title: { ru: 'Чужая' } })

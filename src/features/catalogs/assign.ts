@@ -44,17 +44,27 @@ export async function assignCatalogByName(listId: string, ownerId: string, rawNa
  * слаг и отвечать «нет такой» на «Скиллы» — это переложить на человека знание о внутреннем
  * устройстве (находка авто-ревью: у ассистента и вовсе не было способа узнать слаг).
  *
- * Порядок разбора от точного к терпимому: слаг → тот же текст, приведённый к слагу →
- * видимый заголовок без учёта регистра. Двусмысленность НЕ разрешаем: если под заголовок
- * подходят две полки, честнее не выбрать никакую, чем угадать.
+ * Точное техническое имя решает сразу — оно и есть идентификатор. Всё остальное лишь
+ * ДОГАДКИ, и одна не старше другой: текст, приведённый к слагу, и совпавшая подпись
+ * равноправны. Спорят между собой — не выбираем никакую.
+ *
+ * Спор возможнее, чем кажется, и цена его высока. Пусть у автора есть полки
+ * `{skilly, «Другое»}` и `{skills, «Скиллы»}`: «Скиллы» транслитерируется в `skilly`, и будь
+ * у слага приоритет, список молча уехал бы в «Другое» — ровно туда, куда никто не просил.
+ * Тихую ошибку раскладки замечают нескоро, поэтому «не нашлось» здесь лучше (находка
+ * авто-ревью).
  */
 export function matchCatalog<T extends { name: string; title: unknown }>(mine: T[], wanted: string): T | null {
   const exact = mine.find((c) => c.name === wanted)
   if (exact) return exact
+
   const asSlug = slugify(wanted)
-  const bySlug = mine.find((c) => c.name === asSlug)
-  if (bySlug) return bySlug
-  const needle = wanted.toLowerCase()
+  const bySlug = mine.find((c) => c.name === asSlug) ?? null
+  const needle = wanted.trim().toLowerCase()
   const byTitle = mine.filter((c) => Object.values((c.title ?? {}) as Record<string, string>).some((v) => v?.trim().toLowerCase() === needle))
-  return byTitle.length === 1 ? byTitle[0] : null
+  if (byTitle.length > 1) return null // одна подпись у двух полок — данные молчат
+  const titled = byTitle[0] ?? null
+
+  if (bySlug && titled && bySlug !== titled) return null // догадки спорят — не выбираем
+  return titled ?? bySlug
 }
