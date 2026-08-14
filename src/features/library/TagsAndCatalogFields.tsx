@@ -22,10 +22,20 @@ import { fill, t, type Lang } from '@/shared/i18n'
  * 3 списка из 523. Если новый список по-прежнему рождается вне полок, разбор корпуса
  * окажется разовой уборкой.
  */
+/** «Без каталога» в выпадашке. Подчёркиваний в имени полки быть не может — `slugify`
+ *  оставляет только [a-z0-9-], — поэтому маркер заведомо ни с чем не столкнётся. Слово
+ *  `none` для этого не годится: полка с таким именем законна, и её нельзя было бы выбрать
+ *  (находка авто-ревью). Пустая строка тоже не подходит: Radix её не принимает как значение. */
+const NO_CATALOG = '__none__'
+
+/** Стабильная пустышка для тегов: новый литерал на каждый рендер заставлял бы детей,
+ *  сравнивающих пропы, перерисовываться зря. */
+const NO_TAGS: string[] = []
+
 export function TagsAndCatalogFields({
   lang,
   catalogs,
-  initialTags = [],
+  initialTags = NO_TAGS,
   initialCatalog = '',
 }: {
   lang: Lang
@@ -52,12 +62,12 @@ export function TagsAndCatalogFields({
           {/* Значение уезжает на сервер скрытым полем: Select — своя кнопка, а не <select>,
               и сам по себе в форму ничего не кладёт. */}
           <input type="hidden" name="catalog" value={value} />
-          <Select value={value || 'none'} onValueChange={(v) => setPicked(v === 'none' ? '' : v)}>
+          <Select value={value || NO_CATALOG} onValueChange={(v) => setPicked(v === NO_CATALOG ? '' : v)}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">{t('profile.catalogNone', lang)}</SelectItem>
+              <SelectItem value={NO_CATALOG}>{t('profile.catalogNone', lang)}</SelectItem>
               {catalogs.map((c) => (
                 <SelectItem key={c.name} value={c.name}>
                   {c.title || c.name}

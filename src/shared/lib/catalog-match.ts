@@ -39,10 +39,12 @@ export function guessCatalog(tags: string[], profiles: CatalogProfile[]): Catalo
   const wanted = new Set(tags.filter(Boolean))
   if (!wanted.size || !profiles.length) return null
 
-  const scored = profiles
-    .map((p) => ({ profile: p, shared: p.tags.filter((tag) => wanted.has(tag)) }))
-    .filter((s) => s.shared.length > 0)
-    .sort((a, b) => b.shared.length - a.shared.length)
+  const scored: { profile: CatalogProfile; shared: string[] }[] = []
+  for (const profile of profiles) {
+    const shared = profile.tags.filter((tag) => wanted.has(tag))
+    if (shared.length) scored.push({ profile, shared })
+  }
+  scored.sort((a, b) => b.shared.length - a.shared.length)
 
   const [best, runnerUp] = scored
   if (!best) return null

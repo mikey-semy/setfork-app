@@ -43,12 +43,18 @@ import { ownerHandle } from './shared'
 async function assignCatalogAtCreate(templateId: string, ownerId: string, raw: FormDataEntryValue | null): Promise<void> {
   const name = String(raw ?? '').trim()
   if (!name) return
-  const [cat] = await db
-    .select({ id: repositories.id })
-    .from(repositories)
-    .where(and(eq(repositories.ownerId, ownerId), eq(repositories.name, name)))
-    .limit(1)
-  if (cat) await db.update(templates).set({ repositoryId: cat.id }).where(eq(templates.id, templateId))
+  // Поиск и запись — одной транзакцией с тем же замком, что берёт удаление полки. Порознь
+  // они разъезжаются: полку успевают удалить между «нашли» и «записали», а внешнего ключа у
+  // `repositoryId` нет — новый список остался бы указывать на исчезнувшую (находка авто-ревью).
+  await db.transaction(async (tx) => {
+    const [cat] = await tx
+      .select({ id: repositories.id })
+      .from(repositories)
+      .where(and(eq(repositories.ownerId, ownerId), eq(repositories.name, name)))
+      .limit(1)
+      .for('update')
+    if (cat) await tx.update(templates).set({ repositoryId: cat.id }).where(eq(templates.id, templateId))
+  })
 }
 
 // ── Создание списка ───────────────────────────────────────────────────
