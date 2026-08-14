@@ -155,7 +155,10 @@ export const LOOPS: LoopSpec[] = [
     serviceModule: '@/features/linkcheck/service',
     ensure: 'ensureLinkcheckScheduled',
     paid: false,
-    progress: ['probe', 'linkcheck.sweep'],
+    // Только `linkcheck.sweep`: действие `probe` пишется ИСКЛЮЧИТЕЛЬНО в сухом прогоне, а
+    // такие записи детектор отсекает запросом — то есть прогрессом оно не станет никогда.
+    // Замечание авто-ревью на fe#800 (P2).
+    progress: ['linkcheck.sweep'],
     what: { en: 'walks list links and marks the dead ones', ru: 'обходит ссылки списков и помечает мёртвые' },
   },
   {

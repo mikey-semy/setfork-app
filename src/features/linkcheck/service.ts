@@ -150,14 +150,21 @@ export async function runLinkcheckSweep(payload: LinkcheckPayload = {}, probe: P
   // читатели. По второму считается холостой ход петли, и до этой правки живой проход в нём
   // не оставлял ничего (была только запись сухого прогона), поэтому объявленный в реестре
   // прогресс `linkcheck.sweep` не появился бы никогда. Замечание авто-ревью на fe#800 (P2).
-  await recordAgentAction({
-    loop: 'linkcheck',
-    action: 'linkcheck.sweep',
-    resultStatus: probed > 0 ? 'ok' : 'skipped',
-    signal: { probed },
-    decision: { broken, unreachable, rest, chained },
-    policyVersion: loop.policyVersion,
-  })
+  // Пишем только в ГОЛОВЕ цепочки, как харвест и доставка выше. Свип сам ставит себе
+  // продолжение через десять секунд, пока есть остаток, — запись на каждом звене залила бы
+  // журнал десятками строк за минуты. Окно детектора холостого хода — двенадцать последних
+  // записей, и оно стало бы покрывать две минуты вместо суток, а «День компании» состоял бы
+  // из одного обходчика. Замечание авто-ревью на fe#800 (P2).
+  if (!payload.chained) {
+    await recordAgentAction({
+      loop: 'linkcheck',
+      action: 'linkcheck.sweep',
+      resultStatus: probed > 0 ? 'ok' : 'skipped',
+      signal: { probed },
+      decision: { broken, unreachable, rest, chained },
+      policyVersion: loop.policyVersion,
+    })
+  }
   log.info('linkcheck sweep done', { probed, broken, unreachable, rest, chained })
   return { probed, chained }
 }

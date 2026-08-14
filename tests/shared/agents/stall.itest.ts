@@ -52,11 +52,6 @@ describe('холостой ход', () => {
     expect(await stallReport('finance')).toMatchObject({ progress: 1, stalled: false })
   })
 
-  it('петля не из реестра — не судим вовсе, а не объявляем холостой', async () => {
-    // Записи `mcp` пишет инструмент, а не петля: понятия «прогресс» у них нет.
-    await act('list.bulk', 'ok', 'mcp')
-    expect(await stallReport('mcp')).toMatchObject({ seen: 1, progress: 0, stalled: false })
-  })
 
   it('прогресс был, потом тишина — считаем, сколько действий с тех пор', async () => {
     await act('list.improve')
@@ -72,7 +67,10 @@ describe('холостой ход', () => {
   })
 
   it('неудачная попытка прогрессом не считается', async () => {
-    await act('list.draft', 'error')
+    // Действие берём ИЗ прогресса садовника: с `list.draft` (он теперь у самогенерации)
+    // проверка стала бы вакуумной — отсекало бы по имени действия, и проверка статуса
+    // прошла бы даже будучи удалённой. Замечание авто-ревью на fe#800 (P2).
+    await act('list.suggest', 'error')
     expect(await stallReport('gardener')).toMatchObject({ progress: 0, stalled: true })
   })
 

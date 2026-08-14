@@ -407,15 +407,11 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   out.skipped = delivery.skipped
   // Состояние меняет только ДОСТАВЛЕННОЕ сообщение: запись 'ok' и есть закрытие вопроса.
   // Не дошло — остаётся заявка со 'skipped' и причиной, эпизод открыт, попытка повторится.
+  // Через общий помощник: форма записи о доставке была взята отсюда, и держать её здесь
+  // отдельной копией значило бы разъехаться при первой же правке — тем более что копии уже
+  // расходились по `stage`, а по нему идёт отбор заявок. Замечание авто-ревью на fe#800 (P2).
   if (delivery.sent) {
-    await recordAgentAction({
-      loop: 'aiwatch',
-      action,
-      resultStatus: 'ok',
-      signal: { failStreak: state.failStreak, model: state.lastModel, outcomes: state.outcomes, calls, episode },
-      decision: { verdict: out.verdict },
-      policyVersion: policy.policyVersion,
-    })
+    await подтвердитьДоставку('aiwatch', action, { verdict: out.verdict, episode, calls }, policy.policyVersion)
   }
   log.info('aiwatch sweep done', { ...out, failStreak: state.failStreak, attempt })
   return out

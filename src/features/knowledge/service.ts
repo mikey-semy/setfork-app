@@ -42,11 +42,22 @@ export async function runTriplesSweep(): Promise<{ mined: number; skipped: numbe
     log.info('triples: сухой прогон — добычу не запускаем')
     return { mined: 0, skipped: 0 }
   }
-  if (!(await isAiAvailable())) return { mined: 0, skipped: 0 }
-  if (!(await globalBudgetOk())) {
-    log.info('triples: global AI budget exhausted, skipping')
+  // Не можем работать — это СОСТОЯНИЕ, и оно обязано быть видно. Раньше оба выхода
+  // молчали, то есть петля выглядела не просыпавшейся ровно тогда, когда владельцу важнее
+  // всего знать: канал к модели лёг или кончились деньги. Замечание авто-ревью на fe#800.
+  const немощь = async (причина: string) => {
+    await recordAgentAction({
+      loop: 'triples',
+      action: 'mine',
+      resultStatus: 'skipped',
+      decision: { reason: причина },
+      policyVersion: loop.policyVersion,
+    })
+    log.info(`triples: ${причина}`)
     return { mined: 0, skipped: 0 }
   }
+  if (!(await isAiAvailable())) return немощь('ai unavailable')
+  if (!(await globalBudgetOk())) return немощь('budget exhausted')
 
   // Публичные списки, где рудник ещё не был (или список правился после добычи).
   // Маркер triples_mined_at ставится независимо от урожая — «пустой» список не
@@ -100,14 +111,22 @@ export async function runTriplesSweep(): Promise<{ mined: number; skipped: numbe
   // здесь рабочее состояние — по нему считается холостой ход, и объявленный в реестре
   // прогресс `mine` без этой записи не появился бы никогда.
   // Замечание авто-ревью на fe#800 (P2).
-  await recordAgentAction({
-    loop: 'triples',
-    action: 'mine',
-    resultStatus: mined > 0 ? 'ok' : 'skipped',
-    signal: { batch: batch.length },
-    decision: { mined, skipped },
-    policyVersion: loop.policyVersion,
-  })
+  //
+  // Но ТОЛЬКО когда работа была. Пустая партия — это состояние БИБЛИОТЕКИ («новых списков
+  // нет»), а не петли: пиши мы её как «поработал без результата», в спокойные дни окно
+  // детектора заполнилось бы такими строками и рудник значился бы холостым вечно — ровно
+  // тот вечно красный индикатор, который эта же линза и убирала. Садовник решает так же,
+  // исключая из прогресса «улучшать нечего».
+  if (batch.length > 0) {
+    await recordAgentAction({
+      loop: 'triples',
+      action: 'mine',
+      resultStatus: mined > 0 ? 'ok' : 'skipped',
+      signal: { batch: batch.length },
+      decision: { mined, skipped },
+      policyVersion: loop.policyVersion,
+    })
+  }
   log.info('triples sweep done', { batch: batch.length, mined, skipped })
   return { mined, skipped }
 }

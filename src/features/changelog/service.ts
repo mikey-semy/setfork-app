@@ -52,8 +52,12 @@ interface Pulled {
  * Забрать свежее из GitHub: релизы или слитые pull request'ы.
  *
  * Без токена: публичный репозиторий читается анонимно, а держать секрет ради
- * витрины незачем. Ошибку сети НЕ считаем сбоем подсистемы — changelog это
- * витрина, а не бизнес-процесс.
+ * витрины незачем.
+ *
+ * Недоступность БРОСАЕТ, а не возвращает пустой список: «не смогли получить» и «получили
+ * пусто» — разные исходы, и по журналу их надо различать. Сбоем подсистемы это всё равно
+ * не считается: вызывающий пишет такой проход как `skipped` с причиной и предохранитель
+ * не рвёт — витрина не бизнес-процесс, и гасить её из-за чужого сервера нельзя.
  */
 async function pull(repo: string, source: 'releases' | 'merged'): Promise<Pulled[]> {
   // Приватный репозиторий анонимно отдаёт 404 — для него нужен токен. Публичный
@@ -126,16 +130,6 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
   // предохранитель, но срывать его умеет только сам проход, спросив канарейку. Пять
   // неудачных проходов подряд иначе повторялись бы вечно. Замечание авто-ревью на fe#800 (P2).
   if (!(await autonomyHealthy('changelog'))) return { added: 0, skipped: 'circuit tripped' }
-  if (loop.dryRun) {
-    await recordAgentAction({
-      loop: 'changelog',
-      action: 'changelog.refresh',
-      resultStatus: 'dry-run',
-      decision: { mode: 'skip-live-run', repo: s.repo, source: s.source },
-      policyVersion: loop.policyVersion,
-    })
-    return { added: 0, skipped: 'dry run' }
-  }
 
   /**
    * След прохода в журнале автономии. Журнал здесь не отчётность: по нему предохранитель
@@ -145,6 +139,10 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
    * состояние петли, и именно оно у неё основное; записывай мы только успешные добавления,
    * `hasActions('changelog')` оставался бы ложным месяцами и петля выглядела бы никогда не
    * работавшей. Замечание авто-ревью на fe#800 (P2).
+   *
+   * Объявлено ДО сухого прогона, чтобы им же писалась и его запись: раньше та строилась
+   * руками и молча теряла `resultRef` и `translate`, то есть две формы одной записи
+   * разъезжались бы при первой правке.
    */
   const след = (status: AgentActionInput['resultStatus'], decision: Record<string, unknown>, error?: string) =>
     recordAgentAction({
@@ -157,15 +155,28 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
       policyVersion: loop.policyVersion,
     })
 
-  // Источник у этой петли ОДИН: он не ответил — работать не с чем, и это отказ, а не
-  // «нечего добавлять». У сборщика лент противоположный случай (источников много, один
-  // мёртвый не повод гасить петлю), поэтому там такой сбой пишется как 'skipped'.
+  if (loop.dryRun) {
+    await след('dry-run', { mode: 'skip-live-run' })
+    return { added: 0, skipped: 'dry run' }
+  }
+
+  // НЕДОСТУПНЫЙ GITHUB — НЕ ОТКАЗ ПЕТЛИ, и статус здесь именно 'skipped'.
+  //
+  // Соблазн был написать 'error': тогда сбои копились бы в серию, и предохранитель
+  // сорвался бы. Но у сборщика лент это уже проходили — там стоит комментарий об
+  // инциденте: писали 'error', и одного круга мёртвых источников хватало, чтобы петля
+  // встала НАСОВСЕМ при исправном коде (снимает предохранитель только человек). Здесь
+  // было бы хуже: приватный или переименованный репозиторий отдаёт 404 анонимно, а
+  // протухший токен — 401, и пять проходов подряд навсегда погасили бы витрину.
+  //
+  // Различимость исходов при этом не теряется — она в ПОЛЕ ПРИЧИНЫ, а не в статусе:
+  // «не смогли получить» несёт текст ошибки, «получили пусто» не несёт ничего.
   let items
   try {
     items = await pull(s.repo, s.source)
   } catch (e) {
     const причина = e instanceof Error ? e.message : String(e)
-    await след('error', { reason: 'fetch failed' }, причина)
+    await след('skipped', { reason: 'fetch failed' }, причина)
     captureError(e, { where: 'changelog.pull' })
     return { added: 0, skipped: 'fetch failed' }
   }
@@ -194,21 +205,27 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
   for (const it of fresh.slice(0, 30)) {
     const { en, ru } = await bilingual(it.title, s.translate)
     try {
-      await db
+      // `returning` обязателен: без него `onConflictDoNothing` молча ничего не пишет, а
+      // счётчик всё равно растёт — два воркера (или повтор задачи) на одной записи дали бы
+      // проход с «added: 1» и статусом ok, хотя не добавлено ничего.
+      const [строка] = await db
         .insert(changelogEntries)
         .values({ at: it.at, en, ru, href: it.href || null, source: 'github', externalId: it.externalId })
         .onConflictDoNothing()
-      added++
+        .returning({ id: changelogEntries.id })
+      if (строка) added++
     } catch (e) {
       сорвалось++
       captureError(e, { where: 'changelog.insert' })
     }
   }
-  // Провал вставок — это ОШИБКА, а не «пропустили». Статус выводился из одного лишь
-  // счётчика добавленных, а исключения глушит catch выше: полный отказ записи попадал бы
-  // в журнал бодрым 'skipped', и предохранитель, считающий серию ошибок, никогда бы не
-  // сработал на сломанной петле. Замечание авто-ревью на fe#800 (P2).
-  await след(сорвалось > 0 ? 'error' : added > 0 ? 'ok' : 'skipped', {
+  // ПОЛНЫЙ провал записи — ошибка: это уже наша БД, а не чужой сервер, и такое чинит
+  // человек. А вот частичный провал ошибкой не считаем, и это не мягкость: неудачный
+  // элемент не попадает в базу, поэтому остаётся в «свежих» и будет повторяться каждый
+  // проход. Помечай мы весь проход ошибкой из-за одного такого, серия из пяти набралась
+  // бы гарантированно и петля погасла бы навсегда, добавляя при этом по 29 записей из 30.
+  // Число неудач видно в decision.failed.
+  await след(added === 0 && сорвалось > 0 ? 'error' : added > 0 ? 'ok' : 'skipped', {
     pulled: items.length,
     fresh: fresh.length,
     added,
