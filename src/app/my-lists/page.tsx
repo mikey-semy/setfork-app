@@ -26,13 +26,17 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
   // страницу. Раньше страница грузила всю библиотеку (у владельца это полтысячи списков с
   // аватарами), а фильтр применялся уже к загруженному.
   const keep = session && activeQuery ? [...(await applySavedQuery(session.userId, activeQuery))] : undefined
-  const total = !session ? 0 : keep ? keep.length : await countUserTemplates(session.userId, session.userId)
+  // Два разных счёта, и путать их нельзя. `owned` отвечает на «есть ли у меня списки
+  // вообще» — по нему решается, показать ли приглашение создать первый. `total` — сколько
+  // строк в ТЕКУЩЕЙ выдаче, по нему считаются страницы. Слить их значило бы предлагать
+  // «создайте первый список» человеку, у которого их полтысячи, просто фильтр не совпал
+  // (находка авто-ревью).
+  const owned = session ? await countUserTemplates(session.userId, session.userId) : 0
+  const total = keep ? keep.length : owned
   const totalPages = pageCount(total)
   const page = pageFromParam(sp.page, totalPages)
   const items = session ? await getUserTemplates(session.userId, session.userId, pageWindow(page), keep) : []
-  // «Были ли списки вообще» — вопрос не про страницу: пустая вторая страница не означает
-  // пустую библиотеку, и предлагать «создайте первый» там было бы неправдой.
-  const hadAny = total > 0
+  const hadAny = owned > 0
   // Панель здоровья (HQ §11): «где болит прямо сейчас» — выше ленты.
 
   return (

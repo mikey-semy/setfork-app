@@ -48,7 +48,7 @@ export default async function CatalogPage({
         title={tr(cat.title, lang) || cat.name}
         subtitle={
           <>
-            {lists.length} {t('lists', lang).toLowerCase()}
+            {total} {t('lists', lang).toLowerCase()}
             {tr(cat.desc, lang) ? ` · ${tr(cat.desc, lang)}` : ''}
           </>
         }

@@ -7,6 +7,8 @@ import { hasAiEnvConfig } from '@/shared/settings/ai'
 import { Button } from '@/shared/ui/button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
+import { Pagination } from '@/shared/ui/Pagination'
+import { pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
 import { AdvancedFacets } from '@/features/library/AdvancedFacets'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
 import { ScopeSwitcher, type Scope } from '@/features/library/ScopeSwitcher'
@@ -55,9 +57,13 @@ export default async function SearchPage({
     psort?: string
     state?: string
     focus?: string
+    page?: string
   }>
 }) {
   const sp = await searchParams
+  // Номер страницы нужен ДО запроса — окно уезжает в него; потолок по числу найденного
+  // считается тем же запросом счёта, что и бейдж scope-переключателя.
+  const rawPage = Math.max(1, Number(sp.page) || 1)
   const aiOn = hasAiEnvConfig()
   const scope: Scope = sp.scope === 'people' ? 'people' : sp.scope === 'issues' ? 'issues' : 'lists'
   const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
@@ -89,7 +95,7 @@ export default async function SearchPage({
     Promise.all([countLists(listOpts, session?.userId), countPeople(text), countIssues(text, 'all')]).then(
       ([lists, ppl, iss]) => ({ lists, people: ppl, issues: iss }),
     ),
-    scope === 'lists' ? getFeed({ ...listOpts, sort }, session?.userId, lang) : Promise.resolve([]),
+    scope === 'lists' ? getFeed({ ...listOpts, sort }, session?.userId, lang, pageWindow(rawPage)) : Promise.resolve([]),
     scope === 'people' ? searchPeople({ q: text, sort: peopleSort }) : Promise.resolve([]),
     scope === 'issues' ? searchIssues({ q: text, state: issueState }) : Promise.resolve([]),
   ])
@@ -214,7 +220,17 @@ export default async function SearchPage({
                 </div>
               )
             ) : (
-              <FeedList items={feed} lang={lang} viewerId={session?.userId} className="space-y-3 py-3" />
+              <>
+                <FeedList items={feed} lang={lang} viewerId={session?.userId} className="space-y-3 py-3" />
+                {/* Поиск — листалка, а не витрина: найденное за первой страницей обязано
+                    оставаться достижимым, иначе счётчик обещает больше, чем можно открыть. */}
+                <Pagination
+                  page={pageFromParam(sp.page, pageCount(counts.lists))}
+                  totalPages={pageCount(counts.lists)}
+                  makeHref={(p) => `/search?${qs({ page: p > 1 ? String(p) : undefined })}`}
+                  lang={lang}
+                />
+              </>
             )}
           </>
         )}
