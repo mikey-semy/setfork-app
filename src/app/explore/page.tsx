@@ -19,6 +19,11 @@ import { cardClass } from '@/shared/ui/card-style'
 
 /** Период ссылки «ещё» из бокового виджета: неделя, а не день — за сутки бывает пусто. */
 const SIDE_TREND_RANGE: TrendRange = 'week'
+/** Сколько карточек в основной ленте витрины и сколько в боковом виджете. Числа стоят
+ *  рядом с местом, где они видны, и уезжают в САМ запрос: витрина показывает верх выдачи,
+ *  и грузить ради него весь корпус незачем. */
+const EXPLORE_FEED = 12
+const EXPLORE_SIDE = 5
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -38,12 +43,15 @@ export default async function ExplorePage() {
   // страницы ранжируется иначе (звёзды за всё время), и наполнять ею виджет с подписью
   // «Trending» значило бы обещать одно, а по клику показывать другое.
   const [feed, exploreCatalogs, sidePeople, sideTrending] = await Promise.all([
-    getFeed({ sort: 'trending' }, uid, lang),
+    // Витрине нужен ВЕРХ выдачи, а не вся она: раньше запрос тянул весь видимый корпус с
+    // аватарами авторов, а показывались двенадцать. Числа те же, что и были, — теперь они
+    // стоят в запросе, а не в разметке.
+    getFeed({ sort: 'trending' }, uid, lang, { limit: EXPLORE_FEED }),
     getPublicCatalogs(6),
     searchPeople({ sort: 'followers', limit: 5 }),
-    getTrendingFeed(SIDE_TREND_RANGE, uid, lang),
+    getTrendingFeed(SIDE_TREND_RANGE, uid, lang, { limit: EXPLORE_SIDE }),
   ])
-  const feedTop = feed.slice(0, 12)
+  const feedTop = feed
   // Звёзды зависят от того, что попало в ленту, — только это чтение и ждёт её.
   const feedStarred = uid ? await getStarredIds(uid, feedTop.map((i) => i.id)) : new Set<string>()
 
@@ -74,7 +82,7 @@ export default async function ExplorePage() {
               moreHref={`/explore?tab=trending&view=lists&range=${SIDE_TREND_RANGE}`}
               moreLabel={t('trendingListsMore', lang)}
             >
-              {sideTrending.slice(0, 5).map((l) => (
+              {sideTrending.map((l) => (
                 <Link
                   key={l.id}
                   href={`/${l.ownerHandle}/${l.slug}`}

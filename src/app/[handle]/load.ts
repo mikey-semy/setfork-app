@@ -22,11 +22,12 @@ import { getFolderTemplateIds, getUserFolders } from '@/features/star-folders/qu
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { dayKey } from '@/features/profile/activity/types'
+import { pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
 
 export type ProfileTab = 'overview' | 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
 
-/** Списков на страницу: без страниц вкладка «Списки» у активного автора не читается. */
-const PER_PAGE = 20
+// Размер страницы — общий для всех поверхностей со списками (shared/lib/paging): у них нет
+// причин расходиться, а «по 20 тут и по 30 там» это следы разных решений в разное время.
 
 /** Что показываем на вкладке «Списки»: всё или один срез. */
 const LIST_TYPES = ['public', 'private', 'forks'] as const
@@ -158,9 +159,10 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   })
 
   // Пагинация вкладок со списками (много списков = боль без страниц).
-  const totalPages = Math.max(1, Math.ceil(items.length / PER_PAGE))
-  const page = Math.min(Math.max(1, Number(sp.page) || 1), totalPages)
-  const pageItems = isListsTab ? items.slice((page - 1) * PER_PAGE, page * PER_PAGE) : items
+  const totalPages = pageCount(items.length)
+  const page = pageFromParam(sp.page, totalPages)
+  const { limit, offset } = pageWindow(page)
+  const pageItems = isListsTab ? items.slice(offset, offset + limit) : items
   const pageHref = (p: number) => {
     const qs = new URLSearchParams()
     qs.set('tab', tab)

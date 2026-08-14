@@ -7,11 +7,14 @@ import { hasAiEnvConfig } from '@/shared/settings/ai'
 import { Button } from '@/shared/ui/button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
+import { searchHref } from '@/features/library/search-href'
+import { Pagination } from '@/shared/ui/Pagination'
+import { pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
 import { AdvancedFacets } from '@/features/library/AdvancedFacets'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
 import { ScopeSwitcher, type Scope } from '@/features/library/ScopeSwitcher'
 import { startGeneration } from '@/features/generation/actions'
-import { countLists, getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
+import { countLists, getSearchPage, getPopularTags, type FeedSort } from '@/features/library/queries'
 import { countPeople, searchPeople, type PeopleSort } from '@/features/profile/search'
 import { PeopleResults } from '@/features/profile/PeopleResults'
 import { countIssues, searchIssues, type IssueStateFilter } from '@/features/issues/search'
@@ -55,9 +58,13 @@ export default async function SearchPage({
     psort?: string
     state?: string
     focus?: string
+    page?: string
   }>
 }) {
   const sp = await searchParams
+  // Номер страницы нужен ДО запроса — окно уезжает в него; потолок по числу найденного
+  // считается тем же запросом счёта, что и бейдж scope-переключателя.
+  const rawPage = Math.max(1, Number(sp.page) || 1)
   const aiOn = hasAiEnvConfig()
   const scope: Scope = sp.scope === 'people' ? 'people' : sp.scope === 'issues' ? 'issues' : 'lists'
   const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
@@ -84,23 +91,24 @@ export default async function SearchPage({
 
   const [lang, session] = await Promise.all([getLang(), getSession()])
   // Бейджи scope-переключателя считаем всегда; полную выдачу — только активного scope.
-  const [tags, counts, feed, people, issueRows] = await Promise.all([
+  const [tags, counts, listsPage, people, issueRows] = await Promise.all([
     getPopularTags(),
     Promise.all([countLists(listOpts, session?.userId), countPeople(text), countIssues(text, 'all')]).then(
       ([lists, ppl, iss]) => ({ lists, people: ppl, issues: iss }),
     ),
-    scope === 'lists' ? getFeed({ ...listOpts, sort }, session?.userId, lang) : Promise.resolve([]),
+    scope === 'lists'
+      ? getSearchPage({ ...listOpts, sort }, session?.userId, lang, pageWindow(rawPage))
+      : Promise.resolve({ items: [], total: 0 }),
     scope === 'people' ? searchPeople({ q: text, sort: peopleSort }) : Promise.resolve([]),
     scope === 'issues' ? searchIssues({ q: text, state: issueState }) : Promise.resolve([]),
   ])
+  // Выдача и её объём приезжают вместе: число страниц обязано считаться по ТОМУ ЖЕ
+  // набору, который показан (см. getSearchPage).
+  const feed = listsPage.items
 
-  const qs = (over: Record<string, string | undefined>) => {
-    const p = new URLSearchParams()
-    const merged = { q: sp.q, tag: sp.tag, sort: sp.sort, verified: sp.verified, type: sp.type, ...over }
-    for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v)
-    const s = p.toString()
-    return s ? `${BASE}?${s}` : BASE
-  }
+  // Отдаёт ПОЛНЫЙ адрес, а не хвост запроса (см. features/library/search-href).
+  const qs = (over: Record<string, string | undefined>) =>
+    searchHref({ q: sp.q, tag: sp.tag, sort: sp.sort, verified: sp.verified, type: sp.type }, over)
   // Ссылки табов внутри scope people/issues (сохраняем свободный текст).
   const scopeTab = (extra: Record<string, string | undefined>) => {
     const p = new URLSearchParams()
@@ -214,7 +222,23 @@ export default async function SearchPage({
                 </div>
               )
             ) : (
-              <FeedList items={feed} lang={lang} viewerId={session?.userId} className="space-y-3 py-3" />
+              <>
+                <FeedList items={feed} lang={lang} viewerId={session?.userId} className="space-y-3 py-3" />
+                {/* Поиск — листалка, а не витрина: найденное за первой страницей обязано
+                    оставаться достижимым, иначе счётчик обещает больше, чем можно открыть. */}
+                <Pagination
+                  // Число страниц — по ТОЙ ЖЕ выдаче, что и показана. `counts.lists` для
+                  // этого не годится: он считает буквальные совпадения, а в гибридном
+                  // режиме показывается ещё и смысловое — оно осталось бы за краем.
+                  page={pageFromParam(sp.page, pageCount(listsPage.total))}
+                  totalPages={pageCount(listsPage.total)}
+                  // `qs` отдаёт УЖЕ готовый адрес со всеми действующими фильтрами — его и
+                  // берём целиком. Подставить его как строку запроса значило бы собрать
+                  // `/search?/search?q=…`, то есть ссылку в никуда.
+                  makeHref={(p) => qs({ page: p > 1 ? String(p) : undefined })}
+                  lang={lang}
+                />
+              </>
             )}
           </>
         )}

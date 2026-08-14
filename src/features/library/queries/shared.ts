@@ -102,16 +102,27 @@ export function extraFilters(opts: {
 }
 
 /** Поиск/лента по ключевым словам (ILIKE по всем языкам сразу). q пустой = просто лента. */
-export async function keywordFeed(order: SQL, viewerId?: string, tag?: string, q?: string, extra: SQL[] = [], viewerLang?: Lang): Promise<FeedItem[]> {
+export async function keywordFeed(
+  order: SQL,
+  viewerId?: string,
+  tag?: string,
+  q?: string,
+  extra: SQL[] = [],
+  viewerLang?: Lang,
+  /** Окно выдачи. Без него запрос тянул ВЕСЬ видимый корпус — с аватарами авторов, —
+   *  а разметка показывала из него экран: цена страницы росла вместе с порталом. */
+  window?: { limit: number; offset?: number },
+): Promise<FeedItem[]> {
   const filters: SQL[] = [visibleFilter(viewerId), ...extra]
   if (tag) filters.push(tagFilter(tag))
   if (q) filters.push(searchCondition(q))
-  const rows = await db
+  const base = db
     .select(FEED_COLS)
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(...filters))
     .orderBy(...(viewerLang ? [langPref(viewerLang)] : []), order)
+  const rows = window ? await base.limit(window.limit).offset(window.offset ?? 0) : await base
   return rows as FeedItem[]
 }
 

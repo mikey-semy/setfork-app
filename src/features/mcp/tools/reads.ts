@@ -18,11 +18,13 @@ import { isCollaborator } from '@/features/collab/queries'
  */
 
 export async function mcpSearch(userId: string, query: string, limit: number) {
-  const feed = await getFeed({ q: query }, userId)
+  // Сколько просили, столько и запрашиваем. Раньше выдача приезжала целиком и резалась
+  // здесь — то есть корпус тянулся ради двадцати строк.
+  const feed = await getFeed({ q: query }, userId, undefined, { limit })
   return {
     query,
-    count: Math.min(feed.length, limit),
-    results: feed.slice(0, limit).map((f) => ({
+    count: feed.length,
+    results: feed.map((f) => ({
       ref: `${f.ownerHandle}/${f.slug}`,
       title: tr(f.title, 'en'),
       desc: tr(f.desc, 'en'),
