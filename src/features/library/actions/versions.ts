@@ -12,6 +12,8 @@ import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, editBlockReason } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { isCollaborator } from '@/features/collab/queries'
+// eslint-disable-next-line boundaries/dependencies -- полки принадлежат каталогам; правило «положить на полку» держим ОДНОЙ точкой на все три входа (форма, MCP, пачка MCP), а не копией здесь
+import { assignCatalogByName } from '@/features/catalogs/assign'
 import { registerTags } from '@/features/tags/service'
 import { ensureWatch } from '@/features/watch/actions'
 import { parseEditorItems, toProposedItems } from '../editor'
@@ -31,31 +33,6 @@ import { ownerHandle } from './shared'
  * Одна причина меняться на весь файл — правила записи версии; предложения чужих
  * правок и настройки списка живут отдельно, хотя и зовут отсюда общее.
  */
-
-/**
- * Положить новорождённый список на выбранную полку.
- *
- * Полка появилась в форме создания затем, что раньше её назначали только из настроек уже
- * готового списка — то есть почти никогда: на полках лежало 3 списка из 523. Имя приходит
- * из браузера, поэтому ищется СРЕДИ СВОИХ; не нашлось — список просто остаётся без полки,
- * а не роняет создание.
- */
-async function assignCatalogAtCreate(templateId: string, ownerId: string, raw: FormDataEntryValue | null): Promise<void> {
-  const name = String(raw ?? '').trim()
-  if (!name) return
-  // Поиск и запись — одной транзакцией с тем же замком, что берёт удаление полки. Порознь
-  // они разъезжаются: полку успевают удалить между «нашли» и «записали», а внешнего ключа у
-  // `repositoryId` нет — новый список остался бы указывать на исчезнувшую (находка авто-ревью).
-  await db.transaction(async (tx) => {
-    const [cat] = await tx
-      .select({ id: repositories.id })
-      .from(repositories)
-      .where(and(eq(repositories.ownerId, ownerId), eq(repositories.name, name)))
-      .limit(1)
-      .for('update')
-    if (cat) await tx.update(templates).set({ repositoryId: cat.id }).where(eq(templates.id, templateId))
-  })
-}
 
 // ── Создание списка ───────────────────────────────────────────────────
 export async function createTemplate(formData: FormData): Promise<void> {
@@ -102,7 +79,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
     throw e
   }
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
-  await assignCatalogAtCreate(list.id, session.userId, formData.get('catalog'))
+  await assignCatalogByName(list.id, session.userId, String(formData.get('catalog') ?? ''))
   await registerTags(tags) // новые теги → в реестр
   await ensureWatch(list.id) // владелец следит за своим списком
   // Гейта публикации здесь больше нет: состояние решено ДО записи и приехало значением
