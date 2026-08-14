@@ -38,7 +38,9 @@ import { t } from '@/shared/i18n'
 import { blankCount, type QuizKind } from '@/core'
 import { classifyListKind, refineHint } from '@/shared/ai/list-kind'
 import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
-import { fetchLinkTitleAction, refineList, uploadStepFile, uploadStepImage, uploadStepVideo } from './actions'
+import { fetchLinkTitleAction, refineList } from './actions'
+import { uploadWithProgress } from '@/shared/lib/xhr-upload'
+import { UploadDropzone } from '@/shared/ui/UploadDropzone'
 
 const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap, file: Paperclip, product: ShoppingCart }
 const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru : BLOCK_META[t].en)
@@ -96,7 +98,7 @@ export function ListEditor({
   const ru = lang === 'ru'
   const first = initialItems.length ? initialItems : [emptyItem()]
   const [items, setItemsRaw] = useState<EditorItem[]>(first)
-  const [uploading, setUploading] = useState<number | null>(null)
+  const [imgProg, setImgProg] = useState<{ i: number; pct: number } | null>(null)
   const [dragI, setDragI] = useState<number | null>(null)
   const [overI, setOverI] = useState<number | null>(null)
 
@@ -164,12 +166,23 @@ export function ListEditor({
     if (!nodes) return
     const now = new Map<string, number>()
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const firstRun = prevRects.current.size === 0 // начальный маунт — блоки не анимируем
     nodes.forEach((node) => {
       const uid = node.dataset.uid!
       const top = node.getBoundingClientRect().top
       now.set(uid, top)
       const prev = prevRects.current.get(uid)
-      if (prev != null && prev !== top && !reduce) {
+      if (reduce) return
+      if (prev == null) {
+        // Новый блок (добавлен после маунта) — плавное появление, а не рывок.
+        if (!firstRun) {
+          node.animate(
+            [{ opacity: 0, transform: 'translateY(-6px) scale(0.98)' }, { opacity: 1, transform: 'none' }],
+            { duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
+          )
+        }
+      } else if (prev !== top) {
+        // Существующий блок сдвинулся — FLIP «доезд» до новой позиции.
         node.animate(
           [{ transform: `translateY(${prev - top}px)` }, { transform: 'translateY(0)' }],
           { duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
@@ -206,34 +219,42 @@ export function ListEditor({
     }
   }
 
+  // Загрузки идут через XHR (shared/lib/xhr-upload) ради РЕАЛЬНОГО прогресса —
+  // заливка dropzone слева-направо вместо неопределённого спиннера.
   async function uploadFor(i: number, file: File) {
-    setUploading(i)
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await uploadStepImage(fd)
-    setUploading(null)
-    if ('error' in res) alert(res.error)
-    else patch(i, { imageKey: res.key, imagePreview: res.url })
+    setImgProg({ i, pct: 0 })
+    try {
+      const res = await uploadWithProgress('step-image', file, (pct) => setImgProg({ i, pct }))
+      patch(i, { imageKey: res.key, imagePreview: res.url })
+    } catch (e) {
+      alert(e instanceof Error ? e.message : ru ? 'Не удалось загрузить.' : 'Upload failed.')
+    } finally {
+      setImgProg(null)
+    }
   }
-  const [videoUploading, setVideoUploading] = useState<number | null>(null)
+  const [vidProg, setVidProg] = useState<{ i: number; pct: number } | null>(null)
   async function uploadVideoFor(i: number, file: File) {
-    setVideoUploading(i)
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await uploadStepVideo(fd)
-    setVideoUploading(null)
-    if ('error' in res) alert(res.error)
-    else patch(i, { videoUrl: res.url })
+    setVidProg({ i, pct: 0 })
+    try {
+      const res = await uploadWithProgress('step-video', file, (pct) => setVidProg({ i, pct }))
+      patch(i, { videoUrl: res.url })
+    } catch (e) {
+      alert(e instanceof Error ? e.message : ru ? 'Не удалось загрузить.' : 'Upload failed.')
+    } finally {
+      setVidProg(null)
+    }
   }
-  const [fileUploading, setFileUploading] = useState<number | null>(null)
+  const [fileProg, setFileProg] = useState<{ i: number; pct: number } | null>(null)
   async function uploadFileFor(i: number, file: File) {
-    setFileUploading(i)
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await uploadStepFile(fd)
-    setFileUploading(null)
-    if ('error' in res) alert(res.error)
-    else patch(i, { fileUrl: res.url, fileName: res.name })
+    setFileProg({ i, pct: 0 })
+    try {
+      const res = await uploadWithProgress('step-file', file, (pct) => setFileProg({ i, pct }))
+      patch(i, { fileUrl: res.url, fileName: res.name })
+    } catch (e) {
+      alert(e instanceof Error ? e.message : ru ? 'Не удалось загрузить.' : 'Upload failed.')
+    } finally {
+      setFileProg(null)
+    }
   }
   // Вставка блока на позицию index (0..len). index === len → в конец.
   const insertAt = (index: number, type: BlockType) => {
@@ -596,7 +617,7 @@ export function ListEditor({
                 </button>
               </div>
             ) : (
-              <StepImageInput uploading={uploading === i} onFile={(f) => uploadFor(i, f)} ru={ru} />
+              <UploadDropzone progress={imgProg?.i === i ? imgProg.pct : null} accept="image/png,image/jpeg,image/webp,image/gif" onFile={(f) => uploadFor(i, f)} idle={<><ImageUp size={14} className="shrink-0" /> {ru ? 'Скриншот: перетащите или нажмите' : 'Screenshot: drag or click'}</>} ru={ru} />
             )}
 
             <div className="flex flex-wrap gap-3 pt-1 text-[12px]">
@@ -638,7 +659,7 @@ export function ListEditor({
                   </button>
                 </div>
               ) : (
-                <StepImageInput uploading={uploading === i} onFile={(f) => uploadFor(i, f)} ru={ru} />
+                <UploadDropzone progress={imgProg?.i === i ? imgProg.pct : null} accept="image/png,image/jpeg,image/webp,image/gif" onFile={(f) => uploadFor(i, f)} idle={<><ImageUp size={14} className="shrink-0" /> {ru ? 'Скриншот: перетащите или нажмите' : 'Screenshot: drag or click'}</>} ru={ru} />
               )}
               <BubbleTextEditor
                 value={it.caption}
@@ -674,7 +695,7 @@ export function ListEditor({
                     {ru ? 'или' : 'or'}
                     <span className="h-px flex-1 bg-border" />
                   </div>
-                  <VideoFileInput uploading={videoUploading === i} onFile={(f) => uploadVideoFor(i, f)} ru={ru} />
+                  <UploadDropzone progress={vidProg?.i === i ? vidProg.pct : null} accept="video/mp4,video/webm,video/ogg" onFile={(f) => uploadVideoFor(i, f)} idle={<><VideoIcon size={14} className="shrink-0" /> {ru ? 'Свой файл: перетащите или нажмите (MP4/WEBM, до 50 МБ)' : 'Own file: drag or click (MP4/WEBM, up to 50 MB)'}</>} ru={ru} />
                 </>
               )}
               <BubbleTextEditor
@@ -714,7 +735,7 @@ export function ListEditor({
                   </button>
                 </div>
               ) : (
-                <FileDropInput uploading={fileUploading === i} onFile={(f) => uploadFileFor(i, f)} ru={ru} />
+                <UploadDropzone progress={fileProg?.i === i ? fileProg.pct : null} onFile={(f) => uploadFileFor(i, f)} idle={<><Paperclip size={14} className="shrink-0" /> {ru ? 'Файл: перетащите или нажмите (PDF/док/архив, до 25 МБ)' : 'File: drag or click (PDF/doc/archive, up to 25 MB)'}</>} ru={ru} />
               )}
             </div>
           )}
@@ -1331,124 +1352,5 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
   )
 }
 
-function StepImageInput({ uploading, onFile, ru }: { uploading: boolean; onFile: (f: File) => void; ru: boolean }) {
-  const ref = useRef<HTMLInputElement>(null)
-  const [over, setOver] = useState(false)
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => ref.current?.click()}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setOver(false)
-        const f = e.dataTransfer.files?.[0]
-        if (f) onFile(f)
-      }}
-      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
-        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
-      }`}
-    >
-      {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImageUp size={14} />}
-      {uploading ? (ru ? 'Загрузка…' : 'Uploading…') : ru ? 'Скриншот: перетащите или нажмите' : 'Screenshot: drag or click'}
-      <input
-        ref={ref}
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) onFile(f)
-          e.target.value = ''
-        }}
-      />
-    </div>
-  )
-}
-
-function VideoFileInput({ uploading, onFile, ru }: { uploading: boolean; onFile: (f: File) => void; ru: boolean }) {
-  const ref = useRef<HTMLInputElement>(null)
-  const [over, setOver] = useState(false)
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => ref.current?.click()}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setOver(false)
-        const f = e.dataTransfer.files?.[0]
-        if (f) onFile(f)
-      }}
-      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
-        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
-      }`}
-    >
-      {uploading ? <Loader2 size={14} className="animate-spin" /> : <VideoIcon size={14} />}
-      {uploading
-        ? ru
-          ? 'Загрузка…'
-          : 'Uploading…'
-        : ru
-          ? 'Свой файл: перетащите или нажмите (MP4/WEBM, до 50 МБ)'
-          : 'Own file: drag or click (MP4/WEBM, up to 50 MB)'}
-      <input
-        ref={ref}
-        type="file"
-        accept="video/mp4,video/webm,video/ogg"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) onFile(f)
-          e.target.value = ''
-        }}
-      />
-    </div>
-  )
-}
-
-function FileDropInput({ uploading, onFile, ru }: { uploading: boolean; onFile: (f: File) => void; ru: boolean }) {
-  const ref = useRef<HTMLInputElement>(null)
-  const [over, setOver] = useState(false)
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => ref.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); setOver(true) }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setOver(false)
-        const f = e.dataTransfer.files?.[0]
-        if (f) onFile(f)
-      }}
-      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
-        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
-      }`}
-    >
-      {uploading ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} />}
-      {uploading ? (ru ? 'Загрузка…' : 'Uploading…') : ru ? 'Файл: перетащите или нажмите (PDF/док/архив, до 25 МБ)' : 'File: drag or click (PDF/doc/archive, up to 25 MB)'}
-      <input
-        ref={ref}
-        type="file"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) onFile(f)
-          e.target.value = ''
-        }}
-      />
-    </div>
-  )
-}
+// StepImageInput / VideoFileInput / FileDropInput заменены общим
+// shared/ui/UploadDropzone (с реальным прогрессом загрузки).
