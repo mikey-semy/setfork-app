@@ -7,6 +7,7 @@ import { hasAiEnvConfig } from '@/shared/settings/ai'
 import { Button } from '@/shared/ui/button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
+import { searchHref } from '@/features/library/search-href'
 import { Pagination } from '@/shared/ui/Pagination'
 import { pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
 import { AdvancedFacets } from '@/features/library/AdvancedFacets'
@@ -100,13 +101,9 @@ export default async function SearchPage({
     scope === 'issues' ? searchIssues({ q: text, state: issueState }) : Promise.resolve([]),
   ])
 
-  const qs = (over: Record<string, string | undefined>) => {
-    const p = new URLSearchParams()
-    const merged = { q: sp.q, tag: sp.tag, sort: sp.sort, verified: sp.verified, type: sp.type, ...over }
-    for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v)
-    const s = p.toString()
-    return s ? `${BASE}?${s}` : BASE
-  }
+  // Отдаёт ПОЛНЫЙ адрес, а не хвост запроса (см. features/library/search-href).
+  const qs = (over: Record<string, string | undefined>) =>
+    searchHref({ q: sp.q, tag: sp.tag, sort: sp.sort, verified: sp.verified, type: sp.type }, over)
   // Ссылки табов внутри scope people/issues (сохраняем свободный текст).
   const scopeTab = (extra: Record<string, string | undefined>) => {
     const p = new URLSearchParams()
@@ -227,7 +224,10 @@ export default async function SearchPage({
                 <Pagination
                   page={pageFromParam(sp.page, pageCount(counts.lists))}
                   totalPages={pageCount(counts.lists)}
-                  makeHref={(p) => `/search?${qs({ page: p > 1 ? String(p) : undefined })}`}
+                  // `qs` отдаёт УЖЕ готовый адрес со всеми действующими фильтрами — его и
+                  // берём целиком. Подставить его как строку запроса значило бы собрать
+                  // `/search?/search?q=…`, то есть ссылку в никуда.
+                  makeHref={(p) => qs({ page: p > 1 ? String(p) : undefined })}
                   lang={lang}
                 />
               </>
