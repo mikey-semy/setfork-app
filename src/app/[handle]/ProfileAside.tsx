@@ -71,15 +71,6 @@ export function ProfileAside({ handle, lang, user, viewer, isOwner, bigAvatar, c
       <div className="mt-3 font-mono text-[0.78125rem] text-muted">
         {t('joined', lang)} {monthYear(user.createdAt, lang)}
       </div>
-      <div className="mt-4 flex gap-4 text-[0.8125rem]">
-        <span className="text-ink-2">
-          <b className="text-ink">{counts.lists}</b> {t('lists', lang).toLowerCase()}
-        </span>
-        <span className="text-ink-2">
-          <b className="text-ink">{counts.stars}</b> {t('starredTab', lang).toLowerCase()}
-        </span>
-      </div>
-
       {(user.location || user.website || user.socials.length > 0) && (
         <div className="mt-4 flex flex-col gap-2 text-[0.8125rem]">
           {user.location && (

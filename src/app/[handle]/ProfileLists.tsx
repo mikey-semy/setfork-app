@@ -7,7 +7,6 @@ import { BulkSelection } from '@/features/library/bulk/BulkSelection'
 import { BULK_MAX } from '@/features/library/bulk/limits'
 import { ListsToolbar } from '@/features/profile/ListsToolbar'
 import type { ProfilePageData } from './load'
-import { buttonClass } from '@/shared/ui/button-style'
 
 type Props = Pick<
   ProfilePageData,
@@ -24,13 +23,13 @@ type Props = Pick<
   | 'starFolders'
   | 'fsort'
   | 'folder'
-  | 'query'
   | 'rawQuery'
   | 'sort'
   | 'listType'
   | 'catalogs'
   | 'catalogFilter'
   | 'unfiledCount'
+  | 'unfilteredItemsCount'
 >
 
 /**
@@ -54,10 +53,10 @@ export function ProfileLists({
   starFolders,
   fsort,
   folder,
-  query,
   rawQuery,
   sort,
   listType,
+  unfilteredItemsCount,
 }: Props) {
   // Набор для пакетных действий собираем ЗДЕСЬ и один раз: и признак «можно», и данные для
   // полосы. Ниже остаётся один вопрос — есть он или нет.
@@ -97,6 +96,7 @@ export function ProfileLists({
                 <Link
                   key={f.id}
                   href={on ? `/${handle}?tab=starred` : `/${handle}?tab=starred&folder=${encodeURIComponent(f.name)}`}
+                  // eslint-disable-next-line no-restricted-syntax -- карточка папки, не контрол в ряду; padding задаёт содержательную область карточки.
                   className={`rounded-lg border px-4 py-3 ${on ? 'border-accent bg-accent/10' : 'border-border bg-surface hover:border-border-strong'}`}
                 >
                   <div className="truncate text-[0.875rem] font-semibold text-ink">{f.name}</div>
@@ -110,32 +110,9 @@ export function ProfileLists({
         </div>
       )}
 
-      {tab === 'starred' && (
-        <form action={`/${handle}`} className="mb-4 flex flex-wrap items-center gap-2">
-          <input type="hidden" name="tab" value="starred" />
-          {folder && <input type="hidden" name="folder" value={folder} />}
-          <input
-            name="q"
-            defaultValue={rawQuery}
-            placeholder={t('searchStarsPh', lang)}
-            className={buttonClass({ className: 'min-w-[11.25rem] flex-1 bg-surface-2 outline-hidden focus:border-border-strong' })}
-          />
-          <div className="flex gap-1 text-[0.78125rem]">
-            {(['recent', 'name', 'stars'] as const).map((s) => (
-              <Link
-                key={s}
-                href={`/${handle}?tab=starred${folder ? `&folder=${encodeURIComponent(folder)}` : ''}${query ? `&q=${encodeURIComponent(rawQuery)}` : ''}&sort=${s}`}
-                className={`rounded px-2 py-0.5 ${sort === s ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`}
-              >
-                {s === 'recent' ? t('sortRecent', lang) : s === 'name' ? 'A-Z' : '★'}
-              </Link>
-            ))}
-          </div>
-        </form>
-      )}
-
-      {tab === 'lists' && (
+      {unfilteredItemsCount > 0 && (
         <ListsToolbar
+          tab={tab === 'starred' ? 'starred' : 'lists'}
           lang={lang}
           isOwner={isOwner}
           q={rawQuery}

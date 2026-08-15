@@ -101,7 +101,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   const graphYear = graphYears.includes(rawYear) ? rawYear : nowY
 
   const [counts, followCounts, following, bigAvatar, contributions, received, rawItems, pinned, catalogs, achDisplay] = await Promise.all([
-    getProfileCounts(user.id),
+    getProfileCounts(user.id, viewer?.userId),
     getFollowCounts(user.id),
     viewer && !isOwner ? isFollowing(viewer.userId, user.id) : Promise.resolve(false),
     avatarSrc(user.avatarUrl, 180),
@@ -215,6 +215,9 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     rawQuery: sp.q ?? '',
     sort,
     listType,
+    /** Полный видимый набор до поиска и фильтров. Нужен, чтобы на действительно
+     *  пустой вкладке не показывать панель, которой нечего фильтровать. */
+    unfilteredItemsCount: rawItems.length,
     items,
     pageItems,
     page,
