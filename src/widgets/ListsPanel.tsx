@@ -27,8 +27,8 @@ import { buttonClass } from '@/shared/ui/button-style'
  */
 /** Рейка сайдбара: показывает ровно столько и не листается. */
 export const SIDEBAR_LISTS = 10
-/** Панель дашборда: первая порция и шаг «показать ещё». */
-export const DASHBOARD_LISTS = 12
+/** Панель дашборда: компактный набор как в GitHub Top repositories. */
+export const DASHBOARD_LISTS = 7
 
 export interface ListsPanelItem {
   handle: string
@@ -87,7 +87,6 @@ export function ListsPanel({
   /** Сколько всего есть на сервере — чтобы знать, когда прятать кнопку. */
   total?: number
 }) {
-  const ru = lang === 'ru'
   // Свёрнутость: ленивый init из LS безопасен — до маунта секция не рендерится с сервера иначе, чем '1'.
   const [open, setOpen] = useState(() => {
     if (!collapsible || !storageKey || typeof window === 'undefined') return true
@@ -127,15 +126,12 @@ export function ListsPanel({
   const [remote, setRemote] = useState<ListsPanelItem[] | null>(null)
   const [searching, setSearching] = useState(false)
   useEffect(() => {
-    if (!remoteSearch) return
-    if (!query) {
-      setRemote(null)
-      setSearching(false)
-      return
-    }
+    if (!remoteSearch || !query) return
     let alive = true
-    setSearching(true)
     const id = setTimeout(() => {
+      if (!alive) return
+      setRemote(null)
+      setSearching(true)
       remoteSearch(query)
         .then((r) => alive && setRemote(r))
         .catch(() => alive && setRemote([]))
@@ -158,7 +154,9 @@ export function ListsPanel({
   const shown = cut ? filtered.slice(0, initialLimit) : filtered
   // Сколько ещё лежит на сервере. Без total считать нечего — значит и кнопки нет.
   const restOnServer = loadMore && total !== undefined ? Math.max(0, total - (items.length + more.length)) : 0
-  const hasSearch = searchable === true || (searchable === 'auto' && items.length > initialLimit)
+  // При серверной пагинации в items лежит ровно первая порция, поэтому решать по
+  // items.length нельзя: 7 из 500 скрывали бы поиск как будто списков всего семь.
+  const hasSearch = searchable === true || (searchable === 'auto' && (total ?? items.length) > initialLimit)
 
   const header =
     headerStyle === 'mono' ? (
@@ -187,7 +185,7 @@ export function ListsPanel({
         )}
         {showNew && (
           <Link href="/new" className="inline-flex shrink-0 items-center gap-1 text-[0.78125rem] font-semibold text-accent hover:underline">
-            <Plus size={13} /> {ru ? 'Создать' : 'New'}
+            <Plus size={13} /> {t('newListShort', lang)}
           </Link>
         )}
       </div>
@@ -217,6 +215,9 @@ export function ListsPanel({
                   href={`/${l.handle}/${l.slug}`}
                   onClick={onNavigate}
                   aria-current={active ? 'page' : undefined}
+                  // Строка навигации, не контрол фиксированной высоты: вертикальный
+                  // padding задаёт плотность списка, а не конкурирует с кнопкой в ряду.
+                  // eslint-disable-next-line no-restricted-syntax
                   className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[0.8125rem] hover:bg-surface-2 hover:text-ink ${
                     active ? 'bg-surface-2 text-ink' : 'text-ink-2'
                   }`}

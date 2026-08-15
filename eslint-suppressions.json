@@ -501,11 +501,6 @@
       "count": 1
     }
   },
-  "src/widgets/ListsPanel.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/widgets/MobileSearch.tsx": {
     "no-restricted-syntax": {
       "count": 4

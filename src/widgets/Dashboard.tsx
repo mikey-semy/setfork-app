@@ -8,7 +8,7 @@ import { getFeedEvents, getRecommended, getStarredIds, type FeedEvent } from '@/
 import { Feed } from '@/features/feed/Feed'
 import type { Lang } from '@/shared/i18n'
 import { DASHBOARD_LISTS, ListsPanel } from './ListsPanel'
-import { loadMyLists } from '@/features/library/actions/my-lists'
+import { loadMyLists, searchMyLists } from '@/features/library/actions/my-lists'
 import { t, tr } from '@/shared/i18n'
 import { PromoCard } from './PromoCard'
 import { ChangelogCard } from './ChangelogCard'
@@ -72,12 +72,12 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
         <ListsPanel
           lang={lang}
           title={t('yourLists', lang)}
-          items={mine.map((m) => ({ handle: m.ownerHandle, slug: m.slug, title: m.title, avatarUrl: m.ownerAvatarUrl, version: m.version }))}
+          items={mine.map((m) => ({ handle: m.ownerHandle, slug: m.slug, title: m.title, avatarUrl: m.ownerAvatarUrl }))}
           total={mineTotal}
           loadMore={loadMyLists}
+          remoteSearch={searchMyLists}
           initialLimit={DASHBOARD_LISTS}
           showNew
-          showVersion
           emptyText={t('emptyMyLists', lang)}
         />
       </aside>

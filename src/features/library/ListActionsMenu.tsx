@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Languages, MoreHorizontal, Pencil, Rocket, type LucideIcon } from 'lucide-react'
@@ -38,6 +38,9 @@ interface MenuAction {
   onSelect?: () => void
 }
 
+type PublishHint = { templateId: string; phase: 'visible' | 'popping' } | null
+const publishHintKey = (templateId: string) => `sf:publish-hint:${templateId}`
+
 export function ListActionsMenu({
   base,
   isOwner,
@@ -59,7 +62,48 @@ export function ListActionsMenu({
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
+  const [publishHint, setPublishHint] = useState<PublishHint>(null)
   const translateLabel = t('translateInto', lang).replace('{lang}', LANG_META[targetLang].endonym)
+  const publishHintLabel = t('publishAvailableHint', lang)
+
+  // Подсказка одноразовая для КАЖДОГО черновика: новый список снова заслуживает
+  // ненавязчивого указателя, уже просмотренный — больше не мигает при каждом визите.
+  // Через rAF, а не синхронный setState внутри эффекта: первый SSR/гидрационный
+  // кадр одинаковый, затем клиент безопасно читает localStorage.
+  useEffect(() => {
+    if (!canPublish) return
+    const id = window.requestAnimationFrame(() => {
+      try {
+        if (window.localStorage.getItem(publishHintKey(templateId)) !== '1') {
+          setPublishHint({ templateId, phase: 'visible' })
+        }
+      } catch {
+        // Заблокированное хранилище не должно прятать полезную подсказку.
+        setPublishHint({ templateId, phase: 'visible' })
+      }
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [canPublish, templateId])
+
+  const hintPhase = publishHint?.templateId === templateId ? publishHint.phase : null
+  // animationend может не прийти, если вкладка ушла в фон или пользовательская
+  // таблица стилей отключила animation. Таймер гарантирует, что «лопнувшая» точка
+  // не зависнет прозрачным DOM-узлом.
+  useEffect(() => {
+    if (hintPhase !== 'popping') return
+    const id = window.setTimeout(() => setPublishHint(null), 350)
+    return () => window.clearTimeout(id)
+  }, [hintPhase])
+
+  const acknowledgePublishHint = () => {
+    if (!canPublish || hintPhase !== 'visible') return
+    try {
+      window.localStorage.setItem(publishHintKey(templateId), '1')
+    } catch {
+      // Даже без localStorage убираем точку в текущем просмотре.
+    }
+    setPublishHint({ templateId, phase: 'popping' })
+  }
 
   const doTranslate = () =>
     start(async () => {
@@ -99,17 +143,25 @@ export function ListActionsMenu({
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" aria-label={t('library.moreActions', lang)} className={`relative ${btn}`}>
-          <MoreHorizontal size={16} />
-          {/* Точка = «внутри ждёт действие по состоянию списка». Без неё публикация
-              черновика была бы спрятана совсем: плашки-уговора над списком больше нет,
-              а меню ничем не отличается от обычного. Цвет — тот же warn, что у метки
-              «Черновик» у названия, чтобы это читалось как один признак. */}
-          {canPublish && <span aria-hidden className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-warn" />}
-        </button>
-      </DropdownMenuTrigger>
+    <DropdownMenu onOpenChange={(open) => open && acknowledgePublishHint()}>
+      {/* До первого просмотра тултип расшифровывает точку; после — возвращается
+          обычное «Ещё действия». Само меню остаётся единственным явным сообщением. */}
+      <Tooltip label={hintPhase ? publishHintLabel : t('library.moreActions', lang)}>
+        <DropdownMenuTrigger asChild>
+          <button type="button" aria-label={hintPhase ? publishHintLabel : t('library.moreActions', lang)} className={`relative ${btn}`}>
+            <MoreHorizontal size={16} />
+            {/* Открытие меню = пользователь «заглянул»: точка лопается и навсегда
+                запоминается просмотренной для этого списка. */}
+            {canPublish && hintPhase && (
+              <span
+                data-publish-hint
+                aria-hidden
+                className={`absolute right-0.5 top-0.5 size-1.5 rounded-full bg-warn ${hintPhase === 'popping' ? 'sf-hint-burst' : ''}`}
+              />
+            )}
+          </button>
+        </DropdownMenuTrigger>
+      </Tooltip>
       <DropdownMenuContent align="end">
         {actions.map((a) =>
           a.href ? (

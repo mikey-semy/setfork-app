@@ -1,12 +1,13 @@
 import * as React from 'react'
 import { cn } from '@/shared/lib/cn'
 import { TONE_BORDER, TONE_DIVIDER, type SplitTone } from './split-segment'
-import { TOUCH_MIN_H } from './control'
+import { CONTROL_H } from './control'
 
 /**
  * СПЛИТ-КНОПКА — один примитив на все составные кнопки шапки списка (Следить, Звезда,
  * Форк). Анатомия у всех одна: [действие] │ [счётчик] │ [каретка], рамка одна на группу,
- * между сегментами — разделитель; высота — md шкалы (32px, на touch 44).
+ * между сегментами — разделитель; видимая высота — md шкалы (32px) на любом
+ * указателе, как у одиночных кнопок в том же ряду.
  *
  * Зачем примитив, а не «поправить в каждой»: раньше каждая кнопка собиралась вручную, и
  * они разъезжались по мелочам — у звезды каретка была без разделителя и без подложки, у
@@ -29,7 +30,7 @@ export function SplitButton({
 }) {
   const parts = React.Children.toArray(children).filter(Boolean)
   return (
-    <span className={cn('inline-flex h-8 items-stretch overflow-hidden rounded-md border transition-colors', TOUCH_MIN_H, TONE_BORDER[tone], className)}>
+    <span className={cn('inline-flex items-stretch overflow-hidden rounded-md border bg-surface-2 text-ink transition-colors', CONTROL_H.md, TONE_BORDER[tone], className)}>
       {parts.map((part, i) => (
         <React.Fragment key={i}>
           {/* Разделитель — своей линией, а не border у половинки: внешняя рамка остаётся

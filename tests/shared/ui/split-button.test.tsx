@@ -53,6 +53,9 @@ describe('сплит-кнопка', () => {
     const { container } = render(<SplitButton>{[seg('⑂'), seg('810')]}</SplitButton>)
     const group = container.firstElementChild as HTMLElement
     expect(group.className).toContain('border-border')
+    // Нейтральная кнопка всё равно выглядит активной, как соседние Pin/Share:
+    // прозрачный фон визуально превращал все три средних сплита в disabled.
+    expect(group.className).toContain('bg-surface-2')
     expect(dividers(container)[0].className).toContain('bg-border')
   })
 
@@ -61,6 +64,10 @@ describe('сплит-кнопка', () => {
   // того, что сплит-кнопка отстала от ряда. Теперь тест держит само правило.
   it('высота группы — из шкалы контролов, ряд не разъезжается', () => {
     const { container } = render(<SplitButton>{[seg('a')]}</SplitButton>)
-    expect((container.firstElementChild as HTMLElement).className).toContain(CONTROL_H.md)
+    const group = container.firstElementChild as HTMLElement
+    expect(group.className).toContain(CONTROL_H.md)
+    // На touch видимая кнопка остаётся 32px; 44px раньше делали средние кнопки
+    // выше двух крайних. Это не должно вернуться через TOUCH_MIN_H.
+    expect(group.className).not.toContain('pointer-coarse:min-h-11')
   })
 })
