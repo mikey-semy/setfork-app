@@ -16,7 +16,7 @@ import { loadProfilePage, type ProfileSearchParams } from './load'
 import { ProfileAside } from './ProfileAside'
 import { ProfileLists } from './ProfileLists'
 import { ProfileOverview } from './ProfileOverview'
-import { buttonClass } from '@/shared/ui/button-style'
+import { cardClass } from '@/shared/ui/card-style'
 
 // Заголовок вкладки: «Имя (handle)» как в GitHub (layout добавит « · SetFork»).
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
@@ -100,7 +100,7 @@ export default async function ProfilePage({
                     <Link
                       key={c.id}
                       href={`/${handle}/catalogs/${c.name}`}
-                      className={buttonClass({ size: 'lg', className: 'group' })}
+                      className={cardClass({ pad: 'sm', className: 'group block transition-colors hover:border-border-strong' })}
                     >
                       <div className="flex items-center gap-2">
                         <FolderGit2 size={15} className="text-muted" />

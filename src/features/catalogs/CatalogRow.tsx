@@ -3,7 +3,7 @@ import { FolderGit2 } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { tr, type Lang } from '@/shared/i18n'
 import type { PublicCatalog } from './queries'
-import { buttonClass } from '@/shared/ui/button-style'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Каталог строкой для ленты Explore (в один столбец, как список репозиториев GitHub).
  *  Без баннера — иконка-папка + бейдж «Каталог» отличают его от списка. */
@@ -13,7 +13,7 @@ export function CatalogRow({ c, lang }: { c: PublicCatalog; lang: Lang }) {
   return (
     <Link
       href={`/${c.ownerHandle}/catalogs/${c.name}`}
-      className={buttonClass({ size: 'lg', className: 'items-start' })}
+      className={cardClass({ pad: 'sm', className: 'flex items-start gap-3 transition-colors hover:border-border-strong' })}
     >
       <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-md bg-(--accent-soft) text-accent">
         <FolderGit2 size={16} />

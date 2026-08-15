@@ -3,7 +3,7 @@ import { ListChecks, Users } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { t, type Lang } from '@/shared/i18n'
 import type { PersonRow } from './search'
-import { buttonClass } from '@/shared/ui/button-style'
+import { cardClass } from '@/shared/ui/card-style'
 
 /** Выдача людей (scope=people) — карточки в стиле GitHub Users. */
 export function PeopleResults({ people, lang }: { people: PersonRow[]; lang: Lang }) {
@@ -13,7 +13,7 @@ export function PeopleResults({ people, lang }: { people: PersonRow[]; lang: Lan
         <li key={p.handle}>
           <Link
             href={`/${p.handle}`}
-            className={buttonClass({ size: 'lg', className: 'items-start' })}
+            className={cardClass({ pad: 'sm', className: 'flex items-start gap-3 transition-colors hover:border-border-strong' })}
           >
             <Avatar handle={p.handle} avatarUrl={p.avatarUrl} size={44} />
             <div className="min-w-0 flex-1">
