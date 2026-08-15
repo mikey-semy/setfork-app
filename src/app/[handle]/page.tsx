@@ -2,11 +2,10 @@
 // шапка ответа уходит клиенту сразу, и notFound() из загрузчика уже не может поставить
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
-import Link from 'next/link'
 import { BookOpen, FolderGit2, ListChecks, Star, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t, tr } from '@/shared/i18n'
+import { t } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { PeopleResults } from '@/features/profile/PeopleResults'
@@ -16,7 +15,7 @@ import { loadProfilePage, type ProfileSearchParams } from './load'
 import { ProfileAside } from './ProfileAside'
 import { ProfileLists } from './ProfileLists'
 import { ProfileOverview } from './ProfileOverview'
-import { cardClass } from '@/shared/ui/card-style'
+import { ProfileCatalogCard } from '@/features/catalogs/ProfileCatalogCard'
 
 // Заголовок вкладки: «Имя (handle)» как в GitHub (layout добавит « · SetFork»).
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
@@ -97,19 +96,12 @@ export default async function ProfilePage({
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {catalogs.map((c) => (
-                    <Link
+                    <ProfileCatalogCard
                       key={c.id}
-                      href={`/${handle}/catalogs/${c.name}`}
-                      className={cardClass({ pad: 'sm', className: 'group block transition-colors hover:border-border-strong' })}
-                    >
-                      <div className="flex items-center gap-2">
-                        <FolderGit2 size={15} className="text-muted" />
-                        <span className="truncate font-semibold text-accent group-hover:underline">{tr(c.title, lang) || c.name}</span>
-                      </div>
-                      <div className="mt-1 font-mono text-[0.6875rem] text-muted">
-                        {c.listCount} {t('lists', lang).toLowerCase()}
-                      </div>
-                    </Link>
+                      catalog={c}
+                      handle={handle}
+                      lang={lang}
+                    />
                   ))}
                 </div>
               )

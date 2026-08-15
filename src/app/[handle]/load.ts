@@ -109,7 +109,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     getReceivedStats(user.id),
     !isListsTab ? Promise.resolve([]) : tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),
-    getOwnerCatalogs(user.id),
+    getOwnerCatalogs(user.id, viewer?.userId),
     getAchievementDisplay(),
   ])
   const people = tab === 'followers' ? await getFollowers(user.id) : tab === 'following' ? await getFollowing(user.id) : []

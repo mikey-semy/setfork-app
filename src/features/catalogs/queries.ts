@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
-import { db, repositories, templates, users } from '@/shared/db'
+import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { db, publiclyVisible, repositories, templates, users } from '@/shared/db'
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { CatalogProfile } from '@/shared/lib/catalog-match'
 import { avatarSrc } from '@/shared/media'
@@ -73,18 +73,21 @@ export interface CatalogRow {
   listCount: number
 }
 
-/** Каталоги владельца + число списков в каждом. */
-export async function getOwnerCatalogs(ownerId: string): Promise<CatalogRow[]> {
+/** Каталоги владельца + число списков, доступных текущему зрителю, в каждом. */
+export async function getOwnerCatalogs(ownerId: string, viewerId?: string): Promise<CatalogRow[]> {
+  const visibleLists = viewerId ? or(publiclyVisible(), eq(templates.ownerId, viewerId))! : publiclyVisible()
   const rows = await db
     .select({
       id: repositories.id,
       name: repositories.name,
       title: repositories.title,
       desc: repositories.desc,
-      listCount: sql<number>`(select count(*)::int from ${templates} t where t.repository_id = ${repositories.id})`,
+      listCount: count(templates.id),
     })
     .from(repositories)
+    .leftJoin(templates, and(eq(templates.repositoryId, repositories.id), visibleLists))
     .where(eq(repositories.ownerId, ownerId))
+    .groupBy(repositories.id, repositories.name, repositories.title, repositories.desc)
     .orderBy(asc(repositories.name))
   return rows
 }

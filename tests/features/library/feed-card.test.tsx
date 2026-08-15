@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { CatalogRow } from '@/features/catalogs/CatalogRow'
+import { ProfileCatalogCard } from '@/features/catalogs/ProfileCatalogCard'
 import { FeedCard } from '@/features/library/FeedCard'
 import type { FeedItem } from '@/features/library/queries'
 import { PeopleResults } from '@/features/profile/PeopleResults'
@@ -101,5 +102,28 @@ describe('многострочные карточки Explore', () => {
     const link = screen.getByRole('link', { name: /Data Analyst/ })
     expect(link).toHaveClass('p-3')
     expect(link).not.toHaveClass('h-10')
+  })
+})
+
+describe('карточка каталога в профиле', () => {
+  it('начинает заголовок слева и показывает реальное число списков', () => {
+    render(
+      <ProfileCatalogCard
+        handle="miki"
+        lang="ru"
+        catalog={{
+          id: 'catalog-1',
+          name: 'workplace',
+          title: { ru: 'Этап 0 — Рабочее место' },
+          desc: {},
+          listCount: 2,
+        }}
+      />,
+    )
+
+    const link = screen.getByRole('link', { name: /Этап 0 — Рабочее место/ })
+    expect(link).toHaveClass('block', 'text-left')
+    expect(link).not.toHaveClass('justify-center')
+    expect(screen.getByText('2 списки')).toBeInTheDocument()
   })
 })
