@@ -47,7 +47,7 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
         {canDig && typeof step.n === 'number' && (
           <span className="absolute right-2 top-2 print:hidden">
             <DigChatOpen
-              detail={{ templateId: tpl.id, stepN: step.n, stepTitle: blockChatTitle('text', '', section, lang) }}
+              detail={{ templateId: tpl.id, stepN: step.n, stepTitle: blockChatTitle('text', '', section, lang, md) }}
               label={t('list.digIntoStep', lang)}
               hasSession={digSteps.has(step.n)}
             />

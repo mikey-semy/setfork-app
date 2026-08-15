@@ -31,8 +31,8 @@ export interface RunStepVM {
   productTitle: string // заголовок подборки product-блока
   products: ProductLinkVM[] // товары product-блока (href — трекинговый /api/go)
   title: string
-  /** Подпись блока в шапке чата раскопки: у шага — заголовок, у блока без
-   *  заголовка — его секция-урок или имя типа (считает blockChatTitle). */
+  /** Подпись блока в шапке чата раскопки: заголовок, секция-урок, первая
+   *  читаемая Markdown-строка или имя типа (считает blockChatTitle). */
   digTitle: string
   desc: string
   command: string

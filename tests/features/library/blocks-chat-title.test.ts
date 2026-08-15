@@ -10,7 +10,17 @@ describe('blockChatTitle', () => {
     expect(blockChatTitle('step', 'Установить VS Code', 'Редактор', 'ru')).toBe('Установить VS Code')
   })
   it('у блока без заголовка — секция урока', () => {
-    expect(blockChatTitle('text', '', 'Редактор', 'ru')).toBe('Редактор')
+    expect(blockChatTitle('text', '', 'Редактор', 'ru', '**Внутренний заголовок**')).toBe('Редактор')
+  })
+  it('у text-блока без метаданных — первая читаемая Markdown-строка', () => {
+    expect(blockChatTitle('text', '', '', 'en', '**Глава 4. Реконструкция преступления**\n\nДетектив вошёл в лог.')).toBe(
+      'Глава 4. Реконструкция преступления',
+    )
+    expect(blockChatTitle('text', '', '', 'en', '# Investigation chapter')).toBe('Investigation chapter')
+  })
+  it('служебные Markdown-строки не превращает в заголовок чата', () => {
+    const md = '![diagram](scheme.png)\n\n```bash\necho secret\n```\n\n[Разбор улик](https://example.com)'
+    expect(blockChatTitle('text', '', '', 'ru', md)).toBe('Разбор улик')
   })
   it('без заголовка и секции — имя типа на языке зрителя', () => {
     expect(blockChatTitle('text', '', '', 'ru')).toBe('Текст')
