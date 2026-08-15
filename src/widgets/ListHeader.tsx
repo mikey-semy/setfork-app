@@ -10,7 +10,6 @@ import { Badge } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Alert } from '@/shared/ui/Alert'
 import { PinButton } from '@/features/library/PinButton'
-import { LIST_VISIBILITY_BADGE, listVisibilityState } from '@/features/library/list-visibility'
 import { StarSplit } from './StarSplit'
 import { SplitButton } from '@/shared/ui/SplitButton'
 import { splitSegment } from '@/shared/ui/split-segment'
@@ -53,11 +52,6 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
     getDiscussionCount(meta.id),
   ])
   const base = `/${owner}/${slug}`
-  // Значок у названия описывает ОБА поля сразу (см. list-visibility): у черновика
-  // visibility — ещё намерение, и глобус здесь врал бы про публичность.
-  const visBadge = LIST_VISIBILITY_BADGE[listVisibilityState(meta)]
-  const visLabel = t(visBadge.labelKey, lang)
-
   return (
     <div>
       {/* Табы — full-width СРАЗУ под шапкой (как GitHub). Активная вкладка — клиентски
@@ -98,17 +92,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             <h1 className="min-w-0 text-[1.125rem] font-bold text-ink [overflow-wrap:anywhere] sm:truncate">{tr(meta.title, lang)}</h1>
             {/* Версию у заголовка НЕ показываем: она живёт в сайдбаре Releases (как у GitHub —
                 номер версии/релиза только в блоке Releases, а не рядом с именем). Убран дубль. */}
-            {/* Видимость — ТОЛЬКО ИКОНКОЙ, подпись в тултипе: слово рядом с названием
-                занимало место, которое нужно самому названию, и повторяло то же, что
-                видно значком. Пока этот значок на экране, статус НЕ дублируется в
-                сводке показателей (см. ListStats) — как у GitHub, где бейдж стоит у
-                имени, а строка статистики его не повторяет. */}
-            <Tooltip label={visLabel}>
-              <span className={`grid size-6 shrink-0 place-items-center rounded-md border bg-surface-2 ${visBadge.tone}`} aria-label={visLabel}>
-                <visBadge.Icon size={12} />
-              </span>
-            </Tooltip>
-            {/* Ограниченные состояния — рядом с видимостью (архив строже заморозки). */}
+            {/* Ограниченные состояния остаются рядом с названием (архив строже заморозки). */}
             {meta.archivedAt != null ? (
               <Badge variant="warn" className="shrink-0">
                 <Archive size={11} /> {t('badgeArchived', lang)}

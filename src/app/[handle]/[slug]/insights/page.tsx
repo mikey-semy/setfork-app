@@ -13,6 +13,7 @@ import { getInsightTotals, getWeeklySeries, WEEKS } from '@/features/insights/qu
 import { BadgesCard } from '@/features/badges/BadgesCard'
 import { PAGE } from '@/shared/ui/control'
 import { appOrigin } from '@/shared/auth/app-origin'
+import { isPubliclyVisible } from '@/core'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -133,7 +134,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
               </div>
             </div>
 
-            {meta.visibility === 'public' && <BadgesCard owner={owner} slug={slug} origin={origin} lang={lang} />}
+            {isPubliclyVisible(meta) && <BadgesCard owner={owner} slug={slug} origin={origin} lang={lang} />}
           </aside>
         </div>
       </div>

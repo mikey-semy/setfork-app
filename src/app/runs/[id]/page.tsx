@@ -44,9 +44,15 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
         ? productItems(s.content).map((p) => ({ ...p, href: mon.linkTracking ? `/api/go/${s.id}/p${p.idx}` : undefined }))
         : [],
     title: tr(s.title, lang),
-    // Подпись для шапки чата раскопки: у презентационного блока заголовка нет,
-    // и вместо пустой шапки идёт структурный контекст — секция урока или тип блока.
-    digTitle: blockChatTitle(asBlockType(s.type), tr(s.title, lang), tr(s.section, lang), lang),
+    // Подпись для шапки чата раскопки: у text-блока без метаданных берём первую
+    // читаемую Markdown-строку; имя типа остаётся только последним fallback.
+    digTitle: blockChatTitle(
+      asBlockType(s.type),
+      tr(s.title, lang),
+      tr(s.section, lang),
+      lang,
+      s.type === 'text' && typeof s.content?.md === 'string' ? s.content.md : '',
+    ),
     desc: tr(s.desc, lang),
     command: s.command,
     level: s.level,

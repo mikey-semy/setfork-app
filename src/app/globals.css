@@ -346,6 +346,29 @@ textarea::placeholder {
   animation: cell-pop var(--dur-slow) var(--ease-out);
 }
 
+/* Одноразовая точка-подсказка у меню публикации: при первом открытии она
+   расширяется короткой вспышкой и исчезает, будто лопнула. */
+@keyframes sf-hint-burst {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(var(--warn-rgb) / 0.55);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.45);
+    box-shadow: 0 0 0 3px rgb(var(--warn-rgb) / 0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+    box-shadow: 0 0 0 7px rgb(var(--warn-rgb) / 0);
+  }
+}
+.sf-hint-burst {
+  animation: sf-hint-burst var(--dur-slow) var(--ease-out) forwards;
+}
+
 /* Плавное появление сменяемой фразы в лоадере генерации. */
 @keyframes fadein {
   from {

@@ -37,6 +37,9 @@ export interface SearchFieldProps {
   size?: Size
   /** 'box' — своя рамка (по умолчанию); 'bare' — без рамки, для вложения в готовый контейнер. */
   variant?: 'box' | 'bare'
+  /** grow — видимая рамка добирает 44px на touch; fixed — сохраняет ступень
+   *  шкалы, когда поле стоит в одном ряду с компактными Select/Button. */
+  touch?: 'grow' | 'fixed'
   /** Имя для нативной отправки формы (GET). */
   name?: string
   autoFocus?: boolean
@@ -69,6 +72,7 @@ export function SearchField({
   clearLabel = 'Clear',
   size = 'md',
   variant = 'box',
+  touch = 'grow',
   name,
   autoFocus,
   overlay,
@@ -88,9 +92,7 @@ export function SearchField({
   const box =
     variant === 'bare'
       ? 'flex items-center gap-2'
-      : // Тач-минимум здесь ЯВНО: рамка собирается из SIZES, а не из FIELD_BOX, и
-        // правило полей поле поиска обходило стороной (находка авто-ревью #717).
-        `flex items-center gap-2 rounded-md border border-border bg-surface-2 ${s.box} ${TOUCH_MIN_H} focus-within:border-border-strong`
+      : `flex items-center gap-2 rounded-md border border-border bg-surface-2 ${s.box} ${touch === 'grow' ? TOUCH_MIN_H : ''} focus-within:border-border-strong`
 
   function clear() {
     onValueChange('')

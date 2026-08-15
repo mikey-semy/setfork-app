@@ -16,7 +16,7 @@ import { AUTHORED_DIALECT, dialectSpec, scriptFilename } from '@/core/domain/scr
  *  - содержимое было внутри Radix-меню, которое перехватывает Tab и водит фокус только
  *    по своим пунктам → ни поля, ни вкладки, ни кнопки не достигались с клавиатуры;
  *  - вкладки не были объявлены вкладками (ни ролей, ни aria-selected, ни стрелок);
- *  - команда жила в однострочном input: видно было меньше трети, `| bash` — за краем;
+ *  - длинные команды и iframe не должны раздувать поповер многострочным кодом;
  *  - отказ буфера обмена не имел состояния — кнопка молчала.
  */
 const open = () => {
@@ -46,26 +46,30 @@ describe('меню «Получить»: доступность и содерж�
     expect(screen.getByRole('tabpanel')).toBeTruthy()
   })
 
-  it('команда запуска показана целиком и с переносом, а не в однострочном поле', () => {
+  it('команда запуска остаётся целой для копирования, но занимает одну строку', () => {
     open()
     fireEvent.click(screen.getByRole('tab', { name: /run/i }))
 
-    // Полная команда присутствует в разметке — включая опасный хвост `| bash`.
     // Сверяемся с КАТАЛОГОМ ДИАЛЕКТОВ, а не с переписанной сюда строкой: команду
     // печатают и меню, и шапка самого скрипта, и разъезжаться им нельзя.
-    // Ищем по textContent целиком: подсветка раскладывает строку на токены-спаны
-    // (адрес в кавычках — отдельный токен), и getByText её уже не видит одним узлом.
     const expected = dialectSpec(AUTHORED_DIALECT).run(
       `${window.location.origin}/alice/deploy/raw`,
       scriptFilename('deploy', AUTHORED_DIALECT),
     )
-    expect(document.body.textContent).toContain(expected)
+    expect(screen.getByLabelText('Run in terminal')).toHaveValue(expected)
     // Команда СКАЧИВАЕТ и только потом запускает: конвейер `curl -f … | bash` при
     // отказе сервера возвращает ноль и выглядит как успешный прогон.
     expect(expected).not.toMatch(/\|\s*bash/)
-    // И она не лежит в input, который обрезает значение по ширине поля.
-    const inputs = Array.from(document.querySelectorAll('input')).map((i) => i.getAttribute('value') ?? '')
-    expect(inputs.some((v) => v.includes('| bash'))).toBe(false)
+    // Многострочной карточки кода больше нет: длинный URL не растит поповер вниз.
+    expect(document.querySelector('pre')).toBeNull()
+  })
+
+  it('iframe-код тоже свёрнут в однострочное копируемое поле', () => {
+    open()
+    fireEvent.click(screen.getByRole('tab', { name: /embed/i }))
+
+    expect((screen.getByRole('textbox', { name: 'Embed' }) as HTMLInputElement).value).toContain('<iframe')
+    expect(document.querySelector('pre')).toBeNull()
   })
 
   it('PowerShell-формы запуска нет: обёртка диалекта не переводит авторские команды', () => {

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Braces, ChevronDown, Code2, FileCode, FileDown, GitBranch, Printer, Sparkles, Terminal } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
-import { CodeCard } from '@/shared/ui/CodeCard'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { buttonClass } from '@/shared/ui/button-style'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
@@ -33,7 +32,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
   // Список как ДАННЫЕ — близнец /raw: тот отдаёт скрипт, этот json со строками и версией.
   const dataUrl = `${origin}${base}/data.json`
   const embedCode = `<iframe src="${origin}${base}/embed" width="100%" height="480" style="border:1px solid #ddd;border-radius:8px" loading="lazy"></iframe>`
-
+  const runCommand = dialectSpec(AUTHORED_DIALECT).run(`${origin}${base}/raw`, scriptFilename(slug, AUTHORED_DIALECT))
 
   const heading = (icon: React.ReactNode, label: string) => (
     <SectionLabel className="mb-1.5 flex items-center gap-1.5">
@@ -42,11 +41,12 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
   )
 
   /** Адрес для копирования: значение выделяемо, кнопка — общий примитив с тач-целью. */
-  const copyField = (value: string, mono = true) => (
+  const copyField = (value: string, label: string, mono = true) => (
     <div className="flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1">
       <input
         readOnly
         value={value}
+        aria-label={label}
         onFocus={(e) => e.currentTarget.select()}
         className={`min-w-0 flex-1 bg-transparent text-[0.78125rem] text-ink outline-hidden ${mono ? 'font-mono' : ''}`}
       />
@@ -123,7 +123,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
           {tab === 'clone' && (
             <div role="tabpanel" id="use-panel-clone" aria-labelledby="use-tab-clone">
               {heading(<Terminal size={12} />, t('cloneGitHeading', lang))}
-              {copyField(cloneUrl)}
+              {copyField(cloneUrl, t('cloneGitHeading', lang))}
               <p className="mt-1 text-[0.78125rem] text-ink-2">{t('cloneHttpsHint', lang)}</p>
               <p className="mt-1 text-[0.78125rem] text-ink-2">{t('cloneAuthHint', lang)}</p>
               <a href={`${base}/repo.bundle`} className={`${row} mt-1.5`}>
@@ -134,22 +134,17 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
 
           {tab === 'run' && (
             <div role="tabpanel" id="use-panel-run" aria-labelledby="use-tab-run">
-              {/* Run — исполняемый скрипт (gist-стиль). Команда показывается КАРТОЧКОЙ
-                  КОДА с переносом: в однострочном поле было видно меньше трети команды,
-                  и `| bash` оставался за краем — то есть подсказка «сначала проверь»
-                  относилась к невидимому тексту.
-
-                  Команда берётся ИЗ КАТАЛОГА ДИАЛЕКТОВ, а не пишется здесь руками:
+              {/* Команда берётся ИЗ КАТАЛОГА ДИАЛЕКТОВ, а не пишется здесь руками:
                   ровно эту же строку печатает шапка самого скрипта, и написанные в двух
                   местах — они разъезжались. PowerShell-формы тут больше нет: обёртка
                   диалекта не переводит авторские команды, и `/raw?lang=ps1` на списке с
-                  командами отвечает 406, а не скриптом (см. script-dialect.ts). */}
+                  командами отвечает 406, а не скриптом (см. script-dialect.ts).
+
+                  Поле намеренно ОДНОСТРОЧНОЕ: длинный URL/имя файла раньше превращали
+                  команду в карточку на пол-поповера, хотя здесь важны копирование и
+                  доступ к raw, а не чтение обёртки по словам. */}
               {heading(<Terminal size={12} />, t('runHeading', lang))}
-              <CodeCard
-                code={dialectSpec(AUTHORED_DIALECT).run(`${origin}${base}/raw`, scriptFilename(slug, AUTHORED_DIALECT))}
-                name="bash"
-                lang={lang}
-              />
+              {copyField(runCommand, t('runHeading', lang))}
               <p className="mt-1 text-[0.78125rem] text-ink-2">{t('runHint', lang)}</p>
               <p className="mt-1 text-[0.78125rem] text-ink-2">{t('runShellOnlyHint', lang)}</p>
               <a href={`${base}/raw`} className={`${row} mt-1`}>
@@ -176,7 +171,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
               {/* Данные идут ПЕРВЫМИ: это самый частый программный сценарий — забрать список
                   json'ом. MCP ниже нужен агенту, iframe — сайту. */}
               {heading(<Braces size={12} />, t('dataHeading', lang))}
-              {copyField(dataUrl)}
+              {copyField(dataUrl, t('dataHeading', lang))}
               <p className="mt-1 text-[0.78125rem] text-ink-2">{t('dataHint', lang)}</p>
               <a href={`${base}/data.json`} className={`${row} mt-1`}>
                 <Braces size={14} className="text-muted" /> {t('openData', lang)}
@@ -184,7 +179,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
 
               <div className="mt-2.5 border-t border-border pt-2">
                 {heading(<Sparkles size={12} />, t('mcpHeading', lang))}
-                {copyField(mcpUrl)}
+                {copyField(mcpUrl, t('mcpHeading', lang))}
                 <p className="mt-1 text-[0.78125rem] text-ink-2">{t('mcpHint', lang)}</p>
                 <Link href="/settings#mcp" className={`${row} mt-1 text-accent hover:underline`}>
                   {t('getTokenLink', lang)}
@@ -193,7 +188,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
 
               <div className="mt-2.5 border-t border-border pt-2">
                 {heading(<Code2 size={12} />, t('embedHeading', lang))}
-                <CodeCard code={embedCode} name="iframe" lang={lang} />
+                {copyField(embedCode, t('embedHeading', lang))}
                 <p className="mt-1 text-[0.78125rem] text-ink-2">{t('embedHint', lang)}</p>
               </div>
             </div>

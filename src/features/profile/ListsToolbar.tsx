@@ -9,10 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { t, type Lang } from '@/shared/i18n'
 import { buttonClass } from '@/shared/ui/button-style'
 
-/** Тулбар вкладки «Списки» профиля (как шапка репозиториев GitHub): поиск + фильтр
- *  по типу + сортировка + кнопка «Создать». Меняет query-параметры (сбрасывая
- *  страницу), серверная страница уже фильтрует/пагинирует. */
+/** Общий тулбар вкладок «Списки» и «Звёзды»: одинаковые поиск и сортировка,
+ *  дополнительные фильтры и создание — только у собственной библиотеки. */
 export function ListsToolbar({
+  tab = 'lists',
   lang,
   isOwner,
   q,
@@ -22,6 +22,7 @@ export function ListsToolbar({
   catalog,
   unfiledCount = 0,
 }: {
+  tab?: 'lists' | 'starred'
   lang: Lang
   isOwner: boolean
   q: string
@@ -41,7 +42,7 @@ export function ListsToolbar({
 
   function navigate(patch: Record<string, string>) {
     const sp = new URLSearchParams(params.toString())
-    sp.set('tab', 'lists')
+    sp.set('tab', tab)
     for (const [k, v] of Object.entries(patch)) {
       if (v) sp.set(k, v)
       else sp.delete(k)
@@ -66,15 +67,16 @@ export function ListsToolbar({
             setQuery('')
             navigate({ q: '' })
           }}
-          size="sm"
-          placeholder={ru ? 'Найти список…' : 'Find a list…'}
-          ariaLabel={ru ? 'Найти список' : 'Find a list'}
+          size="md"
+          touch="fixed"
+          placeholder={tab === 'starred' ? t('searchStarsPh', lang) : ru ? 'Найти список…' : 'Find a list…'}
+          ariaLabel={tab === 'starred' ? t('searchStarsPh', lang) : ru ? 'Найти список' : 'Find a list'}
         />
       </form>
 
       {/* Полка: показываем, только когда полки есть или есть что разбирать — пустой
           фильтр на профиле новичка занимал бы место и ничего не объяснял. */}
-      {isOwner && (catalogs.length > 0 || unfiledCount > 0) && (
+      {tab === 'lists' && isOwner && (catalogs.length > 0 || unfiledCount > 0) && (
         <Select value={catalog ?? 'all'} onValueChange={(v) => navigate({ catalog: v === 'all' ? '' : v })}>
           <SelectTrigger className="w-auto min-w-[6.5rem] gap-1.5" aria-label={t('profile.catalogFilter', lang)}>
             <SelectValue />
@@ -95,17 +97,19 @@ export function ListsToolbar({
         </Select>
       )}
 
-      <Select value={type} onValueChange={(v) => navigate({ type: v === 'all' ? '' : v })}>
-        <SelectTrigger className="w-auto min-w-[6.5rem] gap-1.5">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{ru ? 'Все типы' : 'All types'}</SelectItem>
-          <SelectItem value="public">{ru ? 'Публичные' : 'Public'}</SelectItem>
-          <SelectItem value="private">{ru ? 'Приватные' : 'Private'}</SelectItem>
-          <SelectItem value="forks">{ru ? 'Форки' : 'Forks'}</SelectItem>
-        </SelectContent>
-      </Select>
+      {tab === 'lists' && (
+        <Select value={type} onValueChange={(v) => navigate({ type: v === 'all' ? '' : v })}>
+          <SelectTrigger className="w-auto min-w-[6.5rem] gap-1.5">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{ru ? 'Все типы' : 'All types'}</SelectItem>
+            <SelectItem value="public">{ru ? 'Публичные' : 'Public'}</SelectItem>
+            <SelectItem value="private">{ru ? 'Приватные' : 'Private'}</SelectItem>
+            <SelectItem value="forks">{ru ? 'Форки' : 'Forks'}</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
 
       <Select value={sort} onValueChange={(v) => navigate({ sort: v === 'recent' ? '' : v })}>
         <SelectTrigger className="w-auto min-w-[6.5rem] gap-1.5">
@@ -118,7 +122,7 @@ export function ListsToolbar({
         </SelectContent>
       </Select>
 
-      {isOwner && (
+      {tab === 'lists' && isOwner && (
         <Link
           href="/new"
           className={buttonClass({ className: 'border-transparent bg-accent text-white hover:opacity-90' })}

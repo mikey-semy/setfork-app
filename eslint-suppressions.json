@@ -1,4 +1,14 @@
 {
+  "src/app/[handle]/[slug]/ListAbout.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/app/[handle]/[slug]/compare/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
   "src/app/[handle]/[slug]/discussions/[number]/page.tsx": {
     "no-restricted-syntax": {
       "count": 5
@@ -11,7 +21,7 @@
   },
   "src/app/[handle]/[slug]/discussions/page.tsx": {
     "no-restricted-syntax": {
-      "count": 3
+      "count": 5
     }
   },
   "src/app/[handle]/[slug]/insights/page.tsx": {
@@ -54,9 +64,14 @@
       "count": 7
     }
   },
+  "src/app/admin/council/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
   "src/app/admin/page.tsx": {
     "no-restricted-syntax": {
-      "count": 6
+      "count": 8
     }
   },
   "src/app/change-email/page.tsx": {
@@ -97,6 +112,11 @@
   "src/app/reset-password/page.tsx": {
     "no-restricted-syntax": {
       "count": 5
+    }
+  },
+  "src/app/search/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
     }
   },
   "src/app/settings/page.tsx": {
@@ -209,9 +229,19 @@
       "count": 7
     }
   },
+  "src/features/feedback/FeedbackTable.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
   "src/features/follows/actions.ts": {
     "boundaries/dependencies": {
       "count": 1
+    }
+  },
+  "src/features/generation/GenerationChat.tsx": {
+    "no-restricted-syntax": {
+      "count": 9
     }
   },
   "src/features/generation/actions.ts": {
@@ -239,6 +269,11 @@
       "count": 1
     }
   },
+  "src/features/issues/LabelEditor.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
   "src/features/issues/LabelsManager.tsx": {
     "no-restricted-syntax": {
       "count": 7
@@ -256,6 +291,11 @@
   },
   "src/features/issues/label-actions.ts": {
     "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/library/ChangeNoteField.tsx": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -387,6 +427,11 @@
       "count": 4
     }
   },
+  "src/features/profile/activity/ActivityGraph.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
   "src/features/profile/queries.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -399,12 +444,22 @@
   },
   "src/features/quizzes/QuizBlock.tsx": {
     "no-restricted-syntax": {
-      "count": 15
+      "count": 18
+    }
+  },
+  "src/features/reactions/Reactions.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
     }
   },
   "src/features/releases/actions.ts": {
     "boundaries/dependencies": {
       "count": 2
+    }
+  },
+  "src/features/reports/ReportsTable.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
     }
   },
   "src/features/runs/actions.ts": {
@@ -471,6 +526,11 @@
       "count": 1
     }
   },
+  "src/shared/ui/BubbleTextEditor.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
   "src/shared/ui/DatePicker.tsx": {
     "no-restricted-syntax": {
       "count": 2
@@ -479,6 +539,11 @@
   "src/shared/ui/Pagination.tsx": {
     "no-restricted-syntax": {
       "count": 5
+    }
+  },
+  "src/shared/ui/TagChip.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
     }
   },
   "src/shared/ui/controls.tsx": {
@@ -501,14 +566,19 @@
       "count": 1
     }
   },
-  "src/widgets/ListsPanel.tsx": {
+  "src/widgets/MobileSearch.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/widgets/Sidebar.tsx": {
     "no-restricted-syntax": {
       "count": 1
     }
   },
-  "src/widgets/MobileSearch.tsx": {
+  "src/widgets/explore/TrendControls.tsx": {
     "no-restricted-syntax": {
-      "count": 4
+      "count": 1
     }
   }
 }

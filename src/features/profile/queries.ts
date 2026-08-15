@@ -182,10 +182,18 @@ export async function getUserCompletions(userId: string): Promise<CompletedCours
     .limit(24)
 }
 
-export async function getProfileCounts(userId: string) {
+/** Счётчики вкладок профиля обязаны считать тот же набор, который реально может
+ *  открыть зритель. Иначе публичный профиль подтверждает чужие черновики числом
+ *  в бейдже, хотя сама вкладка «Списки» остаётся пустой. */
+export async function getProfileCounts(userId: string, viewerId?: string) {
+  const visible = viewerId ? or(publiclyVisible(), eq(templates.ownerId, viewerId))! : publiclyVisible()
   const [[l], [s], [r]] = await Promise.all([
-    db.select({ c: sql<number>`count(*)::int` }).from(templates).where(eq(templates.ownerId, userId)),
-    db.select({ c: sql<number>`count(*)::int` }).from(stars).where(eq(stars.userId, userId)),
+    db.select({ c: sql<number>`count(*)::int` }).from(templates).where(and(eq(templates.ownerId, userId), visible)),
+    db
+      .select({ c: sql<number>`count(*)::int` })
+      .from(stars)
+      .innerJoin(templates, eq(stars.templateId, templates.id))
+      .where(and(eq(stars.userId, userId), visible)),
     db.select({ c: sql<number>`count(*)::int` }).from(runs).where(eq(runs.userId, userId)),
   ])
   return { lists: l?.c ?? 0, stars: s?.c ?? 0, runs: r?.c ?? 0 }

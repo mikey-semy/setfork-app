@@ -114,12 +114,42 @@ export const BLOCK_META: Record<BlockType, { icon: string; en: string; ru: strin
   product: { icon: '🛒', en: 'Products', ru: 'Товары' },
 }
 
-/** Подпись блока для шапки чата раскопки. У шага это его заголовок; у
- *  презентационного блока заголовка нет, а разбирать содержимое ради подписи
- *  нельзя — первой строкой может оказаться картинка, таблица или код. Берём
- *  структурный контекст: секцию урока, иначе имя типа из каталога блоков. */
-export const blockChatTitle = (type: BlockType, title: string, section: string, lang: Lang): string =>
-  title.trim() || section.trim() || (lang === 'ru' ? BLOCK_META[type].ru : BLOCK_META[type].en)
+const CHAT_TITLE_MAX = 96
+
+/** Первая ЧИТАЕМАЯ строка Markdown: заголовок/жирный абзац годится для шапки,
+ *  а картинка, таблица и fenced-code — нет. Это не Markdown→plain конвертер:
+ *  нам нужен короткий безопасный fallback, когда у text-блока нет метаданных. */
+function markdownChatTitle(markdown: string): string {
+  let fenced = false
+  for (const raw of markdown.split(/\r?\n/)) {
+    const trimmed = raw.trim()
+    if (/^(```|~~~)/.test(trimmed)) {
+      fenced = !fenced
+      continue
+    }
+    if (fenced || !trimmed || /^( {4}|\t)/.test(raw) || /^\|.*\|$/.test(trimmed) || /^https?:\/\/\S+$/i.test(trimmed)) continue
+
+    const plain = trimmed
+      .replace(/^#{1,6}\s+/, '')
+      .replace(/^>\s?/, '')
+      .replace(/^(?:[-+*]|\d+[.)])\s+/, '')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+      .replace(/\[([^\]]+)]\([^)]*\)/g, '$1')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/[*_~`]+/g, '')
+      .replace(/\\([\\`*_[\]{}()#+.!>\-])/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (!plain || /^[|:\-]+$/.test(plain)) continue
+    return plain.length <= CHAT_TITLE_MAX ? plain : `${plain.slice(0, CHAT_TITLE_MAX - 1).trimEnd()}…`
+  }
+  return ''
+}
+
+/** Подпись блока для шапки чата раскопки: явный заголовок → секция урока →
+ *  первая читаемая строка text-блока → локализованное имя типа. */
+export const blockChatTitle = (type: BlockType, title: string, section: string, lang: Lang, markdown = ''): string =>
+  title.trim() || section.trim() || (type === 'text' ? markdownChatTitle(markdown) : '') || (lang === 'ru' ? BLOCK_META[type].ru : BLOCK_META[type].en)
 
 /** Стабильный id варианта опроса (на него ссылаются голоса). */
 export const newOptionId = newBlockId
