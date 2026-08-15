@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
 import { Markdown } from '@/shared/ui/Markdown'
+import { TooltipProvider } from '@/shared/ui/Tooltip'
 
 // XSS-инвариант рендера markdown: react-markdown (без rehype-raw) НЕ выполняет сырой
 // HTML и санитизирует javascript:-ссылки. Тест фиксирует это как контракт компонента.
@@ -46,5 +47,24 @@ describe('Markdown: таблица', () => {
     expect(el?.className).toContain('w-max')
     expect(el?.className).toContain('min-w-full')
     expect(el?.parentElement?.className).toContain('overflow-x-auto')
+  })
+})
+
+describe('Markdown: печать кода', () => {
+  it('оставляет весь код с номерами строк и подсветкой, скрывая служебные кнопки', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <Markdown>{'```bash\nif true; then\n  echo "ready"\nfi\n```'}</Markdown>
+      </TooltipProvider>,
+    )
+    const card = container.querySelector('.sf-code-card')
+
+    expect(card).not.toBeNull()
+    expect(card?.textContent).toContain('1')
+    expect(card?.textContent).toContain('2')
+    expect(card?.textContent).toContain('3')
+    expect(card?.textContent).toContain('echo')
+    expect(card?.querySelector('.hljs-keyword')).not.toBeNull()
+    expect(Array.from(card?.querySelectorAll('div') ?? []).some((el) => el.className.includes('print:hidden'))).toBe(true)
   })
 })

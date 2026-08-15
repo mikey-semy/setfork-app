@@ -500,3 +500,15 @@ em-emoji-picker {
 .hljs-strong {
   font-weight: 600;
 }
+
+/* Печатный код нельзя оставлять внутри overflow-контейнера: Chromium тогда
+   печатает только видимую часть длинной строки или обрезает блок на границе
+   страницы. Цвета токенов сохраняем и в PDF, независимо от экранной темы. */
+@media print {
+  .sf-code-card {
+    overflow: visible !important;
+    break-inside: auto;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

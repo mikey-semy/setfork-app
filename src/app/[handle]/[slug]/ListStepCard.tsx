@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ExternalLink, Info, SquareCheckBig, UserRound } from 'lucide-react'
 import { DigChatOpen } from '@/features/dig/DigChat'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { CodeCard } from '@/shared/ui/CodeCard'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { SmartImage } from '@/shared/ui/SmartImage'
@@ -38,7 +39,7 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
   const why = tr(step.why, lang)
 
   return (
-    <div className={cardClass({ className: 'relative break-inside-avoid' })}>
+    <div className={cardClass({ className: `relative break-inside-avoid${step.command ? ' print:break-inside-auto' : ''}` })}>
       {/* Кирка — СТРОГО в правом верхнем углу карточки (absolute, не в потоке:
           при переносе заголовка она уплывала в середину — фидбек владельца). */}
       {viewer && !readOnlyView && typeof step.n === 'number' && (
@@ -96,13 +97,21 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
             />
           )}
           {step.command && (
-            <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[0.78125rem] text-ink">
-              <span className="shrink-0" style={{ color: 'var(--accent)' }}>$</span>
-              {/* Горизонтальный скролл + выделение: можно доскроллить до конца строки
-                  и выделить/скопировать её часть, а не только всю через кнопку. */}
-              <span className="no-scrollbar min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap">{step.command}</span>
-              <CopyButton text={step.command} lang={lang} />
-            </div>
+            <>
+              {/* На экране команда остаётся компактной и прокручиваемой. Печать этого
+                  контейнера обрезала всё правее видимой области, поэтому принтер его
+                  не видит — ниже для него полноценная CodeCard. */}
+              <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[0.78125rem] text-ink print:hidden">
+                <span className="shrink-0" style={{ color: 'var(--accent)' }}>$</span>
+                <span className="no-scrollbar min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap">{step.command}</span>
+                <CopyButton text={step.command} lang={lang} />
+              </div>
+              {/* Команда — shell-код по контракту списка. CodeCard печатает каждую
+                  строку целиком, с номером и highlight.js-подсветкой. */}
+              <div className="mt-3 hidden print:block">
+                <CodeCard code={step.command} name="bash" lang={lang} />
+              </div>
+            </>
           )}
           {subs.length > 0 && (
             <div className="mt-3">
