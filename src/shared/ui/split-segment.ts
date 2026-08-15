@@ -1,4 +1,5 @@
 import { cn } from '@/shared/lib/cn'
+import { TOUCH_HIT } from './control'
 
 /**
  * Тон и классы сегментов сплит-кнопки — НЕ компоненты, поэтому живут отдельным модулем:
@@ -23,9 +24,9 @@ export const TONE_DIVIDER: Record<SplitTone, string> = {
 export function splitSegment(opts: { interactive?: boolean; muted?: boolean; className?: string } = {}) {
   const { interactive = true, muted = false, className } = opts
   return cn(
-    'inline-flex h-full items-center gap-2 px-3 text-[0.8125rem] font-semibold transition-colors',
+    'inline-flex h-full items-center gap-2 px-3 text-[0.8125rem] font-semibold transition-colors first:rounded-l-md last:rounded-r-md',
     muted && 'px-2.5 font-mono text-[0.78125rem] font-normal text-muted',
-    interactive && 'hover:bg-surface-2 hover:text-ink',
+    interactive && `hover:bg-surface-2 hover:text-ink ${TOUCH_HIT}`,
     className,
   )
 }

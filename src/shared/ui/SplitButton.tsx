@@ -30,7 +30,16 @@ export function SplitButton({
 }) {
   const parts = React.Children.toArray(children).filter(Boolean)
   return (
-    <span className={cn('inline-flex items-stretch overflow-hidden rounded-md border bg-surface-2 text-ink transition-colors', CONTROL_H.md, TONE_BORDER[tone], className)}>
+    <span
+      className={cn(
+        // На touch интерактивные сегменты выпускают невидимую 44px hit-region
+        // вверх/вниз. Видимые фоны крайних сегментов при этом скруглены ими самими.
+        'inline-flex items-stretch overflow-hidden rounded-md border bg-surface-2 text-ink transition-colors pointer-coarse:overflow-visible',
+        CONTROL_H.md,
+        TONE_BORDER[tone],
+        className,
+      )}
+    >
       {parts.map((part, i) => (
         <React.Fragment key={i}>
           {/* Разделитель — своей линией, а не border у половинки: внешняя рамка остаётся

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { SplitButton } from '@/shared/ui/SplitButton'
-import { CONTROL_H } from '@/shared/ui/control'
+import { CONTROL_H, TOUCH_HIT } from '@/shared/ui/control'
 import { splitSegment } from '@/shared/ui/split-segment'
 
 /**
@@ -69,5 +69,23 @@ describe('сплит-кнопка', () => {
     // На touch видимая кнопка остаётся 32px; 44px раньше делали средние кнопки
     // выше двух крайних. Это не должно вернуться через TOUCH_MIN_H.
     expect(group.className).not.toContain('pointer-coarse:min-h-11')
+  })
+
+  it('на touch увеличивает только область нажатия интерактивного сегмента', () => {
+    const { container } = render(
+      <SplitButton>
+        <button type="button" className={splitSegment()}>
+          действие
+        </button>
+        <span className={splitSegment({ interactive: false })}>3</span>
+      </SplitButton>,
+    )
+    const group = container.firstElementChild as HTMLElement
+    const button = container.querySelector('button') as HTMLButtonElement
+    const count = screen.getByText('3')
+
+    expect(group).toHaveClass('pointer-coarse:overflow-visible')
+    expect(button).toHaveClass(...TOUCH_HIT.split(' '))
+    expect(count.className).not.toContain('pointer-coarse:before:h-11')
   })
 })
