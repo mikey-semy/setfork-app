@@ -21,6 +21,7 @@ export function ListsToolbar({
   catalogs = [],
   catalog,
   unfiledCount = 0,
+  actions,
 }: {
   tab?: 'lists' | 'starred'
   lang: Lang
@@ -33,6 +34,8 @@ export function ListsToolbar({
   catalog?: string
   /** Сколько списков ещё не разложено — «Без каталога» и есть очередь разбора. */
   unfiledCount?: number
+  /** Действия страницы в том же ряду контролов (например, пакетный Select). */
+  actions?: React.ReactNode
 }) {
   const ru = lang === 'ru'
   const router = useRouter()
@@ -125,11 +128,13 @@ export function ListsToolbar({
       {tab === 'lists' && isOwner && (
         <Link
           href="/new"
-          className={buttonClass({ className: 'border-transparent bg-accent text-white hover:opacity-90' })}
+          className={buttonClass({ variant: 'primary' })}
         >
           <Plus size={15} /> {ru ? 'Создать' : 'New'}
         </Link>
       )}
+
+      {actions}
     </div>
   )
 }
