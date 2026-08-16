@@ -1,10 +1,8 @@
 'use client'
 
-import { CheckSquare } from 'lucide-react'
-import { Button } from '@/shared/ui/button'
-import { t, type Lang } from '@/shared/i18n'
+import type { Lang } from '@/shared/i18n'
 import { BulkBar } from './BulkBar'
-import { SelectionProvider, useSelection } from './selection'
+import { SelectionProvider } from './selection'
 
 /**
  * Режим выбора вокруг ленты списков: кнопка «Выбрать» сверху, полоса действий снизу.
@@ -17,33 +15,23 @@ export function BulkSelection({
   lang,
   catalogs,
   allIds,
+  toolbar,
   children,
 }: {
   lang: Lang
   catalogs: { name: string; title: string }[]
   /** Идентификаторы ВСЕЙ текущей выдачи (не только страницы) — для «выбрать все». */
   allIds: string[]
+  /** Тулбар должен быть внутри провайдера: тогда Select остаётся на своём месте
+   *  и в активном режиме превращается в Cancel, а не исчезает. */
+  toolbar?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <SelectionProvider>
-      <SelectionToggle lang={lang} />
+      {toolbar}
       {children}
       <BulkBar lang={lang} catalogs={catalogs} allIds={allIds} />
     </SelectionProvider>
-  )
-}
-
-/** Вход в режим. Пока он выключен, на странице от всей этой механики — одна кнопка. */
-function SelectionToggle({ lang }: { lang: Lang }) {
-  const sel = useSelection()
-  if (!sel || sel.active) return null
-  return (
-    <div className="mb-2 flex justify-end">
-      <Button variant="ghost" size="sm" onClick={() => sel.start()}>
-        <CheckSquare size={15} />
-        {t('bulk.select', lang)}
-      </Button>
-    </div>
   )
 }

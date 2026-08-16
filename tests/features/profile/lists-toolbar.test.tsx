@@ -1,7 +1,11 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ProfileLists } from '@/app/[handle]/ProfileLists'
 import { ListsToolbar } from '@/features/profile/ListsToolbar'
+import { SelectionProvider } from '@/features/library/bulk/selection'
+import { SelectionToggle } from '@/features/library/bulk/SelectionToggle'
+import { SelectableCard } from '@/features/library/bulk/SelectableCard'
 
 const push = vi.fn()
 
@@ -71,5 +75,32 @@ describe('панель списков профиля', () => {
     expect(selects).toHaveLength(1)
     expect(selects[0]).toHaveClass('h-8')
     expect(screen.queryByText('All types')).not.toBeInTheDocument()
+  })
+
+  it('держит Select в тулбаре и превращает его в явную отмену режима', async () => {
+    const user = userEvent.setup()
+    render(
+      <SelectionProvider>
+        <ListsToolbar tab="lists" lang="en" isOwner q="" type="all" sort="recent" actions={<SelectionToggle lang="en" />} />
+        <SelectableCard id="one" label="Example list">
+          <div>Example list</div>
+        </SelectableCard>
+      </SelectionProvider>,
+    )
+
+    const create = screen.getByRole('link', { name: 'New' })
+    const select = screen.getByRole('button', { name: 'Select' })
+    expect(create.parentElement).toBe(select.parentElement)
+    expect(create).toHaveClass('bg-primary', 'text-primary-fg')
+    expect(select).toHaveAttribute('aria-pressed', 'false')
+
+    await user.click(select)
+    const cancel = screen.getByRole('button', { name: 'Cancel' })
+    expect(cancel).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('checkbox', { name: 'Example list' })).toBeInTheDocument()
+
+    await user.click(cancel)
+    expect(screen.getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('checkbox', { name: 'Example list' })).not.toBeInTheDocument()
   })
 })

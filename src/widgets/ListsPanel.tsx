@@ -246,24 +246,33 @@ export function ListsPanel({
               })}
             </nav>
           )}
-          {/* ПОРЦИЯМИ, когда вызывающий дал loadMore: кнопка приносит следующий кусок
-              и показывает, сколько ещё осталось на сервере, — а не вываливает всё
-              разом. Свернуть тут нечего: показанное не «раскрыто», а догружено. */}
-          {loadMore && restOnServer > 0 && !query && (
-            <Button
-              variant="ghost"
-              size="xs"
-              disabled={loadingMore}
-              onClick={() => {
-                setLoadingMore(true)
-                loadMore(items.length + more.length, initialLimit)
-                  .then((next) => setMore((p) => [...p, ...next]))
-                  .finally(() => setLoadingMore(false))
-              }}
-              className="mt-1 w-full justify-center text-accent"
-            >
-              {loadingMore ? t('loadingMore', lang) : `${t('showMore', lang)} (${Math.min(initialLimit, restOnServer)})`}
-            </Button>
+          {/* Серверная пагинация приносит небольшие порции, но после первой порции
+              обязана давать и обратный путь: Show less забывает догруженное и снова
+              оставляет компактные семь строк Dashboard. */}
+          {loadMore && !query && (restOnServer > 0 || more.length > 0) && (
+            <div className="mt-1 flex gap-1">
+              {restOnServer > 0 && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  disabled={loadingMore}
+                  onClick={() => {
+                    setLoadingMore(true)
+                    loadMore(items.length + more.length, initialLimit)
+                      .then((next) => setMore((p) => [...p, ...next]))
+                      .finally(() => setLoadingMore(false))
+                  }}
+                  className="min-w-0 flex-1 justify-center text-accent"
+                >
+                  {loadingMore ? t('loadingMore', lang) : `${t('showMore', lang)} (${Math.min(initialLimit, restOnServer)})`}
+                </Button>
+              )}
+              {more.length > 0 && (
+                <Button variant="ghost" size="xs" onClick={() => setMore([])} className="min-w-0 flex-1 justify-center text-accent">
+                  {t('showLess', lang)}
+                </Button>
+              )}
+            </div>
           )}
           {/* Раскрыли — должно быть чем и свернуть обратно: тот же тумблер, не тупик.
               Ветка без loadMore: панель получила весь набор и просто режет его. */}

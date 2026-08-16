@@ -52,8 +52,11 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
     getDiscussionCount(meta.id),
   ])
   const base = `/${owner}/${slug}`
+  // В печатном документе у страницы есть отдельная содержательная шапка с
+  // названием, описанием и версией. Репозиторная навигация и кнопки здесь
+  // интерактивны и лишь дублируют заголовок, поэтому целиком исключаем их.
   return (
-    <div>
+    <div className="print:hidden">
       {/* Табы — full-width СРАЗУ под шапкой (как GitHub). Активная вкладка — клиентски
           (ListTabs/usePathname), чтобы полоска переезжала мгновенно и меню не моргало. */}
       <ListTabs

@@ -27,10 +27,10 @@ export function CodeCard({ code, name, lang }: { code: string; name?: string; la
   // низ карточки (жалоба владельца 04.08.2026). Уменьшать кнопку нельзя — 44px это
   // норма тач-цели, поэтому карточка просто не бывает ниже своего угла.
   return (
-    <div className="relative my-1.5 min-h-10 overflow-hidden rounded-md border border-border bg-surface-2 pointer-coarse:min-h-13">
+    <div className="sf-code-card relative my-1.5 min-h-10 overflow-hidden rounded-md border border-border bg-surface-2 pointer-coarse:min-h-13">
       {/* Правый верхний угол — служебное (правило углов). Подложка у бейджа на случай,
           если первая строка всё же окажется длинной и пройдёт под ним. */}
-      <div className="absolute right-1 top-1 z-10 flex items-center gap-1">
+      <div className="absolute right-1 top-1 z-10 flex items-center gap-1 print:hidden">
         <span className={`rounded bg-surface-2/85 px-1.5 py-0.5 font-mono ${TEXT.caption} uppercase tracking-wide text-muted`}>{label}</span>
         <CopyButton text={code} lang={lang} />
       </div>

@@ -38,8 +38,10 @@ type Props = Pick<
  */
 export function ListBlocks(props: Props) {
   const { steps, isStepBlock, displayNum, lessons, lessonOfBlock, gatedFromLesson, firstLockedIdx, tpl, lang } = props
+  // Block flow в print надёжно разбивается между страницами; flex-колонка в
+  // Chromium может удержать высокий code block одним фрагментом и обрезать хвост.
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 print:block print:space-y-3">
       {steps.map((s, si) => {
         // Заголовок урока/секции — у ЛЮБОГО блока: показываем, когда секция
         // отличается от секции ПРЕДЫДУЩЕГО блока (начинается новый урок).

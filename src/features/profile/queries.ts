@@ -219,6 +219,7 @@ export async function getStarredTemplates(userId: string, viewerId?: string): Pr
       tags: templates.tags,
       version: templates.currentVersion,
       origin: templates.origin,
+      status: templates.status,
       runsCount: templates.runsCount,
       forksCount: templates.forksCount,
       starsCount: templates.starsCount,

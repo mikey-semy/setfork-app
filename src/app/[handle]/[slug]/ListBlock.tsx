@@ -43,7 +43,7 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
     // здесь был голый абзац: ни рамки, ни входа в чат (фидбек владельца).
     const canDig = !!viewer && !readOnlyView && typeof step.n === 'number'
     return (
-      <div className={cardClass({ className: 'relative break-inside-avoid' })}>
+      <div className={cardClass({ className: 'relative break-inside-avoid print:break-inside-auto' })}>
         {canDig && typeof step.n === 'number' && (
           <span className="absolute right-2 top-2 print:hidden">
             <DigChatOpen

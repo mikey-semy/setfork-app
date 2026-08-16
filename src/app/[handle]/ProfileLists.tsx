@@ -4,6 +4,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { Pagination } from '@/shared/ui/Pagination'
 import { FeedList } from '@/features/library/FeedList'
 import { BulkSelection } from '@/features/library/bulk/BulkSelection'
+import { SelectionToggle } from '@/features/library/bulk/SelectionToggle'
 import { BULK_MAX } from '@/features/library/bulk/limits'
 import { ListsToolbar } from '@/features/profile/ListsToolbar'
 import type { ProfilePageData } from './load'
@@ -68,6 +69,22 @@ export function ProfileLists({
         }
       : null
 
+  const toolbar =
+    unfilteredItemsCount > 0 ? (
+      <ListsToolbar
+        tab={tab === 'starred' ? 'starred' : 'lists'}
+        lang={lang}
+        isOwner={isOwner}
+        q={rawQuery}
+        type={listType}
+        sort={sort}
+        catalogs={catalogs.map((c) => ({ name: c.name, title: tr(c.title, lang), count: c.listCount }))}
+        catalog={catalogFilter}
+        unfiledCount={unfiledCount}
+        actions={isOwner && tab === 'lists' ? <SelectionToggle lang={lang} /> : null}
+      />
+    ) : null
+
   return (
     <>
       {/* Stars как у GitHub: секция папок (карточки + сорт), ниже поиск+сорт звёзд. */}
@@ -110,19 +127,7 @@ export function ProfileLists({
         </div>
       )}
 
-      {unfilteredItemsCount > 0 && (
-        <ListsToolbar
-          tab={tab === 'starred' ? 'starred' : 'lists'}
-          lang={lang}
-          isOwner={isOwner}
-          q={rawQuery}
-          type={listType}
-          sort={sort}
-          catalogs={catalogs.map((c) => ({ name: c.name, title: tr(c.title, lang), count: c.listCount }))}
-          catalog={catalogFilter}
-          unfiledCount={unfiledCount}
-        />
-      )}
+      {(!bulk || items.length === 0) && toolbar}
 
       {items.length === 0 ? (
         <EmptyState hint={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
@@ -130,7 +135,7 @@ export function ProfileLists({
         // Пакетные действия — только над своей библиотекой: раскладывать по полкам и
         // публиковать можно лишь то, что твоё. «Все» — вся текущая выдача с фильтром, а не
         // одна страница: разбирать полтысячи списков по двадцать штук бессмысленно.
-        <BulkSelection lang={lang} catalogs={bulk.catalogs} allIds={bulk.allIds}>
+        <BulkSelection lang={lang} catalogs={bulk.catalogs} allIds={bulk.allIds} toolbar={toolbar}>
           <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} selectable />
           <Pagination page={page} totalPages={totalPages} makeHref={pageHref} lang={lang} />
         </BulkSelection>

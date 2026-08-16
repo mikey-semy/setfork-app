@@ -40,5 +40,11 @@ describe('панель списков дашборда', () => {
 
     await waitFor(() => expect(screen.getAllByRole('link')).toHaveLength(14))
     expect(loadMore).toHaveBeenCalledWith(7, 7)
+    expect(screen.getByRole('button', { name: 'Show less' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Show less' }))
+
+    expect(screen.getAllByRole('link')).toHaveLength(7)
+    expect(screen.getByRole('button', { name: `Show more (${DASHBOARD_LISTS})` })).toBeInTheDocument()
   })
 })

@@ -33,7 +33,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
   if (!session || session.userId !== meta.ownerId) notFound() // только владелец
   const [collaborators, catalogs, cover, pendingTransfer] = await Promise.all([
     getCollaborators(meta.id),
-    getOwnerCatalogs(meta.ownerId),
+    getOwnerCatalogs(meta.ownerId, session.userId),
     getListCover(meta.id),
     getPendingTransfer(meta.id),
   ])
