@@ -4,6 +4,7 @@ import { db, embeddings, stars, templates, templateVersions, users, publiclyVisi
 import type { Lang } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
+import { feedWindow } from '@/shared/lib/paging'
 import type { FeedItem } from './list'
 
 /**
@@ -122,7 +123,8 @@ export async function keywordFeed(
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(...filters))
     .orderBy(...(viewerLang ? [langPref(viewerLang)] : []), order)
-  const rows = window ? await base.limit(window.limit).offset(window.offset ?? 0) : await base
+  const w = window && feedWindow(window)
+  const rows = w ? await base.limit(w.limit).offset(w.offset) : await base
   return rows as FeedItem[]
 }
 

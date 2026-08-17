@@ -5,6 +5,7 @@ import type { Lang } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
+import { feedWindow } from '@/shared/lib/paging'
 import type { ActivityItem, FeedItem, FeedSort, ListSuggestion, TagRow, TrendRange } from './list'
 import { descText, extraFilters, FEED_COLS, langPref, keywordFeed, searchCondition, semanticFeed, tagFilter, titleText, visibleFilter, withAvatar } from './shared'
 
@@ -213,7 +214,10 @@ export async function getUserTemplates(
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(templates.ownerId, userId), visibleFilter(viewerId), onlyIds ? inArray(templates.id, onlyIds) : undefined))
     .orderBy(desc(templates.updatedAt))
-  const rows = window ? await q.limit(window.limit).offset(window.offset ?? 0) : await q
+  // Окно проверяем ПЕРЕД запросом: битый предел драйвер выбрасывает молча, и та же
+  // строка кода начинает поднимать весь корпус (feedWindow, там же вся история).
+  const w = window && feedWindow(window)
+  const rows = w ? await q.limit(w.limit).offset(w.offset) : await q
   return withAvatar(rows as FeedItem[])
 }
 

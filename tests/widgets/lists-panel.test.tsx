@@ -1,7 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { DASHBOARD_LISTS, ListsPanel, type ListsPanelItem } from '@/widgets/ListsPanel'
+import { ListsPanel, type ListsPanelItem } from '@/widgets/ListsPanel'
+import { DASHBOARD_LISTS } from '@/shared/lib/paging'
 
 const item = (n: number): ListsPanelItem => ({
   handle: 'miki',

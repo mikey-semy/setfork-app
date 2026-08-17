@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LISTS_PER_PAGE, pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
+import { feedWindow, LISTS_PER_PAGE, pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
 
 // Арифметика страниц выглядит очевидной ровно до первой ошибки в ней: смещение на единицу
 // тихо теряет двадцатый список или показывает его дважды, и заметить это можно только
@@ -48,5 +48,42 @@ describe('номер страницы из адреса', () => {
     expect(pageFromParam(undefined, 3)).toBe(1)
     expect(pageFromParam('-2', 3)).toBe(1)
     expect(pageFromParam('пятая', 3)).toBe(1)
+  })
+})
+
+// Битое окно обязано падать, а не «показывать всё». Драйвер молча выбрасывает предел,
+// который не число, — так главная и отдавала все 518 списков при внешне верном коде.
+describe('проверка окна перед запросом', () => {
+  it('пропускает целое положительное окно как есть', () => {
+    expect(feedWindow({ limit: 7 })).toEqual({ limit: 7, offset: 0 })
+    expect(feedWindow({ limit: 7, offset: 14 })).toEqual({ limit: 7, offset: 14 })
+  })
+
+  it('падает на пределе, который не число', () => {
+    // Именно этот случай и был живым: через границу RSC константа приезжала функцией.
+    expect(() => feedWindow({ limit: (() => 7) as unknown as number })).toThrow(/limit/)
+    expect(() => feedWindow({ limit: undefined as unknown as number })).toThrow(/limit/)
+    expect(() => feedWindow({ limit: '7' as unknown as number })).toThrow(/limit/)
+  })
+
+  it('падает на пустом и дробном пределе, а не режет молча', () => {
+    expect(() => feedWindow({ limit: 0 })).toThrow(/limit/)
+    expect(() => feedWindow({ limit: -1 })).toThrow(/limit/)
+    expect(() => feedWindow({ limit: 7.5 })).toThrow(/limit/)
+  })
+
+  it('падает на битом смещении', () => {
+    expect(() => feedWindow({ limit: 7, offset: -1 })).toThrow(/offset/)
+    expect(() => feedWindow({ limit: 7, offset: NaN })).toThrow(/offset/)
+  })
+
+  it('не трогает само значение, сообщая о нём — иначе ошибка подменится чужой', () => {
+    // Ссылка на клиентский модуль бросает на любом обращении, включая valueOf.
+    const hostile = new Proxy(() => {}, {
+      get: () => {
+        throw new Error('Cannot access on the server')
+      },
+    }) as unknown as number
+    expect(() => feedWindow({ limit: hostile })).toThrow(TypeError)
   })
 })
