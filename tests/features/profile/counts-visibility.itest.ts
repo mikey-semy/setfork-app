@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { db, repositories, stars, templates, users } from '@/shared/db'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
-import { getPopularTags } from '@/features/library/queries'
-import { getProfileCounts, getStarredTemplates } from '@/features/profile/queries'
+import { getPopularTags, getTemplatesByIds } from '@/features/library/queries'
+import { getProfileCounts, getStarredListKeys } from '@/features/profile/queries'
 import { resetTables } from '../../helpers/reset-db'
 
 describe('видимые счётчики профиля', () => {
@@ -72,10 +72,30 @@ describe('видимые счётчики профиля', () => {
     ])
   })
 
-  it('возвращает статус для общей карточки во вкладке Starred', async () => {
-    const items = await getStarredTemplates(ownerId, ownerId)
+  it('во вкладке Starred владелец видит и черновик, и опубликованный — с их статусами', async () => {
+    // Проверяем ОБЕ половины позднего доступа к строке разом: ключи решают, что попадёт
+    // на страницу, строки приезжают отдельным запросом. Пройди только первая — страница
+    // молча стала бы короче обещанного её номером.
+    const keys = await getStarredListKeys(ownerId, ownerId)
+    expect(keys.map((k) => k.slug)).toEqual(expect.arrayContaining(['draft', 'published']))
+    const items = await getTemplatesByIds(
+      keys.map((k) => k.id),
+      ownerId,
+    )
+    expect(items).toHaveLength(keys.length)
     expect(items.find((item) => item.slug === 'draft')?.status).toBe('draft')
     expect(items.find((item) => item.slug === 'published')?.status).toBe('published')
+  })
+
+  it('чужие ключи не превращаются в строки: выборка по id гейтит сама', async () => {
+    // id приходят из отфильтрованной выборки, но запрос по id обязан быть безопасным и
+    // сам по себе — иначе однажды переданный снаружи список id откроет приватные.
+    const own = await getStarredListKeys(ownerId, ownerId)
+    const asStranger = await getTemplatesByIds(
+      own.map((k) => k.id),
+      viewerId,
+    )
+    expect(asStranger.map((i) => i.slug)).not.toContain('draft')
   })
 
   it('считает популярные теги по видимым спискам, а не по устаревшему реестру', async () => {

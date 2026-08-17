@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { courseCompletions, db, issues, runs, stars, suggestions, templateVersions, templates, users, publiclyVisible } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
-import type { FeedItem } from '@/features/library/queries'
+import type { FeedItem, ListKey } from '@/features/library/queries'
 import { avatarSrc } from '@/shared/media'
 import type { ActivityKind, ActivityTopic, DetailsPage, ListEvent, TopicList } from './activity/types'
 
@@ -199,42 +199,34 @@ export async function getProfileCounts(userId: string, viewerId?: string) {
   return { lists: l?.c ?? 0, stars: s?.c ?? 0, runs: r?.c ?? 0 }
 }
 
-/** Списки, отмеченные звездой пользователем. viewerId скрывает чужие приватные. */
-export async function getStarredTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
-  // Публично видимый = public + published + active. Раньше фильтр смотрел только на
-  // visibility → в публичной вкладке «Starred» светились ставшие flagged/hidden списки
-  // и чужие публичные черновики. Свои (owner) видны в любом статусе.
-  const publicVisible = and(
-    publiclyVisible(),
-  )!
+
+/**
+ * КЛЮЧИ звёзд — та же дешёвая половина, что `getUserListKeys`, но по своему источнику.
+ *
+ * Правило видимости здесь обязано совпадать с тем, по которому потом достаются сами
+ * строки (`getTemplatesByIds`): по ключам считается номер страницы, а строки берутся
+ * отдельным запросом. Разойдутся правила — и на странице окажется не то, что обещал
+ * её номер: часть ключей не найдёт себе строки, и страница просто станет короче.
+ */
+export async function getStarredListKeys(userId: string, viewerId?: string): Promise<ListKey[]> {
+  const publicVisible = and(publiclyVisible())!
   const visible = viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
   const rows = await db
     .select({
       id: templates.id,
-      ownerHandle: users.handle,
-      ownerAvatarUrl: users.avatarUrl,
       slug: templates.slug,
       title: templates.title,
-      desc: templates.desc,
-      tags: templates.tags,
-      version: templates.currentVersion,
       origin: templates.origin,
-      status: templates.status,
-      runsCount: templates.runsCount,
-      forksCount: templates.forksCount,
-      starsCount: templates.starsCount,
       visibility: templates.visibility,
-      verified: templates.verified,
+      starsCount: templates.starsCount,
       updatedAt: templates.updatedAt,
+      repositoryId: templates.repositoryId,
     })
     .from(stars)
     .innerJoin(templates, eq(stars.templateId, templates.id))
-    .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(stars.userId, userId), visible))
     .orderBy(desc(stars.createdAt))
-  return Promise.all(
-    (rows as FeedItem[]).map(async (r) => ({ ...r, ownerAvatarUrl: await avatarSrc(r.ownerAvatarUrl, 96) })),
-  )
+  return rows as ListKey[]
 }
 
 /** Прогоны пользователя (для вкладки профиля). */

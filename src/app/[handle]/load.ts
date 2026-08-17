@@ -5,14 +5,14 @@ import { getSession } from '@/shared/auth/session'
 import { agentProfile } from '@/shared/ai/gnome-account'
 import { avatarSrc } from '@/shared/media'
 import type { Lang } from '@/shared/i18n'
-import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries'
+import { getPinnedTemplates, getTemplatesByIds, getUserListKeys } from '@/features/library/queries'
 import {
   getActivityTopics,
   getContributions,
   getOwnListsLight,
   getProfileCounts,
   getReceivedStats,
-  getStarredTemplates,
+  getStarredListKeys,
   getUserByHandle,
   getUserCompletions,
 } from '@/features/profile/queries'
@@ -107,7 +107,10 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     avatarSrc(user.avatarUrl, 180),
     getContributions(user.id, graphYear, viewer?.userId),
     getReceivedStats(user.id),
-    !isListsTab ? Promise.resolve([]) : tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
+    // КЛЮЧИ, а не полные строки: отбор и порядок считаются здесь, поэтому нужен весь
+    // подходящий набор — но нужен он только полями отбора. Тяжёлое достаётся ниже и
+    // ровно для показанной страницы (getTemplatesByIds).
+    !isListsTab ? Promise.resolve([]) : tab === 'starred' ? getStarredListKeys(user.id, viewer?.userId) : getUserListKeys(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),
     getOwnerCatalogs(user.id, viewer?.userId),
     getAchievementDisplay(),
@@ -162,7 +165,8 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   const totalPages = pageCount(items.length)
   const page = pageFromParam(sp.page, totalPages)
   const { limit, offset } = pageWindow(page)
-  const pageItems = isListsTab ? items.slice(offset, offset + limit) : items
+  // Поздний доступ к строке: полные данные — только у двадцати показанных.
+  const pageItems = isListsTab ? await getTemplatesByIds(items.slice(offset, offset + limit).map((i) => i.id), viewer?.userId) : []
   // Общий построитель: он и переносит остальные параметры сам. Вкладка и фильтр полки
   // названы явно, потому что берутся не из адреса, а из разбора выше (`tab` нормализован,
   // а неизвестное имя полки фильтром не считается) — переносить сырой `sp.catalog` значило
