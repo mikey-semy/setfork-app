@@ -38,7 +38,7 @@ describe('панель списков дашборда', () => {
     expect(screen.getByPlaceholderText('Find a list…')).toBeInTheDocument()
     // 500 списков по семь — 72 страницы; на первой «назад» вести некуда.
     expect(screen.getByText('1 / 72')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Previous page' })).toHaveAttribute('aria-disabled', 'true')
 
     await user.click(screen.getByRole('button', { name: 'Next page' }))
 
@@ -111,5 +111,29 @@ describe('страница, которой не стало', () => {
     expect(screen.getByText('1 / 2')).toBeInTheDocument()
     // И показаны строки существующей страницы, а не осиротевшей четвёртой.
     expect(screen.getByText('List 1')).toBeInTheDocument()
+  })
+})
+
+describe('доступность панели', () => {
+  it('неудачную загрузку страницы объявляют, а не показывают молча', async () => {
+    const user = userEvent.setup()
+    const loadPage = vi.fn(async () => {
+      throw new Error('offline')
+    })
+    render(<ListsPanel items={page(1)} lang="en" title="Lists" initialLimit={DASHBOARD_LISTS} total={500} loadPage={loadPage} />)
+
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
+
+    // Без role="alert" живая область листалки вернёт то же «Page 1 / 72», что читалось до
+    // нажатия, — выйдет, будто ничего и не нажимали.
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Could not load. Try again.'))
+  })
+
+  it('список строк — названный ориентир: рядом стоит листалка, тоже nav', () => {
+    render(<ListsPanel items={page(1)} lang="en" title="My lists" initialLimit={DASHBOARD_LISTS} total={500} loadPage={vi.fn()} />)
+    // Два безымянных «navigation» в списке ориентиров скринридера неразличимы.
+    expect(screen.getByRole('navigation', { name: 'My lists' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeInTheDocument()
+    expect(screen.getAllByRole('navigation').every((n) => n.getAttribute('aria-label'))).toBe(true)
   })
 })

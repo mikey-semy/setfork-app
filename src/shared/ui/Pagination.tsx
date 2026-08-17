@@ -65,6 +65,17 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
 
   /** Шаг листалки: ссылка на сервере, кнопка на клиенте, погашенный край — там же. */
   const step = (to: number, label: string, body: React.ReactNode, current = false, rel?: 'prev' | 'next') => {
+    // ТЕКУЩАЯ СТРАНИЦА — не действие, но объявляться обязана, иначе «где я» держится на
+    // одном цвете. Разбор идёт первым и одинаково в обоих режимах: раньше `aria-current`
+    // ставила только ссылочная ветка, и в кнопочной текущая страница отличалась лишь
+    // начертанием.
+    if (current) {
+      return (
+        <span key={label} aria-current="page" className={cn(box, now)}>
+          {body}
+        </span>
+      )
+    }
     // Край считается ПО ТОМУ, ЧТО ИЗВЕСТНО. С номерами край — это `last`. Без номеров
     // (режим разведчика) верхнего края нет вовсе, и его заменяет `hasNext`: назад можно
     // всегда, вперёд — только если следующая страница есть. Проверять здесь только
@@ -79,15 +90,23 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
     // `goToPage`, поэтому здесь достаточно сказать «занято», не забирая фокус.
     const live = to !== page && to >= 1 && withinBounds
     if (!live) {
-      // В кнопочном режиме край — настоящая `disabled`-кнопка: она остаётся в дереве
-      // доступности как кнопка и объявляется недоступной. Ссылке же нечем быть
-      // «выключенной»: `<a>` без href — не ссылка, поэтому там span с aria-disabled.
+      // КРАЙ В КНОПОЧНОМ РЕЖИМЕ — `aria-disabled`, а НЕ `disabled`. Настоящий `disabled`
+      // выкидывает элемент из порядка обхода, и когда ты долистал до последней страницы,
+      // браузер снимал фокус с только что нажатой стрелки и ронял его в <body>: место в
+      // панели терялось ровно в награду за то, что дошёл до конца. С `aria-disabled`
+      // кнопка остаётся под фокусом и объявляется недоступной, а нажатие не делает
+      // ничего, потому что обработчика на ней нет.
+      //
+      // В ссылочном режиме гасить нечего: `<a>` без href — не ссылка. Погашенная стрелка
+      // там ПРЯЧЕТСЯ от скринридера целиком: она не действие и ничего не сообщает, а
+      // безымянный значок в ленте объявляемых элементов — это шум. «Где я» и «куда можно»
+      // читаются по номерам и `aria-current`.
       return onPage ? (
-        <button key={label} type="button" disabled aria-label={label} className={cn(box, current ? now : off)}>
+        <button key={label} type="button" aria-disabled="true" aria-label={label} className={cn(box, off)}>
           {body}
         </button>
       ) : (
-        <span key={label} aria-disabled aria-current={current ? 'page' : undefined} className={cn(box, current ? now : off)}>
+        <span key={label} aria-hidden className={cn(box, off)}>
           {body}
         </span>
       )
@@ -138,8 +157,16 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
   // занесён над одной из них. `shrink-0` с `truncate` тут были заодно бессмысленны:
   // несжимаемому элементу нечего усекать, он просто вылезал бы за узкую панель.
   const position = (
-    <span aria-live="polite" className="min-w-[4.5rem] px-1 text-center font-mono text-[0.75rem] text-muted">
+    <span className="min-w-[4.5rem] px-1 text-center font-mono text-[0.75rem] text-muted">
       {busy ? t('loadingMore', lang) : totalPages !== undefined ? `${page} / ${last}` : page}
+    </span>
+  )
+  // ЖИВАЯ ОБЛАСТЬ ОТДЕЛЬНО И ВСЕГДА В ДЕРЕВЕ. Раньше `aria-live` висел на видимой подписи,
+  // а она с sm уходит в `display:none` ради номеров — то есть на десктопе смена страницы и
+  // загрузка не объявлялись вовсе. Скрытый узел от разрешения экрана не зависит.
+  const announce = (
+    <span className="sr-only" aria-live="polite">
+      {busy ? t('loadingMore', lang) : `${t('pageLabel', lang)} ${page}${totalPages !== undefined ? ` / ${last}` : ''}`}
     </span>
   )
 
@@ -152,6 +179,7 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
       className={cn('mt-4 flex items-center justify-center gap-1 tabular-nums pointer-coarse:gap-2', className)}
       aria-label={t('paginationLabel', lang)}
     >
+      {announce}
       {prev}
       {/* Номера — только когда есть что нумеровать И есть куда их положить. */}
       {totalPages !== undefined && !compact ? (

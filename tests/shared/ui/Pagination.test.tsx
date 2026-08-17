@@ -36,8 +36,14 @@ describe('Pagination', () => {
     expect(screen.getByText('Назад')).toBeInTheDocument()
     expect(screen.getByText('Вперёд')).toBeInTheDocument()
     // Голосом — целиком: «Назад» среди номеров страниц не отвечает на вопрос «куда назад».
-    expect(screen.getByRole('link', { name: 'Предыдущая страница' })).toHaveAttribute('href', '/x?page=1')
-    expect(screen.getByRole('link', { name: 'Следующая страница' })).toHaveAttribute('href', '/x?page=3')
+    // WCAG 2.5.3 (Label in Name): объявляемое имя ОБЯЗАНО содержать видимую подпись —
+    // иначе голосовое управление по команде «Назад» не находит эту же кнопку.
+    const prev = screen.getByRole('link', { name: 'Назад, на предыдущую страницу' })
+    const next = screen.getByRole('link', { name: 'Вперёд, на следующую страницу' })
+    expect(prev).toHaveAttribute('href', '/x?page=1')
+    expect(next).toHaveAttribute('href', '/x?page=3')
+    expect(prev.getAttribute('aria-label')).toContain('Назад')
+    expect(next.getAttribute('aria-label')).toContain('Вперёд')
   })
 
   it('номера страниц: текущая помечена, соседние ведут ссылками', () => {
@@ -83,6 +89,47 @@ describe('Pagination', () => {
     expect(screen.getByRole('link', { name: 'Previous page' })).toHaveAttribute('href', '/x?page=3')
   })
 
+  describe('доступность', () => {
+    it('край не выбрасывается из обхода: фокус остаётся на кнопке, а не падает в body', () => {
+      // Настоящий `disabled` снимает фокус с только что нажатой стрелки, когда долистал до
+      // края, — место теряется в награду за то, что дошёл до конца.
+      render(<Pagination page={5} totalPages={5} onPage={vi.fn()} lang="en" />)
+      const next = screen.getByRole('button', { name: 'Next page' })
+      expect(next).toBeEnabled()
+      expect(next).toHaveAttribute('aria-disabled', 'true')
+      next.focus()
+      expect(document.activeElement).toBe(next)
+    })
+
+    it('нажатие на погашенный край ничего не делает', () => {
+      const onPage = vi.fn()
+      render(<Pagination page={5} totalPages={5} onPage={onPage} lang="en" />)
+      screen.getByRole('button', { name: 'Next page' }).click()
+      expect(onPage).not.toHaveBeenCalled()
+    })
+
+    it('погашенная стрелка-ссылка не попадает в дерево доступности безымянной', () => {
+      // Она не действие и ничего не сообщает; безымянный значок — это шум в ленте.
+      const { container } = render(<Pagination page={1} totalPages={5} makeHref={href} lang="en" />)
+      expect(screen.queryByRole('link', { name: /previous/i })).toBeNull()
+      expect(container.querySelector('[aria-hidden="true"]')).toBeTruthy()
+    })
+
+    it('текущая страница помечена и в кнопочном режиме, а не только цветом', () => {
+      render(<Pagination page={3} totalPages={5} onPage={vi.fn()} lang="en" />)
+      expect(screen.getByText('3')).toHaveAttribute('aria-current', 'page')
+    })
+
+    it('смена страницы объявляется независимо от ширины экрана', () => {
+      // Живая область раньше висела на видимой подписи, а её с sm прячет display:none —
+      // то есть на десктопе не объявлялось ничего.
+      const { container } = render(<Pagination page={3} totalPages={5} makeHref={href} lang="en" />)
+      const live = container.querySelector('[aria-live="polite"]')
+      expect(live).toHaveClass('sr-only')
+      expect(live).toHaveTextContent('Page 3 / 5')
+    })
+  })
+
   describe('мобильный экран', () => {
     it('шаг несёт тач-цель проекта, а не остаётся 32px по шкале вида', () => {
       // У проекта это записанное правило (control.ts): вид по шкале, цель добирается
@@ -107,10 +154,10 @@ describe('Pagination', () => {
     it('подпись положения держит ширину, пока едет страница', () => {
       // Иначе «6 / 74» → «Загрузка…» разъезжает обе стрелки ровно под занесённым пальцем.
       const { rerender } = render(<Pagination page={2} totalPages={5} onPage={vi.fn()} compact lang="en" />)
-      const idle = screen.getByText('2 / 5')
-      expect(idle).toHaveClass('min-w-[4.5rem]')
+      expect(screen.getByText('2 / 5')).toHaveClass('min-w-[4.5rem]')
       rerender(<Pagination page={2} totalPages={5} onPage={vi.fn()} compact busy lang="en" />)
-      expect(screen.getByText('Loading…')).toHaveClass('min-w-[4.5rem]')
+      // «Загрузка…» теперь и в видимой подписи, и в скрытой живой области — берём видимую.
+      expect(screen.getAllByText('Loading…').some((el) => el.className.includes('min-w-[4.5rem]'))).toBe(true)
     })
   })
 })
