@@ -22,7 +22,7 @@ import { getFolderTemplateIds, getUserFolders } from '@/features/star-folders/qu
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { dayKey } from '@/features/profile/activity/types'
-import { pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
+import { pageCount, pageFromParam, pageHref as buildPageHref, pageWindow } from '@/shared/lib/paging'
 
 export type ProfileTab = 'overview' | 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
 
@@ -163,19 +163,11 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   const page = pageFromParam(sp.page, totalPages)
   const { limit, offset } = pageWindow(page)
   const pageItems = isListsTab ? items.slice(offset, offset + limit) : items
-  const pageHref = (p: number) => {
-    const qs = new URLSearchParams()
-    qs.set('tab', tab)
-    if (sp.folder) qs.set('folder', sp.folder)
-    if (sp.q) qs.set('q', sp.q)
-    if (sp.sort) qs.set('sort', sp.sort)
-    if (sp.type) qs.set('type', sp.type)
-    // Фильтр полки переживает переход по страницам: иначе со второй страницы человек
-    // молча возвращается ко всей библиотеке и не понимает, куда делся отбор.
-    if (catalogFilter) qs.set('catalog', catalogFilter)
-    if (p > 1) qs.set('page', String(p))
-    return `/${handle}?${qs.toString()}`
-  }
+  // Общий построитель: он и переносит остальные параметры сам. Вкладка и фильтр полки
+  // названы явно, потому что берутся не из адреса, а из разбора выше (`tab` нормализован,
+  // а неизвестное имя полки фильтром не считается) — переносить сырой `sp.catalog` значило
+  // бы тащить дальше опечатку, от которой страница только что защитилась.
+  const pageHref = buildPageHref(`/${handle}`, { ...sp, tab, catalog: catalogFilter })
 
   return {
     handle,

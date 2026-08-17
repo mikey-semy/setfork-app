@@ -7,7 +7,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
 import { Pagination } from '@/shared/ui/Pagination'
-import { pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
+import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { countUserTemplates, getUserTemplates } from '@/features/library/queries'
 import { applySavedQuery, listSavedQueries } from '@/features/library/saved-queries'
 import { PAGE } from '@/shared/ui/control'
@@ -76,7 +76,7 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
                   <Pagination
                     page={page}
                     totalPages={totalPages}
-                    makeHref={(p) => `/my-lists?${new URLSearchParams({ ...(sp.sq ? { sq: sp.sq } : {}), ...(p > 1 ? { page: String(p) } : {}) }).toString()}`}
+                    makeHref={pageHref('/my-lists', sp)}
                     lang={lang}
                   />
                 </>

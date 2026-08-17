@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ListChecks, Plus } from 'lucide-react'
+import { Check, ChevronDown, ListChecks, Plus } from 'lucide-react'
+import { Pagination } from '@/shared/ui/Pagination'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { SearchField } from '@/shared/ui/SearchField'
@@ -276,32 +277,10 @@ export function ListsPanel({
           {/* Страницы, а не бесконечная лента: на экране всегда ровно одно окно,
               сколько бы списков ни было в библиотеке. Под поиском пагинатора нет —
               выдача поиска это не страница, а совпадения. */}
-          {loadPage && !query && totalPages > 1 && (
-            <div className="mt-1 flex items-center justify-between gap-1">
-              <Button
-                variant="ghost"
-                size="xs"
-                disabled={page <= 1 || paging}
-                aria-label={t('prevPage', lang)}
-                onClick={() => goToPage(page - 1)}
-                className="text-accent"
-              >
-                <ChevronLeft size={14} />
-              </Button>
-              <span aria-live="polite" className="min-w-0 truncate font-mono text-[0.6875rem] text-muted">
-                {paging ? t('loadingMore', lang) : `${page} / ${totalPages}`}
-              </span>
-              <Button
-                variant="ghost"
-                size="xs"
-                disabled={page >= totalPages || paging}
-                aria-label={t('nextPage', lang)}
-                onClick={() => goToPage(page + 1)}
-                className="text-accent"
-              >
-                <ChevronRight size={14} />
-              </Button>
-            </div>
+          {loadPage && !query && (
+            // Та же листалка, что на страницах сайта, — здесь только в кнопочном
+            // режиме и compact: колонка узкая, номера в неё не лягут.
+            <Pagination page={page} totalPages={totalPages} onPage={goToPage} busy={paging} compact lang={lang} className="mt-1" />
           )}
           {pageFailed && <div className="px-2 py-1 text-[0.6875rem] text-danger">{t('loadFailed', lang)}</div>}
           {/* Раскрыли — должно быть чем и свернуть обратно: тот же тумблер, не тупик.

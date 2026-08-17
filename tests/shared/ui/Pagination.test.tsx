@@ -29,9 +29,41 @@ describe('Pagination', () => {
     expect(screen.getByRole('link', { name: /next/i })).toHaveAttribute('href', '/x?page=3')
   })
 
-  it('локализация: ru-подписи', () => {
+  it('локализация: видимая подпись короткая, а объявляемая — полная', () => {
     render(<Pagination page={2} totalPages={3} makeHref={href} lang="ru" />)
-    expect(screen.getByRole('link', { name: /Назад/ })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Вперёд/ })).toBeInTheDocument()
+    // Глазами — «Назад/Вперёд»: рядом с номерами длинная подпись только мешает.
+    expect(screen.getByText('Назад')).toBeInTheDocument()
+    expect(screen.getByText('Вперёд')).toBeInTheDocument()
+    // Голосом — целиком: «Назад» среди номеров страниц не отвечает на вопрос «куда назад».
+    expect(screen.getByRole('link', { name: 'Предыдущая страница' })).toHaveAttribute('href', '/x?page=1')
+    expect(screen.getByRole('link', { name: 'Следующая страница' })).toHaveAttribute('href', '/x?page=3')
+  })
+
+  it('номера страниц: текущая помечена, соседние ведут ссылками', () => {
+    render(<Pagination page={2} totalPages={3} makeHref={href} lang="en" />)
+    expect(screen.getByRole('link', { name: 'Page 3' })).toHaveAttribute('href', '/x?page=3')
+    // Текущая — не ссылка: нажимать на страницу, где уже стоишь, некуда.
+    expect(screen.queryByRole('link', { name: 'Page 2' })).toBeNull()
+    expect(screen.getByText('2')).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('длинная выдача сворачивается многоточиями, а не рядом из сотни номеров', () => {
+    render(<Pagination page={40} totalPages={74} makeHref={href} lang="en" />)
+    for (const p of ['1', '39', '40', '41', '74']) expect(screen.getByText(p)).toBeInTheDocument()
+    expect(screen.getAllByText('…')).toHaveLength(2)
+    expect(screen.queryByText('20')).toBeNull()
+  })
+
+  it('без общего числа листает по признаку «дальше есть»', () => {
+    render(<Pagination page={3} hasNext makeHref={href} lang="en" />)
+    expect(screen.getByRole('link', { name: 'Next page' })).toHaveAttribute('href', '/x?page=4')
+    expect(screen.getByText('3')).toBeInTheDocument()
+    // Номера последней страницы нет и выдумывать его нельзя: его намеренно не считали.
+    expect(screen.queryByText(/\//)).toBeNull()
+  })
+
+  it('дальше некуда — листалки нет вовсе', () => {
+    const { container } = render(<Pagination page={1} hasNext={false} makeHref={href} lang="en" />)
+    expect(container.firstChild).toBeNull()
   })
 })

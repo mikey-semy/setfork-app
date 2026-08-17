@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { feedWindow, LISTS_PER_PAGE, pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
+import { feedWindow, LISTS_PER_PAGE, pageCount, pageFromParam, pageHref, pageNumbers, pageWindow, probeWindow, takePage } from '@/shared/lib/paging'
 
 // Арифметика страниц выглядит очевидной ровно до первой ошибки в ней: смещение на единицу
 // тихо теряет двадцатый список или показывает его дважды, и заметить это можно только
@@ -85,5 +85,74 @@ describe('проверка окна перед запросом', () => {
       },
     }) as unknown as number
     expect(() => feedWindow({ limit: hostile })).toThrow(TypeError)
+  })
+})
+
+// Ссылку на страницу писала каждая страница сама, и они разошлись: где-то фильтры
+// переносились, где-то молча слетали. Теперь построитель один — и правила у него одни.
+describe('ссылка на страницу', () => {
+  it('первая страница живёт по адресу без ?page — чтобы адрес у неё был один', () => {
+    expect(pageHref('/tags/go', {})(1)).toBe('/tags/go')
+    expect(pageHref('/tags/go', { sort: 'new' })(1)).toBe('/tags/go?sort=new')
+  })
+
+  it('переносит остальные параметры, меняя ровно номер', () => {
+    const href = pageHref('/miki', { tab: 'lists', catalog: 'devops', q: 'nginx' })
+    expect(href(3)).toBe('/miki?tab=lists&catalog=devops&q=nginx&page=3')
+  })
+
+  it('прежний номер не липнет ко второму переходу', () => {
+    expect(pageHref('/x', { page: '7', q: 'a' })(2)).toBe('/x?q=a&page=2')
+  })
+
+  it('пустые значения не превращаются в мусор в адресе', () => {
+    expect(pageHref('/x', { q: '', sort: undefined, type: null })(2)).toBe('/x?page=2')
+  })
+
+  it('принимает и готовые URLSearchParams', () => {
+    expect(pageHref('/x', new URLSearchParams({ q: 'go', page: '4' }))(2)).toBe('/x?q=go&page=2')
+  })
+})
+
+describe('окно-разведчик', () => {
+  it('просит на строку больше, чем покажет', () => {
+    expect(probeWindow(1, 20)).toEqual({ limit: 21, offset: 0 })
+    expect(probeWindow(3, 20)).toEqual({ limit: 21, offset: 40 })
+  })
+
+  it('лишняя строка отвечает «дальше есть» и на экран не попадает', () => {
+    const rows = Array.from({ length: 21 }, (_, i) => i)
+    expect(takePage(rows, 20)).toEqual({ items: rows.slice(0, 20), hasNext: true })
+  })
+
+  it('ровно страница — значит дальше ничего', () => {
+    expect(takePage([1, 2, 3], 3)).toEqual({ items: [1, 2, 3], hasNext: false })
+    expect(takePage([], 3)).toEqual({ items: [], hasNext: false })
+  })
+})
+
+describe('номера в листалке', () => {
+  it('короткая выдача показывается целиком, без многоточий', () => {
+    expect(pageNumbers(1, 5)).toEqual([1, 2, 3, 4, 5])
+  })
+
+  it('в середине сворачивается с обеих сторон', () => {
+    expect(pageNumbers(40, 74)).toEqual([1, 'gap', 39, 40, 41, 'gap', 74])
+  })
+
+  it('у краёв окно разворачивается внутрь, а не схлопывается', () => {
+    // Иначе на первой странице номеров вдвое меньше, чем в середине, и ряд прыгает
+    // по ширине при каждом переходе.
+    expect(pageNumbers(1, 74)).toEqual([1, 2, 3, 4, 'gap', 74])
+    expect(pageNumbers(74, 74)).toEqual([1, 'gap', 71, 72, 73, 74])
+  })
+
+  it('первая и последняя страницы есть всегда — на них прыгают чаще всего', () => {
+    for (const p of [1, 2, 20, 73, 74]) {
+      const nums = pageNumbers(p, 74)
+      expect(nums[0]).toBe(1)
+      expect(nums[nums.length - 1]).toBe(74)
+      expect(nums).toContain(p)
+    }
   })
 })

@@ -8,7 +8,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
 import { Pagination } from '@/shared/ui/Pagination'
-import { pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
+import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { countListsInCatalog, getListsInCatalog } from '@/features/library/queries'
 import { getCatalog } from '@/features/catalogs/queries'
 import { PAGE } from '@/shared/ui/control'
@@ -63,7 +63,7 @@ export default async function CatalogPage({
             <Pagination
               page={page}
               totalPages={totalPages}
-              makeHref={(p) => (p > 1 ? `/${handle}/catalogs/${name}?page=${p}` : `/${handle}/catalogs/${name}`)}
+              makeHref={pageHref(`/${handle}/catalogs/${name}`, sp)}
               lang={lang}
             />
           </>

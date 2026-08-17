@@ -6,7 +6,7 @@ import { countLists, getFeed } from '@/features/library/queries'
 import { getTag } from '@/features/tags/queries'
 import { FeedList } from '@/features/library/FeedList'
 import { Pagination } from '@/shared/ui/Pagination'
-import { pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
+import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Badge } from '@/shared/ui/badge'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -56,7 +56,7 @@ export default async function TagPage({
       {items.length ? (
         <>
           <FeedList items={items} lang={lang} viewerId={session?.userId} />
-          <Pagination page={page} totalPages={totalPages} makeHref={(p) => (p > 1 ? `/tags/${slug}?page=${p}` : `/tags/${slug}`)} lang={lang} />
+          <Pagination page={page} totalPages={totalPages} makeHref={pageHref(`/tags/${encodeURIComponent(slug)}`, sp)} lang={lang} />
         </>
       ) : (
         <EmptyState
