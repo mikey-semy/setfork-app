@@ -141,10 +141,10 @@ describe('номера в листалке', () => {
   })
 
   it('у краёв окно разворачивается внутрь, а не схлопывается', () => {
-    // Иначе на первой странице номеров вдвое меньше, чем в середине, и ряд прыгает
-    // по ширине при каждом переходе.
-    expect(pageNumbers(1, 74)).toEqual([1, 2, 3, 4, 'gap', 74])
-    expect(pageNumbers(74, 74)).toEqual([1, 'gap', 71, 72, 73, 74])
+    // Иначе на первой странице номеров меньше, чем в середине, и ряд прыгает по ширине
+    // при каждом переходе. Ячеек ровно семь и там, и там — одно многоточие вместо двух.
+    expect(pageNumbers(1, 74)).toEqual([1, 2, 3, 4, 5, 'gap', 74])
+    expect(pageNumbers(74, 74)).toEqual([1, 'gap', 70, 71, 72, 73, 74])
   })
 
   it('многоточие не прячет ровно одну страницу — это обман без экономии места', () => {
@@ -154,8 +154,18 @@ describe('номера в листалке', () => {
     expect(pageNumbers(6, 6)).toEqual([1, 2, 3, 4, 5, 6])
   })
 
+  it('ширина ряда постоянна: отцентрованный ряд не должен разъезжать стрелки', () => {
+    // Ряд отцентрован, поэтому лишняя ячейка сдвигает ОБЕ стрелки наружу примерно на их
+    // ширину — палец, занесённый над «вперёд», попадает мимо. Раньше на 74 страницах
+    // третья давала шесть ячеек, четвёртая семь, то есть ряд прыгал на обычном шаге.
+    for (const total of [8, 9, 12, 20, 74, 1000]) {
+      const widths = new Set(Array.from({ length: total }, (_, i) => pageNumbers(i + 1, total).length))
+      expect(widths.size).toBe(1)
+    }
+  })
+
   it('многоточие ставится только там, где за ним правда несколько страниц', () => {
-    for (const total of [7, 20, 74]) {
+    for (const total of [7, 8, 9, 12, 20, 74, 1000]) {
       for (let p = 1; p <= total; p++) {
         const nums = pageNumbers(p, total)
         nums.forEach((v, i) => {
@@ -164,6 +174,17 @@ describe('номера в листалке', () => {
           const after = nums[i + 1] as number
           expect(after - before).toBeGreaterThan(2)
         })
+      }
+    }
+  })
+
+  it('текущая страница и оба края есть в ряду всегда', () => {
+    for (const total of [1, 5, 7, 8, 74, 1000]) {
+      for (const p of [1, 2, Math.ceil(total / 2), total - 1, total].filter((v) => v >= 1 && v <= total)) {
+        const nums = pageNumbers(p, total)
+        expect(nums).toContain(p)
+        expect(nums[0]).toBe(1)
+        expect(nums[nums.length - 1]).toBe(total)
       }
     }
   })

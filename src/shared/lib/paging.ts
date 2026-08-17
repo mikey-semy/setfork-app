@@ -160,26 +160,24 @@ export function takePage<T>(rows: T[], perPage = LISTS_PER_PAGE): { items: T[]; 
 /**
  * Номера для листалки: первая, последняя, окно вокруг текущей, между ними — многоточие.
  *
- * Считается ЗДЕСЬ, а не в разметке: это арифметика с краями (у первой и последней
- * страницы окно упирается и обязано разворачиваться в другую сторону, иначе на краях
- * листалка становится вдвое короче и прыгает по ширине при переходе).
+ * ДЛИНА РЯДА ПОСТОЯННА (2·around + 5 ячеек), и это не украшение. Ряд отцентрован, поэтому
+ * лишняя ячейка сдвигает ОБЕ стрелки наружу примерно на их собственную ширину — палец,
+ * уже занесённый над «вперёд», попадает мимо. Первая версия этого не держала: на 74
+ * страницах третья давала шесть ячеек, а четвёртая семь, то есть ряд прыгал на обычном шаге.
+ *
+ * Постоянство даётся не подгонкой, а тремя случаями. У края окно разворачивается внутрь
+ * (одно многоточие вместо двух), в середине их два. Заодно из построения следует, что за
+ * многоточием НИКОГДА не прячется одна страница: прятать одну — обман без экономии места,
+ * ячеек столько же, а страница недостижима в один клик.
  */
 export function pageNumbers(page: number, totalPages: number, around = 1): (number | 'gap')[] {
-  const span = around * 2 + 1
-  if (totalPages <= span + 2) return Array.from({ length: totalPages }, (_, i) => i + 1)
-  const start = Math.min(Math.max(2, page - around), totalPages - span)
-  const end = Math.max(Math.min(totalPages - 1, page + around), span + 1)
-  const out: (number | 'gap')[] = [1]
-  if (start > 2) out.push('gap')
-  for (let p = start; p <= end; p++) out.push(p)
-  if (end < totalPages - 1) out.push('gap')
-  out.push(totalPages)
-  // Многоточие, за которым прячется РОВНО ОДНА страница, — обман: места занимает столько
-  // же, а страницу делает недостижимой в один клик. Разворачиваем его обратно в номер.
-  return out.map((v, i) => {
-    if (v !== 'gap') return v
-    const before = out[i - 1]
-    const after = out[i + 1]
-    return typeof before === 'number' && typeof after === 'number' && after - before === 2 ? before + 1 : v
-  })
+  const cells = around * 2 + 5
+  if (totalPages <= cells) return Array.from({ length: totalPages }, (_, i) => i + 1)
+  const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i)
+  // У начала: сплошной кусок от первой, одно многоточие, последняя.
+  if (page <= around + 3) return [...range(1, cells - 2), 'gap', totalPages]
+  // У конца — зеркально.
+  if (page >= totalPages - (around + 2)) return [1, 'gap', ...range(totalPages - (cells - 3), totalPages)]
+  // В середине: первая, многоточие, окно, многоточие, последняя.
+  return [1, 'gap', ...range(page - around, page + around), 'gap', totalPages]
 }

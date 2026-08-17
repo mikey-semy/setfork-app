@@ -27,6 +27,11 @@ import { buttonClass } from '@/shared/ui/button-style'
 // компоненты через границу RSC и получали ссылку на клиентский модуль вместо
 // числа; почему это тихо ломало запрос — там же, в комментарии у констант.
 
+/** Замер строки списка (px): содержимое ~20 + `py-1.5` сверху и снизу; зазор — `gap-0.5`.
+ *  Числа здесь, а не в разметке, потому что по ним считается резерв высоты страницы. */
+const ROW_H = 32
+const ROW_GAP = 2
+
 export interface ListsPanelItem {
   handle: string
   slug: string
@@ -170,6 +175,10 @@ export function ListsPanel({
   // items.length нельзя: 7 из 500 скрывали бы поиск как будто списков всего семь.
   const hasSearch = searchable === true || (searchable === 'auto' && (total ?? items.length) > initialLimit)
 
+  // Резервируем, только когда листание вообще есть: у профиля с тремя списками пустое
+  // место под семь строк — это дыра на ровном месте.
+  const reserveRows = Boolean(loadPage) && !query && totalPages > 1
+
   const goToPage = (next: number) => {
     if (!loadPage || paging || next === shownPage || next < 1 || next > totalPages) return
     setPageFailed(false)
@@ -240,7 +249,15 @@ export function ListsPanel({
               {t(searching ? 'searchingLists' : 'nothingFound', lang)}
             </div>
           ) : (
-            <nav className="flex flex-col gap-0.5">
+            <nav
+              className="flex flex-col gap-0.5"
+              // ВЫСОТА ЗАРЕЗЕРВИРОВАНА под полную страницу. Последняя страница короче
+              // остальных, и без резерва панель на ней складывалась: на мобильной главной
+              // она стоит первой, поэтому листалка уезжала вверх на пол-экрана — сразу
+              // после того, как палец по ней ударил. Фиксированный потолок строк, ради
+              // которого всё и затевалось, должен быть виден и как постоянная высота.
+              style={reserveRows ? { minHeight: `${(initialLimit * ROW_H + (initialLimit - 1) * ROW_GAP) / 16}rem` } : undefined}
+            >
               {shown.map((l) => {
                 const active = activeKey === `${l.handle}/${l.slug}`
                 return (

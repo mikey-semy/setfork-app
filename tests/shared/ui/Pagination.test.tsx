@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Pagination } from '@/shared/ui/Pagination'
+import { TOUCH_MIN_BOX } from '@/shared/ui/control'
 
 const href = (p: number) => `/x?page=${p}`
 
@@ -80,5 +81,36 @@ describe('Pagination', () => {
     render(<Pagination page={4} hasNext makeHref={href} lang="en" />)
     expect(screen.getByRole('link', { name: 'Next page' })).toHaveAttribute('href', '/x?page=5')
     expect(screen.getByRole('link', { name: 'Previous page' })).toHaveAttribute('href', '/x?page=3')
+  })
+
+  describe('мобильный экран', () => {
+    it('шаг несёт тач-цель проекта, а не остаётся 32px по шкале вида', () => {
+      // У проекта это записанное правило (control.ts): вид по шкале, цель добирается
+      // классом. Рукописная листалка его не брала — а такую ошибку тут уже ловили дважды.
+      render(<Pagination page={2} totalPages={5} makeHref={href} lang="en" />)
+      for (const cls of TOUCH_MIN_BOX.split(' ')) {
+        expect(screen.getByRole('link', { name: 'Next page' })).toHaveClass(cls)
+      }
+    })
+
+    it('во время загрузки шаг не становится disabled — иначе фокус улетает в body', () => {
+      const onPage = vi.fn()
+      render(<Pagination page={2} totalPages={5} onPage={onPage} busy lang="en" />)
+      const next = screen.getByRole('button', { name: 'Next page' })
+      // Кнопка остаётся в дереве и держит фокус, но говорит «занято».
+      expect(next).toBeEnabled()
+      expect(next).toHaveAttribute('aria-disabled', 'true')
+      next.focus()
+      expect(document.activeElement).toBe(next)
+    })
+
+    it('подпись положения держит ширину, пока едет страница', () => {
+      // Иначе «6 / 74» → «Загрузка…» разъезжает обе стрелки ровно под занесённым пальцем.
+      const { rerender } = render(<Pagination page={2} totalPages={5} onPage={vi.fn()} compact lang="en" />)
+      const idle = screen.getByText('2 / 5')
+      expect(idle).toHaveClass('min-w-[4.5rem]')
+      rerender(<Pagination page={2} totalPages={5} onPage={vi.fn()} compact busy lang="en" />)
+      expect(screen.getByText('Loading…')).toHaveClass('min-w-[4.5rem]')
+    })
   })
 })

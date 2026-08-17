@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
+import { CONTROL_H, CONTROL_TEXT, TOUCH_MIN_BOX } from './control'
 import { pageNumbers } from '@/shared/lib/paging'
 import { t, type Lang } from '@/shared/i18n'
 
@@ -54,7 +55,10 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
   // Листать некуда — листалки нет. Пустое место под ней читается как «дальше что-то есть».
   if (!canPrev && !canNext) return null
 
-  const box = 'inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md px-2 text-[0.8125rem]'
+  // ВИД по шкале (32px, как у всех контролов), ЦЕЛЬ по стандарту — на грубом указателе
+  // шаг дорастает до 44 по обеим сторонам. Руками этого писать нельзя: у проекта для
+  // тач-целей есть свои классы, и правило должно жить в одном месте (control.ts).
+  const box = cn('inline-flex min-w-8 items-center justify-center gap-1 rounded-md px-2', CONTROL_H.md, CONTROL_TEXT.md, TOUCH_MIN_BOX)
   const idle = 'border border-border text-ink-2 hover:border-border-strong hover:text-ink'
   const off = 'border border-border/60 text-muted opacity-50'
   const now = 'border border-accent bg-accent/10 font-semibold text-ink'
@@ -68,7 +72,12 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
     // несуществующую страницу везде, кроме первой, — а первую спасал лишь общий выход
     // выше, поэтому тест на ней ничего и не замечал.
     const withinBounds = totalPages !== undefined ? to <= last : to < page || hasNext === true
-    const live = to !== page && to >= 1 && withinBounds && !busy
+    // `busy` НЕ входит в `live`, и это не мелочь. Пока страница едет, только что нажатая
+    // стрелка перерисовывалась как `disabled`, браузер снимал с неё фокус и ронял его в
+    // <body> — на клавиатуре и в скринридере место терялось при КАЖДОМ перелистывании, а
+    // сообщение об ошибке потом некому было объявить. Повторное нажатие и так отсекает
+    // `goToPage`, поэтому здесь достаточно сказать «занято», не забирая фокус.
+    const live = to !== page && to >= 1 && withinBounds
     if (!live) {
       // В кнопочном режиме край — настоящая `disabled`-кнопка: она остаётся в дереве
       // доступности как кнопка и объявляется недоступной. Ссылке же нечем быть
@@ -93,7 +102,15 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
       )
     }
     return (
-      <button key={label} type="button" onClick={() => onPage?.(to)} aria-label={label} aria-current={current ? 'page' : undefined} className={cn(box, idle)}>
+      <button
+        key={label}
+        type="button"
+        onClick={() => onPage?.(to)}
+        aria-label={label}
+        aria-current={current ? 'page' : undefined}
+        aria-disabled={busy || undefined}
+        className={cn(box, idle, busy && 'opacity-50')}
+      >
         {body}
       </button>
     )
@@ -116,15 +133,25 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
   // «6 / 74» — узкая форма; без общего числа честнее показать один номер, чем выдумать M.
   // Пока страница едет, ряд обязан это говорить: `busy` только гасит стрелки, и без
   // подписи медленная загрузка выглядит как «нажал, и ничего не произошло».
+  // Ширина ЗАРЕЗЕРВИРОВАНА: ряд отцентрован, и подпись, вырастая с «6 / 74» до
+  // «Загрузка…», разъезжала бы обе стрелки наружу — ровно в тот момент, когда палец уже
+  // занесён над одной из них. `shrink-0` с `truncate` тут были заодно бессмысленны:
+  // несжимаемому элементу нечего усекать, он просто вылезал бы за узкую панель.
   const position = (
-    <span aria-live="polite" className="min-w-0 shrink-0 truncate px-1 font-mono text-[0.75rem] text-muted">
+    <span aria-live="polite" className="min-w-[4.5rem] px-1 text-center font-mono text-[0.75rem] text-muted">
       {busy ? t('loadingMore', lang) : totalPages !== undefined ? `${page} / ${last}` : page}
     </span>
   )
 
   return (
     // tabular-nums на всей листалке: иначе номера разной ширины дёргают ряд при переходе.
-    <nav className={cn('mt-4 flex items-center justify-center gap-1 tabular-nums', className)} aria-label={t('paginationLabel', lang)}>
+    // gap на грубом указателе шире: цели по 44px, стоящие в 4px друг от друга, дают
+    // промах в соседнюю страницу — Material требует не меньше 8dp зазора, и это тот же
+    // довод, что записан у TOUCH_HIT_ROW про столбики.
+    <nav
+      className={cn('mt-4 flex items-center justify-center gap-1 tabular-nums pointer-coarse:gap-2', className)}
+      aria-label={t('paginationLabel', lang)}
+    >
       {prev}
       {/* Номера — только когда есть что нумеровать И есть куда их положить. */}
       {totalPages !== undefined && !compact ? (
