@@ -7,7 +7,7 @@ import { getSearchSettings } from '@/shared/settings/search'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { feedWindow } from '@/shared/lib/paging'
 import type { ActivityItem, FeedItem, FeedSort, ListSuggestion, TagRow, TrendRange } from './list'
-import { descText, extraFilters, FEED_COLS, langPref, keywordFeed, searchCondition, semanticFeed, tagFilter, titleText, visibleFilter, withAvatar } from './shared'
+import { descText, extraFilters, FEED_COLS, langPref, keywordFeed, likeContains, searchCondition, semanticFeed, tagFilter, titleText, visibleFilter, withAvatar } from './shared'
 
 /**
  * Ленты и поиск: обзор, тренды, подборки, списки пользователя, активность, теги.
@@ -158,7 +158,9 @@ export async function countLists(
 export async function searchListSuggestions(q: string, limit = 6): Promise<ListSuggestion[]> {
   const term = q.trim()
   if (!term) return []
-  const like = `%${term}%`
+  // likeContains, а не `%q%`: подсказки в шапке доступны АНОНИМУ, и без экранирования
+  // запрос из одного `_` разворачивался в «любой символ» — то есть в обход всего корпуса.
+  const like = likeContains(term)
   const rows = await db
     .select({ handle: users.handle, slug: templates.slug, title: templates.title })
     .from(templates)
@@ -244,7 +246,8 @@ export async function searchTemplatesByOwnerHandle(
   limit = 20,
 ): Promise<FeedItem[]> {
   const term = q.trim()
-  const like = `%${term}%`
+  // То же экранирование, что в поиске профиля: `%` и `_` — буквы запроса, а не шаблон.
+  const like = likeContains(term)
   const rows = await db
     .select(FEED_COLS)
     .from(templates)

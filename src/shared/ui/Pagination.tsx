@@ -113,9 +113,21 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
     }
     if (makeHref) {
       return (
-        // rel=prev/next — подсказка обходчику о порядке страниц; prefetch оставлен
-        // по умолчанию: следующая страница почти всегда и есть следующее действие.
-        <Link key={label} href={makeHref(to)} rel={rel} aria-label={label} aria-current={current ? 'page' : undefined} className={cn(box, idle)}>
+        // rel=prev/next — подсказка обходчику о порядке страниц.
+        //
+        // ПРЕДЗАГРУЗКА — ТОЛЬКО У СОСЕДНИХ СТРАНИЦ. По умолчанию Next тянет payload у
+        // каждой ссылки в поле зрения, а номеров в ряду до семи: один показ листалки
+        // превращался бы в семь загрузок целых страниц ради одного перехода. Сосед —
+        // почти всегда и есть следующее действие, остальные номера ждут нажатия.
+        <Link
+          key={label}
+          href={makeHref(to)}
+          rel={rel}
+          prefetch={rel ? undefined : false}
+          aria-label={label}
+          aria-current={current ? 'page' : undefined}
+          className={cn(box, idle)}
+        >
           {body}
         </Link>
       )

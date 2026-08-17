@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { db, repositories, starFolderItems, starFolders, stars, templates, users } from '@/shared/db'
-import { countUnfiledLists, getProfileListIds, getProfileListPage } from '@/features/library/queries'
+import { countUnfiledLists, getProfileListIds, getProfileListPage, searchListSuggestions, searchTemplatesByOwnerHandle } from '@/features/library/queries'
 import { LISTS_PER_PAGE, pageWindow } from '@/shared/lib/paging'
 import { resetTables } from '../../helpers/reset-db'
 
@@ -97,6 +97,16 @@ describe('выдача вкладок профиля', () => {
       expect(await slugs({ query: 'deploy%public' })).toEqual([])
       // А настоящая подстрока по-прежнему находится.
       expect(await slugs({ query: 'deploy-public' })).toEqual(['deploy-public'])
+    })
+
+    it('экранирование распространяется на ВСЕ места поиска, а не только на профиль', async () => {
+      // Панель главной ищет через searchTemplatesByOwnerHandle, а подсказки в шапке —
+      // через searchListSuggestions, и обе строили `%q%` сырыми. Подсказки при этом
+      // доступны АНОНИМУ: запрос из одного `_` разворачивался в обход всего корпуса.
+      await expect(searchTemplatesByOwnerHandle('sel-owner', ownerId, '_')).resolves.toEqual([])
+      await expect(searchListSuggestions('_')).resolves.toEqual([])
+      // Настоящая подстрока находится по-прежнему.
+      expect((await searchTemplatesByOwnerHandle('sel-owner', ownerId, 'deploy-public')).map((i) => i.slug)).toEqual(['deploy-public'])
     })
 
     it('форки отбираются по происхождению, а не по видимости', async () => {

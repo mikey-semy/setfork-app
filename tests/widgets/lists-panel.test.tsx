@@ -137,3 +137,22 @@ describe('доступность панели', () => {
     expect(screen.getAllByRole('navigation').every((n) => n.getAttribute('aria-label'))).toBe(true)
   })
 })
+
+describe('данные сменились под панелью', () => {
+  it('страница сбрасывается, когда набор изменился, а не показывает снимок «до»', async () => {
+    const user = userEvent.setup()
+    const loadPage = vi.fn(async (offset: number) => page(offset / DASHBOARD_LISTS + 1))
+    const props = { lang: 'en' as const, title: 'Lists', initialLimit: DASHBOARD_LISTS, loadPage }
+
+    const { rerender } = render(<ListsPanel {...props} items={page(1)} total={500} />)
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
+    await waitFor(() => expect(screen.getByText('2 / 72')).toBeInTheDocument())
+
+    // Создали список: с сервера приехал другой набор и другой счёт.
+    rerender(<ListsPanel {...props} items={[item(0), ...page(1).slice(0, 6)]} total={501} />)
+
+    // Панель обязана показать свежее, а не строки, снятые до изменения.
+    expect(screen.getByText('1 / 72')).toBeInTheDocument()
+    expect(screen.getByText('List 0')).toBeInTheDocument()
+  })
+})

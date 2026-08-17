@@ -153,6 +153,21 @@ export function ListsPanel({
     }
   }, [query, remoteSearch])
 
+  // ДАННЫЕ МОГЛИ СМЕНИТЬСЯ ПОД ПАНЕЛЬЮ. items и total приезжают с сервера заново после
+  // ревалидации (создали список, удалили, переименовали), а `pageRows` — снимок, снятый
+  // когда-то раньше: панель, стоящая на третьей странице, продолжала бы показывать строки
+  // «до изменения» неограниченно долго. Сравниваем дешёвую подпись набора, а не сам массив:
+  // на каждый рендер он новый, и сброс по нему кидал бы на первую страницу при любом
+  // переходе по сайту.
+  const signature = `${total ?? items.length}|${items[0]?.handle}/${items[0]?.slug}`
+  const [seenSignature, setSeenSignature] = useState(signature)
+  if (seenSignature !== signature) {
+    setSeenSignature(signature)
+    setPage(1)
+    setPageRows(null)
+    setPageFailed(false)
+  }
+
   // Страниц столько, сколько окон в total. Без total листать некуда: панель просто
   // показывает то, что ей дали.
   const totalPages = loadPage && total !== undefined ? Math.max(1, Math.ceil(total / initialLimit)) : 1

@@ -22,7 +22,7 @@ import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { BULK_MAX } from '@/features/library/bulk/limits'
 import { dayKey } from '@/features/profile/activity/types'
-import { MAX_PAGE, pageCount, pageFromParam, pageHref as buildPageHref, pageWindow } from '@/shared/lib/paging'
+import { pageCount, pageFromParam, pageHref as buildPageHref, pageWindow } from '@/shared/lib/paging'
 
 export type ProfileTab = 'overview' | 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
 
@@ -45,19 +45,20 @@ type FolderSort = (typeof FOLDER_SORTS)[number]
  *  адресе неотличимо от «фильтр не задан», и ссылку нельзя ни отправить, ни сохранить. */
 export const NO_CATALOG = 'none'
 
-export type ProfileSearchParams = {
-  tab?: string
-  catalog?: string
-  folder?: string
-  q?: string
-  sort?: string
-  fsort?: string
-  month?: string
-  year?: string
-  e?: string
-  type?: string
-  page?: string
-}
+/**
+ * ОДНО ЗНАЧЕНИЕ ИЗ ПАРАМЕТРА. `?q=a&q=b` приходит массивом — Next отдаёт
+ * `string | string[]`, и объявленный ниже `q?: string` это просто неправда.
+ * До нормализации `(sp.q ?? '').trim()` падал на массиве, то есть ЛЮБОЙ профиль
+ * отдавал пятисотку по адресу, который может собрать кто угодно и без входа.
+ */
+const one = (v: string | string[] | undefined): string | undefined => (Array.isArray(v) ? v[0] : v)
+
+/** Как параметры приходят НА САМОМ ДЕЛЕ: каждый может повториться в адресе. */
+export type ProfileSearchParams = Partial<
+  Record<'tab' | 'catalog' | 'folder' | 'q' | 'sort' | 'fsort' | 'month' | 'year' | 'e' | 'type' | 'page', string | string[]>
+>
+
+const PARAM_KEYS = ['tab', 'catalog', 'folder', 'q', 'sort', 'fsort', 'month', 'year', 'e', 'type', 'page'] as const
 
 /** Всё, что странице профиля нужно знать, прежде чем что-то показать. */
 export type ProfilePageData = Awaited<ReturnType<typeof loadProfilePage>>
@@ -69,7 +70,10 @@ export type ProfilePageData = Awaited<ReturnType<typeof loadProfilePage>>
  *
  * Отдельно от разметки: здесь решается, ЧТО показать, там — как это выглядит.
  */
-export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp: ProfileSearchParams; lang: Lang }) {
+export async function loadProfilePage({ handle, sp: raw, lang }: { handle: string; sp: ProfileSearchParams; lang: Lang }) {
+  // Нормализуем ОДИН РАЗ на входе, а не на каждом обращении: иначе достаточно забыть в
+  // одном месте — и повтор параметра в адресе снова роняет страницу.
+  const sp = Object.fromEntries(PARAM_KEYS.map((k) => [k, one(raw[k])])) as Partial<Record<(typeof PARAM_KEYS)[number], string>>
   const viewer = await getSession()
   const user = await getUserByHandle(handle)
   // Промах может означать «ник сменили»: прежний продолжает вести на человека
@@ -162,7 +166,14 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   // знает тот же запрос. Просим запрошенную страницу, а если её не существует —
   // переспрашиваем последнюю. Лишний запрос бывает только на битом номере в адресе,
   // а не на каждом показе, как было бы при отдельном предварительном счёте.
-  const asked = Math.min(Math.max(1, Math.floor(Number(sp.page)) || 1), MAX_PAGE)
+  // Полный видимый набор до фильтров — он уже посчитан для панели, второй раз не считаем.
+  const unfiltered = !isListsTab ? 0 : tab === 'starred' ? counts.stars : counts.lists
+  // ПОТОЛОК НОМЕРА — ИЗ ЭТОГО ЧИСЛА, а не из общего MAX_PAGE. Отбор не может дать строк
+  // больше, чем есть без отбора, поэтому страниц заведомо не больше. Без этого
+  // `?tab=lists&page=999999` уходил в базу с OFFSET 19 999 980 и счётом по всей вкладке, а
+  // потом, обнаружив что страницы нет, повторял оба запроса для приведённого номера — то
+  // есть один параметр адреса, доступный кому угодно без входа, давал шестикратную работу.
+  const asked = Math.min(Math.max(1, Math.floor(Number(sp.page)) || 1), pageCount(unfiltered))
   let listPage = isListsTab ? await getProfileListPage(filter, pageWindow(asked)) : { items: [], total: 0 }
   const totalPages = pageCount(listPage.total)
   const page = pageFromParam(sp.page, totalPages)
@@ -225,7 +236,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     /** Полный видимый набор до поиска и фильтров. Нужен, чтобы на действительно
      *  пустой вкладке не показывать панель, которой нечего фильтровать. Берётся из уже
      *  посчитанных счётчиков профиля — второй раз то же самое не считаем. */
-    unfilteredItemsCount: !isListsTab ? 0 : tab === 'starred' ? counts.stars : counts.lists,
+    unfilteredItemsCount: unfiltered,
     /** Сколько строк в ТЕКУЩЕЙ выдаче (после поиска и фильтров) — по нему и страницы. */
     total: listPage.total,
     /** id всей текущей выдачи для «выбрать все» (только своя вкладка «Списки»). */
