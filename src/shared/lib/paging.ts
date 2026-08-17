@@ -76,9 +76,17 @@ export function pageCount(total: number, perPage = LISTS_PER_PAGE): number {
   return Math.max(1, Math.ceil(total / perPage))
 }
 
-/** Номер страницы из адреса: мусор и выход за край приводятся к существующей странице. */
+/**
+ * Номер страницы из адреса: мусор и выход за край приводятся к существующей странице.
+ *
+ * ЦЕЛОЕ — обязательно. `?page=2.9` иначе доезжало сюда дробью и дальше расходилось со
+ * всеми, кто номер округляет: окно просило вторую страницу, а листалка рисовала «2.9»,
+ * не подсвечивала текущую и строила ссылку `?page=3.9000000000000004`. Округляем ВНИЗ
+ * (`2.9` → вторая), потому что дробь — это всегда мусор в адресе, а не просьба.
+ */
 export function pageFromParam(raw: string | undefined, totalPages: number): number {
-  return Math.min(Math.max(1, Number(raw) || 1), Math.max(1, totalPages))
+  const n = Math.floor(Number(raw)) || 1
+  return Math.min(Math.max(1, n), Math.max(1, totalPages))
 }
 
 /** Имя параметра страницы. Одно на сайт: иначе «?page=» тут и «?p=» там. */

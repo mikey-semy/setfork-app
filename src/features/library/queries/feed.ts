@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, stars, templates, templateVersions, users, publiclyVisible } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
@@ -213,7 +213,11 @@ export async function getUserTemplates(
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(templates.ownerId, userId), visibleFilter(viewerId), onlyIds ? inArray(templates.id, onlyIds) : undefined))
-    .orderBy(desc(templates.updatedAt))
+    // Доопределение до `id` обязательно: по этому запросу листаются и «мои списки», и
+    // панель главной, а `updatedAt` у пачки списков совпадает сплошь и рядом (импорт,
+    // форк, массовая правка). На равных ключах база вправе вернуть строки в любом
+    // порядке — соседние страницы тогда показывают одну дважды, а другую ни разу.
+    .orderBy(desc(templates.updatedAt), asc(templates.id))
   // Окно проверяем ПЕРЕД запросом: битый предел драйвер выбрасывает молча, и та же
   // строка кода начинает поднимать весь корпус (feedWindow, там же вся история).
   const w = window && feedWindow(window)
@@ -272,7 +276,7 @@ export async function getListsInCatalog(repositoryId: string, viewerId?: string,
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(templates.repositoryId, repositoryId), visibleFilter(viewerId)))
-    .orderBy(desc(templates.updatedAt))
+    .orderBy(desc(templates.updatedAt), asc(templates.id))
   const rows = window ? await base.limit(window.limit).offset(window.offset ?? 0) : await base
   return withAvatar(rows as FeedItem[])
 }

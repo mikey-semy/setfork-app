@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, stars, templates, templateVersions, users, publiclyVisible } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
@@ -122,7 +122,10 @@ export async function keywordFeed(
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(...filters))
-    .orderBy(...(viewerLang ? [langPref(viewerLang)] : []), order)
+    // `asc(id)` в хвосте — доопределение порядка. Без него на равных ключах (у trending
+    // это звёзды+форки, у ленты — дата) соседние страницы вправе показать одну строку
+    // дважды, а другую пропустить. Ключ уникальный, поэтому порядок становится строгим.
+    .orderBy(...(viewerLang ? [langPref(viewerLang)] : []), order, asc(templates.id))
   const w = window && feedWindow(window)
   const rows = w ? await base.limit(w.limit).offset(w.offset) : await base
   return rows as FeedItem[]

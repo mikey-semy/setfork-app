@@ -179,7 +179,10 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   // названы явно, потому что берутся не из адреса, а из разбора выше (`tab` нормализован,
   // а неизвестное имя полки фильтром не считается) — переносить сырой `sp.catalog` значило
   // бы тащить дальше опечатку, от которой страница только что защитилась.
-  const pageHref = buildPageHref(`/${handle}`, { ...sp, tab, catalog: catalogFilter })
+  // `e` НЕ переносим: это одноразовое уведомление («упёрся в квоту»), а не состояние
+  // выдачи. Уехав в ссылку страницы, оно показывало бы баннер снова на второй, третьей
+  // и далее — прежний рукописный построитель его не переносил, и это надо сохранить.
+  const pageHref = buildPageHref(`/${handle}`, { ...sp, e: undefined, tab, catalog: catalogFilter })
 
   return {
     handle,

@@ -168,7 +168,11 @@ export async function getProfileListPage(
  * порядок звёзд опирается на `stars`, которых здесь в запросе нет.
  */
 export async function getProfileListIds(f: ProfileListFilter & { tab: 'lists' }, limit: number): Promise<string[]> {
-  const { limit: max } = feedWindow({ limit })
+  // Потолок пачки, а не окно страницы, поэтому НЕ через feedWindow: тот падает на
+  // непригодном пределе (и правильно — там это тихий полный скан). Здесь предел приходит
+  // из квоты (`BULK_MAX` → env), а `envNumber` пропускает и 0, и дробь: уронить владельцу
+  // вкладку из-за настройки нельзя, поэтому приводим к разумному целому.
+  const max = Math.max(1, Math.floor(limit) || 1)
   const rows = await db
     .select({ id: templates.id })
     .from(templates)

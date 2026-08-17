@@ -89,3 +89,27 @@ describe('панель списков дашборда', () => {
     expect(screen.getAllByRole('link')).toHaveLength(7)
   })
 })
+
+describe('страница, которой не стало', () => {
+  it('не запирает панель, когда списков стало меньше, чем было страниц', async () => {
+    const user = userEvent.setup()
+    const loadPage = vi.fn(async (offset: number) => page(offset / DASHBOARD_LISTS + 1))
+    const props = { lang: 'en' as const, title: 'Lists', initialLimit: DASHBOARD_LISTS, loadPage }
+
+    // Ушли на четвёртую страницу из семидесяти двух...
+    const { rerender } = render(<ListsPanel {...props} items={page(1)} total={500} />)
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
+    await waitFor(() => expect(screen.getByText('4 / 72')).toBeInTheDocument())
+
+    // ...а пока мы там стояли, библиотека уменьшилась до полутора страниц.
+    rerender(<ListsPanel {...props} items={page(1)} total={10} />)
+
+    // Обе стрелки мёртвыми быть не должны: это тупик, из которого выходят перезагрузкой.
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled()
+    expect(screen.getByText('1 / 2')).toBeInTheDocument()
+    // И показаны строки существующей страницы, а не осиротевшей четвёртой.
+    expect(screen.getByText('List 1')).toBeInTheDocument()
+  })
+})

@@ -134,6 +134,13 @@ describe('выдача вкладок профиля', () => {
       const ids = await getProfileListIds({ ...own(), catalogId: null }, LISTS_PER_PAGE)
       expect(ids).toHaveLength(2)
     })
+
+    it('кривой потолок пачки не роняет вкладку', async () => {
+      // BULK_MAX приходит из квоты, а та из env: `envNumber` пропускает и 0, и дробь.
+      // Это потолок, а не окно страницы, поэтому уронить им вкладку владельца нельзя.
+      await expect(getProfileListIds(own(), 0)).resolves.toHaveLength(1)
+      await expect(getProfileListIds(own(), 2.7)).resolves.toHaveLength(2)
+    })
   })
 
   describe('звёзды и папки', () => {

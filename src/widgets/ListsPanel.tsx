@@ -148,8 +148,17 @@ export function ListsPanel({
     }
   }, [query, remoteSearch])
 
+  // Страниц столько, сколько окон в total. Без total листать некуда: панель просто
+  // показывает то, что ей дали.
+  const totalPages = loadPage && total !== undefined ? Math.max(1, Math.ceil(total / initialLimit)) : 1
+  // ОТКРЫТАЯ СТРАНИЦА МОГЛА ИСЧЕЗНУТЬ, пока панель на ней стояла: items и total приезжают
+  // с сервера заново (список удалили, стало меньше страниц), а `page` — состояние здесь.
+  // Без сброса выходил тупик: на пятой странице из трёх «назад» ведёт на четвёртую,
+  // которой нет, «вперёд» — за край, обе стрелки мертвы, и выйти можно только перезагрузкой.
+  const outOfRange = page > totalPages
+  const shownPage = outOfRange ? 1 : page
   // Что вообще показываем без поиска: страницу с сервера (если листали) или items.
-  const base = pageRows ?? items
+  const base = outOfRange ? items : (pageRows ?? items)
   const localFiltered = query
     ? base.filter((l) => `${tr(l.title, lang)} ${l.handle}/${l.slug}`.toLowerCase().includes(query))
     : base
@@ -157,15 +166,12 @@ export function ListsPanel({
   // Поиск показывает все совпадения; без поиска и без страниц — рез до initialLimit.
   const cut = !query && !expanded && !loadPage && filtered.length > initialLimit
   const shown = cut ? filtered.slice(0, initialLimit) : filtered
-  // Страниц столько, сколько окон в total. Без total листать некуда: панель просто
-  // показывает то, что ей дали.
-  const totalPages = loadPage && total !== undefined ? Math.max(1, Math.ceil(total / initialLimit)) : 1
   // При серверной пагинации в items лежит ровно первая страница, поэтому решать по
   // items.length нельзя: 7 из 500 скрывали бы поиск как будто списков всего семь.
   const hasSearch = searchable === true || (searchable === 'auto' && (total ?? items.length) > initialLimit)
 
   const goToPage = (next: number) => {
-    if (!loadPage || paging || next === page || next < 1 || next > totalPages) return
+    if (!loadPage || paging || next === shownPage || next < 1 || next > totalPages) return
     setPageFailed(false)
     // Первая страница уже пришла с сервера — за ней не ходим, иначе «назад» до
     // начала стоит запроса на ровном месте.
@@ -280,7 +286,7 @@ export function ListsPanel({
           {loadPage && !query && (
             // Та же листалка, что на страницах сайта, — здесь только в кнопочном
             // режиме и compact: колонка узкая, номера в неё не лягут.
-            <Pagination page={page} totalPages={totalPages} onPage={goToPage} busy={paging} compact lang={lang} className="mt-1" />
+            <Pagination page={shownPage} totalPages={totalPages} onPage={goToPage} busy={paging} compact lang={lang} className="mt-1" />
           )}
           {pageFailed && <div className="px-2 py-1 text-[0.6875rem] text-danger">{t('loadFailed', lang)}</div>}
           {/* Раскрыли — должно быть чем и свернуть обратно: тот же тумблер, не тупик.
