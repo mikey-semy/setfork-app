@@ -213,3 +213,44 @@ describe('рвущаяся сеть', () => {
     expect(screen.queryByText('Nothing found')).not.toBeInTheDocument()
   })
 })
+
+describe('панель на втором языке', () => {
+  // Фильтр панели и поиск на сервере стоят за ОДНИМ полем ввода, поэтому обязаны
+  // отвечать одинаково. Серверный смотрит `title->>'en' || title->>'ru'` (titleText),
+  // а панель смотрела `tr(title, lang)` — одну строку, ту, что показана читателю.
+  // Слаг НАМЕРЕННО не повторяет ни один из заголовков: с говорящим слагом
+  // (`bread-baking`) фильтр находит список по подстроке слага и выглядит исправным на
+  // любом языке — так эта дыра и держалась. Проверять надо там, где слаг не подсказывает.
+  const bilingual: ListsPanelItem[] = [
+    { handle: 'miki', slug: 'starter-notes', title: { en: 'Sourdough', ru: 'Закваска' }, avatarUrl: null },
+    { handle: 'miki', slug: 'vps', title: { en: 'Deploy', ru: 'Деплой' }, avatarUrl: null },
+  ]
+
+  const found = () => screen.getAllByRole('link').map((l) => l.getAttribute('href'))
+
+  it('находит список по ЛЮБОМУ из его заголовков, а не только по показанному', async () => {
+    const user = userEvent.setup()
+    render(<ListsPanel items={bilingual} lang="ru" title="Списки" initialLimit={1} searchable />)
+
+    // Русскому читателю показана «Закваска», но искать «sourdough» он вправе: тот же
+    // запрос на вкладке профиля этот список находит, потому что SQL смотрит оба заголовка.
+    await user.type(screen.getByRole('textbox'), 'sourdough')
+    await waitFor(() => expect(found()).toEqual(['/miki/starter-notes']))
+  })
+
+  it('и в обратную сторону: английский читатель находит по русскому заголовку', async () => {
+    const user = userEvent.setup()
+    render(<ListsPanel items={bilingual} lang="en" title="Lists" initialLimit={1} searchable />)
+
+    await user.type(screen.getByRole('textbox'), 'закваск')
+    await waitFor(() => expect(found()).toEqual(['/miki/starter-notes']))
+  })
+
+  it('регистр не важен и на кириллице — как в SQL-половине того же поиска', async () => {
+    const user = userEvent.setup()
+    render(<ListsPanel items={bilingual} lang="ru" title="Списки" initialLimit={1} searchable />)
+
+    await user.type(screen.getByRole('textbox'), 'ЗАКВАСКА')
+    await waitFor(() => expect(found()).toEqual(['/miki/starter-notes']))
+  })
+})

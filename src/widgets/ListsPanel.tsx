@@ -206,9 +206,15 @@ export function ListsPanel({
   const shownPage = outOfRange ? 1 : page
   // Что вообще показываем без поиска: страницу с сервера (если листали) или items.
   const base = outOfRange ? items : (pageRows ?? items)
-  const localFiltered = query
-    ? base.filter((l) => `${tr(l.title, lang)} ${l.handle}/${l.slug}`.toLowerCase().includes(query))
-    : base
+  // ИЩЕМ ПО ВСЕМ ЯЗЫКАМ ЗАГОЛОВКА, а не по показанному. `tr()` отдаёт одну строку —
+  // ту, что видит читатель, — и фильтр по ней расходился с серверным поиском в том же
+  // окне ввода: SQL смотрит `title->>'en' || title->>'ru'` (см. titleText), то есть
+  // список {en:'Bread', ru:'Хлебопечка'} на вкладке профиля находится по слову «bread», а
+  // в панели у русского читателя — нет. Расхождение видно только на списке с ДВУМЯ
+  // заголовками: на одноязычных tr() возвращает то же самое, поэтому проверка на
+  // английском корпусе его не показывала.
+  const searchText = (l: ListsPanelItem) => `${Object.values(l.title ?? {}).join(' ')} ${l.handle}/${l.slug}`
+  const localFiltered = query ? base.filter((l) => searchText(l).toLowerCase().includes(query)) : base
   const filtered = remoteSearch && query ? (remote ?? []) : localFiltered
   // Поиск показывает все совпадения; без поиска и без страниц — рез до initialLimit.
   const cut = !query && !expanded && !loadPage && filtered.length > initialLimit

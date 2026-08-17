@@ -137,7 +137,12 @@ export async function loadProfilePage({ handle, sp: raw, lang }: { handle: strin
   // Папки для звёзд (как GitHub Lists): карточки + сорт; звёзды — поиск + сорт.
   const rawFolders = tab === 'starred' ? await getUserFolders(user.id) : []
   const fsort: FolderSort = FOLDER_SORTS.find((s) => s === sp.fsort) ?? 'name'
-  const starFolders = [...rawFolders].sort((a, b) => (fsort === 'count' ? b.count - a.count : a.name.localeCompare(b.name)))
+  // Локаль сравнения — ЧИТАТЕЛЯ, и задана явно. Без неё `localeCompare` берёт локаль
+  // процесса: на `LANG=ru_RU` кириллица встаёт перед латиницей, на `C`/`en_US` — после,
+  // то есть «A-Z» у одного и того же человека зависит от того, как поднят сервер, и ни
+  // при одном значении не совпадает с алфавитом читателя. Проверено: те же шесть имён
+  // дают два разных порядка под разными LANG.
+  const starFolders = [...rawFolders].sort((a, b) => (fsort === 'count' ? b.count - a.count : a.name.localeCompare(b.name, lang)))
 
   const query = (sp.q ?? '').trim().toLowerCase()
   const sort: Sort = SORTS.find((s) => s === sp.sort) ?? 'recent'

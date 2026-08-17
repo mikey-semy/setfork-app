@@ -124,6 +124,8 @@ describe('карточка каталога в профиле', () => {
     const link = screen.getByRole('link', { name: /Этап 0 — Рабочее место/ })
     expect(link).toHaveClass('block', 'text-left')
     expect(link).not.toHaveClass('justify-center')
-    expect(screen.getByText('2 списки')).toBeInTheDocument()
+    // Было «2 списки» — тест закреплял ошибку согласования, а не проверял её. Словарное
+    // `lists` это заголовок «Списки», у него нет падежей; формы берутся из plural().
+    expect(screen.getByText('2 списка')).toBeInTheDocument()
   })
 })

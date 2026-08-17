@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { FolderGit2 } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t, tr } from '@/shared/i18n'
+import { plural, t, tr } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
@@ -48,7 +48,7 @@ export default async function CatalogPage({
         title={tr(cat.title, lang) || cat.name}
         subtitle={
           <>
-            {total} {t('lists', lang).toLowerCase()}
+            {total} {plural(total, 'lists', lang)}
             {tr(cat.desc, lang) ? ` · ${tr(cat.desc, lang)}` : ''}
           </>
         }

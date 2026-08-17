@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { t, tr } from '@/shared/i18n'
+import { plural, t, tr } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Pagination } from '@/shared/ui/Pagination'
 import { FeedList } from '@/features/library/FeedList'
@@ -121,7 +121,11 @@ export function ProfileLists({
                 >
                   <div className="truncate text-[0.875rem] font-semibold text-ink">{f.name}</div>
                   <div className="mt-1 font-mono text-[0.6875rem] text-muted">
-                    {f.count} {t('lists', lang).toLowerCase()}
+                    {/* Существительное СКЛОНЯЕТСЯ: словарное `lists` — это заголовок
+                        «Списки», и рядом с числом он давал «5 списки», «1 списки». На
+                        английском ошибка видна только при единице («1 lists»), поэтому и
+                        держалась. Формы уже лежат в PLURALS под тем же ключом. */}
+                    {f.count} {plural(f.count, 'lists', lang)}
                   </div>
                 </Link>
               )
