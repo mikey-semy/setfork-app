@@ -277,7 +277,10 @@ export async function getListsInCatalog(repositoryId: string, viewerId?: string,
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(templates.repositoryId, repositoryId), visibleFilter(viewerId)))
     .orderBy(desc(templates.updatedAt), asc(templates.id))
-  const rows = window ? await base.limit(window.limit).offset(window.offset ?? 0) : await base
+  // Через feedWindow, как и все прочие окна: непригодный предел драйвер выбрасывает
+  // молча, и запрос начинает поднимать всю полку целиком.
+  const w = window && feedWindow(window)
+  const rows = w ? await base.limit(w.limit).offset(w.offset) : await base
   return withAvatar(rows as FeedItem[])
 }
 

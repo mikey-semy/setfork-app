@@ -66,4 +66,19 @@ describe('Pagination', () => {
     const { container } = render(<Pagination page={1} hasNext={false} makeHref={href} lang="en" />)
     expect(container.firstChild).toBeNull()
   })
+
+  it('без общего числа «вперёд» гаснет на КАЖДОЙ странице, а не только на первой', () => {
+    // На первой странице листалку целиком снимал общий выход «листать некуда», поэтому
+    // проверка на ней ничего не доказывала: со второй ссылка вела на несуществующую третью.
+    render(<Pagination page={2} hasNext={false} makeHref={href} lang="en" />)
+    expect(screen.queryByRole('link', { name: 'Next page' })).toBeNull()
+    // Назад при этом можно всегда: пройденные страницы существуют по построению.
+    expect(screen.getByRole('link', { name: 'Previous page' })).toHaveAttribute('href', '/x?page=1')
+  })
+
+  it('и остаётся живой, пока разведчик говорит «дальше есть»', () => {
+    render(<Pagination page={4} hasNext makeHref={href} lang="en" />)
+    expect(screen.getByRole('link', { name: 'Next page' })).toHaveAttribute('href', '/x?page=5')
+    expect(screen.getByRole('link', { name: 'Previous page' })).toHaveAttribute('href', '/x?page=3')
+  })
 })

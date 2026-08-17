@@ -63,10 +63,20 @@ export function feedWindow(window: { limit: number; offset?: number }): { limit:
   return { limit, offset }
 }
 
+/**
+ * ПОТОЛОК НОМЕРА СТРАНИЦЫ. Номер приходит из адреса, то есть от кого угодно.
+ *
+ * `?page=1e999` даёт `Infinity`: смещение перестаёт быть целым, и строгая проверка окна
+ * роняет страницу пятисоткой. `?page=1e18` проверку проходит, но переполняет `bigint` в
+ * `OFFSET` — падает уже база. Ни один настоящий человек не листает до миллионной страницы,
+ * поэтому предел ставится здесь, а не разбирается на каждой поверхности.
+ */
+export const MAX_PAGE = 1_000_000
+
 /** Окно запроса для страницы (нумерация с 1). Считается ЗДЕСЬ, чтобы `offset` не выводили
  *  руками на каждой странице: ошибка в этой арифметике тихо теряет или дублирует строки. */
 export function pageWindow(page: number, perPage = LISTS_PER_PAGE): { limit: number; offset: number } {
-  const safe = Math.max(1, Math.floor(page) || 1)
+  const safe = Math.min(Math.max(1, Math.floor(page) || 1), MAX_PAGE)
   return { limit: perPage, offset: (safe - 1) * perPage }
 }
 

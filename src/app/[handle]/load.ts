@@ -22,7 +22,7 @@ import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { BULK_MAX } from '@/features/library/bulk/limits'
 import { dayKey } from '@/features/profile/activity/types'
-import { pageCount, pageFromParam, pageHref as buildPageHref, pageWindow } from '@/shared/lib/paging'
+import { MAX_PAGE, pageCount, pageFromParam, pageHref as buildPageHref, pageWindow } from '@/shared/lib/paging'
 
 export type ProfileTab = 'overview' | 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
 
@@ -162,7 +162,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   // знает тот же запрос. Просим запрошенную страницу, а если её не существует —
   // переспрашиваем последнюю. Лишний запрос бывает только на битом номере в адресе,
   // а не на каждом показе, как было бы при отдельном предварительном счёте.
-  const asked = Math.max(1, Math.floor(Number(sp.page)) || 1)
+  const asked = Math.min(Math.max(1, Math.floor(Number(sp.page)) || 1), MAX_PAGE)
   let listPage = isListsTab ? await getProfileListPage(filter, pageWindow(asked)) : { items: [], total: 0 }
   const totalPages = pageCount(listPage.total)
   const page = pageFromParam(sp.page, totalPages)

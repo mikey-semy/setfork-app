@@ -14,6 +14,7 @@ import { t, tr } from '@/shared/i18n'
 import { PromoCard } from './PromoCard'
 import { ChangelogCard } from './ChangelogCard'
 import { cardClass } from '@/shared/ui/card-style'
+import { listVisibilityState } from '@/features/library/list-visibility'
 
 // Dashboard залогиненного (GitHub-стиль, full-width):
 //   слева — Your lists (переиспользуемая панель с фильтром),
@@ -73,7 +74,15 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
         <ListsPanel
           lang={lang}
           title={t('yourLists', lang)}
-          items={mine.map((m) => ({ handle: m.ownerHandle, slug: m.slug, title: m.title, avatarUrl: m.ownerAvatarUrl }))}
+          // visibility обязателен и здесь: `loadMyLists` его отдаёт, и без него замок
+          // у приватного списка появлялся бы только со второй страницы панели.
+          items={mine.map((m) => ({
+            handle: m.ownerHandle,
+            slug: m.slug,
+            title: m.title,
+            avatarUrl: m.ownerAvatarUrl,
+            visibility: listVisibilityState(m),
+          }))}
           total={mineTotal}
           loadPage={loadMyLists}
           remoteSearch={searchMyLists}

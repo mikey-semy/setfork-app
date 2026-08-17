@@ -54,18 +54,34 @@ describe('граница клиентских модулей', () => {
       // Клиент читает клиента напрямую — там границы нет и значения настоящие.
       if (isClientModule(file)) continue
       const src = source.get(file) ?? ''
-      for (const m of src.matchAll(/import\s+(type\s+)?\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g)) {
-        if (m[1]) continue // `import type` стирается сборкой — на рантайм не влияет
-        const target = resolveImport(file, m[3])
+      // Разбираем ВСЕ формы, которыми экспорт клиентского модуля попадает в серверный:
+      // именованные, дефолтные, `* as`, и реэкспорт (он выдаёт чужие экспорты под своим
+      // именем — граница от этого не исчезает, а прячется). Узкая регулярка на одни лишь
+      // `import { … }` пропускала и `import Def, { CONST }`, и барели — то есть ровно те
+      // пути, которыми ошибка и вернулась бы незамеченной.
+      for (const m of src.matchAll(
+        /(?:import|export)\s+(type\s+)?(?:([\w$]+)\s*,\s*)?(?:\{([^}]*)\}|\*\s+as\s+([\w$]+)|\*|([\w$]+))\s*from\s*['"]([^'"]+)['"]/g,
+      )) {
+        const [, typeOnly, defaultThenNamed, named, starAs, bareDefault, spec] = m
+        if (typeOnly) continue // `import type` стирается сборкой — на рантайм не влияет
+        const target = resolveImport(file, spec)
         if (!target || !isClientModule(target)) continue
-        const values = m[2]
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .filter((s) => !s.startsWith('type ')) // точечный `{ type Foo }` — тоже только тип
-          .map((s) => s.split(/\s+as\s+/)[0].trim())
-          .filter((n) => !isComponentName(n))
-        for (const v of values) offenders.push(`${file} ← ${m[3]}: ${v}`)
+
+        const names: string[] = []
+        // `import Default, { … }` — само дефолтное имя обычно компонент, но не всегда.
+        if (defaultThenNamed) names.push(defaultThenNamed)
+        if (bareDefault) names.push(bareDefault)
+        for (const raw of (named ?? '').split(',')) {
+          const n = raw.trim()
+          if (!n || n.startsWith('type ')) continue // точечный `{ type Foo }` — тоже только тип
+          names.push(n.split(/\s+as\s+/)[0].trim())
+        }
+        // `* as NS` и `export *` тянут ВСЁ, включая значения: разобрать поимённо нельзя,
+        // поэтому такая форма запрещена сама по себе.
+        if (starAs) offenders.push(`${file} ← ${spec}: * as ${starAs}`)
+        else if (!named && !defaultThenNamed && !bareDefault) offenders.push(`${file} ← ${spec}: *`)
+
+        for (const n of names.filter((n) => !isComponentName(n))) offenders.push(`${file} ← ${spec}: ${n}`)
       }
     }
 

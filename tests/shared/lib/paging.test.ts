@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { feedWindow, LISTS_PER_PAGE, pageCount, pageFromParam, pageHref, pageNumbers, pageWindow, probeWindow, takePage } from '@/shared/lib/paging'
+import { feedWindow, LISTS_PER_PAGE, MAX_PAGE, pageCount, pageFromParam, pageHref, pageNumbers, pageWindow, probeWindow, takePage } from '@/shared/lib/paging'
 
 // Арифметика страниц выглядит очевидной ровно до первой ошибки в ней: смещение на единицу
 // тихо теряет двадцатый список или показывает его дважды, и заметить это можно только
@@ -177,6 +177,23 @@ describe('номер страницы из адреса', () => {
   it('результат всегда целый — на нём стоит и окно, и подсветка текущей', () => {
     for (const raw of ['2.9', '0.5', '-1.2', '7.999', 'nope']) {
       expect(Number.isInteger(pageFromParam(raw, 10))).toBe(true)
+    }
+  })
+})
+
+// Номер страницы приходит из адреса, то есть от кого угодно: `1e999` давал Infinity —
+// смещение переставало быть целым, строгая проверка окна роняла страницу пятисоткой.
+describe('потолок номера страницы', () => {
+  it('бесконечность и запредельные номера не выносятся в смещение', () => {
+    expect(pageWindow(Infinity)).toEqual({ limit: LISTS_PER_PAGE, offset: (MAX_PAGE - 1) * LISTS_PER_PAGE })
+    expect(pageWindow(1e18)).toEqual({ limit: LISTS_PER_PAGE, offset: (MAX_PAGE - 1) * LISTS_PER_PAGE })
+  })
+
+  it('смещение остаётся безопасным целым — его принимает и проверка окна, и bigint базы', () => {
+    for (const p of [Infinity, 1e18, 1e999, MAX_PAGE * 5]) {
+      const w = pageWindow(p)
+      expect(Number.isSafeInteger(w.offset)).toBe(true)
+      expect(() => feedWindow(w)).not.toThrow()
     }
   })
 })

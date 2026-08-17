@@ -57,7 +57,14 @@ export function Pagination({ page, totalPages, hasNext, makeHref, onPage, lang, 
 
   /** Шаг листалки: ссылка на сервере, кнопка на клиенте, погашенный край — там же. */
   const step = (to: number, label: string, body: React.ReactNode, current = false, rel?: 'prev' | 'next') => {
-    const live = to !== page && to >= 1 && (totalPages === undefined || to <= last) && !busy
+    // Край считается ПО ТОМУ, ЧТО ИЗВЕСТНО. С номерами край — это `last`. Без номеров
+    // (режим разведчика) верхнего края нет вовсе, и его заменяет `hasNext`: назад можно
+    // всегда, вперёд — только если следующая страница есть. Проверять здесь только
+    // `totalPages === undefined` мало: тогда «вперёд» оставалась живой ссылкой на
+    // несуществующую страницу везде, кроме первой, — а первую спасал лишь общий выход
+    // выше, поэтому тест на ней ничего и не замечал.
+    const withinBounds = totalPages !== undefined ? to <= last : to < page || hasNext === true
+    const live = to !== page && to >= 1 && withinBounds && !busy
     if (!live) {
       // В кнопочном режиме край — настоящая `disabled`-кнопка: она остаётся в дереве
       // доступности как кнопка и объявляется недоступной. Ссылке же нечем быть
