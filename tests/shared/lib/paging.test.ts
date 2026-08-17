@@ -147,6 +147,27 @@ describe('номера в листалке', () => {
     expect(pageNumbers(74, 74)).toEqual([1, 'gap', 71, 72, 73, 74])
   })
 
+  it('многоточие не прячет ровно одну страницу — это обман без экономии места', () => {
+    // Шесть страниц: раньше выходило [1,2,3,4,…,6] — многоточие вместо единственной
+    // пятой. Места столько же, а страница недостижима в один клик.
+    expect(pageNumbers(1, 6)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(pageNumbers(6, 6)).toEqual([1, 2, 3, 4, 5, 6])
+  })
+
+  it('многоточие ставится только там, где за ним правда несколько страниц', () => {
+    for (const total of [7, 20, 74]) {
+      for (let p = 1; p <= total; p++) {
+        const nums = pageNumbers(p, total)
+        nums.forEach((v, i) => {
+          if (v !== 'gap') return
+          const before = nums[i - 1] as number
+          const after = nums[i + 1] as number
+          expect(after - before).toBeGreaterThan(2)
+        })
+      }
+    }
+  })
+
   it('первая и последняя страницы есть всегда — на них прыгают чаще всего', () => {
     for (const p of [1, 2, 20, 73, 74]) {
       const nums = pageNumbers(p, 74)

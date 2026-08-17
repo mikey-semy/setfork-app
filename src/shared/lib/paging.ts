@@ -31,7 +31,8 @@ export const LISTS_PER_PAGE = 20
  *
  * Поэтому: числа здесь, а панель их только принимает пропом.
  */
-/** Рейка сайдбара: показывает ровно столько и не листается. */
+/** Сколько строк рейка сайдбара ПОДНИМАЕТ. Показывает она меньше: `initialLimit` ей не
+ *  передают, поэтому действует умолчание панели (5) и «показать ещё» до этих десяти. */
 export const SIDEBAR_LISTS = 10
 /** Панель дашборда: компактный набор как в GitHub Top repositories. */
 export const DASHBOARD_LISTS = 7
@@ -173,5 +174,12 @@ export function pageNumbers(page: number, totalPages: number, around = 1): (numb
   for (let p = start; p <= end; p++) out.push(p)
   if (end < totalPages - 1) out.push('gap')
   out.push(totalPages)
-  return out
+  // Многоточие, за которым прячется РОВНО ОДНА страница, — обман: места занимает столько
+  // же, а страницу делает недостижимой в один клик. Разворачиваем его обратно в номер.
+  return out.map((v, i) => {
+    if (v !== 'gap') return v
+    const before = out[i - 1]
+    const after = out[i + 1]
+    return typeof before === 'number' && typeof after === 'number' && after - before === 2 ? before + 1 : v
+  })
 }

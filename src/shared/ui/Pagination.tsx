@@ -43,8 +43,12 @@ type Common = {
 /** Ссылки (серверные страницы) ИЛИ кнопки (клиентские панели) — но не то и другое сразу. */
 type Props = Common & ({ makeHref: (page: number) => string; onPage?: never } | { onPage: (page: number) => void; makeHref?: never })
 
-export function Pagination({ page, totalPages, hasNext, makeHref, onPage, lang, busy = false, compact = false, className }: Props) {
+export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPage, lang, busy = false, compact = false, className }: Props) {
   const last = totalPages ?? 0
+  // Номер приводим к существующему ЗДЕСЬ, а не надеемся на вызывающего: с номером за
+  // краем оба шага оказывались мёртвыми, и ряд превращался в тупик. Вызывающие его и так
+  // приводят, но чинить это в каждом — то самое расползание, от которого уходили.
+  const page = totalPages !== undefined ? Math.min(Math.max(1, rawPage), Math.max(1, last)) : Math.max(1, rawPage)
   const canPrev = page > 1
   const canNext = totalPages !== undefined ? page < last : Boolean(hasNext)
   // Листать некуда — листалки нет. Пустое место под ней читается как «дальше что-то есть».
@@ -110,9 +114,11 @@ export function Pagination({ page, totalPages, hasNext, makeHref, onPage, lang, 
   const prev = step(page - 1, t('prevPage', lang), arrow(<ChevronLeft size={14} />, t('prevPageShort', lang), 'l'), false, 'prev')
   const next = step(page + 1, t('nextPage', lang), arrow(<ChevronRight size={14} />, t('nextPageShort', lang), 'r'), false, 'next')
   // «6 / 74» — узкая форма; без общего числа честнее показать один номер, чем выдумать M.
+  // Пока страница едет, ряд обязан это говорить: `busy` только гасит стрелки, и без
+  // подписи медленная загрузка выглядит как «нажал, и ничего не произошло».
   const position = (
-    <span className="min-w-0 shrink-0 px-1 font-mono text-[0.75rem] text-muted">
-      {totalPages !== undefined ? `${page} / ${last}` : page}
+    <span aria-live="polite" className="min-w-0 shrink-0 truncate px-1 font-mono text-[0.75rem] text-muted">
+      {busy ? t('loadingMore', lang) : totalPages !== undefined ? `${page} / ${last}` : page}
     </span>
   )
 

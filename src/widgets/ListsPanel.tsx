@@ -288,7 +288,9 @@ export function ListsPanel({
             // режиме и compact: колонка узкая, номера в неё не лягут.
             <Pagination page={shownPage} totalPages={totalPages} onPage={goToPage} busy={paging} compact lang={lang} className="mt-1" />
           )}
-          {pageFailed && <div className="px-2 py-1 text-[0.6875rem] text-danger">{t('loadFailed', lang)}</div>}
+          {/* Под поиском не показываем: сообщение относится к странице, а выдача поиска
+              страницей не является — иначе «не удалось загрузить» висит над найденным. */}
+          {pageFailed && !query && <div className="px-2 py-1 text-[0.6875rem] text-danger">{t('loadFailed', lang)}</div>}
           {/* Раскрыли — должно быть чем и свернуть обратно: тот же тумблер, не тупик.
               Ветка без loadPage: панель получила весь набор и просто режет его. */}
           {!loadPage && (cut || (expanded && !query && filtered.length > initialLimit)) && (

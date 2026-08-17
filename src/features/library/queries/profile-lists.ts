@@ -3,7 +3,7 @@ import { and, asc, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-or
 import { db, starFolderItems, starFolders, stars, templates, users } from '@/shared/db'
 import { feedWindow } from '@/shared/lib/paging'
 import type { FeedItem } from './list'
-import { FEED_COLS, titleText, visibleFilter, withAvatar } from './shared'
+import { FEED_COLS, likeContains, titleText, visibleFilter, withAvatar } from './shared'
 
 /**
  * ВЫДАЧА ВКЛАДОК ПРОФИЛЯ («Списки» и «Звёзды») — отбор, порядок и окно ОДНИМ запросом.
@@ -52,7 +52,9 @@ export interface ProfileListFilter {
  *  на своей библиотеке («ищу свой список», а не «ищу упоминание»). Выражения совпадают с
  *  trgm-индексами (0028_search_fts), иначе ILIKE ушёл бы в seq scan. */
 const searchLike = (q: string): SQL => {
-  const like = `%${q}%`
+  // Через likeContains: `%` и `_` в запросе — буквы, а не подстановочные знаки. Иначе
+  // поиск по `_` отдавал бы всю библиотеку (в памяти это был обычный includes).
+  const like = likeContains(q)
   return or(ilike(titleText, like), ilike(templates.slug, like))!
 }
 

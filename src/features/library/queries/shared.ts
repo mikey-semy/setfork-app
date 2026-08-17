@@ -62,11 +62,24 @@ export const tagFilter = (tag: string): SQL => sql`${templates.tags} @> ARRAY[${
 // иначе Postgres не сможет использовать trgm/FTS GIN и уйдёт в seq scan.
 export const titleText = sql`(coalesce(${templates.title}->>'en','') || ' ' || coalesce(${templates.title}->>'ru',''))`
 
+/**
+ * ПОДСТРОКА ДЛЯ ILIKE — с экранированием, а не просто `%q%`.
+ *
+ * `%` и `_` — это подстановочные знаки шаблона, а не буквы запроса. Без экранирования
+ * поиск по `_` возвращает вообще всё (шаблон `%_%` — «хоть один символ»), а по `100%`
+ * находит «1000 шагов». Человек при этом ищет буквально то, что набрал: в памяти это был
+ * обычный `includes`, и заменять его на язык шаблонов никто не просил.
+ *
+ * Обратный слэш — экранирующий знак LIKE по умолчанию, отдельный `ESCAPE` не нужен;
+ * сам слэш поэтому экранируется первым.
+ */
+export const likeContains = (q: string): string => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+
 /** Условие поиска: подстрока (ILIKE через trgm-GIN) + мультисловный FTS
  *  (websearch_to_tsquery, 'simple' — без стемминга, контент EN/RU) +
  *  word_similarity (<%) — устойчивость к опечаткам в заголовке. */
 export function searchCondition(q: string): SQL {
-  const like = `%${q}%`
+  const like = likeContains(q)
   return or(
     ilike(titleText, like),
     ilike(descText, like),

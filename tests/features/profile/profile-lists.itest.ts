@@ -88,6 +88,17 @@ describe('выдача вкладок профиля', () => {
       expect((await slugs({ sort: 'stars' }))[0]).toBe('bread-baking')
     })
 
+    it('подстановочные знаки в запросе — буквы, а не язык шаблонов', async () => {
+      // `%` и `_` — знаки LIKE. Без экранирования поиск по `_` отдавал бы всю библиотеку
+      // (шаблон `%_%` = «хоть один символ»), а по `100%` находил бы «1000 шагов».
+      // В памяти это был обычный includes, и менять смысл поиска никто не просил.
+      expect(await slugs({ query: '_' })).toEqual([])
+      expect(await slugs({ query: '%' })).toEqual([])
+      expect(await slugs({ query: 'deploy%public' })).toEqual([])
+      // А настоящая подстрока по-прежнему находится.
+      expect(await slugs({ query: 'deploy-public' })).toEqual(['deploy-public'])
+    })
+
     it('форки отбираются по происхождению, а не по видимости', async () => {
       expect(await slugs({ listType: 'forks' })).toEqual(['unfiled-fork'])
     })
