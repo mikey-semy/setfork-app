@@ -74,7 +74,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
           title={t('yourLists', lang)}
           items={mine.map((m) => ({ handle: m.ownerHandle, slug: m.slug, title: m.title, avatarUrl: m.ownerAvatarUrl }))}
           total={mineTotal}
-          loadMore={loadMyLists}
+          loadPage={loadMyLists}
           remoteSearch={searchMyLists}
           initialLimit={DASHBOARD_LISTS}
           showNew

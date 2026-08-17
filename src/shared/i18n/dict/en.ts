@@ -357,6 +357,8 @@ export const en = {
   noFileChosen: 'No file selected.',
   showMore: 'Show more',
   showLess: 'Show less',
+  prevPage: 'Previous page',
+  nextPage: 'Next page',
   allLabels: 'All labels',
   allMilestones: 'All milestones',
   prCoauthors: 'Co-authors',

@@ -349,6 +349,8 @@ export const ru: Record<DictKey, string> = {
   noFileChosen: 'Файл не выбран.',
   showMore: 'Показать ещё',
   showLess: 'Свернуть',
+  prevPage: 'Предыдущая страница',
+  nextPage: 'Следующая страница',
   allLabels: 'Все метки',
   allMilestones: 'Все вехи',
   prCoauthors: 'Соавторы',

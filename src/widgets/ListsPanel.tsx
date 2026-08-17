@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Check, ChevronDown, ListChecks, Plus } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ListChecks, Plus } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { SearchField } from '@/shared/ui/SearchField'
@@ -18,7 +18,8 @@ import { buttonClass } from '@/shared/ui/button-style'
 //   showNew     — ссылка «+ New» в заголовке
 //   showOwner   — префикс handle/ у названия
 //   showVersion — vN справа
-//   initialLimit — рез до N + кнопка «Показать ещё (M)» (поиск показывает все совпадения)
+//   initialLimit — размер порции: без loadPage это рез до N + «Показать ещё (M)»,
+//                  с loadPage — размер СТРАНИЦЫ (поиск показывает все совпадения)
 
 /**
  * Сколько строк поднимает КАЖДАЯ поверхность. Числа живут здесь, потому что это
@@ -57,7 +58,7 @@ export function ListsPanel({
   headerStyle = 'mono',
   activeKey,
   remoteSearch,
-  loadMore,
+  loadPage,
   total,
 }: {
   items: ListsPanelItem[]
@@ -79,12 +80,17 @@ export function ListsPanel({
    *  Функция обязана быть стабильной (модульная или useCallback). */
   remoteSearch?: (q: string) => Promise<ListsPanelItem[]>
   /**
-   * Подгрузка СЛЕДУЮЩЕЙ порции с сервера. Без неё «показать ещё» просто
-   * раскрывает то, что уже прислали, — так и было до 13.08.2026, и на 518
-   * списках это вываливало на экран всё разом (жалоба владельца).
+   * СТРАНИЦА с сервера: окно `initialLimit` строк, начиная с `offset`. Панель
+   * ЗАМЕНЯЕТ показанное этим окном, а не дописывает вниз.
+   *
+   * Дописывала — и в этом была беда. «Показать ещё» копило порции в одном
+   * массиве, поэтому у владельца с 518 списками панель на главной росла до
+   * полной библиотеки: сколько нажал, столько строк и висит в DOM, а свернуть
+   * можно было только всё разом. Со страницей потолок фиксированный —
+   * `initialLimit` строк на любой странице и на любом размере библиотеки.
    */
-  loadMore?: (offset: number, limit: number) => Promise<ListsPanelItem[]>
-  /** Сколько всего есть на сервере — чтобы знать, когда прятать кнопку. */
+  loadPage?: (offset: number, limit: number) => Promise<ListsPanelItem[]>
+  /** Сколько всего есть на сервере — из него считаются страницы. */
   total?: number
 }) {
   // Свёрнутость: ленивый init из LS безопасен — до маунта секция не рендерится с сервера иначе, чем '1'.
@@ -94,10 +100,13 @@ export function ListsPanel({
   })
   const [q, setQ] = useState('')
   const [expanded, setExpanded] = useState(false)
-  // Догруженные порции лежат ОТДЕЛЬНО от items: сервер может прислать items заново
-  // (ревалидация), и подмешивать их в один массив значило бы терять или дублировать.
-  const [more, setMore] = useState<ListsPanelItem[]>([])
-  const [loadingMore, setLoadingMore] = useState(false)
+  // Страница живёт ОТДЕЛЬНО от items: items — это первая страница с сервера, и она
+  // может приехать заново (ревалидация). Держим её как есть, а листание кладём
+  // рядом; page === 1 возвращается к items без запроса.
+  const [page, setPage] = useState(1)
+  const [pageRows, setPageRows] = useState<ListsPanelItem[] | null>(null)
+  const [paging, setPaging] = useState(false)
+  const [pageFailed, setPageFailed] = useState(false)
 
   const toggle = () =>
     setOpen((v) => {
@@ -143,20 +152,43 @@ export function ListsPanel({
     }
   }, [query, remoteSearch])
 
+  // Что вообще показываем без поиска: страницу с сервера (если листали) или items.
+  const base = pageRows ?? items
   const localFiltered = query
-    ? items.filter((l) => `${tr(l.title, lang)} ${l.handle}/${l.slug}`.toLowerCase().includes(query))
-    : items
-  // Порционная подгрузка приходит ВСЛЕД за items, поиск её не касается.
-  const withMore = query ? localFiltered : [...items, ...more]
-  const filtered = remoteSearch && query ? (remote ?? []) : withMore
-  // Поиск показывает все совпадения; без поиска — рез до initialLimit.
-  const cut = !query && !expanded && !loadMore && filtered.length > initialLimit
+    ? base.filter((l) => `${tr(l.title, lang)} ${l.handle}/${l.slug}`.toLowerCase().includes(query))
+    : base
+  const filtered = remoteSearch && query ? (remote ?? []) : localFiltered
+  // Поиск показывает все совпадения; без поиска и без страниц — рез до initialLimit.
+  const cut = !query && !expanded && !loadPage && filtered.length > initialLimit
   const shown = cut ? filtered.slice(0, initialLimit) : filtered
-  // Сколько ещё лежит на сервере. Без total считать нечего — значит и кнопки нет.
-  const restOnServer = loadMore && total !== undefined ? Math.max(0, total - (items.length + more.length)) : 0
-  // При серверной пагинации в items лежит ровно первая порция, поэтому решать по
+  // Страниц столько, сколько окон в total. Без total листать некуда: панель просто
+  // показывает то, что ей дали.
+  const totalPages = loadPage && total !== undefined ? Math.max(1, Math.ceil(total / initialLimit)) : 1
+  // При серверной пагинации в items лежит ровно первая страница, поэтому решать по
   // items.length нельзя: 7 из 500 скрывали бы поиск как будто списков всего семь.
   const hasSearch = searchable === true || (searchable === 'auto' && (total ?? items.length) > initialLimit)
+
+  const goToPage = (next: number) => {
+    if (!loadPage || paging || next === page || next < 1 || next > totalPages) return
+    setPageFailed(false)
+    // Первая страница уже пришла с сервера — за ней не ходим, иначе «назад» до
+    // начала стоит запроса на ровном месте.
+    if (next === 1) {
+      setPage(1)
+      setPageRows(null)
+      return
+    }
+    setPaging(true)
+    loadPage((next - 1) * initialLimit, initialLimit)
+      .then((rows) => {
+        setPageRows(rows)
+        setPage(next)
+      })
+      // Страница не приехала — остаёмся на текущей и говорим об этом. Молча
+      // подсунуть пустоту нельзя: это читалось бы как «списки кончились».
+      .catch(() => setPageFailed(true))
+      .finally(() => setPaging(false))
+  }
 
   const header =
     headerStyle === 'mono' ? (
@@ -246,37 +278,40 @@ export function ListsPanel({
               })}
             </nav>
           )}
-          {/* Серверная пагинация приносит небольшие порции, но после первой порции
-              обязана давать и обратный путь: Show less забывает догруженное и снова
-              оставляет компактные семь строк Dashboard. */}
-          {loadMore && !query && (restOnServer > 0 || more.length > 0) && (
-            <div className="mt-1 flex gap-1">
-              {restOnServer > 0 && (
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  disabled={loadingMore}
-                  onClick={() => {
-                    setLoadingMore(true)
-                    loadMore(items.length + more.length, initialLimit)
-                      .then((next) => setMore((p) => [...p, ...next]))
-                      .finally(() => setLoadingMore(false))
-                  }}
-                  className="min-w-0 flex-1 justify-center text-accent"
-                >
-                  {loadingMore ? t('loadingMore', lang) : `${t('showMore', lang)} (${Math.min(initialLimit, restOnServer)})`}
-                </Button>
-              )}
-              {more.length > 0 && (
-                <Button variant="ghost" size="xs" onClick={() => setMore([])} className="min-w-0 flex-1 justify-center text-accent">
-                  {t('showLess', lang)}
-                </Button>
-              )}
+          {/* Страницы, а не бесконечная лента: на экране всегда ровно одно окно,
+              сколько бы списков ни было в библиотеке. Под поиском пагинатора нет —
+              выдача поиска это не страница, а совпадения. */}
+          {loadPage && !query && totalPages > 1 && (
+            <div className="mt-1 flex items-center justify-between gap-1">
+              <Button
+                variant="ghost"
+                size="xs"
+                disabled={page <= 1 || paging}
+                aria-label={t('prevPage', lang)}
+                onClick={() => goToPage(page - 1)}
+                className="text-accent"
+              >
+                <ChevronLeft size={14} />
+              </Button>
+              <span aria-live="polite" className="min-w-0 truncate font-mono text-[0.6875rem] text-muted">
+                {paging ? t('loadingMore', lang) : `${page} / ${totalPages}`}
+              </span>
+              <Button
+                variant="ghost"
+                size="xs"
+                disabled={page >= totalPages || paging}
+                aria-label={t('nextPage', lang)}
+                onClick={() => goToPage(page + 1)}
+                className="text-accent"
+              >
+                <ChevronRight size={14} />
+              </Button>
             </div>
           )}
+          {pageFailed && <div className="px-2 py-1 text-[0.6875rem] text-danger">{t('loadFailed', lang)}</div>}
           {/* Раскрыли — должно быть чем и свернуть обратно: тот же тумблер, не тупик.
-              Ветка без loadMore: панель получила весь набор и просто режет его. */}
-          {!loadMore && (cut || (expanded && !query && filtered.length > initialLimit)) && (
+              Ветка без loadPage: панель получила весь набор и просто режет его. */}
+          {!loadPage && (cut || (expanded && !query && filtered.length > initialLimit)) && (
             <Button
               variant="ghost"
               size="xs"

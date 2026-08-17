@@ -11,22 +11,22 @@ const item = (n: number): ListsPanelItem => ({
   version: 42,
 })
 
+const page = (n: number) => Array.from({ length: DASHBOARD_LISTS }, (_, i) => item((n - 1) * DASHBOARD_LISTS + i + 1))
+
 describe('панель списков дашборда', () => {
-  it('начинается с семи строк без версий и догружает следующую компактную порцию', async () => {
+  it('листает страницами по семь строк и не копит их на экране', async () => {
     const user = userEvent.setup()
-    const first = Array.from({ length: DASHBOARD_LISTS }, (_, i) => item(i + 1))
-    const next = Array.from({ length: DASHBOARD_LISTS }, (_, i) => item(i + 1 + DASHBOARD_LISTS))
-    const loadMore = vi.fn(async () => next)
+    const loadPage = vi.fn(async (offset: number) => page(offset / DASHBOARD_LISTS + 1))
     const remoteSearch = vi.fn(async () => [])
 
     render(
       <ListsPanel
-        items={first}
+        items={page(1)}
         lang="en"
         title="Lists"
         initialLimit={DASHBOARD_LISTS}
         total={500}
-        loadMore={loadMore}
+        loadPage={loadPage}
         remoteSearch={remoteSearch}
       />,
     )
@@ -35,16 +35,56 @@ describe('панель списков дашборда', () => {
     expect(screen.getAllByRole('link')).toHaveLength(7)
     expect(screen.queryByText('v42')).not.toBeInTheDocument()
     expect(screen.getByPlaceholderText('Find a list…')).toBeInTheDocument()
+    // 500 списков по семь — 72 страницы; на первой «назад» вести некуда.
+    expect(screen.getByText('1 / 72')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled()
 
-    await user.click(screen.getByRole('button', { name: `Show more (${DASHBOARD_LISTS})` }))
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
 
-    await waitFor(() => expect(screen.getAllByRole('link')).toHaveLength(14))
-    expect(loadMore).toHaveBeenCalledWith(7, 7)
-    expect(screen.getByRole('button', { name: 'Show less' })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Show less' }))
-
+    await waitFor(() => expect(screen.getByText('2 / 72')).toBeInTheDocument())
+    expect(loadPage).toHaveBeenCalledWith(7, 7)
+    // ГЛАВНОЕ: страница ЗАМЕНИЛА показанное, а не дописалась вниз.
     expect(screen.getAllByRole('link')).toHaveLength(7)
-    expect(screen.getByRole('button', { name: `Show more (${DASHBOARD_LISTS})` })).toBeInTheDocument()
+    expect(screen.getByText('List 8')).toBeInTheDocument()
+    expect(screen.queryByText('List 1')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Previous page' }))
+
+    // Возврат на первую страницу берёт то, что уже пришло с сервера, — без запроса.
+    expect(screen.getByText('1 / 72')).toBeInTheDocument()
+    expect(screen.getAllByRole('link')).toHaveLength(7)
+    expect(loadPage).toHaveBeenCalledTimes(1)
+  })
+
+  it('не листает, когда всё умещается на одной странице', () => {
+    render(
+      <ListsPanel
+        items={page(1).slice(0, 3)}
+        lang="en"
+        title="Lists"
+        initialLimit={DASHBOARD_LISTS}
+        total={3}
+        loadPage={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Next page' })).not.toBeInTheDocument()
+  })
+
+  it('сообщает об ошибке страницы и остаётся на текущей', async () => {
+    const user = userEvent.setup()
+    const loadPage = vi.fn(async () => {
+      throw new Error('offline')
+    })
+
+    render(
+      <ListsPanel items={page(1)} lang="en" title="Lists" initialLimit={DASHBOARD_LISTS} total={500} loadPage={loadPage} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
+
+    await waitFor(() => expect(screen.getByText('Could not load. Try again.')).toBeInTheDocument())
+    expect(screen.getByText('1 / 72')).toBeInTheDocument()
+    expect(screen.getAllByRole('link')).toHaveLength(7)
   })
 })
