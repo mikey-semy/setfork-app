@@ -175,14 +175,15 @@ describe('выдача вкладок профиля', () => {
     })
 
     it('папка звёзд отбирает свои строки', async () => {
-      const res = await getProfileListPage({ ownerId, viewerId: ownerId, tab: 'starred', folder: 'to-read' }, win)
+      const res = await getProfileListPage({ ownerId, viewerId: ownerId, tab: 'starred', folderId }, win)
       expect(res.items.map((i) => i.slug)).toEqual(['bread-baking'])
       expect(res.total).toBe(1)
     })
 
-    it('несуществующая папка фильтром не считается — как и неизвестная полка', async () => {
+    it('нерешённое имя папки фильтром не считается — как и неизвестная полка', async () => {
+      // Имя в id разрешает страница (у неё папки уже загружены); не нашлось — фильтра нет.
       // Иначе опечатка в адресе показывает пустую вкладку, и об этом неоткуда узнать.
-      const res = await getProfileListPage({ ownerId, viewerId: ownerId, tab: 'starred', folder: 'no-such-folder' }, win)
+      const res = await getProfileListPage({ ownerId, viewerId: ownerId, tab: 'starred', folderId: undefined }, win)
       expect(res.total).toBe(5)
     })
 

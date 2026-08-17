@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ListsPanel, type ListsPanelItem } from '@/widgets/ListsPanel'
@@ -154,5 +154,62 @@ describe('данные сменились под панелью', () => {
     // Панель обязана показать свежее, а не строки, снятые до изменения.
     expect(screen.getByText('1 / 72')).toBeInTheDocument()
     expect(screen.getByText('List 0')).toBeInTheDocument()
+  })
+})
+
+describe('рвущаяся сеть', () => {
+  it('ответ, ушедший до смены набора, не возвращает снимок «до»', async () => {
+    const user = userEvent.setup()
+    let release: (rows: ListsPanelItem[]) => void = () => {}
+    const loadPage = vi.fn(() => new Promise<ListsPanelItem[]>((res) => { release = res }))
+    const props = { lang: 'en' as const, title: 'Lists', initialLimit: DASHBOARD_LISTS, loadPage }
+
+    const { rerender } = render(<ListsPanel {...props} items={page(1)} total={500} />)
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
+    // Пока страница едет, набор сменился с сервера.
+    rerender(<ListsPanel {...props} items={[item(0), ...page(1).slice(0, 6)]} total={501} />)
+    // ...и только теперь приходит ответ старого поколения.
+    release(page(2))
+
+    await waitFor(() => expect(screen.getByText('List 0')).toBeInTheDocument())
+    // Он не должен отменить сброс: страница первая, строки свежие.
+    expect(screen.queryByText('List 8')).not.toBeInTheDocument()
+  })
+
+  it('страница, которая не приходит никогда, не запирает панель навсегда', async () => {
+    // Фейковые таймеры без userEvent: тот сам ждёт таймеров, и связка вешала весь файл —
+    // упавший по таймауту тест не успевал вернуть настоящие часы следующему.
+    vi.useFakeTimers()
+    try {
+      const loadPage = vi.fn(() => new Promise<ListsPanelItem[]>(() => {}))
+      render(<ListsPanel items={page(1)} lang="en" title="Lists" initialLimit={DASHBOARD_LISTS} total={500} loadPage={loadPage} />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20_000)
+      })
+
+      // Без потолка ожидания «Загрузка…» висела бы вечно, обе стрелки мертвы, выход —
+      // только перезагрузка.
+      expect(screen.getByRole('alert')).toHaveTextContent('Could not load. Try again.')
+      expect(screen.getByRole('button', { name: 'Next page' })).not.toHaveAttribute('aria-disabled', 'true')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('упавший поиск не выдаётся за «ничего не найдено»', async () => {
+    const user = userEvent.setup()
+    const remoteSearch = vi.fn(async () => {
+      throw new Error('offline')
+    })
+    render(<ListsPanel items={page(1)} lang="en" title="Lists" initialLimit={DASHBOARD_LISTS} total={500} remoteSearch={remoteSearch} loadPage={vi.fn()} />)
+
+    await user.type(screen.getByPlaceholderText('Find a list…'), 'nginx')
+
+    // «Ничего не найдено» — это ответ про корпус. Про запрос, который не выполнился,
+    // такого ответа нет.
+    await waitFor(() => expect(screen.getByText('Could not load. Try again.')).toBeInTheDocument())
+    expect(screen.queryByText('Nothing found')).not.toBeInTheDocument()
   })
 })

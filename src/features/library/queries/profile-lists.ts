@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm'
-import { db, starFolderItems, starFolders, stars, templates, users } from '@/shared/db'
+import { db, starFolderItems, stars, templates, users } from '@/shared/db'
 import { feedWindow } from '@/shared/lib/paging'
 import type { FeedItem } from './list'
 import { FEED_COLS, likeContains, titleText, visibleFilter, withAvatar } from './shared'
@@ -41,11 +41,12 @@ export interface ProfileListFilter {
    */
   catalogId?: string | null
   /**
-   * Имя папки звёзд. Только для `starred`. Несуществующее имя фильтром НЕ считается —
-   * то же правило, что у полки: опечатка в адресе иначе показывает пустую вкладку, и
-   * человеку неоткуда узнать, что фильтр вообще применился.
+   * id папки звёзд. Только для `starred`. Разрешает имя в id ВЫЗЫВАЮЩИЙ — у него список
+   * папок уже загружен для карточек, и второй запрос за тем же id блокировал бы пару
+   * «строки + счёт». Там же живёт и правило «неизвестное имя фильтром не считается»:
+   * рядом с таким же правилом для полки, а не порознь.
    */
-  folder?: string
+  folderId?: string
 }
 
 /** Поиск профиля — по названию и слагу, БЕЗ описания: так было в памяти, и так ожидается
@@ -87,16 +88,6 @@ const ordering = (f: ProfileListFilter): SQL[] => {
   return f.tab === 'starred' ? [desc(stars.createdAt), asc(templates.id)] : [desc(templates.updatedAt), asc(templates.id)]
 }
 
-/** Папка звёзд → её id. Нет такой папки — `undefined`: фильтра просто нет (см. `folder`). */
-async function folderId(ownerId: string, name: string): Promise<string | undefined> {
-  const [f] = await db
-    .select({ id: starFolders.id })
-    .from(starFolders)
-    .where(and(eq(starFolders.userId, ownerId), eq(starFolders.name, name)))
-    .limit(1)
-  return f?.id
-}
-
 /**
  * Страница выдачи и сколько всего строк под теми же условиями.
  *
@@ -108,9 +99,13 @@ async function folderId(ownerId: string, name: string): Promise<string | undefin
 export async function getProfileListPage(
   f: ProfileListFilter,
   window: { limit: number; offset?: number },
+  /** Уже известное общее число: тогда счёт не повторяем. Нужно повторному запросу за
+   *  приведённой страницей — он идёт по тем же условиям, и второй `count(*)` на том же
+   *  наборе это чистая работа впустую на пути, куда попадают по адресу и без входа. */
+  knownTotal?: number,
 ): Promise<{ items: FeedItem[]; total: number }> {
   const w = feedWindow(window)
-  const fid = f.tab === 'starred' && f.folder ? await folderId(f.ownerId, f.folder) : undefined
+  const fid = f.tab === 'starred' ? f.folderId : undefined
   const where = and(...conditions(f))
   const order = ordering(f)
 
@@ -119,9 +114,9 @@ export async function getProfileListPage(
       db.select(FEED_COLS).from(templates).innerJoin(users, eq(templates.ownerId, users.id)).where(where).orderBy(...order).limit(w.limit).offset(w.offset),
       // Счёт БЕЗ join'а на автора: он ничего не отбирает (у списка всегда есть владелец),
       // а индексу мешает.
-      db.select({ n: sql<number>`count(*)::int` }).from(templates).where(where),
+      knownTotal === undefined ? db.select({ n: sql<number>`count(*)::int` }).from(templates).where(where) : Promise.resolve([]),
     ])
-    return { items: await withAvatar(rows as FeedItem[]), total: count?.n ?? 0 }
+    return { items: await withAvatar(rows as FeedItem[]), total: knownTotal ?? count?.n ?? 0 }
   }
 
   const starred = and(eq(stars.userId, f.ownerId), where)

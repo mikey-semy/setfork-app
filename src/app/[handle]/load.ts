@@ -159,7 +159,10 @@ export async function loadProfilePage({ handle, sp: raw, lang }: { handle: strin
     listType,
     // undefined = фильтра нет, null = «без полки» (очередь разбора).
     catalogId: catalogFilter === undefined ? undefined : catalogFilter === NO_CATALOG ? null : (catalogIdByName.get(catalogFilter) ?? undefined),
-    folder: tab === 'starred' ? sp.folder : undefined,
+    // Имя папки разрешаем ЗДЕСЬ, из уже загруженных папок: второй запрос за тем же id
+    // блокировал бы пару «строки + счёт». И правило то же, что у полки — неизвестное имя
+    // фильтром не считается, иначе опечатка в адресе даёт пустую вкладку без объяснения.
+    folderId: tab === 'starred' && sp.folder ? rawFolders.find((f) => f.name === sp.folder)?.id : undefined,
   }
 
   // Номер страницы теперь узнаётся ВМЕСТЕ с выдачей, а не до неё: сколько всего строк,
@@ -174,18 +177,22 @@ export async function loadProfilePage({ handle, sp: raw, lang }: { handle: strin
   // потом, обнаружив что страницы нет, повторял оба запроса для приведённого номера — то
   // есть один параметр адреса, доступный кому угодно без входа, давал шестикратную работу.
   const asked = Math.min(Math.max(1, Math.floor(Number(sp.page)) || 1), pageCount(unfiltered))
-  let listPage = isListsTab ? await getProfileListPage(filter, pageWindow(asked)) : { items: [], total: 0 }
-  const totalPages = pageCount(listPage.total)
-  const page = pageFromParam(sp.page, totalPages)
-  if (isListsTab && page !== asked) listPage = await getProfileListPage(filter, pageWindow(page))
-  const pageItems = listPage.items
-  // Пакетные действия берут ВСЮ текущую выдачу, а не показанную страницу: разбирать
-  // полтысячи списков по двадцать штук бессмысленно. Потолок у «всего» всё равно есть.
-  const [allIds, unfiledCount] = await Promise.all([
+  // ВСЁ НЕЗАВИСИМОЕ — ПАРАЛЛЕЛЬНО. Набор для «выбрать все» и очередь разбора не читают из
+  // выдачи ни строки, а стояли за ней в очереди: лишний круг к базе на каждый показ
+  // своей вкладки, просто потому что код шёл сверху вниз.
+  const [firstTry, allIds, unfiledCount] = await Promise.all([
+    isListsTab ? getProfileListPage(filter, pageWindow(asked)) : Promise.resolve({ items: [], total: 0 }),
+    // Пакетные действия берут ВСЮ текущую выдачу, а не показанную страницу: разбирать
+    // полтысячи списков по двадцать штук бессмысленно. Потолок у «всего» всё равно есть.
     isOwner && tab === 'lists' ? getProfileListIds({ ...filter, tab: 'lists' }, BULK_MAX) : Promise.resolve([]),
     // Очередь разбора считается ДО фильтров: по ней решается, показывать ли сам фильтр полок.
     isOwner && tab === 'lists' ? countUnfiledLists(user.id, viewer?.userId) : Promise.resolve(0),
   ])
+  const totalPages = pageCount(firstTry.total)
+  const page = pageFromParam(sp.page, totalPages)
+  // Повторный запрос идёт с УЖЕ ИЗВЕСТНЫМ числом: условия те же, считать второй раз нечего.
+  const listPage = isListsTab && page !== asked ? await getProfileListPage(filter, pageWindow(page), firstTry.total) : firstTry
+  const pageItems = listPage.items
   // Общий построитель: он и переносит остальные параметры сам. Вкладка и фильтр полки
   // названы явно, потому что берутся не из адреса, а из разбора выше (`tab` нормализован,
   // а неизвестное имя полки фильтром не считается) — переносить сырой `sp.catalog` значило

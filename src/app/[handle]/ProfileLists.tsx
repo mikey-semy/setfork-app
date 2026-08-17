@@ -133,7 +133,20 @@ export function ProfileLists({
       {(!bulk || total === 0) && toolbar}
 
       {total === 0 ? (
-        <EmptyState hint={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
+        // ДВА РАЗНЫХ ПУСТО. «Списков пока нет» — про человека, «ничего не подошло» — про
+        // фильтр. Раньше отфильтрованная в ноль библиотека из пятисот списков сообщала
+        // владельцу, что у него их нет: неправда, и вдобавок скрывает, что виноват фильтр
+        // и его можно снять. `/my-lists` этот раздел уже делает, а профиль — нет, хотя
+        // `unfilteredItemsCount` лежит тут же в пропсах.
+        <EmptyState
+          hint={
+            unfilteredItemsCount === 0
+              ? tab === 'starred'
+                ? t('noStars', lang)
+                : t('noProfileLists', lang)
+              : t('library.nothingMatchesQuery', lang)
+          }
+        />
       ) : bulk ? (
         // Пакетные действия — только над своей библиотекой: раскладывать по полкам и
         // публиковать можно лишь то, что твоё. «Все» — вся текущая выдача с фильтром, а не

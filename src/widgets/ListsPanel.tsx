@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, ListChecks, Plus } from 'lucide-react'
 import { Pagination } from '@/shared/ui/Pagination'
 import { Avatar } from '@/shared/ui/Avatar'
@@ -31,6 +31,10 @@ import { buttonClass } from '@/shared/ui/button-style'
  *  Числа здесь, а не в разметке, потому что по ним считается резерв высоты страницы. */
 const ROW_H = 32
 const ROW_GAP = 2
+
+/** Сколько ждём страницу, прежде чем считать, что она не придёт. Столько же, сколько
+ *  человек готов смотреть на «Загрузка…», не решив, что интерфейс сломался. */
+const PAGE_TIMEOUT_MS = 15_000
 
 export interface ListsPanelItem {
   handle: string
@@ -108,6 +112,10 @@ export function ListsPanel({
   const [pageRows, setPageRows] = useState<ListsPanelItem[] | null>(null)
   const [paging, setPaging] = useState(false)
   const [pageFailed, setPageFailed] = useState(false)
+  const [searchFailed, setSearchFailed] = useState(false)
+  /** Номер поколения запросов. Ответ старого поколения игнорируется целиком: он мог уйти
+   *  до того, как набор сменился или человек ушёл на другую страницу. */
+  const generation = useRef(0)
 
   const toggle = () =>
     setOpen((v) => {
@@ -136,15 +144,30 @@ export function ListsPanel({
   const [remote, setRemote] = useState<ListsPanelItem[] | null>(null)
   const [searching, setSearching] = useState(false)
   useEffect(() => {
+    // Начали искать — прежняя неудача страницы больше не про то, что на экране. Гасим её
+    // здесь, а не прячем при показе: спрятанное `role="alert"` объявится заново, стоит
+    // очистить поиск.
+    setPageFailed(false)
     if (!remoteSearch || !query) return
     let alive = true
     const id = setTimeout(() => {
       if (!alive) return
       setRemote(null)
       setSearching(true)
+      setSearchFailed(false)
       remoteSearch(query)
-        .then((r) => alive && setRemote(r))
-        .catch(() => alive && setRemote([]))
+        .then((r) => {
+          if (!alive) return
+          setRemote(r)
+        })
+        // НЕ пустой результат: неудавшийся поиск и поиск без совпадений — разные ответы.
+        // Раньше оба показывали «ничего не найдено», то есть панель уверенно сообщала об
+        // отсутствии того, чего вообще не искала.
+        .catch(() => {
+          if (!alive) return
+          setRemote([])
+          setSearchFailed(true)
+        })
         .finally(() => alive && setSearching(false))
     }, 200)
     return () => {
@@ -166,6 +189,10 @@ export function ListsPanel({
     setPage(1)
     setPageRows(null)
     setPageFailed(false)
+    // И гасим поколение: запрос, ушедший ДО смены набора, вернётся со снимком «до» и
+    // молча отменит этот сброс — то есть панель снова покажет устаревшие строки, но уже
+    // без всякого повода их заподозрить.
+    generation.current += 1
   }
 
   // Страниц столько, сколько окон в total. Без total листать некуда: панель просто
@@ -204,16 +231,29 @@ export function ListsPanel({
       setPageRows(null)
       return
     }
+    const id = ++generation.current
     setPaging(true)
-    loadPage((next - 1) * initialLimit, initialLimit)
+    // ПОТОЛОК ОЖИДАНИЯ ОБЯЗАТЕЛЕН. Обещание, которое не разрешается никогда (оборвалась
+    // сеть на полпути, спящая вкладка), оставляло `paging` включённым навсегда: обе
+    // стрелки неактивны, ошибки нет, выйти можно только перезагрузкой.
+    Promise.race([
+      loadPage((next - 1) * initialLimit, initialLimit),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), PAGE_TIMEOUT_MS)),
+    ])
       .then((rows) => {
+        if (generation.current !== id) return
         setPageRows(rows)
         setPage(next)
       })
       // Страница не приехала — остаёмся на текущей и говорим об этом. Молча
       // подсунуть пустоту нельзя: это читалось бы как «списки кончились».
-      .catch(() => setPageFailed(true))
-      .finally(() => setPaging(false))
+      .catch(() => {
+        if (generation.current !== id) return
+        setPageFailed(true)
+      })
+      .finally(() => {
+        if (generation.current === id) setPaging(false)
+      })
   }
 
   const header =
@@ -260,8 +300,10 @@ export function ListsPanel({
               <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-[0.78125rem] text-muted">{emptyText}</div>
             ) : null
           ) : shown.length === 0 ? (
+            // «Ничего не найдено» — ответ ПОИСКУ. Без поиска пустая страница означает, что
+            // набор изменился под нами, и говорить о ненайденном там нечего.
             <div className="px-2 py-3 text-[0.78125rem] text-muted">
-              {t(searching ? 'searchingLists' : 'nothingFound', lang)}
+              {t(searching ? 'searchingLists' : searchFailed ? 'loadFailed' : query ? 'nothingFound' : 'loadFailed', lang)}
             </div>
           ) : (
             <nav
