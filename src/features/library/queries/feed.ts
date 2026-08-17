@@ -6,7 +6,7 @@ import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { feedWindow } from '@/shared/lib/paging'
-import type { ActivityItem, FeedItem, FeedSort, ListKey, ListSuggestion, TagRow, TrendRange } from './list'
+import type { ActivityItem, FeedItem, FeedSort, ListSuggestion, TagRow, TrendRange } from './list'
 import { descText, extraFilters, FEED_COLS, langPref, keywordFeed, searchCondition, semanticFeed, tagFilter, titleText, visibleFilter, withAvatar } from './shared'
 
 /**
@@ -219,62 +219,6 @@ export async function getUserTemplates(
   const w = window && feedWindow(window)
   const rows = w ? await q.limit(w.limit).offset(w.offset) : await q
   return withAvatar(rows as FeedItem[])
-}
-
-/** Колонки ключа: без `desc`, тегов, счётчиков показа, автора и картинок. */
-const LIST_KEY_COLS = {
-  id: templates.id,
-  slug: templates.slug,
-  title: templates.title,
-  origin: templates.origin,
-  visibility: templates.visibility,
-  starsCount: templates.starsCount,
-  updatedAt: templates.updatedAt,
-  repositoryId: templates.repositoryId,
-}
-
-/**
- * КЛЮЧИ всех видимых списков пользователя — дешёвая половина «позднего доступа к строке».
- *
- * Профиль отбирает библиотеку у себя (поиск по названию, тип, полка, порядок), поэтому
- * ему нужен весь подходящий набор, а не окно. Но нужен он ему НЕ ЦЕЛИКОМ: страница
- * показывает двадцать строк, а ехало 518 полных — с join'ом на автора, с `desc` и
- * тегами, и с подписью картинки на каждую (это ещё и тысяча с лишним асинхронных
- * вызовов на один показ профиля). Здесь остаются только поля отбора и порядка;
- * тяжёлое достаётся отдельно и ровно для страницы — `getTemplatesByIds`.
- *
- * Без join'а на `users` намеренно: ник и аватар автора на своей же странице одни и те же.
- */
-export async function getUserListKeys(userId: string, viewerId?: string): Promise<ListKey[]> {
-  const rows = await db
-    .select(LIST_KEY_COLS)
-    .from(templates)
-    .where(and(eq(templates.ownerId, userId), visibleFilter(viewerId)))
-    .orderBy(desc(templates.updatedAt))
-  return rows as ListKey[]
-}
-
-/**
- * Дорогая половина: полные строки ровно для показанной страницы.
- *
- * Порядок восстанавливаем по переданным id, а не полагаемся на порядок БД: страница
- * могла быть отсортирована в приложении (по имени, по звёздам), и `in (...)` про этот
- * порядок ничего не знает — строки приехали бы в своём.
- *
- * Фильтр видимости ЗДЕСЬ повторно, хотя id и приходят из уже отфильтрованной выборки.
- * Выборка по id — это ровно та форма запроса, куда однажды передадут id со стороны
- * («покажи вот эти»), и тогда молчаливое доверие к списку id станет утечкой приватных.
- * Второй раз то же условие не стоит ничего: строки и так достаются по первичному ключу.
- */
-export async function getTemplatesByIds(ids: string[], viewerId?: string): Promise<FeedItem[]> {
-  if (!ids.length) return []
-  const rows = await db
-    .select(FEED_COLS)
-    .from(templates)
-    .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(and(inArray(templates.id, ids), visibleFilter(viewerId)))
-  const byId = new Map((rows as FeedItem[]).map((r) => [r.id, r]))
-  return withAvatar(ids.map((id) => byId.get(id)).filter((r): r is FeedItem => !!r))
 }
 
 /** Сколько всего списков у пользователя видно этому зрителю — для «показать ещё». */

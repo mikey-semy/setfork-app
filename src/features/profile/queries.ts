@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { courseCompletions, db, issues, runs, stars, suggestions, templateVersions, templates, users, publiclyVisible } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
-import type { FeedItem, ListKey } from '@/features/library/queries'
+import type { FeedItem } from '@/features/library/queries'
 import { avatarSrc } from '@/shared/media'
 import type { ActivityKind, ActivityTopic, DetailsPage, ListEvent, TopicList } from './activity/types'
 
@@ -200,34 +200,6 @@ export async function getProfileCounts(userId: string, viewerId?: string) {
 }
 
 
-/**
- * КЛЮЧИ звёзд — та же дешёвая половина, что `getUserListKeys`, но по своему источнику.
- *
- * Правило видимости здесь обязано совпадать с тем, по которому потом достаются сами
- * строки (`getTemplatesByIds`): по ключам считается номер страницы, а строки берутся
- * отдельным запросом. Разойдутся правила — и на странице окажется не то, что обещал
- * её номер: часть ключей не найдёт себе строки, и страница просто станет короче.
- */
-export async function getStarredListKeys(userId: string, viewerId?: string): Promise<ListKey[]> {
-  const publicVisible = and(publiclyVisible())!
-  const visible = viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
-  const rows = await db
-    .select({
-      id: templates.id,
-      slug: templates.slug,
-      title: templates.title,
-      origin: templates.origin,
-      visibility: templates.visibility,
-      starsCount: templates.starsCount,
-      updatedAt: templates.updatedAt,
-      repositoryId: templates.repositoryId,
-    })
-    .from(stars)
-    .innerJoin(templates, eq(stars.templateId, templates.id))
-    .where(and(eq(stars.userId, userId), visible))
-    .orderBy(desc(stars.createdAt))
-  return rows as ListKey[]
-}
 
 /** Прогоны пользователя (для вкладки профиля). */
 export async function getProfileRuns(userId: string) {

@@ -5,22 +5,22 @@ import { getSession } from '@/shared/auth/session'
 import { agentProfile } from '@/shared/ai/gnome-account'
 import { avatarSrc } from '@/shared/media'
 import type { Lang } from '@/shared/i18n'
-import { getPinnedTemplates, getTemplatesByIds, getUserListKeys } from '@/features/library/queries'
+import { countUnfiledLists, getPinnedTemplates, getProfileListIds, getProfileListPage, type ProfileListFilter } from '@/features/library/queries'
 import {
   getActivityTopics,
   getContributions,
   getOwnListsLight,
   getProfileCounts,
   getReceivedStats,
-  getStarredListKeys,
   getUserByHandle,
   getUserCompletions,
 } from '@/features/profile/queries'
 import { getAchievementDisplay } from '@/features/profile/achievement-config'
 import { getFollowers, getFollowing } from '@/features/profile/search'
-import { getFolderTemplateIds, getUserFolders } from '@/features/star-folders/queries'
+import { getUserFolders } from '@/features/star-folders/queries'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
+import { BULK_MAX } from '@/features/library/bulk/limits'
 import { dayKey } from '@/features/profile/activity/types'
 import { pageCount, pageFromParam, pageHref as buildPageHref, pageWindow } from '@/shared/lib/paging'
 
@@ -100,17 +100,13 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   // «2026» — это он и есть (решение владельца 12.08).
   const graphYear = graphYears.includes(rawYear) ? rawYear : nowY
 
-  const [counts, followCounts, following, bigAvatar, contributions, received, rawItems, pinned, catalogs, achDisplay] = await Promise.all([
+  const [counts, followCounts, following, bigAvatar, contributions, received, pinned, catalogs, achDisplay] = await Promise.all([
     getProfileCounts(user.id, viewer?.userId),
     getFollowCounts(user.id),
     viewer && !isOwner ? isFollowing(viewer.userId, user.id) : Promise.resolve(false),
     avatarSrc(user.avatarUrl, 180),
     getContributions(user.id, graphYear, viewer?.userId),
     getReceivedStats(user.id),
-    // КЛЮЧИ, а не полные строки: отбор и порядок считаются здесь, поэтому нужен весь
-    // подходящий набор — но нужен он только полями отбора. Тяжёлое достаётся ниже и
-    // ровно для показанной страницы (getTemplatesByIds).
-    !isListsTab ? Promise.resolve([]) : tab === 'starred' ? getStarredListKeys(user.id, viewer?.userId) : getUserListKeys(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),
     getOwnerCatalogs(user.id, viewer?.userId),
     getAchievementDisplay(),
@@ -138,7 +134,6 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   const rawFolders = tab === 'starred' ? await getUserFolders(user.id) : []
   const fsort: FolderSort = FOLDER_SORTS.find((s) => s === sp.fsort) ?? 'name'
   const starFolders = [...rawFolders].sort((a, b) => (fsort === 'count' ? b.count - a.count : a.name.localeCompare(b.name)))
-  const folderIds = tab === 'starred' && sp.folder ? await getFolderTemplateIds(user.id, sp.folder) : null
 
   const query = (sp.q ?? '').trim().toLowerCase()
   const sort: Sort = SORTS.find((s) => s === sp.sort) ?? 'recent'
@@ -147,26 +142,39 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   // Фильтр по полке: имя каталога или NO_CATALOG. Неизвестное имя фильтром не считаем —
   // иначе опечатка в адресе показывает пустую библиотеку без объяснения.
   const catalogFilter = sp.catalog === NO_CATALOG ? NO_CATALOG : catalogs.find((c) => c.name === sp.catalog)?.name
-  // Set, а не includes внутри фильтра: у активного пользователя и папка, и выдача —
-  // сотни строк, и поиск по массиву в цикле превращается в перебор на перебор.
-  const inFolder = folderIds ? new Set(folderIds) : null
   const catalogIdByName = new Map(catalogs.map((c) => [c.name, c.id]))
-  const items = selectItems({
-    items: inFolder ? rawItems.filter((it) => inFolder.has(it.id)) : rawItems,
-    tab,
+
+  // ОТБОР, ПОРЯДОК И ОКНО — В ЗАПРОСЕ. Раньше страница поднимала весь подходящий набор
+  // и разбиралась с ним в памяти; теперь она спрашивает ровно свою страницу.
+  const filter: ProfileListFilter = {
+    ownerId: user.id,
+    viewerId: viewer?.userId,
+    tab: tab === 'starred' ? 'starred' : 'lists',
     query,
     sort,
     listType,
-    catalog: catalogFilter,
-    catalogId: catalogFilter && catalogFilter !== NO_CATALOG ? catalogIdByName.get(catalogFilter) : undefined,
-  })
+    // undefined = фильтра нет, null = «без полки» (очередь разбора).
+    catalogId: catalogFilter === undefined ? undefined : catalogFilter === NO_CATALOG ? null : (catalogIdByName.get(catalogFilter) ?? undefined),
+    folder: tab === 'starred' ? sp.folder : undefined,
+  }
 
-  // Пагинация вкладок со списками (много списков = боль без страниц).
-  const totalPages = pageCount(items.length)
+  // Номер страницы теперь узнаётся ВМЕСТЕ с выдачей, а не до неё: сколько всего строк,
+  // знает тот же запрос. Просим запрошенную страницу, а если её не существует —
+  // переспрашиваем последнюю. Лишний запрос бывает только на битом номере в адресе,
+  // а не на каждом показе, как было бы при отдельном предварительном счёте.
+  const asked = Math.max(1, Math.floor(Number(sp.page)) || 1)
+  let listPage = isListsTab ? await getProfileListPage(filter, pageWindow(asked)) : { items: [], total: 0 }
+  const totalPages = pageCount(listPage.total)
   const page = pageFromParam(sp.page, totalPages)
-  const { limit, offset } = pageWindow(page)
-  // Поздний доступ к строке: полные данные — только у двадцати показанных.
-  const pageItems = isListsTab ? await getTemplatesByIds(items.slice(offset, offset + limit).map((i) => i.id), viewer?.userId) : []
+  if (isListsTab && page !== asked) listPage = await getProfileListPage(filter, pageWindow(page))
+  const pageItems = listPage.items
+  // Пакетные действия берут ВСЮ текущую выдачу, а не показанную страницу: разбирать
+  // полтысячи списков по двадцать штук бессмысленно. Потолок у «всего» всё равно есть.
+  const [allIds, unfiledCount] = await Promise.all([
+    isOwner && tab === 'lists' ? getProfileListIds({ ...filter, tab: 'lists' }, BULK_MAX) : Promise.resolve([]),
+    // Очередь разбора считается ДО фильтров: по ней решается, показывать ли сам фильтр полок.
+    isOwner && tab === 'lists' ? countUnfiledLists(user.id, viewer?.userId) : Promise.resolve(0),
+  ])
   // Общий построитель: он и переносит остальные параметры сам. Вкладка и фильтр полки
   // названы явно, потому что берутся не из адреса, а из разбора выше (`tab` нормализован,
   // а неизвестное имя полки фильтром не считается) — переносить сырой `sp.catalog` значило
@@ -192,7 +200,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     catalogs,
     catalogFilter,
     /** Сколько списков ещё не разложено по полкам — очередь разбора одним числом. */
-    unfiledCount: rawItems.filter((it) => !it.repositoryId).length,
+    unfiledCount,
     achDisplay,
     people,
     ownLight,
@@ -212,9 +220,13 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     sort,
     listType,
     /** Полный видимый набор до поиска и фильтров. Нужен, чтобы на действительно
-     *  пустой вкладке не показывать панель, которой нечего фильтровать. */
-    unfilteredItemsCount: rawItems.length,
-    items,
+     *  пустой вкладке не показывать панель, которой нечего фильтровать. Берётся из уже
+     *  посчитанных счётчиков профиля — второй раз то же самое не считаем. */
+    unfilteredItemsCount: !isListsTab ? 0 : tab === 'starred' ? counts.stars : counts.lists,
+    /** Сколько строк в ТЕКУЩЕЙ выдаче (после поиска и фильтров) — по нему и страницы. */
+    total: listPage.total,
+    /** id всей текущей выдачи для «выбрать все» (только своя вкладка «Списки»). */
+    allIds,
     pageItems,
     page,
     totalPages,
@@ -229,46 +241,6 @@ function asTab(raw: string | undefined): ProfileTab {
   return tabs.find((t) => t === raw) ?? 'overview'
 }
 
-/**
- * Поиск, фильтр по типу и полке, порядок — ровно для той вкладки, где они есть.
- *
- * Экспортируется ради теста: это ПРАВИЛА выдачи, и проверять их надо отдельно от
- * страницы, которая тянет БД и сессию. Внутри — чистая функция над массивом.
- */
-export function selectItems<
-  T extends {
-    id: string
-    slug: string
-    title: Record<string, string | undefined>
-    starsCount: number
-    visibility: string
-    origin: string | null
-    repositoryId?: string | null
-  },
->(ctx: {
-  items: T[]
-  tab: ProfileTab
-  query: string
-  sort: Sort
-  listType: ListType
-  catalog?: string
-  catalogId?: string
-}): T[] {
-  const { tab, query, sort, listType, catalog, catalogId } = ctx
-  if (tab !== 'lists' && tab !== 'starred') return ctx.items
-
-  let items = ctx.items
-  if (query) items = items.filter((it) => it.slug.toLowerCase().includes(query) || Object.values(it.title).some((v) => v?.toLowerCase().includes(query)))
-  if (tab === 'lists' && listType !== 'all') {
-    items = items.filter((it) => (listType === 'forks' ? it.origin === 'forked' : it.visibility === listType))
-  }
-  if (tab === 'lists' && catalog) {
-    items = catalog === NO_CATALOG ? items.filter((it) => !it.repositoryId) : items.filter((it) => it.repositoryId === catalogId)
-  }
-  if (sort === 'name') items = [...items].sort((a, b) => a.slug.localeCompare(b.slug))
-  else if (sort === 'stars') items = [...items].sort((a, b) => b.starsCount - a.starsCount)
-  return items
-}
 
 /**
  * Лента активности за месяц (?month=YYYY-MM) и стрелки листания: назад — не раньше

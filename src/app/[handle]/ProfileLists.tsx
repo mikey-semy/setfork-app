@@ -5,7 +5,6 @@ import { Pagination } from '@/shared/ui/Pagination'
 import { FeedList } from '@/features/library/FeedList'
 import { BulkSelection } from '@/features/library/bulk/BulkSelection'
 import { SelectionToggle } from '@/features/library/bulk/SelectionToggle'
-import { BULK_MAX } from '@/features/library/bulk/limits'
 import { ListsToolbar } from '@/features/profile/ListsToolbar'
 import type { ProfilePageData } from './load'
 
@@ -16,7 +15,8 @@ type Props = Pick<
   | 'tab'
   | 'isOwner'
   | 'viewer'
-  | 'items'
+  | 'total'
+  | 'allIds'
   | 'pageItems'
   | 'page'
   | 'totalPages'
@@ -46,7 +46,8 @@ export function ProfileLists({
   catalogs,
   catalogFilter,
   unfiledCount,
-  items,
+  total,
+  allIds,
   pageItems,
   page,
   totalPages,
@@ -65,7 +66,9 @@ export function ProfileLists({
     isOwner && tab === 'lists'
       ? {
           catalogs: catalogs.map((c) => ({ name: c.name, title: tr(c.title, lang) })),
-          allIds: items.slice(0, BULK_MAX).map((i) => i.id),
+          // Набор для «выбрать все» приходит запросом: вся текущая выдача с потолком, а не
+          // показанная страница — разбирать полтысячи списков по двадцать штук бессмысленно.
+          allIds,
         }
       : null
 
@@ -127,9 +130,9 @@ export function ProfileLists({
         </div>
       )}
 
-      {(!bulk || items.length === 0) && toolbar}
+      {(!bulk || total === 0) && toolbar}
 
-      {items.length === 0 ? (
+      {total === 0 ? (
         <EmptyState hint={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
       ) : bulk ? (
         // Пакетные действия — только над своей библиотекой: раскладывать по полкам и
