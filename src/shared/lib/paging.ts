@@ -51,6 +51,12 @@ export const NOTIFICATIONS_PER_PAGE = 30
 export const COMMENTS_PER_PAGE = 20
 
 /**
+ * Порция истории версий. Как у треда: строка истории — это сообщение с автором и датой,
+ * и группировка по дням при большем числе перестаёт читаться как «что было в этот день».
+ */
+export const COMMITS_PER_PAGE = 20
+
+/**
  * ОКНО ВЫДАЧИ, ПРОВЕРЕННОЕ ПЕРЕД ЗАПРОСОМ. Зовётся везде, где окно уходит в `.limit()`.
  *
  * Драйвер ставит предел так: `typeof limit === 'object' || (typeof limit === 'number' &&
@@ -259,11 +265,19 @@ const CURSOR_SEP = '~'
 const CURSOR_MAX = 512
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /**
- * Текстовая форма `timestamptz` из Postgres: `2026-08-18 19:02:03.092835+00`.
- * Проверяем строго, потому что дальше ключ уходит в `::timestamptz`, и мусор там —
- * это 500 на ровном месте вместо «покажем сначала».
+ * ТИП КЛЮЧА СОРТИРОВКИ. Не украшение: дальше ключ уходит в `::timestamptz` или `::int`,
+ * и мусор там — это 500 на ровном месте вместо «покажем сначала».
+ *
+ * Тип спрашивается У ПОВЕРХНОСТИ, а не угадывается по виду строки. Иначе курсор от
+ * ленты уведомлений, подставленный в адрес истории версий, доехал бы до `'2026-08-18
+ * …'::int` и уронил страницу. Поверхность знает свой ключ; строка — нет.
  */
+export type CursorKeyType = 'time' | 'int'
+
+/** Текстовая форма `timestamptz` из Postgres: `2026-08-18 19:02:03.092835+00`. */
 const TS_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?$/
+/** Целое без плюса, ведущих нулей и хвостов: номер версии, счётчик. */
+const INT_RE = /^-?(0|[1-9]\d{0,17})$/
 
 const toBase64Url = (s: string): string =>
   btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
@@ -307,7 +321,7 @@ export function encodeCursor(cursor: Cursor): string {
  * видимое, безвредное и ровно то, что человеку нужно, если он приехал по обломанной
  * ссылке. Так же поступает `pageFromParam` с мусорным номером.
  */
-export function decodeCursor(raw: string | undefined | null): Cursor | null {
+export function decodeCursor(raw: string | undefined | null, keyType: CursorKeyType = 'time'): Cursor | null {
   if (typeof raw !== 'string' || !raw || raw.length > CURSOR_MAX) return null
   const decoded = fromBase64Url(raw)
   if (decoded === null) return null
@@ -317,7 +331,7 @@ export function decodeCursor(raw: string | undefined | null): Cursor | null {
   const id = decoded.slice(at + CURSOR_SEP.length)
   // Разделитель ровно один: две пары в одном курсоре — признак подделки, а не опечатки.
   if (id.includes(CURSOR_SEP)) return null
-  if (!TS_RE.test(key) || !UUID_RE.test(id)) return null
+  if (!(keyType === 'int' ? INT_RE : TS_RE).test(key) || !UUID_RE.test(id)) return null
   return { key, id }
 }
 

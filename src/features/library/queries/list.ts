@@ -2,6 +2,8 @@ import 'server-only'
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, issues, listDrafts, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, suggestionViewed, templates, templateVersions, users, publiclyVisible } from '@/shared/db'
 import type { Lang, LocaleText } from '@/shared/i18n'
+import { cursorKey, keysetStep } from '@/shared/db/keyset'
+import { encodeCursor, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
@@ -152,15 +154,45 @@ export async function getVersionAuthors(templateId: string, version: number) {
   return out.filter((v): v is { handle: string; name: string | null; avatarUrl: string | null } => !!v)
 }
 
-/** «Коммиты» списка: версии с автором (аватар/ник) для GitHub-подобной страницы.
- *  leftJoin — у старых версий и фоновых (gardener/API) автора нет (authorId null). */
-export async function getCommits(templateId: string) {
+/**
+ * «КОММИТЫ» СПИСКА — версии с автором для GitHub-подобной страницы истории.
+ *
+ * Самая длинная выдача на сайте: каждая правка добавляет строку НАВСЕГДА, и история
+ * активного списка не сокращается никогда. Отдавалась она целиком, без предела вовсе.
+ *
+ * Ключ здесь — НОМЕР ВЕРСИИ, а не время. Он уникален в пределах списка и монотонен, то
+ * есть является настоящим ключом порядка; время же у пачки версий, созданных одной
+ * операцией (импорт, массовая правка садовником), совпадает. Отсюда `keyType: 'int'`:
+ * тот же курсор, другое приведение в SQL. Доопределение до `id` избыточно при уникальном
+ * номере, но форма шага одна на все поверхности, и заводить ей исключение дороже, чем
+ * оставить лишнюю колонку в сравнении.
+ *
+ * leftJoin — у старых версий и фоновых (gardener/API) автора нет (authorId null).
+ */
+export async function getCommitsPage(
+  templateId: string,
+  perPage: number,
+  cursor: Cursor | null = null,
+  dir: FeedDirection = 'after',
+  /** Отбор — В ЗАПРОСЕ, а не после него. Отфильтровать показанную порцию значило бы
+   *  отдавать «двадцать штук, из которых подошли три», а следующая страница начиналась бы
+   *  не там, где кончилась предыдущая. Ровно тот случай, что записан в грабли трека. */
+  filter: { authorHandle?: string; since?: Date } = {},
+) {
+  // Без курсора шага назад не существует: «перед началом» — не место.
+  const back = dir === 'before' && cursor !== null
+  const step = keysetStep(templateVersions.version, templateVersions.id, cursor, {
+    order: 'desc', // свежая версия сверху, как в истории коммитов
+    dir: back ? 'before' : 'after',
+    keyType: 'int',
+  })
   const rows = await db
     .select({
       id: templateVersions.id,
       version: templateVersions.version,
       note: templateVersions.note,
       createdAt: templateVersions.createdAt,
+      cursorKey: cursorKey(templateVersions.version),
       authorId: templateVersions.authorId,
       authorHandle: users.handle,
       authorName: users.name,
@@ -168,19 +200,75 @@ export async function getCommits(templateId: string) {
     })
     .from(templateVersions)
     .leftJoin(users, eq(templateVersions.authorId, users.id))
-    .where(eq(templateVersions.templateId, templateId))
-    .orderBy(desc(templateVersions.version))
-  return Promise.all(
-    rows.map(async (r) => ({
-      id: r.id,
-      version: r.version,
-      note: r.note,
-      createdAt: r.createdAt,
-      author: r.authorId && r.authorHandle ? { handle: r.authorHandle, name: r.authorName, avatarUrl: await avatarSrc(r.authorAvatarUrl, 48) } : null,
-    })),
-  )
+    .where(
+      and(
+        eq(templateVersions.templateId, templateId),
+        filter.authorHandle ? eq(users.handle, filter.authorHandle) : undefined,
+        filter.since ? gte(templateVersions.createdAt, filter.since) : undefined,
+        step.where,
+      ),
+    )
+    .orderBy(...step.order)
+    .limit(probeLimit(perPage))
+
+  // Отсекаем лишнюю строку разведчика ДО разворота — иначе отрезался бы не тот конец.
+  const { items: taken, hasNext: more } = takePage(rows, perPage)
+  const shown = step.reverse ? [...taken].reverse() : taken
+  const at = (row: (typeof shown)[number] | undefined): string | null =>
+    row ? encodeCursor({ key: row.cursorKey, id: row.id }) : null
+  return {
+    items: await Promise.all(
+      shown.map(async (r) => ({
+        id: r.id,
+        version: r.version,
+        note: r.note,
+        createdAt: r.createdAt,
+        author:
+          r.authorId && r.authorHandle
+            ? { handle: r.authorHandle, name: r.authorName, avatarUrl: await avatarSrc(r.authorAvatarUrl, 48) }
+            : null,
+      })),
+    ),
+    // Разведчик знает про ту сторону, в которую шагнули; про другую известно из адреса.
+    next: back ? at(shown[shown.length - 1]) : more ? at(shown[shown.length - 1]) : null,
+    prev: back ? (more ? at(shown[0]) : null) : cursor ? at(shown[0]) : null,
+  }
 }
 
+
+/**
+ * Сколько всего версий у списка — число в шапке истории.
+ *
+ * Считается отдельно и БЕЗ фильтров: в шапке стоит «столько-то коммитов у списка», а не
+ * «столько-то подошло под отбор». Раньше это была длина полной выдачи — то есть за число
+ * в шапке платили подъёмом всей истории.
+ */
+export async function countCommits(templateId: string): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(templateVersions)
+    .where(eq(templateVersions.templateId, templateId))
+  return r?.n ?? 0
+}
+
+/**
+ * АВТОРЫ ИСТОРИИ — для выпадающего фильтра.
+ *
+ * Отдельным запросом, а не из показанной порции: список авторов от того, какую страницу
+ * истории открыли, зависеть не должен — иначе фильтр по человеку исчезал бы ровно тогда,
+ * когда его правок нет на текущей странице, то есть когда он и нужен.
+ *
+ * Предел — не пагинация, а здравый смысл: выпадающий список не показывает тысячу имён.
+ */
+export async function getCommitAuthors(templateId: string): Promise<{ handle: string; name: string | null }[]> {
+  return db
+    .selectDistinct({ handle: users.handle, name: users.name })
+    .from(templateVersions)
+    .innerJoin(users, eq(templateVersions.authorId, users.id))
+    .where(eq(templateVersions.templateId, templateId))
+    .orderBy(asc(users.handle))
+    .limit(200)
+}
 
 export interface Contributor {
   handle: string

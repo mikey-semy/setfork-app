@@ -1,6 +1,6 @@
 import 'server-only'
 import { sql, type Column, type SQL } from 'drizzle-orm'
-import type { Cursor, FeedDirection, FeedOrder } from '@/shared/lib/paging'
+import type { Cursor, CursorKeyType, FeedDirection, FeedOrder } from '@/shared/lib/paging'
 
 /**
  * KEYSET НА УРОВНЕ ЗАПРОСА — два кусочка, из которых собирается пополняемая лента.
@@ -62,16 +62,20 @@ export function keysetStep(
   key: Column,
   id: Column,
   cursor: Cursor | null,
-  opts: { order?: FeedOrder; dir?: FeedDirection } = {},
+  opts: { order?: FeedOrder; dir?: FeedDirection; keyType?: CursorKeyType } = {},
 ): { where: SQL | undefined; order: SQL[]; reverse: boolean } {
-  const { order = 'desc', dir = 'after' } = opts
+  const { order = 'desc', dir = 'after', keyType = 'time' } = opts
   // Скан идёт в сторону показа, когда шагают вперёд, и против неё — когда назад.
   const scanDesc = dir === 'after' ? order === 'desc' : order !== 'desc'
+  // Приведение — по типу ключа поверхности. Тот же тип обязан быть у `decodeCursor`:
+  // разойдутся — и курсор одной поверхности, подставленный в адрес другой, уронит её
+  // приведением вместо того, чтобы честно отсеяться как непригодный.
+  const at = keyType === 'int' ? sql`${cursor?.key}::int` : sql`${cursor?.key}::timestamptz`
   return {
     where: cursor
       ? scanDesc
-        ? sql`(${key}, ${id}) < (${cursor.key}::timestamptz, ${cursor.id}::uuid)`
-        : sql`(${key}, ${id}) > (${cursor.key}::timestamptz, ${cursor.id}::uuid)`
+        ? sql`(${key}, ${id}) < (${at}, ${cursor.id}::uuid)`
+        : sql`(${key}, ${id}) > (${at}, ${cursor.id}::uuid)`
       : undefined,
     order: scanDesc ? [sql`${key} desc`, sql`${id} desc`] : [sql`${key} asc`, sql`${id} asc`],
     // Шаг назад всегда сканирует против показа, значит строки приходят задом наперёд.
