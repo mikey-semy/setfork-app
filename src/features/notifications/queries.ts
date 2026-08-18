@@ -3,9 +3,9 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { canViewList } from '@/core'
 import { collaborators, db, issues, notifications, templates, users } from '@/shared/db'
-import { afterCursor, cursorKey, keysetOrder } from '@/shared/db/keyset'
+import { cursorKey, keysetStep } from '@/shared/db/keyset'
 import type { LocaleText } from '@/shared/i18n'
-import { encodeCursor, probeLimit, takePage, type Cursor } from '@/shared/lib/paging'
+import { encodeCursor, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
 export type NotificationType =
@@ -67,7 +67,13 @@ export async function getUnreadCount(userId: string): Promise<number> {
  *  ради единого предиката доступа. */
 const UNREAD_SCAN_LIMIT = 500
 
-async function visibleNotifications(userId: string, limit: number, cursor: Cursor | null = null) {
+async function visibleNotifications(
+  userId: string,
+  limit: number,
+  cursor: Cursor | null = null,
+  dir: FeedDirection = 'after',
+) {
+  const step = keysetStep(notifications.createdAt, notifications.id, cursor, dir)
   const actor = alias(users, 'actor')
   const owner = alias(users, 'owner')
   const rows = await db
@@ -97,12 +103,12 @@ async function visibleNotifications(userId: string, limit: number, cursor: Curso
     .leftJoin(templates, eq(notifications.templateId, templates.id))
     .leftJoin(owner, eq(owner.id, templates.ownerId))
     .leftJoin(issues, eq(notifications.issueId, issues.id))
-    .where(and(eq(notifications.recipientId, userId), afterCursor(notifications.createdAt, notifications.id, cursor)))
-    // Порядок доопределён до `id`, и оба ключа вниз — этого требует кортежное сравнение
-    // курсора (см. keysetOrder). Раньше здесь стоял один `createdAt desc`: у пачки
-    // уведомлений, созданных одной операцией, время совпадает, и порядок между ними
-    // был произволен.
-    .orderBy(...keysetOrder(notifications.createdAt, notifications.id))
+    .where(and(eq(notifications.recipientId, userId), step.where))
+    // Условие и порядок берутся ОДНИМ шагом: порознь они могли бы смотреть в разные
+    // стороны, и запрос молча отдавал бы хвост ленты вместо соседней порции. Заодно
+    // порядок доопределён до `id` — раньше здесь стоял один `createdAt desc`, а у пачки
+    // уведомлений от одной операции время совпадает, и порядок между ними был произволен.
+    .orderBy(...step.order)
     .limit(limit)
 
   // Соредакторство спрашиваем ОДНИМ запросом на всю ленту: приватный список виден и тем,
@@ -165,29 +171,46 @@ const toItems = (rows: RawNotification[]): Promise<NotificationItem[]> =>
  * строка с границы либо пропадает, либо приходит дважды. Прыжок на «страницу 7» здесь и
  * не нужен — ленту читают сверху вниз.
  *
- * `hasNext` и курсор считаются по СЫРЫМ строкам, до отсева видимости, и это осознанно.
- * Видимость уведомления решает `canViewList` в приложении (предикат один на всё
- * приложение; дублировать его в SQL — однажды с ним разойтись), поэтому порция может
- * ПОКАЗАТЬ меньше строк, чем взяла. Считать «дальше есть» по показанным нельзя: у порции,
- * где всё скрыто, лента оборвалась бы на середине, хотя ниже есть что читать.
+ * Края считаются по СЫРЫМ строкам, до отсева видимости, и это осознанно. Видимость
+ * уведомления решает `canViewList` в приложении (предикат один на всё приложение;
+ * дублировать его в SQL — однажды с ним разойтись), поэтому порция может ПОКАЗАТЬ меньше
+ * строк, чем взяла. Считать «дальше есть» по показанным нельзя: у порции, где всё скрыто,
+ * лента оборвалась бы на середине, хотя ниже есть что читать.
  *
  * Плата за это — порции разной высоты. Убрать её можно только перенеся предикат доступа
  * в SQL; это отдельное решение, а не побочный эффект перевода на keyset.
+ *
+ * ОТКУДА БЕРЁТСЯ ПРОТИВОПОЛОЖНЫЙ КРАЙ. Разведчик отвечает только про ту сторону, в
+ * которую шагнули. Про другую спрашивать базу не нужно: если мы пришли шагом «вниз» с
+ * курсором, значит выше что-то есть — мы оттуда и приехали. Второй запрос ради того, что
+ * и так известно из адреса, — лишняя работа на каждый показ ленты.
  */
 export async function getNotificationsPage(
   userId: string,
   perPage: number,
   cursor: Cursor | null = null,
-): Promise<{ items: NotificationItem[]; hasNext: boolean; next: string | null }> {
-  const raw = await visibleNotifications(userId, probeLimit(perPage), cursor)
-  const { items: shown, hasNext } = takePage(raw, perPage)
+  dir: FeedDirection = 'after',
+): Promise<{ items: NotificationItem[]; next: string | null; prev: string | null }> {
+  // Без курсора шага вверх не существует: «перед началом» — не место. Иначе порядок `asc`
+  // без условия отдал бы САМЫЕ СТАРЫЕ уведомления, и лента открывалась бы с конца.
+  const up = dir === 'before' && cursor !== null
+  const raw = await visibleNotifications(userId, probeLimit(perPage), cursor, up ? 'before' : 'after')
+  // Отсекаем лишнюю строку разведчика ДО разворота: развернуть раньше — отрезать не тот
+  // конец, то есть терять ближайшую к читателю строку и показывать вместо неё дальнюю.
+  const { items: taken, hasNext: more } = takePage(raw, perPage)
+  const shown = up ? [...taken].reverse() : taken
+  const first = shown[0]
   const last = shown[shown.length - 1]
+  // Курсоры строятся по ВЗЯТЫМ строкам, а не по показанным: иначе скрытая строка на
+  // границе перечитывалась бы бесконечно.
+  const at = (row: (typeof shown)[number] | undefined): string | null =>
+    row ? encodeCursor({ key: row.cursorKey, id: row.id }) : null
   return {
     items: await toItems(shown),
-    hasNext,
-    // Курсор следующей порции — ключ ПОСЛЕДНЕЙ взятой строки, а не последней показанной:
-    // иначе скрытая строка на границе перечитывалась бы бесконечно.
-    next: hasNext && last ? encodeCursor({ key: last.cursorKey, id: last.id }) : null,
+    // Шагнули вниз — разведчик знает про низ, а верх известен из того, что мы пришли с
+    // курсором. Шагнули вверх — наоборот.
+    next: up ? at(last) : more ? at(last) : null,
+    prev: up ? (more ? at(first) : null) : cursor ? at(first) : null,
   }
 }
 

@@ -89,6 +89,47 @@ describe('лента уведомлений листается ключом', ()
     expect(secondPage.filter((id) => firstPage.includes(id))).not.toHaveLength(0)
   })
 
+  it('шаг назад возвращает ровно ту порцию, с которой ушли', async () => {
+    await resetTables([notifications])
+    await seed(0, COUNT)
+    const first = await getNotificationsPage(userId, PER)
+    expect(first.prev).toBeNull() // у начала ленты шага вверх нет
+
+    const second = await getNotificationsPage(userId, PER, decodeCursor(first.next))
+    expect(second.prev).not.toBeNull()
+
+    const backAgain = await getNotificationsPage(userId, PER, decodeCursor(second.prev), 'before')
+    expect(backAgain.items.map((n) => n.id)).toEqual(first.items.map((n) => n.id))
+  })
+
+  it('шаг назад отрезает БЛИЖНИЙ конец, а не дальний', async () => {
+    // Строки шага вверх приходят от курсора вверх, то есть задом наперёд. Развернуть их
+    // ДО отсечения лишней строки разведчика — значит выбросить ближайшую к читателю и
+    // подставить дальнюю: порция уедет на строку, и одна пропадёт совсем.
+    await resetTables([notifications])
+    await seed(0, COUNT) // 7 строк, порции по 3
+    const p1 = await getNotificationsPage(userId, PER)
+    const p2 = await getNotificationsPage(userId, PER, decodeCursor(p1.next))
+    const p3 = await getNotificationsPage(userId, PER, decodeCursor(p2.next))
+    const forward = [...p1.items, ...p2.items, ...p3.items].map((n) => n.id)
+    expect(forward).toHaveLength(COUNT)
+
+    // Тот же обход в обратную сторону обязан дать ту же последовательность.
+    const b2 = await getNotificationsPage(userId, PER, decodeCursor(p3.prev), 'before')
+    const b1 = await getNotificationsPage(userId, PER, decodeCursor(b2.prev), 'before')
+    expect([...b1.items, ...b2.items, ...p3.items].map((n) => n.id)).toEqual(forward)
+  })
+
+  it('«назад» без курсора не открывает ленту с конца', async () => {
+    // Порядок шага вверх — по возрастанию. Без условия он отдал бы САМЫЕ СТАРЫЕ строки,
+    // то есть лента открывалась бы с хвоста; направление без курсора обязано игнорироваться.
+    await resetTables([notifications])
+    await seed(0, COUNT)
+    const start = await getNotificationsPage(userId, PER)
+    const bogus = await getNotificationsPage(userId, PER, null, 'before')
+    expect(bogus.items.map((n) => n.id)).toEqual(start.items.map((n) => n.id))
+  })
+
   it('KEYSET ЭТОГО НЕ ДАЁТ: та же вставка сверху не сдвигает выдачу', async () => {
     await resetTables([notifications])
     await seed(0, COUNT)

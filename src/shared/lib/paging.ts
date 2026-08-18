@@ -206,6 +206,17 @@ export function pageNumbers(page: number, totalPages: number, around = 1): (numb
 
 /** Имя параметра курсора в адресе. Одно на сайт — как PAGE_PARAM. */
 export const AFTER_PARAM = 'after'
+/** Зеркальный шаг: «строки ПЕРЕД вот этой». Им и живёт «назад» у keyset. */
+export const BEFORE_PARAM = 'before'
+/** Все параметры курсора — чтобы шаг в одну сторону не тащил за собой другой (см. cursorHref). */
+const CURSOR_PARAMS = [AFTER_PARAM, BEFORE_PARAM]
+
+/**
+ * Направление шага. Не «сортировка», а именно шаг: `after` — вниз по ленте (к более
+ * старому), `before` — вверх (к более свежему). У обоих один и тот же порядок ПОКАЗА,
+ * свежие сверху; отличается лишь то, с какой стороны от курсора берутся строки.
+ */
+export type FeedDirection = 'after' | 'before'
 
 /**
  * Курсор — пара «значение ключа сортировки + id».
@@ -317,12 +328,15 @@ export function probeLimit(perPage = LISTS_PER_PAGE): number {
 export function cursorHref(
   pathname: string,
   params: URLSearchParams | Record<string, string | number | undefined | null>,
-  param = AFTER_PARAM,
+  param: FeedDirection = AFTER_PARAM,
 ): (cursor: string | null) => string {
   const qs = new URLSearchParams()
   const entries = params instanceof URLSearchParams ? [...params.entries()] : Object.entries(params)
   for (const [k, v] of entries) {
-    if (k === param || v === undefined || v === null || v === '') continue
+    // Выкидываются ОБА параметра курсора, а не только свой. Иначе шаг «назад» строился бы
+    // поверх оставшегося `?after=`, адрес получал бы оба сразу, и страница читала бы тот,
+    // что разбирает первым, — то есть шаг уводил бы не туда, куда написано на стрелке.
+    if (CURSOR_PARAMS.includes(k) || v === undefined || v === null || v === '') continue
     qs.set(k, String(v))
   }
   return (cursor: string | null) => {

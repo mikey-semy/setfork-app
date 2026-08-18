@@ -11,7 +11,7 @@ import { MarkRead } from '@/features/notifications/MarkRead'
 import { NOTIF_VERB } from '@/features/notifications/verbs'
 import { Pagination } from '@/shared/ui/Pagination'
 import { PAGE } from '@/shared/ui/control'
-import { cursorHref, decodeCursor, NOTIFICATIONS_PER_PAGE } from '@/shared/lib/paging'
+import { AFTER_PARAM, BEFORE_PARAM, cursorHref, decodeCursor, NOTIFICATIONS_PER_PAGE } from '@/shared/lib/paging'
 
 
 export async function generateMetadata() {
@@ -27,21 +27,28 @@ export async function generateMetadata() {
  * с границы либо пропадает, либо приходит дважды (см. shared/lib/paging, раздел keyset).
  * Прыжок на «страницу 7» ленте и не нужен: её читают сверху вниз.
  *
- * Шаг НАЗАД пока только из истории браузера: зеркальный `?before=` не сделан, поэтому в
- * листалке его нет вовсе, а не нарисован мёртвым.
+ * Шага два и они зеркальны: `?after=` ведёт вниз (к более старому), `?before=` — вверх.
+ * Разбираются в таком порядке, потому что одновременно их в адресе быть не может:
+ * `cursorHref` выкидывает оба и ставит ровно один.
  */
-export default async function NotificationsPage({ searchParams }: { searchParams: Promise<{ after?: string }> }) {
+export default async function NotificationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ after?: string; before?: string }>
+}) {
   const session = await requireSession()
   const sp = await searchParams
   // Мусорный курсор — это «показать сначала», а не пятисотка: ссылка могла обломаться в
   // письме или мессенджере, и человеку нужна лента, а не ошибка.
-  const cursor = decodeCursor(sp.after)
+  const back = decodeCursor(sp.before)
+  const cursor = back ?? decodeCursor(sp.after)
   const [lang, page] = await Promise.all([
     getLang(),
-    getNotificationsPage(session.userId, NOTIFICATIONS_PER_PAGE, cursor),
+    getNotificationsPage(session.userId, NOTIFICATIONS_PER_PAGE, cursor, back ? 'before' : 'after'),
   ])
   const items = page.items
-  const stepHref = cursorHref('/notifications', sp)
+  const fwdHref = cursorHref('/notifications', sp, AFTER_PARAM)
+  const backHref = cursorHref('/notifications', sp, BEFORE_PARAM)
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' })
 
   return (
@@ -93,9 +100,11 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           })}
         </div>
       )}
-      {/* Номеров у keyset нет вовсе — только шаги, и каждый живёт, пока есть адрес.
-          «Назад» появится вместе с зеркальным `?before=`. */}
-      <Pagination lang={lang} steps={{ prev: null, next: page.next ? stepHref(page.next) : null }} />
+      {/* Номеров у keyset нет вовсе — только два шага, и каждый живёт, пока есть адрес. */}
+      <Pagination
+        lang={lang}
+        steps={{ prev: page.prev ? backHref(page.prev) : null, next: page.next ? fwdHref(page.next) : null }}
+      />
     </div>
   )
 }

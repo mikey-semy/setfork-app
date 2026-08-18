@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AFTER_PARAM,
+  BEFORE_PARAM,
   cursorHref,
   decodeCursor,
   encodeCursor,
@@ -318,6 +320,14 @@ describe('keyset: курсор', () => {
     it('у начала ленты адрес ровно один — без параметра', () => {
       expect(cursorHref('/notifications', { after: 'что-то' })(null)).toBe('/notifications')
       expect(cursorHref('/notifications', {})(null)).toBe('/notifications')
+    })
+
+    it('шаг не тащит за собой встречный параметр', () => {
+      // Иначе «назад» строился бы поверх оставшегося `?after=`, в адресе оказывались бы
+      // оба, и страница пошла бы по тому, что разбирает первым, — то есть не туда, куда
+      // написано на стрелке.
+      expect(cursorHref('/n', { after: 'вниз' }, BEFORE_PARAM)('вверх')).toBe('/n?before=%D0%B2%D0%B2%D0%B5%D1%80%D1%85')
+      expect(cursorHref('/n', { before: 'вверх' }, AFTER_PARAM)('вниз')).toBe('/n?after=%D0%B2%D0%BD%D0%B8%D0%B7')
     })
   })
 })
