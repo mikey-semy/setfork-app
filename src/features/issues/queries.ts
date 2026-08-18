@@ -1,6 +1,8 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, issueAssignees, issueComments, issues, listLabels, milestones, users } from '@/shared/db'
+import { cursorKey, keysetStep } from '@/shared/db/keyset'
+import { encodeCursor, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 import type { CustomLabel } from '@/shared/lib/labels'
 
@@ -196,19 +198,86 @@ export async function getIssue(templateId: string, number: number): Promise<Issu
   return { ...row, authorAvatarUrl: await avatarSrc(row.authorAvatarUrl, 64) }
 }
 
-export async function getIssueComments(issueId: string): Promise<IssueComment[]> {
+/**
+ * УЧАСТНИКИ ТРЕДА — для подсказки @mention.
+ *
+ * Отдельным запросом, а не из показанных реплик: с тех пор как тред листается, «все
+ * комментаторы» и «комментаторы этой порции» — разные множества, и picker на второй
+ * порции забыл бы половину людей. Список участников от порции зависеть не должен.
+ *
+ * Предел здесь — не пагинация, а здравый смысл: подсказка под курсором не показывает
+ * сотни людей, а различных участников у треда столько и не бывает.
+ */
+export async function getIssueParticipants(issueId: string): Promise<{ handle: string; avatarUrl: string | null }[]> {
+  const rows = await db
+    .selectDistinct({ handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(issueComments)
+    .innerJoin(users, eq(issueComments.authorId, users.id))
+    .where(eq(issueComments.issueId, issueId))
+    .orderBy(asc(users.handle))
+    .limit(100)
+  return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+}
+
+/**
+ * ПОРЦИЯ ТРЕДА — листается ключом, как и лента уведомлений, но порядок ПОКАЗА обратный.
+ *
+ * Тред читают с начала и дописывают в конец, поэтому `order: 'asc'`, и «дальше» здесь
+ * значит «в будущее», а не «в прошлое». Путать это с лентой нельзя: с порядком ленты
+ * шаг «дальше» открывал бы тред с конца.
+ *
+ * Почему вообще ключом, если у треда вставка идёт в ХВОСТ и смещение от неё не едет.
+ * Едет от УДАЛЕНИЯ: снятый модерацией или убранный автором комментарий сдвигает всё,
+ * что ниже, на одну строку вверх — и следующая порция начинается не с той строки,
+ * теряя ровно одну. Вставка сверху для треда редкость, удаление — нет.
+ *
+ * Раньше тред отдавался ЦЕЛИКОМ, без предела вовсе: у обсуждения на тысячу реплик
+ * страница поднимала тысячу строк с аватарами, чтобы показать экран.
+ */
+export async function getIssueCommentsPage(
+  issueId: string,
+  perPage: number,
+  cursor: Cursor | null = null,
+  dir: FeedDirection = 'after',
+): Promise<{ items: IssueComment[]; next: string | null; prev: string | null }> {
+  // Без курсора шага назад не существует: «перед началом» — не место. Иначе скан против
+  // показа без условия открыл бы тред с ПОСЛЕДНЕЙ реплики.
+  const back = dir === 'before' && cursor !== null
+  const step = keysetStep(issueComments.createdAt, issueComments.id, cursor, {
+    order: 'asc',
+    dir: back ? 'before' : 'after',
+  })
   const rows = await db
     .select({
       id: issueComments.id,
       body: issueComments.body,
       createdAt: issueComments.createdAt,
+      // Ключ курсора ТЕКСТОМ: типизированная колонка приезжает без микросекунд, и курсор
+      // из неё пропускал бы реплики (см. shared/db/keyset).
+      cursorKey: cursorKey(issueComments.createdAt),
       authorId: issueComments.authorId,
       authorHandle: users.handle,
       authorAvatarUrl: users.avatarUrl,
     })
     .from(issueComments)
     .innerJoin(users, eq(issueComments.authorId, users.id))
-    .where(eq(issueComments.issueId, issueId))
-    .orderBy(asc(issueComments.createdAt))
-  return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
+    .where(and(eq(issueComments.issueId, issueId), step.where))
+    .orderBy(...step.order)
+    .limit(probeLimit(perPage))
+
+  // Отсекаем лишнюю строку разведчика ДО разворота: развернуть раньше — отрезать не тот
+  // конец, то есть потерять ближайшую к читателю реплику.
+  const { items: taken, hasNext: more } = takePage(rows, perPage)
+  const shown = step.reverse ? [...taken].reverse() : taken
+  const at = (row: (typeof shown)[number] | undefined): string | null =>
+    row ? encodeCursor({ key: row.cursorKey, id: row.id }) : null
+  return {
+    items: await Promise.all(
+      shown.map(async ({ cursorKey: _k, ...r }) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })),
+    ),
+    // Разведчик знает только про ту сторону, в которую шагнули; про другую известно из
+    // того, что мы оттуда пришли.
+    next: back ? at(shown[shown.length - 1]) : more ? at(shown[shown.length - 1]) : null,
+    prev: back ? (more ? at(shown[0]) : null) : cursor ? at(shown[0]) : null,
+  }
 }

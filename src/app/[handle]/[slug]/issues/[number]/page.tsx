@@ -8,7 +8,7 @@ import { Button } from '@/shared/ui/button'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { requireViewableMeta } from '@/features/library/guard'
-import { getIssue, getIssueAssignees, getIssueComments, getListLabels } from '@/features/issues/queries'
+import { getIssue, getIssueAssignees, getIssueCommentsPage, getIssueParticipants, getListLabels } from '@/features/issues/queries'
 import { LabelEditor } from '@/features/issues/LabelEditor'
 import { AssigneePicker } from '@/features/issues/AssigneePicker'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
@@ -21,6 +21,8 @@ import { CommentCard } from '@/features/collab/CommentCard'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
 import { cardClass } from '@/shared/ui/card-style'
+import { Pagination } from '@/shared/ui/Pagination'
+import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, decodeCursor } from '@/shared/lib/paging'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
   const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
@@ -29,10 +31,13 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
 
 export default async function IssueThreadPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ handle: string; slug: string; number: string }>
+  searchParams: Promise<{ after?: string; before?: string }>
 }) {
   const { handle: owner, slug, number: numStr } = await params
+  const sp = await searchParams
   const number = Number(numStr)
   const [lang, session, meta] = await Promise.all([getLang(), getSession(), requireViewableMeta(owner, slug)])
   if (!meta) notFound()
@@ -41,14 +46,23 @@ export default async function IssueThreadPage({
   if (!isFeatureEnabled(meta, 'issues')) notFound() // раздел выключен (Settings → Features)
   const issue = number > 0 ? await getIssue(meta.id, number) : null
   if (!issue) notFound()
-  const comments = await getIssueComments(issue.id)
+  // Тред листается ключом, а не отдаётся целиком: у обсуждения на тысячу реплик страница
+  // поднимала тысячу строк с аватарами, чтобы показать экран. Мусорный курсор — «показать
+  // сначала», а не пятисотка.
+  const back = decodeCursor(sp.before)
+  const cursor = back ?? decodeCursor(sp.after)
+  const thread = await getIssueCommentsPage(issue.id, COMMENTS_PER_PAGE, cursor, back ? 'before' : 'after')
+  const comments = thread.items
   const path = `/${owner}/${slug}/issues/${issue.number}`
-  const [issueR, cmtR, assignees, milestoneOpts, custom] = await Promise.all([
+  const [issueR, cmtR, assignees, milestoneOpts, custom, participants] = await Promise.all([
     getReactionsFor('issue', [issue.id], session?.userId),
     getReactionsFor('issue_comment', comments.map((c) => c.id), session?.userId),
     getIssueAssignees(issue.id),
     getMilestonesForPicker(meta.id),
     getListLabels(meta.id),
+    // Участники — по всему треду, а не по показанной порции: иначе на второй порции
+    // подсказка @mention забывала бы половину людей.
+    getIssueParticipants(issue.id),
   ])
 
   const isOwner = session?.userId === meta.ownerId
@@ -59,7 +73,7 @@ export default async function IssueThreadPage({
   const issuePeople = [
     { handle: issue.authorHandle, avatarUrl: issue.authorAvatarUrl },
     ...assignees.map((a) => ({ handle: a.handle, avatarUrl: a.avatarUrl })),
-    ...comments.map((c) => ({ handle: c.authorHandle, avatarUrl: c.authorAvatarUrl })),
+    ...participants,
   ].filter((p) => p.handle && !seenPeople.has(p.handle) && seenPeople.add(p.handle))
   const isAuthor = session?.userId === issue.authorId
   const canToggle = isOwner || isAuthor
@@ -133,6 +147,16 @@ export default async function IssueThreadPage({
             />
           ))}
         </div>
+
+        {/* Шаги треда. Номеров нет: порядок показа обратный ленте, но механика та же —
+            «дальше» ведёт к более поздним репликам. */}
+        <Pagination
+          lang={lang}
+          steps={{
+            prev: thread.prev ? cursorHref(path, sp, BEFORE_PARAM)(thread.prev) : null,
+            next: thread.next ? cursorHref(path, sp, AFTER_PARAM)(thread.next) : null,
+          }}
+        />
 
         {/* Форма ответа */}
         {session ? (

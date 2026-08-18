@@ -73,7 +73,8 @@ async function visibleNotifications(
   cursor: Cursor | null = null,
   dir: FeedDirection = 'after',
 ) {
-  const step = keysetStep(notifications.createdAt, notifications.id, cursor, dir)
+  // Порядок показа — свежее сверху; направление шага задаёт вызывающий.
+  const step = keysetStep(notifications.createdAt, notifications.id, cursor, { order: 'desc', dir })
   const actor = alias(users, 'actor')
   const owner = alias(users, 'owner')
   const rows = await db
