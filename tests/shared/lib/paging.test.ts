@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { feedWindow, LISTS_PER_PAGE, MAX_PAGE, pageCount, pageFromParam, pageHref, pageNumbers, pageWindow, probeWindow, takePage } from '@/shared/lib/paging'
+import {
+  cursorHref,
+  decodeCursor,
+  encodeCursor,
+  feedWindow,
+  LISTS_PER_PAGE,
+  MAX_PAGE,
+  pageCount,
+  pageFromParam,
+  pageHref,
+  pageNumbers,
+  pageWindow,
+  probeLimit,
+  probeWindow,
+  takePage,
+} from '@/shared/lib/paging'
 
 // Арифметика страниц выглядит очевидной ровно до первой ошибки в ней: смещение на единицу
 // тихо теряет двадцатый список или показывает его дважды, и заметить это можно только
@@ -237,5 +252,72 @@ describe('потолок номера страницы', () => {
       expect(Number.isSafeInteger(w.offset)).toBe(true)
       expect(() => feedWindow(w)).not.toThrow()
     }
+  })
+})
+
+describe('keyset: курсор', () => {
+  const KEY = '2026-08-18 19:02:03.092835+00'
+  const ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
+
+  it('кодирование обратимо и полную точность ключа не теряет', () => {
+    const c = decodeCursor(encodeCursor({ key: KEY, id: ID }))
+    expect(c).toEqual({ key: KEY, id: ID })
+    // Микросекунды — не украшение: на них и держится вся правильность keyset.
+    expect(c!.key).toContain('.092835')
+  })
+
+  it('в адрес попадает без символов, которые там значат другое', () => {
+    const raw = encodeCursor({ key: KEY, id: ID })
+    expect(raw).not.toMatch(/[+/=:&?#]/)
+    expect(encodeURIComponent(raw)).toBe(raw)
+  })
+
+  it('мусор — это «показать сначала», а не падение', () => {
+    const bads = [undefined, null, '', 'not-base64!!', btoa('no-separator'), btoa(`${KEY}~not-a-uuid`), btoa(`not-a-date~${ID}`)]
+    for (const bad of bads) expect(decodeCursor(bad as string | undefined)).toBeNull()
+  })
+
+  it('ключ не-ASCII — громкая ошибка программиста, а не поломка в браузере', () => {
+    // btoa умеет только Latin-1. Ключи keyset — метки времени и uuid, но если ключом
+    // однажды сделают текст, узнать об этом надо здесь, а не посреди листания.
+    expect(() => encodeCursor({ key: 'ключ', id: ID })).toThrow(TypeError)
+  })
+
+  it('ключ проверяется строго: в SQL уходит только форма timestamptz', () => {
+    // Дальше ключ идёт в `::timestamptz`. Пропустить туда что угодно — значит менять
+    // «покажем сначала» на пятисотку по ссылке из чужого письма.
+    for (const bad of ['2026-08-18', 'now()', "2026-08-18 19:02:03.092835+00'; drop table", '2026-13-99 99:99:99+00 ']) {
+      expect(decodeCursor(btoa(`${bad}~${ID}`))).toBeNull()
+    }
+    expect(decodeCursor(btoa(`2026-08-18 19:02:03+00~${ID}`))).toEqual({ key: '2026-08-18 19:02:03+00', id: ID })
+  })
+
+  it('второй разделитель — признак подделки, а не опечатки', () => {
+    expect(decodeCursor(btoa(`${KEY}~${ID}~${ID}`))).toBeNull()
+  })
+
+  it('длина курсора ограничена: адрес приходит от кого угодно', () => {
+    expect(decodeCursor('a'.repeat(513))).toBeNull()
+  })
+
+  it('разведчик берёт на строку больше показанного', () => {
+    expect(probeLimit(20)).toBe(21)
+    expect(takePage(Array.from({ length: 21 }, (_, i) => i), 20)).toEqual({
+      items: Array.from({ length: 20 }, (_, i) => i),
+      hasNext: true,
+    })
+    expect(takePage(Array.from({ length: 20 }, (_, i) => i), 20).hasNext).toBe(false)
+  })
+
+  describe('cursorHref', () => {
+    it('переносит остальные параметры и меняет ровно курсор', () => {
+      const href = cursorHref('/notifications', { unread: '1', after: 'старый' })
+      expect(href('новый')).toBe('/notifications?unread=1&after=%D0%BD%D0%BE%D0%B2%D1%8B%D0%B9')
+    })
+
+    it('у начала ленты адрес ровно один — без параметра', () => {
+      expect(cursorHref('/notifications', { after: 'что-то' })(null)).toBe('/notifications')
+      expect(cursorHref('/notifications', {})(null)).toBe('/notifications')
+    })
   })
 })
