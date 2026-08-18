@@ -169,7 +169,15 @@ export async function semanticFeed(
     .innerJoin(templates, eq(embeddings.refId, templates.id))
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(...filters))
-    .orderBy(desc(similarity))
+    // `asc(id)` в хвосте — по той же причине, что в keywordFeed, и здесь она острее.
+    // Одинаковая близость — не редкость, а норма: у повторной заливки того же текста
+    // эмбеддинг совпадает БИТ В БИТ, то есть distance равен точно. На равных ключах
+    // порядок произволен, и рвётся не только он: `limit` отрезает выдачу по этому же
+    // порядку, поэтому на границе отсечки произволен и САМ СОСТАВ — от запроса к запросу
+    // в хвост попадает то одна строка, то другая. Склеенная выдача поиска режется на
+    // страницы уже в памяти (getFeed), так что её страницы наследуют этот произвол
+    // целиком: строка показывается дважды или не показывается ни разу.
+    .orderBy(desc(similarity), asc(templates.id))
     .limit(limit)
   return rows as FeedItem[]
 }
