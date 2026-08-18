@@ -1,9 +1,11 @@
 import 'server-only'
-import { and, desc, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { canViewList } from '@/core'
 import { collaborators, db, issues, notifications, templates, users } from '@/shared/db'
+import { afterCursor, cursorKey, keysetOrder } from '@/shared/db/keyset'
 import type { LocaleText } from '@/shared/i18n'
+import { encodeCursor, probeLimit, takePage, type Cursor } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
 export type NotificationType =
@@ -65,7 +67,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
  *  ради единого предиката доступа. */
 const UNREAD_SCAN_LIMIT = 500
 
-async function visibleNotifications(userId: string, limit: number) {
+async function visibleNotifications(userId: string, limit: number, cursor: Cursor | null = null) {
   const actor = alias(users, 'actor')
   const owner = alias(users, 'owner')
   const rows = await db
@@ -74,6 +76,9 @@ async function visibleNotifications(userId: string, limit: number) {
       type: notifications.type,
       read: notifications.read,
       createdAt: notifications.createdAt,
+      // Ключ курсора — ТЕКСТОМ из базы. Из `createdAt` его строить нельзя: drizzle
+      // отдаёт колонку JS-датой, то есть без микросекунд (см. shared/db/keyset).
+      cursorKey: cursorKey(notifications.createdAt),
       actorHandle: actor.handle,
       actorAvatarUrl: actor.avatarUrl,
       ownerHandle: owner.handle,
@@ -92,8 +97,12 @@ async function visibleNotifications(userId: string, limit: number) {
     .leftJoin(templates, eq(notifications.templateId, templates.id))
     .leftJoin(owner, eq(owner.id, templates.ownerId))
     .leftJoin(issues, eq(notifications.issueId, issues.id))
-    .where(eq(notifications.recipientId, userId))
-    .orderBy(desc(notifications.createdAt))
+    .where(and(eq(notifications.recipientId, userId), afterCursor(notifications.createdAt, notifications.id, cursor)))
+    // Порядок доопределён до `id`, и оба ключа вниз — этого требует кортежное сравнение
+    // курсора (см. keysetOrder). Раньше здесь стоял один `createdAt desc`: у пачки
+    // уведомлений, созданных одной операцией, время совпадает, и порядок между ними
+    // был произволен.
+    .orderBy(...keysetOrder(notifications.createdAt, notifications.id))
     .limit(limit)
 
   // Соредакторство спрашиваем ОДНИМ запросом на всю ленту: приватный список виден и тем,
@@ -133,12 +142,52 @@ async function visibleNotifications(userId: string, limit: number) {
  * факт «в этом списке что-то произошло» тоже часть приватного.
  */
 export async function getNotifications(userId: string, limit = 50): Promise<NotificationItem[]> {
-  const rows = await visibleNotifications(userId, limit)
-  return Promise.all(
-    rows.map(async ({ templateId: _t, listOwnerId: _o, visibility: _v, status: _s, moderation: _m, ...r }) => ({
-      ...r,
-      actorAvatarUrl: await avatarSrc(r.actorAvatarUrl, 64),
-    })),
+  return toItems(await visibleNotifications(userId, limit))
+}
+
+type RawNotification = Awaited<ReturnType<typeof visibleNotifications>>[number]
+
+const toItems = (rows: RawNotification[]): Promise<NotificationItem[]> =>
+  Promise.all(
+    rows.map(
+      async ({ templateId: _t, listOwnerId: _o, visibility: _v, status: _s, moderation: _m, cursorKey: _k, ...r }) => ({
+        ...r,
+        actorAvatarUrl: await avatarSrc(r.actorAvatarUrl, 64),
+      }),
+    ),
   ) as Promise<NotificationItem[]>
+
+/**
+ * ПОРЦИЯ ЛЕНТЫ УВЕДОМЛЕНИЙ — листается КЛЮЧОМ, а не номером страницы.
+ *
+ * Уведомления прилетают сверху постоянно, и это тот самый случай, где смещение даёт не
+ * медленную выдачу, а неверную: пока читают вторую порцию, начало отсчёта уезжает вниз, и
+ * строка с границы либо пропадает, либо приходит дважды. Прыжок на «страницу 7» здесь и
+ * не нужен — ленту читают сверху вниз.
+ *
+ * `hasNext` и курсор считаются по СЫРЫМ строкам, до отсева видимости, и это осознанно.
+ * Видимость уведомления решает `canViewList` в приложении (предикат один на всё
+ * приложение; дублировать его в SQL — однажды с ним разойтись), поэтому порция может
+ * ПОКАЗАТЬ меньше строк, чем взяла. Считать «дальше есть» по показанным нельзя: у порции,
+ * где всё скрыто, лента оборвалась бы на середине, хотя ниже есть что читать.
+ *
+ * Плата за это — порции разной высоты. Убрать её можно только перенеся предикат доступа
+ * в SQL; это отдельное решение, а не побочный эффект перевода на keyset.
+ */
+export async function getNotificationsPage(
+  userId: string,
+  perPage: number,
+  cursor: Cursor | null = null,
+): Promise<{ items: NotificationItem[]; hasNext: boolean; next: string | null }> {
+  const raw = await visibleNotifications(userId, probeLimit(perPage), cursor)
+  const { items: shown, hasNext } = takePage(raw, perPage)
+  const last = shown[shown.length - 1]
+  return {
+    items: await toItems(shown),
+    hasNext,
+    // Курсор следующей порции — ключ ПОСЛЕДНЕЙ взятой строки, а не последней показанной:
+    // иначе скрытая строка на границе перечитывалась бы бесконечно.
+    next: hasNext && last ? encodeCursor({ key: last.cursorKey, id: last.id }) : null,
+  }
 }
 

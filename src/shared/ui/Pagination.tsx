@@ -15,10 +15,18 @@ import { t, type Lang } from '@/shared/i18n'
  * роли живут в одном коде — а разошлись бы они мгновенно: до этого листалка на дашборде
  * была отдельной вёрсткой и уже отличалась и размером, и поведением на краях.
  *
- * ДВА РЕЖИМА ПО ТОМУ, ЧТО ИЗВЕСТНО:
+ * ТРИ РЕЖИМА ПО ТОМУ, ЧТО ИЗВЕСТНО:
  *   `totalPages` — номера страниц (можно прыгнуть на последнюю);
  *   `hasNext`    — только «вперёд/назад», когда общее число не считали намеренно
- *                  (см. probeWindow: `count(*)` на каждый показ дороже самой выдачи).
+ *                  (см. probeWindow: `count(*)` на каждый показ дороже самой выдачи);
+ *   `steps`      — KEYSET: номера не существуют вовсе, шаги заданы готовыми адресами.
+ *
+ * Третий режим — не «ещё один вид», а следствие механики. На пополняемой ленте номер
+ * страницы НЕВЫРАЗИМ: смещение считается от начала выдачи, а начало уезжает вниз, пока
+ * ленту читают (см. shared/lib/paging, раздел keyset). Показывать там «страница 3»
+ * значило бы называть числом то, что числом не является. Поэтому у keyset-режима нет ни
+ * номеров, ни подписи «3 / 74» — только два шага, и каждый живёт ровно тогда, когда для
+ * него есть адрес.
  *
  * МОБИЛЬНЫЙ ВИД — НЕ УРЕЗАННЫЙ, А ДРУГОЙ. Номера страниц на 390px не помещаются (74
  * страницы — это 74 цели по 32px), поэтому там «‹ 6 / 74 ›» с крупными стрелками, а
@@ -27,8 +35,11 @@ import { t, type Lang } from '@/shared/i18n'
  * на каждой странице сайта.
  */
 
+/** Шаги keyset-режима: готовые адреса. `null` — шага нет (край ленты). */
+export type CursorSteps = { prev: string | null; next: string | null }
+
 type Common = {
-  page: number
+  page?: number
   lang: Lang
   /** Сколько всего страниц. Нет — листалка идёт по `hasNext` без номеров. */
   totalPages?: number
@@ -41,17 +52,28 @@ type Common = {
   className?: string
 }
 
-/** Ссылки (серверные страницы) ИЛИ кнопки (клиентские панели) — но не то и другое сразу. */
-type Props = Common & ({ makeHref: (page: number) => string; onPage?: never } | { onPage: (page: number) => void; makeHref?: never })
+/**
+ * Ссылки (серверные страницы) ИЛИ кнопки (клиентские панели) — но не то и другое сразу.
+ * Третьим вариантом — keyset: готовые адреса шагов, и тогда номера запрещены типом, а не
+ * договорённостью (`page?: never`): передать номер туда, где его не существует, нельзя.
+ */
+type Props = Common &
+  (
+    | { page: number; makeHref: (page: number) => string; onPage?: never; steps?: never }
+    | { page: number; onPage: (page: number) => void; makeHref?: never; steps?: never }
+    | { steps: CursorSteps; page?: never; makeHref?: never; onPage?: never }
+  )
 
-export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPage, lang, busy = false, compact = false, className }: Props) {
+export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPage, steps, lang, busy = false, compact = false, className }: Props) {
   const last = totalPages ?? 0
   // Номер приводим к существующему ЗДЕСЬ, а не надеемся на вызывающего: с номером за
   // краем оба шага оказывались мёртвыми, и ряд превращался в тупик. Вызывающие его и так
   // приводят, но чинить это в каждом — то самое расползание, от которого уходили.
-  const page = totalPages !== undefined ? Math.min(Math.max(1, rawPage), Math.max(1, last)) : Math.max(1, rawPage)
-  const canPrev = page > 1
-  const canNext = totalPages !== undefined ? page < last : Boolean(hasNext)
+  const raw = rawPage ?? 1
+  const page = totalPages !== undefined ? Math.min(Math.max(1, raw), Math.max(1, last)) : Math.max(1, raw)
+  // У keyset края заданы не номером, а наличием адреса: нет адреса — нет шага.
+  const canPrev = steps ? Boolean(steps.prev) : page > 1
+  const canNext = steps ? Boolean(steps.next) : totalPages !== undefined ? page < last : Boolean(hasNext)
   // Листать некуда — листалки нет. Пустое место под ней читается как «дальше что-то есть».
   if (!canPrev && !canNext) return null
 
@@ -159,6 +181,37 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
       {side === 'r' && icon}
     </>
   )
+  if (steps) {
+    // Шаг keyset: адрес есть — ссылка, нет — НИЧЕГО.
+    //
+    // Здесь мы намеренно расходимся с номерным режимом, где край рисуется погашенным.
+    // Там погашенная стрелка временна: шагнул — и она ожила, а держат её ради постоянной
+    // ширины ряда с номерами. У keyset ни номеров, ни ряда нет, и отсутствующий шаг
+    // отсутствует НАСОВСЕМ, пока читатель не уйдёт вперёд. Вечно мёртвый значок — это
+    // обещание действия, которого не будет.
+    const cursorStep = (href: string | null, label: string, body: React.ReactNode, rel: 'prev' | 'next') =>
+      href ? (
+        <Link key={label} href={href} rel={rel} aria-label={label} className={cn(box, idle)}>
+          {body}
+        </Link>
+      ) : null
+    return (
+      <nav
+        className={cn('mt-4 flex items-center justify-center gap-1 tabular-nums pointer-coarse:gap-2', className)}
+        aria-label={t('paginationLabel', lang)}
+      >
+        {/* Объявляем ТОЛЬКО загрузку. Номера страницы здесь нет, и выдумывать его для
+            скринридера нельзя: «страница 3» на ленте, у которой начало уезжает, — это
+            неверные сведения, а не удобство. */}
+        <span className="sr-only" aria-live="polite">
+          {busy ? t('loadingMore', lang) : ''}
+        </span>
+        {cursorStep(steps.prev, t('prevPage', lang), arrow(<ChevronLeft size={14} />, t('prevPageShort', lang), 'l'), 'prev')}
+        {cursorStep(steps.next, t('nextPage', lang), arrow(<ChevronRight size={14} />, t('nextPageShort', lang), 'r'), 'next')}
+      </nav>
+    )
+  }
+
   const prev = step(page - 1, t('prevPage', lang), arrow(<ChevronLeft size={14} />, t('prevPageShort', lang), 'l'), false, 'prev')
   const next = step(page + 1, t('nextPage', lang), arrow(<ChevronRight size={14} />, t('nextPageShort', lang), 'r'), false, 'next')
   // «6 / 74» — узкая форма; без общего числа честнее показать один номер, чем выдумать M.

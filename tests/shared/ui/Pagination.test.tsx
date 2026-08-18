@@ -161,3 +161,36 @@ describe('Pagination', () => {
     })
   })
 })
+
+describe('Pagination: режим keyset (курсор)', () => {
+  it('оба шага есть → две ссылки и НИ ОДНОГО номера', () => {
+    render(<Pagination steps={{ prev: '/n?before=a', next: '/n?after=b' }} lang="en" />)
+    expect(screen.getByRole('link', { name: /previous/i })).toHaveAttribute('href', '/n?before=a')
+    expect(screen.getByRole('link', { name: /next/i })).toHaveAttribute('href', '/n?after=b')
+    // Номер страницы на пополняемой ленте невыразим, и выдумывать его нельзя.
+    expect(screen.queryByText(/\d+\s*\/\s*\d+/)).toBeNull()
+    expect(screen.queryByText('1')).toBeNull()
+  })
+
+  it('шага нет → его нет и в разметке: вечно мёртвая стрелка обещает несуществующее действие', () => {
+    const { container } = render(<Pagination steps={{ prev: null, next: '/n?after=b' }} lang="en" />)
+    expect(screen.getByRole('link', { name: /next/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /previous/i })).toBeNull()
+    // Именно НЕТ, а не погашенный край: в номерном режиме край временный и оживёт,
+    // здесь — нет, пока не появится зеркальный `?before=`. Ищем прямого потомка nav:
+    // `aria-hidden` есть и у подписи ВНУТРИ живой ссылки, и она тут ни при чём.
+    expect(container.querySelectorAll('nav > span[aria-hidden]')).toHaveLength(0)
+  })
+
+  it('шагать некуда → листалки нет вовсе', () => {
+    const { container } = render(<Pagination steps={{ prev: null, next: null }} lang="en" />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('загрузка объявляется, а номер страницы — нет', () => {
+    render(<Pagination steps={{ prev: null, next: '/n?after=b' }} busy lang="en" />)
+    const live = document.querySelector('[aria-live="polite"]')
+    expect(live).toBeInTheDocument()
+    expect(live).not.toHaveTextContent(/page\s*\d/i)
+  })
+})

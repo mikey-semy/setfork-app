@@ -6,10 +6,12 @@ import { t, tr, type TKey } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
-import { getNotifications, type NotificationItem } from '@/features/notifications/queries'
+import { getNotificationsPage, type NotificationItem } from '@/features/notifications/queries'
 import { MarkRead } from '@/features/notifications/MarkRead'
 import { NOTIF_VERB } from '@/features/notifications/verbs'
+import { Pagination } from '@/shared/ui/Pagination'
 import { PAGE } from '@/shared/ui/control'
+import { cursorHref, decodeCursor, NOTIFICATIONS_PER_PAGE } from '@/shared/lib/paging'
 
 
 export async function generateMetadata() {
@@ -17,9 +19,29 @@ export async function generateMetadata() {
   return { title: t('notifications', lang) }
 }
 
-export default async function NotificationsPage() {
+/**
+ * Лента уведомлений листается КЛЮЧОМ, а не номером страницы.
+ *
+ * Уведомления прилетают сверху постоянно, и номер здесь не просто неудобен — он неверен:
+ * смещение считается от начала выдачи, а начало уезжает вниз, пока ленту читают, и строка
+ * с границы либо пропадает, либо приходит дважды (см. shared/lib/paging, раздел keyset).
+ * Прыжок на «страницу 7» ленте и не нужен: её читают сверху вниз.
+ *
+ * Шаг НАЗАД пока только из истории браузера: зеркальный `?before=` не сделан, поэтому в
+ * листалке его нет вовсе, а не нарисован мёртвым.
+ */
+export default async function NotificationsPage({ searchParams }: { searchParams: Promise<{ after?: string }> }) {
   const session = await requireSession()
-  const [lang, items] = await Promise.all([getLang(), getNotifications(session.userId)])
+  const sp = await searchParams
+  // Мусорный курсор — это «показать сначала», а не пятисотка: ссылка могла обломаться в
+  // письме или мессенджере, и человеку нужна лента, а не ошибка.
+  const cursor = decodeCursor(sp.after)
+  const [lang, page] = await Promise.all([
+    getLang(),
+    getNotificationsPage(session.userId, NOTIFICATIONS_PER_PAGE, cursor),
+  ])
+  const items = page.items
+  const stepHref = cursorHref('/notifications', sp)
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' })
 
   return (
@@ -71,6 +93,9 @@ export default async function NotificationsPage() {
           })}
         </div>
       )}
+      {/* Номеров у keyset нет вовсе — только шаги, и каждый живёт, пока есть адрес.
+          «Назад» появится вместе с зеркальным `?before=`. */}
+      <Pagination lang={lang} steps={{ prev: null, next: page.next ? stepHref(page.next) : null }} />
     </div>
   )
 }
