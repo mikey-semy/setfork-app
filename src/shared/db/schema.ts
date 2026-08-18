@@ -371,13 +371,28 @@ export const templates = pgTable(
     ownerFork: uniqueIndex('templates_owner_fork_uq').on(t.ownerId, t.forkedFromId),
     // Публичная лента: сорт по updatedAt / starsCount под фильтром видимости —
     // частичные индексы точно под visibleFilter (published+public+active).
+    //
+    // `.nullsFirst()` — НЕ косметика, а условие того, что индекс вообще работает.
+    // `ORDER BY x DESC` в SQL значит `DESC NULLS FIRST`, а `.desc()` у drizzle строит
+    // индекс `DESC NULLS LAST`. Порядки разные, и планировщик такой индекс для сортировки
+    // взять не может — даже когда колонка NOT NULL и разницы физически нет. Замер на
+    // 20 000 строк: с NULLS LAST здесь стоял `Seq Scan` + `top-N heapsort` по всему
+    // корпусу, с NULLS FIRST — `Index Scan` на 20 строк. То есть частичный индекс,
+    // заведённый ровно под этот запрос, лежал мёртвым.
     pubUpdated: index('templates_pub_updated_idx')
-      .on(t.updatedAt.desc())
+      .on(t.updatedAt.desc().nullsFirst())
       .where(sql`status = 'published' and visibility = 'public' and moderation = 'active'`),
     pubStars: index('templates_pub_stars_idx')
-      .on(t.starsCount.desc())
+      .on(t.starsCount.desc().nullsFirst())
       .where(sql`status = 'published' and visibility = 'public' and moderation = 'active'`),
-    ownerUpdated: index('templates_owner_updated_idx').on(t.ownerId, t.updatedAt.desc()), // списки профиля
+    // Списки профиля («мои списки», панель главной, вкладка профиля). Третья колонка —
+    // не украшение: порядок этих выдач доопределён до `id` (feed.ts, profile-lists.ts),
+    // и без `id` в индексе база берёт индексный скан по первым двум колонкам, а равные
+    // `updated_at` дорешивает Incremental Sort — то есть сортировкой в рантайме на
+    // каждой странице. С `id` в индексе порядок выдаётся индексом целиком.
+    // Отдельным индексом это не заводится: `(owner_id, updated_at desc)` — префикс
+    // этого, и старый был бы чистым дублем, за который платят все записи в таблицу.
+    ownerUpdated: index('templates_owner_updated_idx').on(t.ownerId, t.updatedAt.desc().nullsFirst(), t.id),
     repository: index('templates_repository_idx').on(t.repositoryId), // списки каталога
   }),
 )
@@ -608,7 +623,9 @@ export const stars = pgTable(
   (t) => ({
     userTpl: uniqueIndex('stars_user_tpl').on(t.userId, t.templateId),
     tpl: index('stars_tpl_idx').on(t.templateId),
-    userCreated: index('stars_user_created_idx').on(t.userId, t.createdAt.desc()), // вкладка «starred» профиля
+    // Вкладка «starred» профиля. `.nullsFirst()` — из того же соображения, что у
+    // templates_pub_updated_idx: иначе порядок индекса не совпадает с `ORDER BY … DESC`.
+    userCreated: index('stars_user_created_idx').on(t.userId, t.createdAt.desc().nullsFirst()),
   }),
 )
 
@@ -876,8 +893,10 @@ export const agentActions = pgTable(
     idempotencyKey: text('idempotency_key'),
   },
   (t) => [
-    index('agent_actions_loop_idx').on(t.loop, t.occurredAt.desc()),
-    index('agent_actions_agent_idx').on(t.agentId, t.occurredAt.desc()),
+    // `.nullsFirst()` — см. templates_pub_updated_idx: без него порядок индекса
+    // расходится с `ORDER BY occurred_at DESC` и для сортировки не годится.
+    index('agent_actions_loop_idx').on(t.loop, t.occurredAt.desc().nullsFirst()),
+    index('agent_actions_agent_idx').on(t.agentId, t.occurredAt.desc().nullsFirst()),
     uniqueIndex('agent_actions_idem_idx').on(t.idempotencyKey),
   ],
 )
@@ -2350,7 +2369,8 @@ export const notifications = pgTable(
   },
   (t) => [
     index('notifications_recipient_idx').on(t.recipientId, t.read),
-    index('notifications_recipient_created_idx').on(t.recipientId, t.createdAt.desc()), // колокол: последние N
+    // Колокол: последние N. `.nullsFirst()` — см. templates_pub_updated_idx.
+    index('notifications_recipient_created_idx').on(t.recipientId, t.createdAt.desc().nullsFirst()),
   ],
 )
 
