@@ -18,6 +18,7 @@ import { SuggestionTimeline } from '@/features/library/SuggestionTimeline'
 import type { ReactNode } from 'react'
 import type { loadSuggestionPage } from './load'
 import { cardClass } from '@/shared/ui/card-style'
+import { Pagination } from '@/shared/ui/Pagination'
 
 /**
  * Вкладка обсуждения: заметка правки, разговор, ревью, слияние и история действий.
@@ -44,7 +45,7 @@ export function SuggestionConversation({
   /** Панель ревью приходит готовой: она нужна и здесь, и под диффом. */
   reviewPanel: ReactNode
 }) {
-  const { sug, path, comments, cmtR, sugR, canMerge, isOwner, meta, items, prs, blockReasons, timeline, sugPeople, threeWay, hasConflicts, branchBehind, branchMissing, isDraft } = data
+  const { sug, path, comments, threadSteps, cmtR, sugR, canMerge, isOwner, meta, items, prs, blockReasons, timeline, sugPeople, threeWay, hasConflicts, branchBehind, branchMissing, isDraft } = data
   return (
     <>
         {/* Заметка правки — первое сообщение обсуждения (как тело PR у GitHub), а
@@ -115,6 +116,8 @@ export function SuggestionConversation({
             ))}
           </div>
         )}
+        {/* Шаги треда — номеров нет, порядок показа от старого к новому. */}
+        <Pagination lang={lang} steps={threadSteps} />
 
         {/* Блок слияния — там же, где обсуждение: решение принимают, прочитав
             разговор. Предупреждение про устаревшую базу и резолвер конфликтов

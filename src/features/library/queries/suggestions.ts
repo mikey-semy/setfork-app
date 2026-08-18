@@ -1,6 +1,8 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm'
 import { db, issues, milestones, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, suggestionViewed, templates, users } from '@/shared/db'
+import { cursorKey, keysetStep } from '@/shared/db/keyset'
+import { encodeCursor, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
 export type SuggestionFilter = 'open' | 'closed'
@@ -161,21 +163,76 @@ export async function getSuggestion(templateId: string, idOrNumber: string) {
 }
 
 /** Комментарии-обсуждение к предложению. */
-export async function getSuggestionComments(suggestionId: string) {
+/**
+ * УЧАСТНИКИ ОБСУЖДЕНИЯ — для подсказки @mention.
+ *
+ * Отдельным запросом, а не из показанной порции: с тех пор как тред листается, «все
+ * комментаторы» и «комментаторы этой порции» — разные множества, и picker на второй
+ * порции забыл бы половину людей.
+ */
+export async function getSuggestionParticipants(
+  suggestionId: string,
+): Promise<{ handle: string; avatarUrl: string | null }[]> {
+  const rows = await db
+    .selectDistinct({ handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(suggestionComments)
+    .innerJoin(users, eq(suggestionComments.authorId, users.id))
+    .where(eq(suggestionComments.suggestionId, suggestionId))
+    .orderBy(asc(users.handle))
+    .limit(100)
+  return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+}
+
+/**
+ * ПОРЦИЯ ОБСУЖДЕНИЯ ПРЕДЛОЖЕНИЯ — тот же рецепт, что у треда задачи и обсуждения.
+ *
+ * Порядок показа `asc`: разговор читают с начала. Ключом, а не смещением, — из-за
+ * удаления реплики: она сдвигает всё, что ниже, и следующая порция по смещению
+ * перепрыгивает ровно одну.
+ *
+ * Раньше тред отдавался целиком, без предела.
+ */
+export async function getSuggestionCommentsPage(
+  suggestionId: string,
+  perPage: number,
+  cursor: Cursor | null = null,
+  dir: FeedDirection = 'after',
+) {
+  // Без курсора шага назад не существует: «перед началом» — не место.
+  const back = dir === 'before' && cursor !== null
+  const step = keysetStep(suggestionComments.createdAt, suggestionComments.id, cursor, {
+    order: 'asc',
+    dir: back ? 'before' : 'after',
+  })
   const rows = await db
     .select({
       id: suggestionComments.id,
       body: suggestionComments.body,
       createdAt: suggestionComments.createdAt,
+      // Ключ ТЕКСТОМ: типизированная колонка приезжает без микросекунд (shared/db/keyset).
+      cursorKey: cursorKey(suggestionComments.createdAt),
       authorId: suggestionComments.authorId,
       authorHandle: users.handle,
       authorAvatarUrl: users.avatarUrl,
     })
     .from(suggestionComments)
     .innerJoin(users, eq(suggestionComments.authorId, users.id))
-    .where(eq(suggestionComments.suggestionId, suggestionId))
-    .orderBy(asc(suggestionComments.createdAt))
-  return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
+    .where(and(eq(suggestionComments.suggestionId, suggestionId), step.where))
+    .orderBy(...step.order)
+    .limit(probeLimit(perPage))
+
+  // Отсекаем лишнюю строку разведчика ДО разворота — иначе отрезался бы не тот конец.
+  const { items: taken, hasNext: more } = takePage(rows, perPage)
+  const shown = step.reverse ? [...taken].reverse() : taken
+  const at = (row: (typeof shown)[number] | undefined): string | null =>
+    row ? encodeCursor({ key: row.cursorKey, id: row.id }) : null
+  return {
+    items: await Promise.all(
+      shown.map(async ({ cursorKey: _k, ...r }) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })),
+    ),
+    next: back ? at(shown[shown.length - 1]) : more ? at(shown[shown.length - 1]) : null,
+    prev: back ? (more ? at(shown[0]) : null) : cursor ? at(shown[0]) : null,
+  }
 }
 
 /** Число открытых предложений. */

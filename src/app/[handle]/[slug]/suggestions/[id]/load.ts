@@ -4,7 +4,7 @@ import type { BadgeVariant } from '@/shared/ui/badge'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import type { ProposedItem } from '@/shared/db'
 import { isAdminHandle } from '@/shared/auth/admin'
-import { getIssuesByNumbers, getSuggestion, getSuggestionAssignees, getSuggestionComments, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails, getUsersByIds, getVersionSteps, getViewedMarks } from '@/features/library/queries'
+import { getIssuesByNumbers, getSuggestion, getSuggestionAssignees, getSuggestionCommentsPage, getSuggestionParticipants, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails, getUsersByIds, getVersionSteps, getViewedMarks } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { canEditSuggestionItems } from '@/features/library/suggestion-perms'
 import { threeWayMerge } from '@/features/git/three-way'
@@ -20,6 +20,7 @@ import { blockFingerprint, isStaleMark } from '@/features/library/viewed-fingerp
 import { closingRefs } from '@/features/library/closing-refs'
 import type { TimelineEvent } from '@/features/library/SuggestionTimeline'
 import { getSuggestionThreads } from '@/features/comments/queries'
+import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, decodeCursor } from '@/shared/lib/paging'
 import { threadState } from '@/features/comments/state'
 import type { RowThread } from '@/features/library/DiffComments'
 import type { AnchorableBlock } from '@/features/comments/fields'
@@ -65,7 +66,7 @@ export async function loadSuggestionPage({
   owner: string
   slug: string
   id: string
-  sp: { e?: string; tab?: string; view?: string; commit?: string }
+  sp: { e?: string; tab?: string; view?: string; commit?: string; after?: string; before?: string }
   lang: Lang
   session: { userId: string; handle: string } | null
 }) {
@@ -73,7 +74,15 @@ export async function loadSuggestionPage({
   if (!meta) notFound()
   const sug = await getSuggestion(meta.id, id)
   if (!sug) notFound()
-  const [comments, base] = await Promise.all([getSuggestionComments(sug.id), getVersionSteps(meta.id, sug.baseVersion)])
+  // Тред листается ключом; мусорный курсор — «показать сначала», а не пятисотка.
+  const back = decodeCursor(sp.before)
+  const [thread, participants, base] = await Promise.all([
+    getSuggestionCommentsPage(sug.id, COMMENTS_PER_PAGE, back ?? decodeCursor(sp.after), back ? 'before' : 'after'),
+    // Участники — по всему треду, а не по показанной порции.
+    getSuggestionParticipants(sug.id),
+    getVersionSteps(meta.id, sug.baseVersion),
+  ])
+  const comments = thread.items
   // Канонический адрес — по номеру (человеческий), uuid остаётся рабочим входом.
   const path = `/${owner}/${slug}/suggestions/${sug.number ?? sug.id}`
   const [sugR, cmtR] = await Promise.all([
@@ -171,7 +180,7 @@ export async function loadSuggestionPage({
   const sugSeen = new Set<string>()
   const sugPeople = [
     { handle: sug.author.handle, avatarUrl: sug.author.avatarUrl },
-    ...comments.map((c) => ({ handle: c.authorHandle, avatarUrl: c.authorAvatarUrl })),
+    ...participants,
   ].filter((p) => p.handle && !sugSeen.has(p.handle) && sugSeen.add(p.handle))
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
   const isDraft = sug.status === 'open' && sug.draft
@@ -346,6 +355,12 @@ export async function loadSuggestionPage({
 
   return {
     comments,
+    // Шаги треда — готовыми адресами: разметка не должна знать ни про курсоры, ни про
+    // имена параметров.
+    threadSteps: {
+      prev: thread.prev ? cursorHref(path, sp, BEFORE_PARAM)(thread.prev) : null,
+      next: thread.next ? cursorHref(path, sp, AFTER_PARAM)(thread.next) : null,
+    },
     sugR,
     cmtR,
     reviews,
