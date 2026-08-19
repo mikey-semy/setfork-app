@@ -151,13 +151,31 @@ describe('Pagination', () => {
       expect(document.activeElement).toBe(next)
     })
 
-    it('подпись положения держит ширину, пока едет страница', () => {
-      // Иначе «6 / 74» → «Загрузка…» разъезжает обе стрелки ровно под занесённым пальцем.
+    it('номер НЕ подменяется словом «загрузка», пока едет страница', () => {
+      // Раньше подменялся — и это оказалось дефектом, а не сообщением: страница приезжает
+      // за сотню миллисекунд, и подмена читалась как МИГАНИЕ. Найдено владельцем на живом
+      // сайте («каждое нажатие loading на долю секунды появляется»). Теперь ожидание
+      // показывается гашением стрелок с задержкой, а словами — только скринридеру.
       const { rerender } = render(<Pagination page={2} totalPages={5} onPage={vi.fn()} compact lang="en" />)
       expect(screen.getByText('2 / 5')).toHaveClass('min-w-[4.5rem]')
+
       rerender(<Pagination page={2} totalPages={5} onPage={vi.fn()} compact busy lang="en" />)
-      // «Загрузка…» теперь и в видимой подписи, и в скрытой живой области — берём видимую.
-      expect(screen.getAllByText('Loading…').some((el) => el.className.includes('min-w-[4.5rem]'))).toBe(true)
+      // Номер на месте, ширина по-прежнему зарезервирована: ряд отцентрован, и подпись,
+      // меняясь в ширине, разъезжала бы обе стрелки под занесённым пальцем.
+      expect(screen.getByText('2 / 5')).toHaveClass('min-w-[4.5rem]')
+      // Слово живёт только в живой области — она скрыта от глаз.
+      const loading = screen.getAllByText('Loading…')
+      expect(loading).toHaveLength(1)
+      expect(loading[0]).toHaveClass('sr-only')
+    })
+
+    it('гашение стрелок ОТЛОЖЕНО — быстрый ответ не мигает', () => {
+      // Задержка перехода тем же порогом, что у отложенного скелета (--dur-wait):
+      // успела страница раньше — вспышки не было вовсе.
+      render(<Pagination page={2} totalPages={5} onPage={vi.fn()} compact busy lang="en" />)
+      const prev = screen.getByRole('button', { name: /previous/i })
+      expect(prev.className).toContain('delay-(--dur-wait)')
+      expect(prev.className).toContain('transition-opacity')
     })
   })
 })

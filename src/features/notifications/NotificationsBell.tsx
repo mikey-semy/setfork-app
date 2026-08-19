@@ -39,13 +39,23 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
           )}
         </IconButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[21.25rem] p-0">
+      {/* ВЫСОТА ОГРАНИЧЕНА ДОСТУПНОЙ, а список тянется внутри. Раньше панель считала
+          свою высоту сама: шапка + до 360px списка + строка «все уведомления». На
+          невысоком окне это не помещалось, а у выпадашки `overflow-hidden` — и хвост
+          просто ОБРЕЗАЛСЯ: строка «все уведомления» оказывалась за краем, нажать её было
+          нельзя. Тот же приём уже применён у CloneDropdown — значит грабли не новые. */}
+      <DropdownMenuContent
+        align="end"
+        className="flex max-h-(--radix-dropdown-menu-content-available-height) w-[21.25rem] flex-col p-0"
+      >
         <PanelHead title={t('notifications', lang)} />
 
         {items.length === 0 ? (
           <div className="px-3 py-8 text-center text-[0.78125rem] text-muted">{t('noNotifications', lang)}</div>
         ) : (
-          <div className="max-h-[22.5rem] overflow-auto">
+          // min-h-0 обязателен: без него flex-ребёнок не сжимается ниже содержимого,
+          // и прокрутка не включается — список снова выдавит хвост за край.
+          <div className="min-h-0 flex-1 overflow-auto">
             {items.map((n) => {
               const isFollow = n.type === 'follow'
               const listHref = n.ownerHandle && n.slug ? `/${n.ownerHandle}/${n.slug}` : null
@@ -76,7 +86,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
 
         <Link
           href="/notifications"
-          className={`block border-t border-border text-center font-semibold text-accent hover:bg-surface-2 ${PANEL_HEAD} ${TEXT.bodySm}`}
+          className={`block shrink-0 border-t border-border text-center font-semibold text-accent hover:bg-surface-2 ${PANEL_HEAD} ${TEXT.bodySm}`}
         >
           {t('seeAll', lang)}
         </Link>

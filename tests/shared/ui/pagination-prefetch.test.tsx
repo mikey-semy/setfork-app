@@ -16,8 +16,19 @@ import { describe, expect, it, vi } from 'vitest'
  * файле тесты идут с настоящим Link и проверяют разметку.
  */
 vi.mock('next/link', () => ({
-  default: ({ href, prefetch, children, ...rest }: { href: string; prefetch?: boolean; children: React.ReactNode }) => (
-    <a href={href} data-prefetch={String(prefetch)} {...rest}>
+  default: ({
+    href,
+    prefetch,
+    scroll,
+    children,
+    ...rest
+  }: {
+    href: string
+    prefetch?: boolean
+    scroll?: boolean
+    children: React.ReactNode
+  }) => (
+    <a href={href} data-prefetch={String(prefetch)} data-scroll={String(scroll)} {...rest}>
       {children}
     </a>
   ),
@@ -49,5 +60,24 @@ describe('предзагрузка страниц листалки', () => {
     render(<Pagination steps={{ prev: '/n?before=a', next: '/n?after=b' }} lang="en" />)
     expect(prefetchOf(/next/i)).toBe('undefined')
     expect(prefetchOf(/previous/i)).toBe('false')
+  })
+})
+
+describe('листание не уводит страницу наверх', () => {
+  /**
+   * По умолчанию Next при переходе прокручивает документ к началу. Листалка стоит ПОД
+   * выдачей, поэтому каждое нажатие «дальше» выбрасывало читателя вверх, и чтобы нажать
+   * ещё раз, приходилось прокручивать обратно. Найдено владельцем на живом сайте.
+   *
+   * `scroll={false}` — тоже собственный проп Next, в DOM он не попадает; проверяется, как
+   * и предзагрузка, через подменённую ссылку.
+   */
+  it.each([
+    ['номерной режим', <Pagination key="n" page={2} totalPages={5} makeHref={href} lang="en" />],
+    ['режим keyset', <Pagination key="k" steps={{ prev: '/n?before=a', next: '/n?after=b' }} lang="en" />],
+  ])('%s', (_name, node) => {
+    render(node)
+    expect(screen.getByRole('link', { name: /next/i })).toHaveAttribute('data-scroll', 'false')
+    expect(screen.getByRole('link', { name: /previous/i })).toHaveAttribute('data-scroll', 'false')
   })
 })

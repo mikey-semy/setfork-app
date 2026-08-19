@@ -188,6 +188,13 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
           href={makeHref(to)}
           rel={rel}
           prefetch={rel === 'next' ? undefined : false}
+          // scroll={false} — БЕЗ ПРЫЖКА НАВЕРХ. По умолчанию Next при переходе уводит
+          // страницу к началу документа, и листание глубокой ленты выбрасывало читателя
+          // вверх на каждом нажатии: чтобы нажать «дальше» ещё раз, приходилось
+          // прокручивать обратно. Листалка стоит под выдачей, и оставаться на месте —
+          // ровно то, чего от неё ждут: следующая страница появляется там же, где была
+          // предыдущая, а стрелка остаётся под пальцем.
+          scroll={false}
           aria-label={label}
           aria-current={current ? 'page' : undefined}
           className={cn(box, idle)}
@@ -204,7 +211,11 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
         aria-label={label}
         aria-current={current ? 'page' : undefined}
         aria-disabled={busy || undefined}
-        className={cn(box, idle, busy && 'opacity-50')}
+        // Гашение ОТЛОЖЕНО. На быстрой сети страница приезжает за сотню миллисекунд, и
+        // мгновенное `opacity-50` успевало моргнуть на каждом нажатии — глаз замечает
+        // смену, но не успевает прочитать. Задержка перехода — тот же порог, что у
+        // отложенного скелета (--dur-wait): успела страница раньше, вспышки не было.
+        className={cn(box, idle, busy && 'opacity-50 transition-opacity delay-(--dur-wait)')}
       >
         {body}
       </button>
@@ -234,7 +245,16 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
     const cursorStep = (href: string | null, label: string, body: React.ReactNode, rel: 'prev' | 'next') =>
       href ? (
         // Предзагрузка — по тому же правилу, что у номерного режима: только «вперёд».
-        <Link key={label} href={href} rel={rel} prefetch={rel === 'next' ? undefined : false} aria-label={label} className={cn(box, idle)}>
+        <Link
+          key={label}
+          href={href}
+          rel={rel}
+          prefetch={rel === 'next' ? undefined : false}
+          // Тот же довод, что в номерном режиме: лента остаётся на месте.
+          scroll={false}
+          aria-label={label}
+          className={cn(box, idle)}
+        >
           {body}
         </Link>
       ) : null
@@ -255,15 +275,18 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
   const prev = step(page - 1, t('prevPage', lang), arrow(<ChevronLeft size={14} />, t('prevPageShort', lang), 'l'), false, 'prev')
   const next = step(page + 1, t('nextPage', lang), arrow(<ChevronRight size={14} />, t('nextPageShort', lang), 'r'), false, 'next')
   // «6 / 74» — узкая форма; без общего числа честнее показать один номер, чем выдумать M.
-  // Пока страница едет, ряд обязан это говорить: `busy` только гасит стрелки, и без
-  // подписи медленная загрузка выглядит как «нажал, и ничего не произошло».
-  // Ширина ЗАРЕЗЕРВИРОВАНА: ряд отцентрован, и подпись, вырастая с «6 / 74» до
-  // «Загрузка…», разъезжала бы обе стрелки наружу — ровно в тот момент, когда палец уже
-  // занесён над одной из них. `shrink-0` с `truncate` тут были заодно бессмысленны:
-  // несжимаемому элементу нечего усекать, он просто вылезал бы за узкую панель.
+  //
+  // НОМЕР НЕ ПОДМЕНЯЕТСЯ СЛОВОМ «Загрузка…», хотя раньше подменялся. Страница приезжает
+  // за сотню миллисекунд, и подмена читалась не как сообщение, а как МИГАНИЕ: глаз
+  // успевает заметить смену, но не прочитать. Ожидание теперь показывается гашением
+  // стрелок с задержкой (см. выше), а словами — только скринридеру, где короткая
+  // вежливая реплика ничего не мигает.
+  //
+  // Ширина ЗАРЕЗЕРВИРОВАНА: ряд отцентрован, и подпись, меняясь в ширине, разъезжала бы
+  // обе стрелки наружу — ровно в тот момент, когда палец уже занесён над одной из них.
   const position = (
     <span className="min-w-[4.5rem] px-1 text-center font-mono text-[0.75rem] text-muted">
-      {busy ? t('loadingMore', lang) : totalPages !== undefined ? `${page} / ${last}` : page}
+      {totalPages !== undefined ? `${page} / ${last}` : page}
     </span>
   )
   // ЖИВАЯ ОБЛАСТЬ ОТДЕЛЬНО И ВСЕГДА В ДЕРЕВЕ. Раньше `aria-live` висел на видимой подписи,
