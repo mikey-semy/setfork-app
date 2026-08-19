@@ -5,7 +5,9 @@ import { getLang } from '@/shared/i18n/server'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
-import { getAuditLog, type AuditEntry } from '@/features/admin/audit-queries'
+import { getAuditLogPage, type AuditEntry } from '@/features/admin/audit-queries'
+import { Pagination } from '@/shared/ui/Pagination'
+import { AFTER_PARAM, AUDIT_PER_PAGE, BEFORE_PARAM, cursorHref, decodeCursor } from '@/shared/lib/paging'
 import type { AuditAction } from '@/shared/audit'
 
 export const dynamic = 'force-dynamic'
@@ -69,10 +71,20 @@ export async function generateMetadata() {
   return { title: t('adminAudit', lang) }
 }
 
-export default async function AuditPage() {
+export default async function AuditPage({ searchParams }: { searchParams: Promise<{ after?: string; before?: string }> }) {
+  const sp = await searchParams
+  // Журнал листается КЛЮЧОМ: он пополняется сверху непрерывно, и смещение здесь давало бы
+  // не медленную выдачу, а неверную. Пропущенная запись аудита читается как «действия не
+  // было» — цена ошибки выше, чем где-либо ещё.
+  const back = decodeCursor(sp.before)
   // Проверка прав, язык и сам журнал независимы — ждём их разом, а не по очереди
   // (React Doctor: server-sequential-independent-await).
-  const [, lang, entries] = await Promise.all([requireAdmin(), getLang(), getAuditLog(200)])
+  const [, lang, log] = await Promise.all([
+    requireAdmin(),
+    getLang(),
+    getAuditLogPage(AUDIT_PER_PAGE, back ?? decodeCursor(sp.after), back ? 'before' : 'after'),
+  ])
+  const entries = log.items
 
   return (
     <div className="min-w-0">
@@ -122,6 +134,13 @@ export default async function AuditPage() {
           })}
         </div>
       )}
+      <Pagination
+        lang={lang}
+        steps={{
+          prev: log.prev ? cursorHref('/admin/audit', sp, BEFORE_PARAM)(log.prev) : null,
+          next: log.next ? cursorHref('/admin/audit', sp, AFTER_PARAM)(log.next) : null,
+        }}
+      />
     </div>
   )
 }
