@@ -207,10 +207,61 @@ describe('Pagination: число найденного и предзагрузк�
     expect(nav).not.toHaveTextContent('518')
   })
 
+  it('счёт остаётся, когда страница ОДНА', () => {
+    // Ровно тот случай, ради которого счёт и заводили: отбор сузил выдачу до горстки
+    // строк, листать нечего — и человек не видит ни «1 / 1», ни числа найденного.
+    render(<Pagination page={1} totalPages={1} total={5} makeHref={href} lang="en" />)
+    expect(screen.getByText(/Found/)).toBeInTheDocument()
+    expect(screen.getByText('5')).toBeInTheDocument()
+    // Ряда при этом нет: пустое место под ним читается как «дальше что-то есть».
+    expect(screen.queryByRole('navigation')).toBeNull()
+  })
+
+  it('ни счёта, ни ряда — ничего', () => {
+    const { container } = render(<Pagination page={1} totalPages={1} makeHref={href} lang="en" />)
+    expect(container.firstChild).toBeNull()
+  })
+
   it('без счёта лишнего узла нет', () => {
     const { container } = render(<Pagination page={2} totalPages={3} makeHref={href} lang="en" />)
     expect(screen.queryByText(/Found/)).toBeNull()
     // Ряд остаётся корнем: обёртка заводится только когда есть что показать над ним.
     expect(container.firstChild).toBe(screen.getByRole('navigation'))
+  })
+})
+
+describe('Pagination: подпись и имя — на ОБОИХ языках', () => {
+  /**
+   * WCAG 2.5.3 (Label in Name) — правило, ради которого заведена линза локализации: на
+   * английском оно проходит по совпадению («Previous» — префикс «Previous page»), а на
+   * русском «Назад» и «Предыдущая страница» не пересекаются ни словом, и голосовая команда
+   * по видимой подписи кнопку не находит.
+   *
+   * Прежняя проверка стояла на одном языке и одном режиме. Проверяем обе локали и оба
+   * режима: у keyset шаги свои, и правило могло не доехать до них вовсе.
+   */
+  it.each([
+    ['ru' as const, 'Назад', 'Вперёд'],
+    ['en' as const, 'Previous', 'Next'],
+  ])('номерной режим, %s', (lang, prevShort, nextShort) => {
+    render(<Pagination page={2} totalPages={3} makeHref={href} lang={lang} />)
+    const prev = screen.getByRole('link', { name: new RegExp(prevShort, 'i') })
+    const next = screen.getByRole('link', { name: new RegExp(nextShort, 'i') })
+    expect(prev.getAttribute('aria-label')).toContain(prevShort)
+    expect(next.getAttribute('aria-label')).toContain(nextShort)
+    // Видимая подпись есть в разметке — иначе сверять было бы не с чем.
+    expect(prev).toHaveTextContent(prevShort)
+    expect(next).toHaveTextContent(nextShort)
+  })
+
+  it.each([
+    ['ru' as const, 'Назад', 'Вперёд'],
+    ['en' as const, 'Previous', 'Next'],
+  ])('режим keyset, %s', (lang, prevShort, nextShort) => {
+    render(<Pagination steps={{ prev: '/n?before=a', next: '/n?after=b' }} lang={lang} />)
+    const prev = screen.getByRole('link', { name: new RegExp(prevShort, 'i') })
+    const next = screen.getByRole('link', { name: new RegExp(nextShort, 'i') })
+    expect(prev.getAttribute('aria-label')).toContain(prevShort)
+    expect(next.getAttribute('aria-label')).toContain(nextShort)
   })
 })

@@ -87,24 +87,29 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
   // У keyset края заданы не номером, а наличием адреса: нет адреса — нет шага.
   const canPrev = steps ? Boolean(steps.prev) : page > 1
   const canNext = steps ? Boolean(steps.next) : totalPages !== undefined ? page < last : Boolean(hasNext)
-  // Листать некуда — листалки нет. Пустое место под ней читается как «дальше что-то есть».
-  if (!canPrev && !canNext) return null
+  /** Строка «Найдено: N» — сама по себе, без отступов: их расставляет обёртка ниже. */
+  const found =
+    total === undefined ? null : (
+      <div className="text-center text-[0.75rem] text-muted">
+        {t('foundLabel', lang)}: <span className="tabular-nums text-ink-2">{total}</span>
+      </div>
+    )
+  // Листать некуда — РЯДА нет: пустое место под ним читается как «дальше что-то есть».
+  //
+  // А вот счёт остаётся. Первая версия выходила отсюда целиком, и число найденного
+  // пропадало ровно там, где оно нужнее всего: отбор сузил выдачу до горстки строк,
+  // страница осталась одна — и человек не видит НИ «3 / 26», ни «Найдено: 5». Ради этого
+  // случая счёт и заводили.
+  if (!canPrev && !canNext) return found && <div className={cn('mt-4', className)}>{found}</div>
 
   // ВИД по шкале (32px, как у всех контролов), ЦЕЛЬ по стандарту — на грубом указателе
   // шаг дорастает до 44 по обеим сторонам. Руками этого писать нельзя: у проекта для
   // тач-целей есть свои классы, и правило должно жить в одном месте (control.ts).
-  /** Строка «Найдено: N» над рядом. `undefined` — поверхность счёт не передала. */
-  const found =
-    total === undefined ? null : (
-      <div className="mb-1 text-center text-[0.75rem] text-muted">
-        {t('foundLabel', lang)}: <span className="tabular-nums text-ink-2">{total}</span>
-      </div>
-    )
   /** Ряд обёрнут, только когда есть что показать над ним: лишний узел даром не нужен. */
   const withFound = (row: React.ReactNode) =>
     found ? (
       <div className={cn('mt-4', className)}>
-        {found}
+        <div className="mb-1">{found}</div>
         {row}
       </div>
     ) : (
