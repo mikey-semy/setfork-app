@@ -13,6 +13,8 @@
 #   BACKUP_DIR     куда класть (по умолч. ./backups)
 #   RETENTION_DAYS сколько хранить локально (по умолч. 14)
 #   PROJECT        имя compose-проекта для имени тома (по умолч. имя папки)
+#   GIT_VOL        имя тома с git-данными (по умолч. ${PROJECT}_gitdata). ⚠️ Ядро уехало
+#                  отдельным проектом: на проде это том `setfork_git` из setfork-core.
 set -eu
 
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
@@ -34,12 +36,33 @@ echo "[backup] pg_dump → $db_file"
 dc exec -T db pg_dump -U "$PGUSER" -d "$PGDB" -Fc > "$db_file"
 
 # 2) git-данные — tar тома через одноразовый alpine (том смонтирован read-only).
+#
+# ⚠️ ТОМ ПРОВЕРЯЕТСЯ ДО АРХИВАЦИИ, и это не перестраховка. Docker при монтировании
+# НЕСУЩЕСТВУЮЩЕГО тома молча создаёт пустой: tar отрабатывает успешно, кладёт архив на
+# 87 байт с одной записью `./`, и его контрольная сумма честно ложится в манифест. То
+# есть бэкап выглядит сделанным, а git-данных в нём нет. Проверено 19.08.2026 прямым
+# опытом — ровно после того, как выяснилось, что тома `gitdata` в этом проекте больше
+# нет: ядро уехало отдельным проектом (setfork-core, том `setfork_git`).
+GIT_VOL="${GIT_VOL:-${PROJECT}_gitdata}"
+if ! docker volume inspect "$GIT_VOL" >/dev/null 2>&1; then
+  echo "[backup] ОШИБКА: тома '$GIT_VOL' нет. Git-данные живут там, где стоит ядро" >&2
+  echo "[backup] (setfork-core, том setfork_git). Задайте GIT_VOL или бэкапьте их из" >&2
+  echo "[backup] проекта ядра — иначе архив был бы пустым, а бэкап 'успешным'." >&2
+  exit 1
+fi
 git_file="$BACKUP_DIR/git-$TS.tar.gz"
-echo "[backup] tar ${PROJECT}_gitdata → $git_file"
+echo "[backup] tar $GIT_VOL → $git_file"
 docker run --rm \
-  -v "${PROJECT}_gitdata:/src:ro" \
+  -v "$GIT_VOL:/src:ro" \
   -v "$(cd "$BACKUP_DIR" && pwd):/out" \
   alpine sh -c "tar czf /out/git-$TS.tar.gz -C /src ."
+
+# Пустой архив — тоже отказ: том мог существовать, но оказаться не тем.
+if [ "$(tar tzf "$git_file" | head -5 | wc -l)" -le 1 ]; then
+  echo "[backup] ОШИБКА: архив git пуст — том '$GIT_VOL' не содержит репозиториев" >&2
+  rm -f "$git_file"
+  exit 1
+fi
 
 # 3) Контрольные суммы (проверка целостности при восстановлении).
 ( cd "$BACKUP_DIR" && sha256sum "db-$TS.dump" "git-$TS.tar.gz" > "manifest-$TS.sha256" )
