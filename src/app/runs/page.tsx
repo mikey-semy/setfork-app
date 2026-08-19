@@ -6,7 +6,9 @@ import { t, tr, type Lang } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
-import { getUserRuns, type UserRunRow } from '@/features/runs/queries'
+import { countUserRunsByStatus, getUserRuns, type RunStatus, type UserRunRow } from '@/features/runs/queries'
+import { Pagination } from '@/shared/ui/Pagination'
+import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
 import { PAGE } from '@/shared/ui/control'
 import { buttonClass } from '@/shared/ui/button-style'
@@ -16,13 +18,32 @@ export async function generateMetadata() {
   return { title: t('runs', lang) }
 }
 
-export default async function MyRunsPage() {
-  const session = await requireSession()
-  const [lang, runs] = await Promise.all([getLang(), getUserRuns(session.userId)])
+const TABS: { key: RunStatus; label: 'runsInProgress' | 'runsCompleted' | 'runsAbandoned' }[] = [
+  { key: 'active', label: 'runsInProgress' },
+  { key: 'done', label: 'runsCompleted' },
+  { key: 'abandoned', label: 'runsAbandoned' },
+]
 
-  const active = runs.filter((r) => r.status === 'active')
-  const done = runs.filter((r) => r.status === 'done')
-  const abandoned = runs.filter((r) => r.status === 'abandoned')
+/**
+ * СТАТУС СТАЛ ВКЛАДКОЙ, а не разделом на общей странице.
+ *
+ * Раньше страница показывала три раздела сразу и делила ПОЛНУЮ выдачу в памяти — то есть
+ * поднимала все прогоны человека, сколько бы их ни было. Со страницами такое деление
+ * невозможно в принципе: страница могла бы состоять из одних завершённых, и раздел
+ * «в процессе» выглядел бы пустым при живых прогонах.
+ *
+ * Вкладки — та же форма, что у задач и правок: отбор в запросе, счётчики рядом с
+ * названием, страницы внутри вкладки.
+ */
+export default async function MyRunsPage({ searchParams }: { searchParams: Promise<{ tab?: string; page?: string }> }) {
+  const session = await requireSession()
+  const sp = await searchParams
+  const tab: RunStatus = TABS.find((x) => x.key === sp.tab)?.key ?? 'active'
+  const [lang, counts] = await Promise.all([getLang(), countUserRunsByStatus(session.userId)])
+  const totalPages = pageCount(counts[tab])
+  const page = pageFromParam(sp.page, totalPages)
+  const rows = await getUserRuns(session.userId, tab, pageWindow(page))
+  const empty = counts.active + counts.done + counts.abandoned === 0
 
   return (
     <div className={PAGE}>
@@ -30,32 +51,42 @@ export default async function MyRunsPage() {
           Здесь он остаётся только для скринридеров и структуры страницы. */}
       <PageHeader hideTitle title={t('myRuns', lang)} />
 
-      {runs.length === 0 ? (
+      {empty ? (
         <EmptyState icon={<ListChecks size={34} strokeWidth={1.5} />} title={t('noRunsYet', lang)} />
       ) : (
-        <div className="flex flex-col gap-6">
-          <Section label={t('runsInProgress', lang)} rows={active} lang={lang} />
-          <Section label={t('runsCompleted', lang)} rows={done} lang={lang} />
-          <Section label={t('runsAbandoned', lang)} rows={abandoned} lang={lang} muted />
-        </div>
+        <>
+          {/* Смена вкладки сбрасывает номер страницы: третьей страницы «завершённых»
+              может не быть у «брошенных», и остаться на ней значило бы показать пустоту. */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            {TABS.map((x) => (
+              <Link
+                key={x.key}
+                href={x.key === 'active' ? '/runs' : `/runs?tab=${x.key}`}
+                aria-current={x.key === tab ? 'page' : undefined}
+                className={buttonClass({
+                  variant: x.key === tab ? 'primary' : 'ghost',
+                  size: 'sm',
+                })}
+              >
+                {t(x.label, lang)} · {counts[x.key]}
+              </Link>
+            ))}
+          </div>
+
+          {rows.length === 0 ? (
+            <EmptyState variant="plain" hint={t('noRunsYet', lang)} />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {rows.map((r) => (
+                <RunCard key={r.id} r={r} lang={lang} muted={tab === 'abandoned'} />
+              ))}
+            </div>
+          )}
+
+          <Pagination page={page} totalPages={totalPages} makeHref={pageHref('/runs', sp)} lang={lang} />
+        </>
       )}
     </div>
-  )
-}
-
-function Section({ label, rows, lang, muted }: { label: string; rows: UserRunRow[]; lang: Lang; muted?: boolean }) {
-  if (rows.length === 0) return null
-  return (
-    <section>
-      <div className="mb-2 text-[0.78125rem] font-semibold uppercase tracking-wider text-muted">
-        {label} · {rows.length}
-      </div>
-      <div className="flex flex-col gap-2">
-        {rows.map((r) => (
-          <RunCard key={r.id} r={r} lang={lang} muted={muted} />
-        ))}
-      </div>
-    </section>
   )
 }
 
