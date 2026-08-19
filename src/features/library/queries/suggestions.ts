@@ -2,6 +2,7 @@ import 'server-only'
 import { and, asc, desc, eq, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, issues, milestones, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, suggestionViewed, templates, users } from '@/shared/db'
 import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
+import { likeContains } from '@/shared/db/like'
 import { feedWindow, probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
@@ -118,7 +119,7 @@ function suggestionConds(templateId: string, opts: SuggestionQuery): SQL[] {
   if (opts.status === 'closed') conds.push(sql`${suggestions.status} <> 'open'`)
   else if (opts.status === 'open') conds.push(eq(suggestions.status, 'open'))
   const q = opts.q?.trim()
-  if (q) conds.push(sql`${suggestions.note} ilike ${'%' + q + '%'}`)
+  if (q) conds.push(sql`${suggestions.note} ilike ${likeContains(q)}`)
   if (opts.label) conds.push(sql`${opts.label} = any(${suggestions.labels})`)
   if (opts.milestone) conds.push(eq(suggestions.milestoneId, opts.milestone))
   if (opts.author) conds.push(sql`${users.handle} = ${opts.author}`)

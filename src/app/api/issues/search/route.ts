@@ -2,6 +2,7 @@ import { and, desc, eq, ilike, sql } from 'drizzle-orm'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { db, issues } from '@/shared/db'
+import { likeContains } from '@/shared/db/like'
 import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { canViewList } from '@/core'
 import { rateLimit, tooMany } from '@/shared/rate-limit'
@@ -28,7 +29,9 @@ export async function GET(req: Request) {
   }
 
   const conds = [eq(issues.templateId, tpl.id)]
-  if (q) conds.push(/^\d+$/.test(q) ? sql`${issues.number}::text like ${q + '%'}` : ilike(issues.title, `%${q}%`))
+  // Цифровая ветка безопасна и без экранирования: там `q` — только цифры (проверено
+  // регуляркой строкой выше). Текстовая шла сырой, и `?q=%` отдавала ВСЕ задачи списка.
+  if (q) conds.push(/^\d+$/.test(q) ? sql`${issues.number}::text like ${q + '%'}` : ilike(issues.title, likeContains(q)))
 
   const rows = await db
     .select({ number: issues.number, title: issues.title, status: issues.status })

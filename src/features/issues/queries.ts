@@ -2,6 +2,7 @@ import 'server-only'
 import { and, asc, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import { db, issueAssignees, issueComments, issues, listLabels, milestones, users } from '@/shared/db'
 import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
+import { likeContains } from '@/shared/db/like'
 import { feedWindow } from '@/shared/lib/paging'
 import { probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
@@ -53,7 +54,7 @@ export interface IssueQuery {
 function issueConds(templateId: string, opts: IssueQuery): SQL[] {
   const conds: SQL[] = [eq(issues.templateId, templateId), eq(issues.status, opts.status)]
   const q = opts.q?.trim()
-  if (q) conds.push(sql`${issues.title} ilike ${'%' + q + '%'}`)
+  if (q) conds.push(sql`${issues.title} ilike ${likeContains(q)}`)
   if (opts.label) conds.push(sql`${opts.label} = any(${issues.labels})`)
   if (opts.milestone) conds.push(eq(issues.milestoneId, opts.milestone))
   return conds

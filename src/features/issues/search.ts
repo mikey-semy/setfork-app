@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
 import { db, issueComments, issues, templates, users, publiclyVisible } from '@/shared/db'
+import { likeContains } from '@/shared/db/like'
 import type { LocaleText } from '@/shared/i18n'
 
 export type IssueStateFilter = 'open' | 'closed' | 'all'
@@ -25,7 +26,7 @@ function issuesWhere(q?: string, state: IssueStateFilter = 'open'): SQL {
   if (state !== 'all') conds.push(eq(issues.status, state))
   const term = q?.trim()
   if (term) {
-    const like = `%${term}%`
+    const like = likeContains(term)
     // Номер #N ищем только если весь токен — цифры (иначе "12abc" всплывал бы issue #12).
     conds.push(/^\d+$/.test(term) ? or(ilike(issues.title, like), eq(issues.number, Number(term)))! : ilike(issues.title, like))
   }

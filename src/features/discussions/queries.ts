@@ -2,6 +2,7 @@ import 'server-only'
 import { and, asc, desc, eq, ilike, sql, type SQL } from 'drizzle-orm'
 import { db, discussionComments, discussions, users } from '@/shared/db'
 import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
+import { likeContains } from '@/shared/db/like'
 import { feedWindow, probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
@@ -31,7 +32,7 @@ export interface DiscussionQuery {
 function discussionConds(templateId: string, opts: DiscussionQuery): SQL[] {
   const conds: SQL[] = [eq(discussions.templateId, templateId)]
   if (opts.category) conds.push(eq(discussions.category, opts.category))
-  if (opts.q) conds.push(ilike(discussions.title, `%${opts.q}%`))
+  if (opts.q) conds.push(ilike(discussions.title, likeContains(opts.q)))
   return conds
 }
 
