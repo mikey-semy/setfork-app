@@ -125,7 +125,28 @@ export function WatchButton({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <OverlayPanel open={customOpen} onClose={() => setCustomOpen(false)} title={labels.customTitle} width={360}>
+      {/* Кнопка — в футер, а не в тело: в теле она уезжает с прокруткой. Здесь список
+          короткий и это не бросалось в глаза, но дефект тот же, что был у фильтра ленты, —
+          и чинится он один раз в этом же примитиве. */}
+      <OverlayPanel
+        open={customOpen}
+        onClose={() => setCustomOpen(false)}
+        title={labels.customTitle}
+        width={360}
+        footer={
+          <button
+            type="button"
+            onClick={() => {
+              apply('custom', events)
+              setCustomOpen(false)
+            }}
+            disabled={pending}
+            className={buttonClass({ className: 'border-accent bg-accent text-white disabled:opacity-50' })}
+          >
+            {labels.apply}
+          </button>
+        }
+      >
         <div className="flex flex-col gap-1">
           {EVENT_KEYS.map((k) => {
             const label = k === 'versions' ? labels.evVersions : k === 'issues' ? labels.evIssues : labels.evSuggestions
@@ -141,19 +162,6 @@ export function WatchButton({
               </label>
             )
           })}
-          <div className="mt-2 flex justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                apply('custom', events)
-                setCustomOpen(false)
-              }}
-              disabled={pending}
-              className={buttonClass({ className: 'border-accent bg-accent text-white disabled:opacity-50' })}
-            >
-              {labels.apply}
-            </button>
-          </div>
         </div>
       </OverlayPanel>
     </>

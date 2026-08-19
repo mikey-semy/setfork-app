@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { buttonClass } from '@/shared/ui/button-style'
 import { type ReactNode } from 'react'
 import { Eye, Pencil } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
@@ -55,7 +56,7 @@ export function SuggestionFiles({
         {canEditItems && (
           <Link
             href={`${path}/edit`}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-[0.78125rem] font-semibold text-ink hover:border-border-strong"
+            className={buttonClass({ className: 'shrink-0' })}
           >
             <Pencil size={14} /> {t('prEdit', lang)}
           </Link>

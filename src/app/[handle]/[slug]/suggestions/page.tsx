@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { buttonClass } from '@/shared/ui/button-style'
 import { notFound } from 'next/navigation'
 import {
   GitBranch,
@@ -140,7 +141,7 @@ export default async function SuggestionsPage({
         {session && (
           <Link
             href={`/${owner}/${slug}/suggest`}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
+            className={buttonClass({ variant: 'primary', className: 'shrink-0' })}
           >
             {/* На мобиле — только значок: длинным подписям в кнопках там не место. */}
             <Plus size={15} /> <span className="max-sm:hidden">{t('suggestEdit', lang)}</span>
