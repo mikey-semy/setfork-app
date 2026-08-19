@@ -623,6 +623,10 @@ jobs:
         if: success()
         env:
           NTFY_URL: ${{ vars.NTFY_DEPLOY_URL }}
+          # Свой ntfy закрыт на публикацию: без токена он отвечает 403 forbidden
+          # (проверено 19.08.2026 на ntfy.equiply.ru). Пусто — шлём без заголовка, как
+          # на публичный ntfy.sh.
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
           TG_BASE: ${{ vars.TELEGRAM_API_BASE }}
@@ -645,10 +649,18 @@ jobs:
 
           sent=0
           if [ -n "$NTFY_URL" ]; then
-            code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
-              -H "Title: SetFork: прод обновлён" -H "Tags: rocket" -H "Priority: default" \
-              -d "$TEXT" "$NTFY_URL" || echo 000)
-            case "$code" in 2*) sent=1 ;; *) echo "::warning::ntfy не принял оповещение (HTTP $code)" ;; esac
+            # Заголовок авторизации добавляется, ТОЛЬКО если токен задан: пустой
+            # `Authorization: Bearer` сам по себе даёт отказ, то есть настройка без
+            # токена ломалась бы там, где раньше работала.
+            set -- -sS -o /dev/null -w '%{http_code}' -X POST \
+              -H "Title: SetFork: прод обновлён" -H "Tags: rocket" -H "Priority: default"
+            [ -n "$NTFY_TOKEN" ] && set -- "$@" -H "Authorization: Bearer $NTFY_TOKEN"
+            code=$(curl "$@" -d "$TEXT" "$NTFY_URL" || echo 000)
+            case "$code" in
+              2*) sent=1 ;;
+              401|403) echo "::warning::ntfy отказал (HTTP $code) — нужен секрет NTFY_TOKEN с правом publish на тему" ;;
+              *) echo "::warning::ntfy не принял оповещение (HTTP $code)" ;;
+            esac
           fi
 
           if [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ]; then
