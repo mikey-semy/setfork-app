@@ -63,11 +63,6 @@ export const tagFilter = (tag: string): SQL => sql`${templates.tags} @> ARRAY[${
 // иначе Postgres не сможет использовать trgm/FTS GIN и уйдёт в seq scan.
 export const titleText = sql`(coalesce(${templates.title}->>'en','') || ' ' || coalesce(${templates.title}->>'ru',''))`
 
-// Правило переехало в `shared/db/like`: оно обязательно для ВСЕХ поверхностей, а лёжа
-// внутри одной фичи не досталось трём соседним. Здесь остаётся ре-экспорт — потребители
-// внутри библиотеки берут его по-прежнему отсюда.
-export { likeContains }
-
 /** Условие поиска: подстрока (ILIKE через trgm-GIN) + мультисловный FTS
  *  (websearch_to_tsquery, 'simple' — без стемминга, контент EN/RU) +
  *  word_similarity (<%) — устойчивость к опечаткам в заголовке. */

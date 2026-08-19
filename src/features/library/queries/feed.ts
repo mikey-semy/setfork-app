@@ -7,7 +7,8 @@ import { getSearchSettings } from '@/shared/settings/search'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { feedWindow } from '@/shared/lib/paging'
 import type { ActivityItem, FeedItem, FeedSort, ListSuggestion, TagRow, TrendRange } from './list'
-import { descText, extraFilters, FEED_COLS, langPref, keywordFeed, likeContains, searchCondition, semanticFeed, tagFilter, titleText, visibleFilter, withAvatar } from './shared'
+import { descText, extraFilters, FEED_COLS, langPref, keywordFeed, searchCondition, semanticFeed, tagFilter, titleText, visibleFilter, withAvatar } from './shared'
+import { likeContains } from '@/shared/db/like'
 
 /**
  * Ленты и поиск: обзор, тренды, подборки, списки пользователя, активность, теги.

@@ -121,6 +121,42 @@ describe('лента уведомлений листается ключом', ()
     expect(new Set([...p1.items, ...p2.items].map((n) => n.id)).size).toBe(5)
   })
 
+  it('порция, где скрыто ВСЁ, не обрывает ленту и не запирает читателя', async () => {
+    // Складываются две правки из разных проходов: края считаются по сырым строкам (иначе
+    // порция без единой видимой строки говорила бы «дальше ничего»), и у пустой порции
+    // есть выход назад. Порознь каждая проверена; здесь проверяется, что они не мешают
+    // друг другу — по runbook это самое урожайное место, код правок никто не смотрел.
+    await resetTables([notifications, templates])
+    const [other] = await db.insert(users).values({ handle: 'stranger2' }).returning({ id: users.id })
+    const [priv] = await db
+      .insert(templates)
+      .values({ ownerId: other.id, slug: 'secret2', title: { ru: 's' }, visibility: 'private' })
+      .returning({ id: templates.id })
+    // Шесть строк: средние ТРИ — про недоступный список, то есть вся вторая порция.
+    await db.insert(notifications).values(
+      Array.from({ length: 6 }, (_, i) => ({
+        recipientId: userId,
+        type: 'star' as const,
+        templateId: i >= 2 && i <= 4 ? priv.id : null,
+        createdAt: new Date(Date.UTC(2026, 7, 18, 12, 0, 100 - i)),
+      })),
+    )
+
+    const p1 = await getNotificationsPage(userId, 2)
+    expect(p1.items).toHaveLength(2)
+    const p2 = await getNotificationsPage(userId, 2, decodeCursor(p1.next))
+    // Вся порция скрыта — но лента не кончилась, и шаг вперёд есть.
+    expect(p2.items).toHaveLength(0)
+    expect(p2.next).not.toBeNull()
+    // Из пустой порции есть и выход назад — читатель не заперт.
+    expect(p2.prev).not.toBeNull()
+
+    const p3 = await getNotificationsPage(userId, 2, decodeCursor(p2.next))
+    expect(p3.items).toHaveLength(1) // шестая строка, единственная видимая ниже
+    const back = await getNotificationsPage(userId, 2, decodeCursor(p2.prev), 'before')
+    expect(back.items.map((n) => n.id)).toEqual(p1.items.map((n) => n.id))
+  })
+
   it('шаг назад возвращает ровно ту порцию, с которой ушли', async () => {
     await resetTables([notifications])
     await seed(0, COUNT)

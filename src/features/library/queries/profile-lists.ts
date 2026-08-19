@@ -3,7 +3,8 @@ import { and, asc, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-or
 import { db, starFolderItems, stars, templates, users } from '@/shared/db'
 import { feedWindow } from '@/shared/lib/paging'
 import type { FeedItem } from './list'
-import { FEED_COLS, likeContains, titleText, visibleFilter, withAvatar } from './shared'
+import { FEED_COLS, titleText, visibleFilter, withAvatar } from './shared'
+import { likeContains } from '@/shared/db/like'
 
 /**
  * ВЫДАЧА ВКЛАДОК ПРОФИЛЯ («Списки» и «Звёзды») — отбор, порядок и окно ОДНИМ запросом.
