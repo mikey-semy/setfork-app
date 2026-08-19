@@ -29,6 +29,13 @@ export function rowsToProposed(rows: DetailStep[]): ProposedItem[] {
         section: s.section,
         needsHuman: s.needsHuman,
         needsHumanAsk: s.needsHumanAsk,
+        // РАЗРУШИТЕЛЬНЫЙ ПУНКТ переносится наравне с остальным. Его тут не было, и пометка
+        // молча слетала: `toStepInput` ставит `danger ?? isRiskyCommand(command)`, то есть
+        // потерянное поле не остаётся пустым, а ПЕРЕСЧИТЫВАЕТСЯ по шаблону команды. Решение
+        // автора — и «да, опасно» на безопасной с виду команде, и снятая пометка на
+        // подозрительной — переживало ровно до первого патча СОСЕДНЕГО блока: состав
+        // переписывается целиком, а danger в него не попадал. Замерено линзой ядра 02.
+        danger: s.danger,
         subtasks: s.subtasks,
         refs: s.refs,
       }) as unknown as ProposedItem,
