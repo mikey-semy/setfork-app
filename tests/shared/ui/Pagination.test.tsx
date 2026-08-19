@@ -194,3 +194,23 @@ describe('Pagination: режим keyset (курсор)', () => {
     expect(live).not.toHaveTextContent(/page\s*\d/i)
   })
 })
+
+describe('Pagination: число найденного и предзагрузка', () => {
+  it('счёт показывается ОТДЕЛЬНОЙ строкой, а ряд остаётся прежним', () => {
+    // Ряд отцентрован, и любое изменение его содержимого разъезжает обе стрелки — палец,
+    // занесённый над «вперёд», попадает мимо. Поэтому счёт живёт над рядом, а «2 / 3»
+    // остаётся на месте.
+    render(<Pagination page={2} totalPages={3} total={518} makeHref={href} lang="en" />)
+    expect(screen.getByText('518')).toBeInTheDocument()
+    expect(screen.getByText(/Found/)).toBeInTheDocument()
+    const nav = screen.getByRole('navigation')
+    expect(nav).not.toHaveTextContent('518')
+  })
+
+  it('без счёта лишнего узла нет', () => {
+    const { container } = render(<Pagination page={2} totalPages={3} makeHref={href} lang="en" />)
+    expect(screen.queryByText(/Found/)).toBeNull()
+    // Ряд остаётся корнем: обёртка заводится только когда есть что показать над ним.
+    expect(container.firstChild).toBe(screen.getByRole('navigation'))
+  })
+})

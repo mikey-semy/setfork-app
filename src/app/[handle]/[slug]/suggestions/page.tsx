@@ -285,7 +285,7 @@ export default async function SuggestionsPage({
         </SuggestionSelection>
       )}
       {/* Отбор переносится сам: pageHref тащит остальные параметры и меняет номер. */}
-      <Pagination page={page} totalPages={totalPages} makeHref={pageHref(base, sp)} lang={lang} />
+      <Pagination page={page} totalPages={totalPages} total={total} makeHref={pageHref(base, sp)} lang={lang} />
     </div>
   )
 }

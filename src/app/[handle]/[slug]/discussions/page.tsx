@@ -99,7 +99,7 @@ export default async function DiscussionsPage({
           </div>
         )}
         {/* Раздел переносится сам: pageHref тащит остальные параметры. */}
-        <Pagination page={page} totalPages={totalPages} makeHref={pageHref(base, sp)} lang={lang} />
+        <Pagination page={page} totalPages={totalPages} total={total} makeHref={pageHref(base, sp)} lang={lang} />
       </div>
     </>
   )

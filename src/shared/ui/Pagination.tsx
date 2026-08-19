@@ -49,6 +49,19 @@ type Common = {
   busy?: boolean
   /** Компактная — только «‹ N / M ›», без номеров даже на десктопе (узкие панели). */
   compact?: boolean
+  /**
+   * Сколько строк подошло под текущий отбор.
+   *
+   * Показывается ОТДЕЛЬНОЙ строкой над рядом, а не вместо «3 / 26», и это не вкусовщина:
+   * ряд отцентрован, и любое изменение его содержимого разъезжает обе стрелки — палец,
+   * занесённый над «вперёд», попадает мимо (та же причина, по которой у подписи позиции
+   * зарезервирована ширина). Отдельная строка ряда не трогает.
+   *
+   * Зачем вообще: «3 / 26» отвечает «где я», но не отвечает «сколько нашлось», а при
+   * включённом отборе человека интересует именно второе. Передают её те поверхности, у
+   * которых счёт и так посчитан ради числа страниц, — лишнего запроса это не стоит.
+   */
+  total?: number
   className?: string
 }
 
@@ -64,7 +77,7 @@ type Props = Common &
     | { steps: CursorSteps; page?: never; makeHref?: never; onPage?: never }
   )
 
-export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPage, steps, lang, busy = false, compact = false, className }: Props) {
+export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPage, steps, total, lang, busy = false, compact = false, className }: Props) {
   const last = totalPages ?? 0
   // Номер приводим к существующему ЗДЕСЬ, а не надеемся на вызывающего: с номером за
   // краем оба шага оказывались мёртвыми, и ряд превращался в тупик. Вызывающие его и так
@@ -80,6 +93,26 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
   // ВИД по шкале (32px, как у всех контролов), ЦЕЛЬ по стандарту — на грубом указателе
   // шаг дорастает до 44 по обеим сторонам. Руками этого писать нельзя: у проекта для
   // тач-целей есть свои классы, и правило должно жить в одном месте (control.ts).
+  /** Строка «Найдено: N» над рядом. `undefined` — поверхность счёт не передала. */
+  const found =
+    total === undefined ? null : (
+      <div className="mb-1 text-center text-[0.75rem] text-muted">
+        {t('foundLabel', lang)}: <span className="tabular-nums text-ink-2">{total}</span>
+      </div>
+    )
+  /** Ряд обёрнут, только когда есть что показать над ним: лишний узел даром не нужен. */
+  const withFound = (row: React.ReactNode) =>
+    found ? (
+      <div className={cn('mt-4', className)}>
+        {found}
+        {row}
+      </div>
+    ) : (
+      row
+    )
+  // Отступ и внешний класс живут НА ОБЁРТКЕ, когда она есть, иначе они удвоились бы.
+  const rowClass = cn('flex items-center justify-center gap-1 tabular-nums pointer-coarse:gap-2', found ? null : cn('mt-4', className))
+
   const box = cn('inline-flex min-w-8 items-center justify-center gap-1 rounded-md px-2', CONTROL_H.md, CONTROL_TEXT.md, TOUCH_MIN_BOX)
   const idle = 'border border-border text-ink-2 hover:border-border-strong hover:text-ink'
   const off = 'border border-border/60 text-muted opacity-50'
@@ -137,15 +170,19 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
       return (
         // rel=prev/next — подсказка обходчику о порядке страниц.
         //
-        // ПРЕДЗАГРУЗКА — ТОЛЬКО У СОСЕДНИХ СТРАНИЦ. По умолчанию Next тянет payload у
-        // каждой ссылки в поле зрения, а номеров в ряду до семи: один показ листалки
-        // превращался бы в семь загрузок целых страниц ради одного перехода. Сосед —
-        // почти всегда и есть следующее действие, остальные номера ждут нажатия.
+        // ПРЕДЗАГРУЗКА — ТОЛЬКО У «ВПЕРЁД». По умолчанию Next тянет payload у каждой
+        // ссылки в поле зрения, а номеров в ряду до семи: один показ листалки
+        // превращался бы в семь загрузок целых страниц ради одного перехода.
+        //
+        // «Назад» из предзагрузки ИСКЛЮЧЕНА намеренно. На неё приходят, уже побывав на
+        // предыдущей странице, — то есть её payload у браузера есть, и вторая загрузка
+        // ничего не ускоряет, а трафик тратит на каждом показе листалки. Дальше по ленте
+        // человек идёт вперёд, и предзагружать имеет смысл ровно это направление.
         <Link
           key={label}
           href={makeHref(to)}
           rel={rel}
-          prefetch={rel ? undefined : false}
+          prefetch={rel === 'next' ? undefined : false}
           aria-label={label}
           aria-current={current ? 'page' : undefined}
           className={cn(box, idle)}
@@ -191,15 +228,13 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
     // обещание действия, которого не будет.
     const cursorStep = (href: string | null, label: string, body: React.ReactNode, rel: 'prev' | 'next') =>
       href ? (
-        <Link key={label} href={href} rel={rel} aria-label={label} className={cn(box, idle)}>
+        // Предзагрузка — по тому же правилу, что у номерного режима: только «вперёд».
+        <Link key={label} href={href} rel={rel} prefetch={rel === 'next' ? undefined : false} aria-label={label} className={cn(box, idle)}>
           {body}
         </Link>
       ) : null
-    return (
-      <nav
-        className={cn('mt-4 flex items-center justify-center gap-1 tabular-nums pointer-coarse:gap-2', className)}
-        aria-label={t('paginationLabel', lang)}
-      >
+    return withFound(
+      <nav className={rowClass} aria-label={t('paginationLabel', lang)}>
         {/* Объявляем ТОЛЬКО загрузку. Номера страницы здесь нет, и выдумывать его для
             скринридера нельзя: «страница 3» на ленте, у которой начало уезжает, — это
             неверные сведения, а не удобство. */}
@@ -208,7 +243,7 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
         </span>
         {cursorStep(steps.prev, t('prevPage', lang), arrow(<ChevronLeft size={14} />, t('prevPageShort', lang), 'l'), 'prev')}
         {cursorStep(steps.next, t('nextPage', lang), arrow(<ChevronRight size={14} />, t('nextPageShort', lang), 'r'), 'next')}
-      </nav>
+      </nav>,
     )
   }
 
@@ -235,15 +270,12 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
     </span>
   )
 
-  return (
+  return withFound(
     // tabular-nums на всей листалке: иначе номера разной ширины дёргают ряд при переходе.
     // gap на грубом указателе шире: цели по 44px, стоящие в 4px друг от друга, дают
     // промах в соседнюю страницу — Material требует не меньше 8dp зазора, и это тот же
     // довод, что записан у TOUCH_HIT_ROW про столбики.
-    <nav
-      className={cn('mt-4 flex items-center justify-center gap-1 tabular-nums pointer-coarse:gap-2', className)}
-      aria-label={t('paginationLabel', lang)}
-    >
+    <nav className={rowClass} aria-label={t('paginationLabel', lang)}>
       {announce}
       {prev}
       {/* Номера — только когда есть что нумеровать И есть куда их положить. */}
@@ -267,6 +299,6 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
         position
       )}
       {next}
-    </nav>
+    </nav>,
   )
 }

@@ -360,6 +360,8 @@ export const en = {
   prevPage: 'Previous page',
   nextPage: 'Next page',
   paginationLabel: 'Pagination',
+  /** How many rows matched the current filter — shown next to the pager. */
+  foundLabel: 'Found',
   pageLabel: 'Page',
   prevPageShort: 'Previous',
   nextPageShort: 'Next',

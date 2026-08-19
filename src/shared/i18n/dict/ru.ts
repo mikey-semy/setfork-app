@@ -352,6 +352,8 @@ export const ru: Record<DictKey, string> = {
   prevPage: 'Назад, на предыдущую страницу',
   nextPage: 'Вперёд, на следующую страницу',
   paginationLabel: 'Постранично',
+  /** Сколько строк подошло под текущий отбор — рядом с листалкой. */
+  foundLabel: 'Найдено',
   pageLabel: 'Страница',
   prevPageShort: 'Назад',
   nextPageShort: 'Вперёд',

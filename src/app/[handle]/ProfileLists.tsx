@@ -157,12 +157,12 @@ export function ProfileLists({
         // одна страница: разбирать полтысячи списков по двадцать штук бессмысленно.
         <BulkSelection lang={lang} catalogs={bulk.catalogs} allIds={bulk.allIds} toolbar={toolbar}>
           <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} selectable />
-          <Pagination page={page} totalPages={totalPages} makeHref={pageHref} lang={lang} />
+          <Pagination page={page} totalPages={totalPages} total={total} makeHref={pageHref} lang={lang} />
         </BulkSelection>
       ) : (
         <>
           <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} />
-          <Pagination page={page} totalPages={totalPages} makeHref={pageHref} lang={lang} />
+          <Pagination page={page} totalPages={totalPages} total={total} makeHref={pageHref} lang={lang} />
         </>
       )}
     </>
