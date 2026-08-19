@@ -103,9 +103,13 @@ export function CoverSection({
               onClick={() => pickAccent(a)}
               aria-label={a || 'default'}
               style={a ? { backgroundColor: a } : undefined}
-              className={`h-5 w-5 rounded-full border ${a ? '' : 'bg-surface-2'} ${accent === a ? 'ring-2 ring-offset-1 ring-(--accent)' : 'border-black/10'}`}
+              // inline-flex с центрированием — иначе `×` садится на БАЗОВУЮ ЛИНИЮ текста
+              // и падает к низу кружка: у кнопки по умолчанию текст выравнен по базовой
+              // линии, а не по центру бокса. Само собой это не исправляется ни размером
+              // шрифта, ни line-height — нужен именно флекс-центр.
+              className={`inline-flex h-5 w-5 items-center justify-center rounded-full border ${a ? '' : 'bg-surface-2'} ${accent === a ? 'ring-2 ring-offset-1 ring-(--accent)' : 'border-black/10'}`}
             >
-              {!a && <span className="text-[0.6875rem] text-muted">×</span>}
+              {!a && <span className="text-[0.6875rem] leading-none text-muted">×</span>}
             </button>
           ))}
         </div>

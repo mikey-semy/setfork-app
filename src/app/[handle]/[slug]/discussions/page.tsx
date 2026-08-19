@@ -49,20 +49,36 @@ export default async function DiscussionsPage({
   return (
     <>
       <div className={PAGE}>
+        {/* РЯД ОДНОЙ ВЫСОТЫ. Пилюли задавали высоту отступом (`py-1.5`), а кнопка рядом
+            берёт её из шкалы — ряд стоял разнобоем, и это било в глаза. Теперь и то и
+            другое идёт через `buttonClass`: высота приходит из одного места.
+
+            НА УЗКОМ ЭКРАНЕ — ТОЛЬКО ЗНАЧОК. Пять подписей в ряд на телефон не влезали, и
+            текст вылезал за пилюлю. Подпись остаётся доступным именем (`aria-label`) и
+            подсказкой; на пальце подсказка теперь показывается удержанием, как клавиша
+            на экранной клавиатуре (см. shared/ui/Tooltip). */}
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1">
-            <Link href={base} className={`rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium ${!category ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}>
-              {ru ? 'Все' : 'All'}
-            </Link>
-            {DISCUSSION_CATEGORIES.map((c) => (
-              <Link
-                key={c.key}
-                href={`${base}?category=${c.key}`}
-                className={`rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium ${category === c.key ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}
-              >
-                {c.icon} {ru ? c.ru : c.en}
-              </Link>
-            ))}
+            {[{ key: '', icon: '📋', label: ru ? 'Все' : 'All' }, ...DISCUSSION_CATEGORIES.map((c) => ({ key: c.key, icon: c.icon, label: ru ? c.ru : c.en }))].map((c) => {
+              const on = c.key ? category === c.key : !category
+              return (
+                <Tooltip key={c.key || 'all'} label={c.label}>
+                  <Link
+                    href={c.key ? `${base}?category=${c.key}` : base}
+                    aria-label={c.label}
+                    aria-current={on ? 'page' : undefined}
+                    className={buttonClass({
+                      variant: 'ghost',
+                      size: 'md',
+                      className: on ? 'bg-surface-2 text-ink' : undefined,
+                    })}
+                  >
+                    <span aria-hidden>{c.icon}</span>
+                    <span className="hidden sm:inline">{c.label}</span>
+                  </Link>
+                </Tooltip>
+              )
+            })}
           </div>
           {session && (
             <Link href={`${base}/new`} className={buttonClass({ variant: 'primary' })}>

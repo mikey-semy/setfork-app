@@ -24,6 +24,28 @@ export function TooltipProvider({ children, delay = 250 }: { children: React.Rea
 //     <Tooltip label="…"><SheetTrigger asChild><IconButton …/></SheetTrigger></Tooltip>
 // Обратный порядок молча ломает кнопку: onClick и aria-* от триггера уходят в
 // Tooltip и до неё не доходят (09.08.2026 так перестала открываться панель свойств).
+
+/**
+ * НА ПАЛЬЦЕ ПОДСКАЗКА РАБОТАЕТ ИНАЧЕ, ЧЕМ ПОД МЫШЬЮ.
+ *
+ * У мыши есть наведение: курсор стоит над кнопкой, подсказка висит, пока он там. У пальца
+ * наведения нет вовсе — есть только «коснулся» и «отпустил». Radix в таком случае
+ * показывает подсказку по касанию и почти сразу убирает её вместе с нажатием: получается
+ * вспышка, которую замечаешь, но не успеваешь прочесть. То есть на телефоне подсказка не
+ * помогала, а мешала — ровно так это и выглядело в работе.
+ *
+ * Берём поведение, которое на телефоне уже знакомо каждому: КЛАВИАТУРА. Нажал клавишу —
+ * над ней всплыл символ; держишь — висит; отпустил — исчез. Здесь так же: подсказка
+ * появляется по касанию, живёт, пока палец на кнопке, и уходит с отпусканием.
+ *
+ * Появление плавное — `sf-pop-in` из моушен-системы (мягкий подъём с лёгким масштабом),
+ * а не мгновенная подстановка: резкое появление у самого пальца читается как рывок.
+ *
+ * Мышь и клавиатура работают как раньше: там `onOpenChange` от Radix, задержки провайдера
+ * и наведение. Ветка «палец» включается только на грубом указателе — по `pointerType`
+ * самого события, а не по ширине экрана: планшет с мышью не должен получать поведение
+ * пальца, а телефон в альбомной — поведение мыши.
+ */
 export function Tooltip({
   label,
   children,
@@ -35,10 +57,47 @@ export function Tooltip({
   side?: 'top' | 'bottom' | 'left' | 'right'
   delay?: number
 }) {
+  const [open, setOpen] = React.useState(false)
+  // Касание «ведёт» подсказку само: пока палец на кнопке, `onOpenChange` от Radix
+  // игнорируется — иначе он закрыл бы её на том же нажатии.
+  const touching = React.useRef(false)
+
   if (!label) return <>{children}</>
+
+  const holdOn = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse') return
+    touching.current = true
+    setOpen(true)
+  }
+  const holdOff = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse') return
+    touching.current = false
+    setOpen(false)
+  }
+
   return (
-    <TooltipPrimitive.Root delayDuration={delay}>
-      <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
+    <TooltipPrimitive.Root
+      delayDuration={delay}
+      open={open}
+      onOpenChange={(next) => {
+        if (touching.current) return
+        setOpen(next)
+      }}
+    >
+      {/* Обработчики на ОБЁРТКЕ триггера, а не на children: компонент намеренно не
+          пробрасывает пропы внутрь (см. предупреждение о порядке выше), и повесить их на
+          чужую кнопку значило бы перетереть её собственные. `asChild` при этом сохраняем —
+          иначе в разметке появится лишний узел и сломается вёрстка рядов. */}
+      <TooltipPrimitive.Trigger
+        asChild
+        onPointerDown={holdOn}
+        onPointerUp={holdOff}
+        onPointerCancel={holdOff}
+        // Палец уехал с кнопки, не отпуская, — это тоже конец удержания.
+        onPointerLeave={holdOff}
+      >
+        {children}
+      </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content
           side={side}

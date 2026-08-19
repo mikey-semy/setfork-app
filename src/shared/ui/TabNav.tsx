@@ -298,16 +298,19 @@ function MoreTab({
 export interface TabItemProps {
   href: string
   on: boolean
-  /** Иконка вкладки (только на широком экране); фильтры-вкладки живут и без неё. */
+  /** Значок вкладки. С ним на узком экране показывается ОН, а подпись уходит в
+   *  подсказку; без него подпись видна всегда. */
   icon?: React.ReactNode
   label: string
   count?: number
 }
 
 export function TabItem({ href, on, icon, label, count }: TabItemProps) {
-  return (
+  const item = (
     <Link
       href={href}
+      // Подпись остаётся доступным именем и тогда, когда её не видно (узкий экран).
+      aria-label={icon != null ? label : undefined}
       data-active={on || undefined}
       // ТЕКУЩАЯ ВКЛАДКА ОБЪЯВЛЯЕТСЯ, а не только рисуется. `data-active` двигает полоску
       // и меняет начертание — оба признака чисто зрительные, и в скринридере ряд звучал
@@ -318,11 +321,17 @@ export function TabItem({ href, on, icon, label, count }: TabItemProps) {
         on ? 'font-semibold text-ink' : 'font-medium text-ink-2 hover:text-ink'
       }`}
     >
-      {/* Иконка — только на широком экране. На мобиле она съедает ширину, из-за
-          которой в ряд не влезает лишняя вкладка, а смысла не добавляет: подписи
-          короткие и однозначные (так же у GitHub на узком экране). */}
-      {icon != null && <span className={`hidden sm:inline ${on ? 'text-ink' : 'text-muted'}`}>{icon}</span>}
-      {label}
+      {/* НА УЗКОМ ЭКРАНЕ — ЗНАЧОК ВМЕСТО ПОДПИСИ, а не наоборот.
+          Прежде прятался значок: считалось, что подписи «короткие и однозначные». На
+          русском они не короткие — «Завершённые», «Новое обсуждение», — и в ряд не
+          влезали: текст вылезал за вкладку. Значок занимает фиксированную ширину и
+          читается сразу.
+          Подпись при этом не пропадает: она остаётся доступным именем (`aria-label` на
+          ссылке) и подсказкой, а на пальце подсказка теперь показывается удержанием, как
+          клавиша на экранной клавиатуре (см. shared/ui/Tooltip).
+          Вкладка БЕЗ значка показывает подпись всегда — иначе от неё осталась бы пустота. */}
+      {icon != null && <span className={on ? 'text-ink' : 'text-muted'}>{icon}</span>}
+      <span className={icon != null ? 'hidden sm:inline' : undefined}>{label}</span>
       {count != null && count > 0 && (
         <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-surface-2 px-1.5 text-[0.6875rem] leading-none text-ink-2">
           {count}
@@ -330,4 +339,7 @@ export function TabItem({ href, on, icon, label, count }: TabItemProps) {
       )}
     </Link>
   )
+  // Подсказка нужна там, где подпись спрятана. Вкладке без значка она ни к чему: её
+  // подпись видна всегда, и подсказка лишь повторяла бы написанное.
+  return icon != null ? <Tooltip label={label}>{item}</Tooltip> : item
 }

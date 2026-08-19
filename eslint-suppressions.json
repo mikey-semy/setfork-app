@@ -21,7 +21,7 @@
   },
   "src/app/[handle]/[slug]/discussions/page.tsx": {
     "no-restricted-syntax": {
-      "count": 5
+      "count": 3
     }
   },
   "src/app/[handle]/[slug]/insights/page.tsx": {
