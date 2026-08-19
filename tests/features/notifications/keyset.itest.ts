@@ -18,7 +18,7 @@ import { resetTables } from '../../helpers/reset-db'
  * доказывает только «код работает», но не «работает лучше».
  */
 
-const { db, notifications, users } = await import('@/shared/db')
+const { db, notifications, templates, users } = await import('@/shared/db')
 const { getNotificationsPage } = await import('@/features/notifications/queries')
 
 const COUNT = 7
@@ -87,6 +87,38 @@ describe('лента уведомлений листается ключом', ()
     // Пересечение НЕПУСТО: начало отсчёта уехало вниз на два, и строки с первой страницы
     // приехали на вторую. Это и есть «offset не медленный, а неверный».
     expect(secondPage.filter((id) => firstPage.includes(id))).not.toHaveLength(0)
+  })
+
+  it('СКРЫТАЯ СТРОКА НА ГРАНИЦЕ не обрывает ленту', async () => {
+    // Разведчик берёт на строку больше показанного, чтобы ответить «есть ли дальше». Пока
+    // отсев видимости стоял ВНУТРИ запроса, он успевал убрать именно эту строку — и
+    // ответом становилось «дальше ничего». Проверено: шесть уведомлений, одно скрытое на
+    // границе, порция по три — показывались три строки, а два видимых уведомления
+    // оказывались недостижимы вовсе.
+    await resetTables([notifications, templates])
+    const [other] = await db.insert(users).values({ handle: 'stranger' }).returning({ id: users.id })
+    const [priv] = await db
+      .insert(templates)
+      .values({ ownerId: other.id, slug: 'secret', title: { ru: 's' }, visibility: 'private' })
+      .returning({ id: templates.id })
+    await db.insert(notifications).values(
+      Array.from({ length: 6 }, (_, i) => ({
+        recipientId: userId,
+        type: 'star' as const,
+        // Четвёртое — ровно строка-разведчик при порции в три.
+        templateId: i === 3 ? priv.id : null,
+        createdAt: new Date(Date.UTC(2026, 7, 18, 12, 0, 100 - i)),
+      })),
+    )
+
+    const p1 = await getNotificationsPage(userId, 3)
+    expect(p1.items).toHaveLength(3)
+    expect(p1.next).not.toBeNull() // ниже есть что читать — лента обрываться не должна
+
+    const p2 = await getNotificationsPage(userId, 3, decodeCursor(p1.next))
+    // Скрытое уведомление не показано, но и не съело порцию: остальные два на месте.
+    expect(p2.items).toHaveLength(2)
+    expect(new Set([...p1.items, ...p2.items].map((n) => n.id)).size).toBe(5)
   })
 
   it('шаг назад возвращает ровно ту порцию, с которой ушли', async () => {

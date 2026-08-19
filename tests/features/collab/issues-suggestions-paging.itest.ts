@@ -135,6 +135,25 @@ describe('задачи и правки листаются страницами',
     expect(last).toHaveLength(OPEN - PER * 2) // хвост короче страницы
   })
 
+  it('ДРЕЙФ СМЕЩЕНИЯ ЗАФИКСИРОВАН: «сначала новые» повторяет строку, «сначала старые» — нет', async () => {
+    // Не дефект, а принятый компромисс, и он записан здесь, чтобы не считаться устным.
+    // По каталогу ПРЫГАЮТ («открыть страницу 7»), а курсор прыжка не умеет; платой идёт
+    // дрейф: свежая строка встаёт сверху, всё едет вниз, строка с границы приходит
+    // дважды. Раньше докстрока утверждала обратное — что смещение здесь верно.
+    const newest = { status: 'open' as const, sort: 'newest' as const }
+    const p1 = (await getIssues(templateId, newest, pageWindow(1, 3))).map((i) => i.number)
+    await db.insert(issues).values({ templateId, number: 999, title: 'новая', authorId: (await db.select({ id: users.id }).from(users).limit(1))[0].id, status: 'open' })
+    const p2 = (await getIssues(templateId, newest, pageWindow(2, 3))).map((i) => i.number)
+    expect(p2.filter((n) => p1.includes(n))).not.toHaveLength(0)
+
+    // А «сначала старые» дрейфа не даёт: новые строки приходят В ХВОСТ.
+    const oldest = { status: 'open' as const, sort: 'oldest' as const }
+    const o1 = (await getIssues(templateId, oldest, pageWindow(1, 3))).map((i) => i.number)
+    await db.insert(issues).values({ templateId, number: 1000, title: 'ещё', authorId: (await db.select({ id: users.id }).from(users).limit(1))[0].id, status: 'open' })
+    const o2 = (await getIssues(templateId, oldest, pageWindow(2, 3))).map((i) => i.number)
+    expect(o2.filter((n) => o1.includes(n))).toHaveLength(0)
+  })
+
   it('шаблонные знаки в запросе — БУКВЫ, а не язык шаблонов', async () => {
     // `%` и `_` — подстановочные знаки. Пока шаблон строился руками, `?q=%` возвращал ВСЕ
     // задачи (фильтр не фильтровал), а `?q=_b` находил «ab». Проверено на живой базе до
