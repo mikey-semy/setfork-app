@@ -9,7 +9,9 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
-import { getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, getListLabels, type IssueFilter, type IssueSort } from '@/features/issues/queries'
+import { countListIssues, getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, getListLabels, type IssueFilter, type IssueSort } from '@/features/issues/queries'
+import { Pagination } from '@/shared/ui/Pagination'
+import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { LabelChips } from '@/shared/ui/LabelChips'
 import { LabelsManager } from '@/features/issues/LabelsManager'
 import { FilterMenu } from '@/shared/ui/FilterMenu'
@@ -31,7 +33,7 @@ export default async function IssuesPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ status?: string; q?: string; label?: string; milestone?: string; sort?: string }>
+  searchParams: Promise<{ status?: string; q?: string; label?: string; milestone?: string; sort?: string; page?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
@@ -46,9 +48,16 @@ export default async function IssuesPage({
   const milestone = sp.milestone || undefined
   const sort: IssueSort = sp.sort === 'oldest' ? 'oldest' : 'newest'
 
+  // Номера страниц, а не курсор: задачи — каталог, по нему прыгают и его фильтруют.
+  // Счёт идёт по ТОМУ ЖЕ отбору, что и выдача (countListIssues делит с ней условия), иначе
+  // листалка нарисовала бы страницы, которых нет.
+  const query = { status, q, label, milestone, sort }
+  const total = await countListIssues(meta.id, query)
+  const totalPages = pageCount(total)
+  const page = pageFromParam(sp.page, totalPages)
   const [counts, list, labels, mstones, custom] = await Promise.all([
     getIssueCounts(meta.id),
-    getIssues(meta.id, { status, q, label, milestone, sort }),
+    getIssues(meta.id, query, pageWindow(page)),
     getIssueLabelsInUse(meta.id),
     getMilestonesForPicker(meta.id),
     getListLabels(meta.id),
@@ -193,6 +202,8 @@ export default async function IssuesPage({
             ))}
           </div>
         )}
+        {/* Отбор переносится сам: pageHref тащит остальные параметры и меняет номер. */}
+        <Pagination page={page} totalPages={totalPages} makeHref={pageHref(base, sp)} lang={lang} />
       </div>
     </>
   )

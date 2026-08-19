@@ -1,7 +1,8 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import { db, issueAssignees, issueComments, issues, listLabels, milestones, users } from '@/shared/db'
 import { cursorKey, keysetStep } from '@/shared/db/keyset'
+import { feedWindow } from '@/shared/lib/paging'
 import { encodeCursor, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 import type { CustomLabel } from '@/shared/lib/labels'
@@ -34,18 +35,60 @@ export interface IssueRow {
 const commentCountSql = sql<number>`(select count(*)::int from ${issueComments} c where c.issue_id = ${issues.id})`
 
 /** Список issue: статус + опц. поиск, фильтр по label/вехе, сортировка. */
-export async function getIssues(
-  templateId: string,
-  opts: { status: IssueFilter; q?: string; label?: string; milestone?: string; sort?: IssueSort },
-): Promise<IssueRow[]> {
-  const conds = [eq(issues.templateId, templateId), eq(issues.status, opts.status)]
+export interface IssueQuery {
+  status: IssueFilter
+  q?: string
+  label?: string
+  milestone?: string
+  sort?: IssueSort
+}
+
+/**
+ * Условия отбора задач — ОДИН источник на выдачу и на счёт.
+ *
+ * Порознь их писать нельзя: счёт даёт число страниц, и разойдись он с выдачей хоть на
+ * одно условие — листалка нарисует страницы, которых нет, либо спрячет существующие.
+ * Ошибка при этом тихая: обе функции по отдельности выглядят верными.
+ */
+function issueConds(templateId: string, opts: IssueQuery): SQL[] {
+  const conds: SQL[] = [eq(issues.templateId, templateId), eq(issues.status, opts.status)]
   const q = opts.q?.trim()
   if (q) conds.push(sql`${issues.title} ilike ${'%' + q + '%'}`)
   if (opts.label) conds.push(sql`${opts.label} = any(${issues.labels})`)
   if (opts.milestone) conds.push(eq(issues.milestoneId, opts.milestone))
+  return conds
+}
+
+/** Сколько задач подходит под ТОТ ЖЕ отбор — для числа страниц. */
+export async function countListIssues(templateId: string, opts: IssueQuery): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(issues)
+    .where(and(...issueConds(templateId, opts)))
+  return r?.n ?? 0
+}
+
+/**
+ * Задачи списка страницей.
+ *
+ * Номера страниц, а не курсор: задачи — КАТАЛОГ, а не лента. Их фильтруют, сортируют и
+ * прыгают по ним; порядок задан номером задачи (`issues.number`), который уникален в
+ * пределах списка и не меняется, поэтому смещение здесь верно — новые задачи приходят с
+ * краю нумерации, а не в середину.
+ *
+ * Раньше выдача шла без предела вовсе: список с тысячей задач поднимал тысячу строк
+ * вместе с аватарами авторов и счётчиками комментариев, чтобы показать экран.
+ */
+export async function getIssues(
+  templateId: string,
+  opts: IssueQuery,
+  /** Окно страницы. Проверяется `feedWindow`: битый предел драйвер выбрасывает молча. */
+  window?: { limit: number; offset?: number },
+): Promise<IssueRow[]> {
+  const conds = issueConds(templateId, opts)
   const order = opts.sort === 'oldest' ? asc(issues.number) : desc(issues.number)
 
-  const rows = await db
+  const base = db
     .select({
       id: issues.id,
       number: issues.number,
@@ -63,6 +106,8 @@ export async function getIssues(
     .leftJoin(milestones, eq(milestones.id, issues.milestoneId))
     .where(and(...conds))
     .orderBy(order)
+  const w = window && feedWindow(window)
+  const rows = w ? await base.limit(w.limit).offset(w.offset) : await base
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
 }
 
