@@ -7,6 +7,7 @@ import { timeAgo } from '@/shared/ui/timeAgo'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { countUserRunsByStatus, getUserRuns, type RunStatus, type UserRunRow } from '@/features/runs/queries'
+import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { Pagination } from '@/shared/ui/Pagination'
 import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
@@ -55,26 +56,33 @@ export default async function MyRunsPage({ searchParams }: { searchParams: Promi
         <EmptyState icon={<ListChecks size={34} strokeWidth={1.5} />} title={t('noRunsYet', lang)} />
       ) : (
         <>
-          {/* Смена вкладки сбрасывает номер страницы: третьей страницы «завершённых»
-              может не быть у «брошенных», и остаться на ней значило бы показать пустоту. */}
-          <div className="mb-4 flex flex-wrap gap-2">
-            {TABS.map((x) => (
-              <Link
-                key={x.key}
-                href={x.key === 'active' ? '/runs' : `/runs?tab=${x.key}`}
-                aria-current={x.key === tab ? 'page' : undefined}
-                className={buttonClass({
-                  variant: x.key === tab ? 'primary' : 'ghost',
-                  size: 'sm',
-                })}
-              >
-                {t(x.label, lang)} · {counts[x.key]}
-              </Link>
-            ))}
+          {/* ОДИН ТАБ-БАР НА САЙТ — тот же `TabNav`, что у профиля, модерации и Explore.
+              Первая версия этого ряда была рукописной, и это ровно та ошибка, с которой
+              начиналась вся работа по листанию: шесть своих листалок вместо одной. У
+              вкладок она уже была решена примитивом, и заводить седьмой ряд незачем.
+
+              Форма совпадает с модерацией построчно: отбор внутри страницы через параметр
+              адреса, счётчик рядом с подписью. Ряд не листается вбок, а не влезшие вкладки
+              уезжают в «…» — на узком экране видно, что вкладок больше. */}
+          <div className="-mx-4 mb-4">
+            <TabNav scope="runs" overflow={{ moreLabel: t('moreTabs', lang) }}>
+              {TABS.map((x) => (
+                <TabItem
+                  key={x.key}
+                  href={x.key === 'active' ? '/runs' : `/runs?tab=${x.key}`}
+                  on={x.key === tab}
+                  label={t(x.label, lang)}
+                  count={counts[x.key]}
+                />
+              ))}
+            </TabNav>
           </div>
 
           {rows.length === 0 ? (
-            <EmptyState variant="plain" hint={t('noRunsYet', lang)} />
+            // НЕ «пока нет прогонов»: сюда попадают, когда пуста ИМЕННО эта вкладка, а
+            // прогоны у человека есть — просто в другой. Прежний текст был бы ложью,
+            // причём той, что заставляет искать несуществующую поломку.
+            <EmptyState variant="plain" hint={t('noRunsInTab', lang)} />
           ) : (
             <div className="flex flex-col gap-2">
               {rows.map((r) => (

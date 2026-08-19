@@ -626,6 +626,8 @@ export const ru: Record<DictKey, string> = {
   runsCompleted: 'Завершённые',
   runsAbandoned: 'Брошенные',
   noRunsYet: 'Пока нет прогонов. Начните с любого списка.',
+  /** Вкладка пуста, а прогоны у человека есть: «пока нет прогонов» здесь было бы ложью. */
+  noRunsInTab: 'В этой вкладке пусто.',
   runResume: 'Продолжить',
   runOpen: 'Открыть',
   runContinue: 'Продолжить прогон',

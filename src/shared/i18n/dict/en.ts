@@ -634,6 +634,8 @@ export const en = {
   runsCompleted: 'Completed',
   runsAbandoned: 'Abandoned',
   noRunsYet: 'No runs yet. Start one from any list.',
+  /** The tab is empty while the person does have runs: “no runs yet” would be a lie. */
+  noRunsInTab: 'Nothing in this tab.',
   runResume: 'Resume',
   runOpen: 'Open',
   runContinue: 'Continue run',
