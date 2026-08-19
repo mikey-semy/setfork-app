@@ -1171,7 +1171,8 @@ export const suggestionComments = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('suggestion_comments_sug_idx').on(t.suggestionId)],
+  // Порядок треда в индексе — см. issue_comments_issue_idx.
+  (t) => [index('suggestion_comments_sug_idx').on(t.suggestionId, t.createdAt, t.id)],
 )
 
 // ── Reactions (эмодзи на issues/suggestions/комментарии, как в GitHub) ──
@@ -1284,7 +1285,17 @@ export const issueComments = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('issue_comments_issue_idx').on(t.issueId)],
+  // ПОРЯДОК ТРЕДА — В ИНДЕКСЕ, а не в сортировке на каждую порцию.
+  //
+  // Индекса по одному родителю мало: он отдаёт ВЕСЬ тред, и дальше база сортирует его
+  // целиком ради двадцати строк. Замер 19.08 на треде в 20 000 реплик: `Index Scan` по
+  // `issue_id` возвращал все 20 000, следом `top-N heapsort`. То есть цена порции равна
+  // длине треда — ровно то, ради избавления от чего листание и заводилось.
+  //
+  // С этим индексом условие курсора `(created_at, id) > (:key, :id)` становится `Index
+  // Cond`, то есть настоящим диапазонным сканом: замер даёт `Index Only Scan` на 21
+  // строку. Порядок ASC — тред читают с начала (см. shared/db/keyset).
+  (t) => [index('issue_comments_issue_idx').on(t.issueId, t.createdAt, t.id)],
 )
 
 // ── Discussions (форум-треды на список, как GitHub Discussions) ──────
@@ -1323,7 +1334,9 @@ export const discussionComments = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('discussion_comments_discussion_idx').on(t.discussionId)],
+  // Порядок треда в индексе — см. issue_comments_issue_idx: без него каждая порция
+  // сортирует обсуждение целиком.
+  (t) => [index('discussion_comments_discussion_idx').on(t.discussionId, t.createdAt, t.id)],
 )
 export type Discussion = typeof discussions.$inferSelect
 export type DiscussionComment = typeof discussionComments.$inferSelect
@@ -2331,7 +2344,15 @@ export const auditLog = pgTable(
     ip: text('ip'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('audit_log_created_idx').on(t.createdAt), index('audit_log_actor_idx').on(t.actorId)],
+  // Журнал листается ключом `(created_at desc, id desc)`. Без `id` в индексе база
+  // дорешивает порядок `Incremental Sort` — на группах в одну строку это дёшево, но
+  // колонка в уже существующий индекс достаётся даром, а порядок начинает отдаваться
+  // целиком. `nullsFirst` — иначе индекс не совпадёт с `ORDER BY … DESC` вовсе
+  // (см. tests/architecture/index-nulls-order).
+  (t) => [
+    index('audit_log_created_idx').on(t.createdAt.desc().nullsFirst(), t.id.desc().nullsFirst()),
+    index('audit_log_actor_idx').on(t.actorId),
+  ],
 )
 
 // ── Sessions (серверный реестр входов — для отзыва и «кто онлайн») ────
@@ -2369,8 +2390,15 @@ export const notifications = pgTable(
   },
   (t) => [
     index('notifications_recipient_idx').on(t.recipientId, t.read),
-    // Колокол: последние N. `.nullsFirst()` — см. templates_pub_updated_idx.
-    index('notifications_recipient_created_idx').on(t.recipientId, t.createdAt.desc().nullsFirst()),
+    // Колокол: последние N. `.nullsFirst()` — см. templates_pub_updated_idx. `id` в
+    // хвосте — потому что лента листается ключом `(created_at desc, id desc)`: без него
+    // порядок дорешивается `Incremental Sort`, а колонка в существующий индекс достаётся
+    // даром.
+    index('notifications_recipient_created_idx').on(
+      t.recipientId,
+      t.createdAt.desc().nullsFirst(),
+      t.id.desc().nullsFirst(),
+    ),
   ],
 )
 
