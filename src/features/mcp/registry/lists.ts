@@ -39,7 +39,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
       // операция, и клиент вправе спросить человека. Точечная правка — patch_list.
       annotations: { destructiveHint: true },
       description:
-        'Replace ALL blocks of a list you own (steps and/or text/image/poll/video/quiz/file) — anything you omit is removed. For editing a few blocks use patch_list instead. A draft is edited in place; a published list gets a new version.',
+        'Replace ALL blocks of a list you own (steps and/or text/image/poll/video/quiz/file) — anything you omit is removed. For editing a few blocks use patch_list instead. Every write call makes a new version unless you pass publish:false — this holds for drafts and published lists alike.',
       inputSchema: {
         handle: z.string().describe('Owner handle (must be you)'),
         slug: z.string().describe('List slug'),
@@ -62,7 +62,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
     {
       title: 'Patch a list',
       description:
-        'Edit SPECIFIC blocks of a list you own instead of resending the whole list. Ops address blocks by their stable "bid" from get_list: update (change only the fields you pass), insert (new block at start/end/after a bid), delete, move. All ops apply together or none at all. baseVersion is required — pass the "version" you got from get_list; if the list changed meanwhile the patch is rejected so you cannot silently overwrite someone else\'s edit. By default each call publishes a new version; pass publish:false to COLLECT edits instead — they pile up in the same draft the editor shows (get_list returns it as pendingEdits), and publish_draft turns the whole pile into ONE version. Prefer this over update_list for edits; a list that was never published is patched in place.',
+        'Edit SPECIFIC blocks of a list you own instead of resending the whole list. Ops address blocks by their stable "bid" from get_list: update (change only the fields you pass), insert (new block at start/end/after a bid), delete, move. All ops apply together or none at all. baseVersion is required — pass the "version" you got from get_list; if the list changed meanwhile the patch is rejected so you cannot silently overwrite someone else\'s edit. By default each call publishes a new version; pass publish:false to COLLECT edits instead — they pile up in the same draft the editor shows (get_list returns it as pendingEdits), and publish_draft turns the whole pile into ONE version. Prefer this over update_list for edits. This works the same whether or not the list is published.',
       inputSchema: {
         handle: z.string().describe('Owner handle (must be you)'),
         slug: z.string().describe('List slug'),

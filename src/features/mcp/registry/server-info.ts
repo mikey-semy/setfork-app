@@ -29,7 +29,7 @@ export const serverOptions = {
       '3. Batch: by default one patch_list call = one new version. To let several rounds of edits land as ONE version, call patch_list with publish:false — they pile up in a draft (get_list shows it as pendingEdits) — and finish with publish_draft (two-step: it reports first, publishes with confirm:true). Stuck because the list moved on? discard_draft throws the pile away.',
       '',
       'Good to know:',
-      '- A list that was never published is edited in place; for a published list every write call makes a version unless you pass publish:false.',
+      '- Every write call makes a new version unless you pass publish:false, which collects edits in the working copy instead; publishing a list changes who can see it, not what is in it.',
       '- baseVersion protects you: if someone edited the list meanwhile, the patch is rejected instead of overwriting their work — re-read with get_list and retry.',
       '- Step links are just {"url": "..."}; a label is optional and the interface falls back to the domain.',
       '- delete_list is irreversible and needs confirm:true; without it the call only reports what would go.',

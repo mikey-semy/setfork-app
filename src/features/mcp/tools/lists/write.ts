@@ -15,7 +15,7 @@ import { listStore } from '@/features/library/list-store'
 // Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { resolveListRefOrMoved } from '../shared'
-import { draftWritable, duplicateBid, lockList, replaceDraftStepsIn } from './draft-store'
+import { draftWritable, duplicateBid, lockList } from './draft-store'
 
 /** Отказ стража разрушительных команд → ответ инструмента. Это не сбой, а
  *  вердикт: агенту нужно назвать причину, а не увидеть стектрейс. */
@@ -45,9 +45,9 @@ export async function ownedList(userId: string, handle: string, slug: string) {
   return { tpl }
 }
 
-/** Записать НОВЫЙ состав блоков (доменная форма): черновик правится на месте,
- *  опубликованный получает новую версию. Общая половина update_list и patch_list —
- *  писать список двумя разными путями значит рано или поздно расхождение. */
+/** Записать НОВЫЙ состав блоков (доменная форма) — новой версией через ядро. Общая половина
+ *  update_list и patch_list: писать список двумя разными путями значит рано или поздно
+ *  расхождение, и однажды оно уже случилось — см. комментарий ниже. */
 export async function writeProposed(
   tpl: NonNullable<Awaited<ReturnType<typeof ownedList>>['tpl']>,
   handle: string,
@@ -61,30 +61,16 @@ export async function writeProposed(
   const dup = duplicateBid(proposed)
   if (dup) return { error: `two blocks share the same bid "${dup}" — a block id must be unique within a list` }
 
-  if (tpl.status === 'draft') {
-    // черновик — перезаписываем текущую версию на месте (без плодения версий).
-    // ПОД ТЕМ ЖЕ замком, что и патч: иначе полная замена и патч переплетаются —
-    // замена удаляет и вставляет строки, пока патч держит только замок списка, и
-    // чья-то работа пропадает при обоих «успешных» ответах.
-    const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
-    try {
-      const gate = await db.transaction(async (tx) => {
-        await lockList(tx, tpl.id)
-        const denied = await draftWritable(tx, tpl.id)
-        if (denied) return denied
-        await replaceDraftStepsIn(tx, cur.id, proposed)
-        await tx.update(templates).set({ tags: meta.tags, ordered: meta.ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-        return null
-      })
-      if (gate) return gate
-    } catch (e) {
-      const refused = destructiveError(e)
-      if (refused) return refused
-      throw e
-    }
-    return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version }
-  }
-
+  // ЧЕРНОВИК ПИШЕТСЯ ТАК ЖЕ, КАК ВСЁ ОСТАЛЬНОЕ. Здесь была ветка «перезаписать текущую
+  // версию на месте, без плодения версий»: она шла прямо в Postgres, мимо фасада — то есть
+  // мимо ядра, которое одно создаёт коммит. Линза ядра 02 измерила цену (19.08): git о такой
+  // правке не узнавал НИКОГДА, публикация списка её не выравнивала, и сайт показывал одно, а
+  // `git clone` отдавал другое. Хуже: при потере тома ядро материализует репозиторий из
+  // Postgres — и та же версия v1 получала другое содержимое и другой SHA, то есть
+  // восстановление переписывало историю.
+  //
+  // Копить правки без версий по-прежнему можно и нужно — но рабочей копией (publish:false),
+  // общей с редактором, а не вторым путём записи (ADR-0020).
   // tags/ordered едут ВНУТРИ addVersion (Ф2a-довесок): ядро применяет мету той же
   // транзакцией, что и версию, — канон коммита сразу несёт свежие значения.
   // expectedVersion (если задан) ядро сверяет ТАМ ЖЕ: сравнение и запись под одним
@@ -97,11 +83,20 @@ export async function writeProposed(
     // правку готовили, список ушёл вперёд. Агент перечитывает и накладывает заново.
     if (e instanceof ListWriteError && e.code === 'stale')
       return { error: 'list changed while the patch was being applied — read it again (get_list) and rebuild the ops' }
+    // Вердикт стража разрушительных команд — тоже ответ, а не сбой: агенту нужно назвать
+    // причину. Раньше он превращался в ответ только в ветке правки черновика; когда та
+    // ушла, стражевой отказ полетел исключением — то есть агент получал бы стектрейс
+    // вместо «отказано, потому что».
+    const refused = destructiveError(e)
+    if (refused) return refused
     throw e
   }
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающий
   // контент, залитый через MCP, не минует модерацию, и здесь её дублировать не нужно.
   const { enqueueReindex } = await import('@/features/library/jobs')
   await enqueueReindex(tpl.id)
-  return { ref: `${handle}/${slug}`, status: 'published', version: ver.version }
+  // Статус отдаём НАСТОЯЩИЙ: он был захардкожен 'published', и черновик, получив версию,
+  // отвечал агенту «опубликован» — то есть врал про видимость ровно там, где агент решает,
+  // показывать ли ссылку человеку.
+  return { ref: `${handle}/${slug}`, status: tpl.status, version: ver.version }
 }

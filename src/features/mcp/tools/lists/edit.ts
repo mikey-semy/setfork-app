@@ -10,10 +10,11 @@ import { getDraft } from '@/features/library/queries'
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { detailByRefOrMoved, toProposed, type DetailStep, type McpItemInput } from '../shared'
 import { patchBlock, rowsToProposed } from './patch-block'
-import { draftWritable, duplicateBid, lockList, replaceDraftStepsIn } from './draft-store'
+import { draftWritable, duplicateBid, lockList } from './draft-store'
 import { destructiveError, ownedList, writeProposed } from './write'
 
-/** Обновить список (только владелец). Черновик — правим на месте; опубликованный — новая версия. */
+/** Обновить список (только владелец): новая версия через ядро, либо накопление в рабочей
+ *  копии при publish:false. Статус списка на механику записи не влияет (ADR-0020). */
 export interface McpUpdateInput {
   items: McpItemInput[]
   note?: string
@@ -63,62 +64,15 @@ export async function mcpPatchList(
   // Нетронутые блоки идут в запись СВОЕЙ, доменной формой: со всеми переводами и
   // содержимым как есть. Через плоскую MCP-форму проходит только патчимый блок —
   // иначе правка одного заголовка стирала бы переводы и товары у всего списка.
-  // Список, который НИКОГДА не публиковался, правится на месте и версий не плодит —
-  // копить ему нечего, а молча проигнорировать publish:false нельзя: агент решил бы,
-  // что правки лежат в черновике, тогда как они уже в живом списке.
-  if (tpl.status === 'draft' && input.publish === false) {
-    return {
-      error:
-        'this list was never published: edits apply in place and do not create versions, so publish:false does not apply here — call patch_list without it',
-    }
-  }
+  // Неопубликованный список правится ТЕМ ЖЕ путём, что и остальные: publish:false копит
+  // правки в рабочей копии, без него — рождается версия. Отдельной механики «на месте» у
+  // черновика больше нет (ADR-0020): она шла мимо ядра и уводила git от базы.
 
   const patchIO = {
     bidOf: (it: ProposedItem) =>
       it.blockId ?? (typeof (it.content as Record<string, unknown> | undefined)?.bid === 'string' ? (it.content as Record<string, string>).bid : undefined),
     update: patchBlock,
     create: (block: McpItemInput) => toProposed([block])[0] ?? { error: 'the inserted block is empty (a step needs a title)' },
-  }
-
-  if (tpl.status === 'draft') {
-    // ЧЕРНОВИК: читаем состав и заменяем его ПОД ОДНИМ замком. Конкурирующий патч
-    // ждёт на нём и потом читает уже новое состояние — вместо того чтобы наложить
-    // свои операции на снимок, который к моменту записи устарел.
-    try {
-      return await db.transaction(async (tx) => {
-      await lockList(tx, tpl.id)
-      // Состояние ПЕРЕЧИТЫВАЕМ под замком: пока патч готовили, список могли
-      // опубликовать, заморозить или заархивировать. Со старыми данными на руках
-      // правка заменила бы шаги уже опубликованной версии НА МЕСТЕ — без новой
-      // версии и без git-коммита, то есть мимо истории.
-      const denied = await draftWritable(tx, tpl.id)
-      if (denied) return denied
-      const [fresh] = await tx.select({ current: templates.currentVersion }).from(templates).where(eq(templates.id, tpl.id))
-      if (!fresh) return { error: 'list not found' }
-      if (input.baseVersion !== fresh.current)
-        return { error: `list changed: it is at version ${fresh.current}, your patch is based on ${input.baseVersion} — read it again (get_list) and rebuild the ops` }
-      const [cur] = await tx
-        .select({ id: templateVersions.id, version: templateVersions.version })
-        .from(templateVersions)
-        .where(and(eq(templateVersions.templateId, tpl.id), eq(templateVersions.version, fresh.current)))
-        .limit(1)
-      if (!cur) return { error: 'list not found' }
-
-      const rows = await tx.select().from(steps).where(eq(steps.versionId, cur.id)).orderBy(asc(steps.n))
-      const applied = applyPatchOps<ProposedItem>(rowsToProposed(rows as unknown as DetailStep[]), ops, patchIO)
-      if ('error' in applied) return applied
-      if (!applied.items.length) return { error: 'at least one item with a title is required' }
-      const dupBid = duplicateBid(applied.items)
-      if (dupBid) return { error: `two blocks share the same bid "${dupBid}" — a block id must be unique within a list` }
-      await replaceDraftStepsIn(tx, cur.id, applied.items)
-        await tx.update(templates).set({ updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-        return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version, ops: ops.length, blocks: applied.items.length }
-      })
-    } catch (e) {
-      const refused = destructiveError(e)
-      if (refused) return refused
-      throw e
-    }
   }
 
   const detail = await detailByRefOrMoved(handle, slug)
@@ -224,8 +178,6 @@ export async function mcpPublishDraft(userId: string, handle: string, slug: stri
   const found = await ownedList(userId, handle, slug)
   if ('error' in found) return found
   const { tpl } = found
-  if (tpl.status === 'draft')
-    return { error: 'this list was never published: it is edited in place, so there is nothing to publish from a draft — use publish on the list itself' }
   const draft = await getDraft(tpl.id, userId)
   if (!draft) return { error: 'there are no unpublished edits to publish' }
   if (!confirm) {

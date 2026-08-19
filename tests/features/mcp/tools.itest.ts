@@ -288,24 +288,32 @@ describe('patch_list — точечная правка вместо переза
     expect(res).toMatchObject({ error: expect.stringContaining('product') })
   })
 
-  // У черновика номер версии не растёт — сверять «правка основана на текущей»
-  // там нечем, и два патча с одним baseVersion оба прошли бы проверку. Защищает
-  // замок: чтение состава и его замена идут под ним, поэтому второй патч видит
-  // результат первого, а не свой устаревший снимок.
-  it('два одновременных патча черновика не теряют друг друга', async () => {
+  // Два патча с одним baseVersion — это гонка, и разрешается она ОДИНАКОВО у черновика и
+  // у опубликованного списка (ADR-0020): первый создаёт версию, второй получает отказ
+  // «список уехал, перечитай». Раньше у черновика номер версии не рос, сверять было нечем,
+  // и оба патча ложились под замком друг за другом.
+  //
+  // Проверяется главное свойство, которое было и тогда: НИЧЕГО НЕ ТЕРЯЕТСЯ МОЛЧА. Разница
+  // в том, что отказ теперь виден агенту, а не разрешается за него.
+  it('два одновременных патча: один проходит, второй получает отказ, и ничего не теряется', async () => {
     const { slug, read } = await three()
     const [a, , c] = read.steps.map((s) => s.bid)
     const [r1, r2] = await Promise.all([
       mcpPatchList(ownerId, 'mowner', slug, { baseVersion: read.version, ops: [{ op: 'update', bid: a, title: 'ПЕРВЫЙ' }] }),
       mcpPatchList(ownerId, 'mowner', slug, { baseVersion: read.version, ops: [{ op: 'update', bid: c, title: 'ТРЕТИЙ' }] }),
     ])
-    expect('error' in r1).toBe(false)
-    expect('error' in r2).toBe(false)
+    const ok = [r1, r2].filter((r) => !('error' in r))
+    const refused = [r1, r2].filter((r) => 'error' in r) as { error: string }[]
+    expect(ok).toHaveLength(1)
+    expect(refused).toHaveLength(1)
+    // Отказ обязан быть ВНЯТНЫМ: агент должен понять, что делать дальше.
+    expect(refused[0].error).toMatch(/changed/)
 
     const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
-    // Обе правки на месте: ни одна не была затёрта снимком другой.
-    expect(after.steps.find((b) => b.bid === a)?.title).toBe('ПЕРВЫЙ')
-    expect(after.steps.find((b) => b.bid === c)?.title).toBe('ТРЕТИЙ')
+    // Прошедшая правка на месте, отказанная НЕ применилась наполовину, блоки целы.
+    const titles = [after.steps.find((b) => b.bid === a)?.title, after.steps.find((b) => b.bid === c)?.title]
+    expect(titles.filter((t) => t === 'ПЕРВЫЙ' || t === 'ТРЕТИЙ')).toHaveLength(1)
+    expect(after.steps).toHaveLength(3)
   })
 
   it('явная очистка поля применяется, а не тонет в слиянии со старым', async () => {
@@ -353,6 +361,18 @@ describe('patch_list — точечная правка вместо переза
     expect(after.steps.find((b) => b.type === 'text')).toMatchObject({ section: 'Урок 2', text: 'врезка' })
   })
 
+  // Строки ТЕКУЩЕЙ версии. Раньше тесты читали версию, снятую при создании: правка
+  // черновика шла на месте, и номер версии не двигался. Теперь любая запись рождает
+  // новую версию (ADR-0020), и старая остаётся как была — по построению, а не по ошибке.
+  const currentSteps = async (tplId: string) => {
+    const [tpl] = await db.select({ current: templates.currentVersion }).from(templates).where(eq(templates.id, tplId))
+    const [ver] = await db
+      .select({ id: templateVersions.id })
+      .from(templateVersions)
+      .where(and(eq(templateVersions.templateId, tplId), eq(templateVersions.version, tpl.current)))
+    return db.select({ title: steps.title, desc: steps.desc }).from(steps).where(eq(steps.versionId, ver.id))
+  }
+
   // Правка ложится в ТУ локаль, из которой чтение взяло показанное значение.
   // Иначе она обновит другой перевод, а get_list продолжит отдавать прежний текст.
   it('правка двуязычного поля видна в ответе и не портит второй перевод', async () => {
@@ -374,7 +394,7 @@ describe('patch_list — точечная правка вместо переза
 
     const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
     expect(after.steps[0].title).toBe('new') // правка ВИДНА
-    const [row] = await db.select({ title: steps.title }).from(steps).where(eq(steps.versionId, ver.id))
+    const [row] = await currentSteps(tplId)
     expect(row.title).toEqual({ ru: 'старое', en: 'new' }) // второй перевод цел
   })
 
@@ -391,13 +411,13 @@ describe('patch_list — точечная правка вместо переза
       ops: [{ op: 'update', bid: read.steps[0].bid, desc: '' }],
     })
     expect('error' in res).toBe(false)
-    const [row] = await db.select({ desc: steps.desc }).from(steps).where(eq(steps.versionId, ver.id))
+    const [row] = await currentSteps(tplId)
     expect(row.desc).toEqual({ ru: 'Описание' }) // русский перевод НЕ снесён вместе с английским
   })
 
-  // Полная замена (update_list) и патч правят один черновик разными путями —
-  // и обязаны идти через один замок, иначе чья-то работа исчезает при двух
-  // «успешных» ответах.
+  // Полная замена (update_list) и патч правят один список разными путями. Смешаться они не
+  // должны никогда; при этом патч, чей baseVersion устарел из-за замены, получает отказ —
+  // это нормальный исход гонки, а не потеря.
   it('патч и полная замена черновика не переплетаются', async () => {
     const { slug, read } = await three()
     const [a] = read.steps.map((s) => s.bid)
@@ -405,8 +425,9 @@ describe('patch_list — точечная правка вместо переза
       mcpPatchList(ownerId, 'mowner', slug, { baseVersion: read.version, ops: [{ op: 'update', bid: a, title: 'ИЗ ПАТЧА' }] }),
       mcpUpdateList(ownerId, 'mowner', slug, { items: [...read.steps, { title: 'из полной замены' }] }),
     ])
-    expect('error' in rPatch).toBe(false)
-    expect('error' in rReplace).toBe(false)
+    // Хотя бы одна запись прошла; отказ, если он есть, — внятный.
+    expect([rPatch, rReplace].filter((r) => !('error' in r)).length).toBeGreaterThanOrEqual(1)
+    for (const r of [rPatch, rReplace]) if ('error' in r) expect((r as { error: string }).error).toMatch(/changed/)
 
     // Кто бы ни записал вторым, список остаётся целым и непротиворечивым: либо
     // 3 блока с правкой патча, либо 4 блока полной замены — но не мешанина.
