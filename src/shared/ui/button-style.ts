@@ -65,7 +65,13 @@ export function buttonClass({
   className,
 }: { variant?: ButtonVariant; size?: ButtonSize; touch?: ButtonTouch; className?: string } = {}): string {
   return cn(
-    'inline-flex items-center justify-center rounded-md font-semibold outline-hidden transition-colors focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50',
+    // `whitespace-nowrap` — НЕСУЩЕЕ, а не косметика. Высоту кнопки задаёт шкала
+    // (CONTROL_H), и подпись, перенесённая на вторую строку, в эту высоту не влезает:
+    // текст вылезает за границы, и первая строка оказывается ВЫШЕ верхнего края кнопки.
+    // Ровно так это и выглядело: «More» на главной и «New discussion» на обсуждениях.
+    // Кнопке с длинной подписью в узком месте нужен `truncate` от вызывающего — но
+    // ломать высоту переносом она не должна никогда.
+    'inline-flex items-center justify-center whitespace-nowrap rounded-md font-semibold outline-hidden transition-colors focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50',
     VARIANTS[variant],
     CONTROL_H[size],
     // Шкала 24/28/32 — это ВИД, и он один на все указатели. Пальцу нужна цель 44

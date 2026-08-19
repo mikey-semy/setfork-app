@@ -90,9 +90,21 @@ export default async function IssuesPage({
             <SearchForm initial={q ?? ''} placeholder={t('searchIssuesPh', lang)} />
           </form>
           {session && (
-            <Link href={`${base}/new`} className={buttonClass({ variant: 'primary' })}>
-              <Plus size={15} /> {t('newIssue', lang)}
-            </Link>
+            <Tooltip label={t('newIssue', lang)}>
+              <Link
+                href={`${base}/new`}
+                aria-label={t('newIssue', lang)}
+                // `touch="grow"`, потому что рядом стоит ПОЛЕ ПОИСКА. Поле на грубом
+                // указателе дорастает до 44px — иначе в него не влезает 16px шрифт,
+                // который проект ставит против зума iOS, — а кнопка по умолчанию
+                // остаётся 32 и добирает цель невидимой зоной. В ряду это читается как
+                // разнобой высот. Ряд равняется по тому, кто не может стать ниже.
+                className={buttonClass({ variant: 'primary', touch: 'grow' })}
+              >
+                <Plus size={15} />
+                <span className="max-sm:hidden">{t('newIssue', lang)}</span>
+              </Link>
+            </Tooltip>
           )}
         </div>
 

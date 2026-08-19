@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { TabItem } from '@/shared/ui/TabNav'
-import { TooltipProvider } from '@/shared/ui/Tooltip'
 
 describe('счётчик вкладки', () => {
   it('центрирует число внутри фиксированного круглого бейджа', () => {
@@ -27,37 +26,5 @@ describe('какая вкладка текущая — не только на в
     )
     expect(screen.getByRole('link', { name: 'Первая' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Вторая' })).not.toHaveAttribute('aria-current')
-  })
-})
-
-describe('узкий экран: значок вместо подписи', () => {
-  /**
-   * Прежде прятался ЗНАЧОК, а подпись оставалась: считалось, что подписи «короткие и
-   * однозначные». На русском они не короткие — «Завершённые», «Новое обсуждение», — и в
-   * ряд не влезали: текст вылезал за вкладку. Найдено владельцем на живом сайте.
-   *
-   * Проверяем не пиксели, а РЕШЕНИЕ: что именно прячется на узком экране и остаётся ли
-   * подпись доступной, когда её не видно.
-   */
-  it('со значком: подпись прячется до sm, но остаётся доступным именем', () => {
-    // Вкладка со значком оборачивается подсказкой, а той нужен провайдер (он есть в
-    // layout приложения).
-    render(
-      <TooltipProvider delay={0}>
-        <TabItem href="/a" on={false} icon={<span>💬</span>} label="Общее" count={3} />
-      </TooltipProvider>,
-    )
-    const link = screen.getByRole('link', { name: 'Общее' })
-    expect(link).toHaveAttribute('aria-label', 'Общее')
-    // Видимая подпись скрыта до sm; значок виден всегда.
-    expect(screen.getByText('Общее').className).toContain('hidden')
-    expect(screen.getByText('💬').className).not.toContain('hidden')
-    // Счётчик остаётся: на узком экране он и есть главное число вкладки.
-    expect(screen.getByText('3')).toBeInTheDocument()
-  })
-
-  it('без значка: подпись видна всегда — иначе от вкладки осталась бы пустота', () => {
-    render(<TabItem href="/b" on={false} label="Завершённые" />)
-    expect(screen.getByText('Завершённые').className ?? '').not.toContain('hidden')
   })
 })

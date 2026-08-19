@@ -51,7 +51,27 @@ export function FeedFilter({ lang, onChange }: { lang: Lang; onChange: (p: FeedP
       <Button onClick={() => setOpen(true)}>
         <SlidersHorizontal size={13} /> {ru ? 'Фильтр' : 'Filter'}
       </Button>
-      <OverlayPanel open={open} onClose={() => setOpen(false)} align="top" title={ru ? 'Фильтр' : 'Filter'}>
+      {/* Кнопки — в ФУТЕР панели, а не в её тело. Лежа в теле, они уезжали вместе с
+          прокруткой: чтобы нажать «OK», приходилось долистывать список галочек до конца.
+          Футер у примитива был с самого начала — здесь им просто не воспользовались, и
+          тело панели прокручивается само (min-h-0 + overflow-y-auto внутри OverlayPanel). */}
+      <OverlayPanel
+        open={open}
+        onClose={() => setOpen(false)}
+        align="top"
+        title={ru ? 'Фильтр' : 'Filter'}
+        // Рамку и раскладку даёт сам PanelFoot — своя обёртка здесь дублировала бы их.
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => apply(DEFAULT_PREFS)}>
+              {ru ? 'Сбросить' : 'Reset to default'}
+            </Button>
+            <Button variant="primary" onClick={() => setOpen(false)} className="px-3">
+              OK
+            </Button>
+          </>
+        }
+      >
               <div>
                 <div className="text-[0.78125rem] font-semibold text-ink">{ru ? 'События' : 'Events'}</div>
                 <p className="mb-2 text-[0.6875rem] text-muted">
@@ -84,14 +104,6 @@ export function FeedFilter({ lang, onChange }: { lang: Lang; onChange: (p: FeedP
                   }
                   className="mt-2 rounded-none border-t border-border pb-1 pt-2.5"
                 />
-              </div>
-              <div className="flex items-center justify-end gap-2 border-t border-border px-3.5 py-2.5">
-                <Button variant="ghost" onClick={() => apply(DEFAULT_PREFS)}>
-                  {ru ? 'Сбросить' : 'Reset to default'}
-                </Button>
-                <Button variant="primary" onClick={() => setOpen(false)} className="px-3">
-                  OK
-                </Button>
               </div>
       </OverlayPanel>
     </>

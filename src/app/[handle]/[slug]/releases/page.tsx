@@ -1,3 +1,4 @@
+import { buttonClass } from '@/shared/ui/button-style'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Download, Eye, FileText, GitCompare, Plus, Rss, Tag, Trash2 } from 'lucide-react'
@@ -46,6 +47,9 @@ export default async function ReleasesPage({
   const [rels, latestId] = await Promise.all([getReleases(meta.id, pageWindow(page)), getLatestReleaseId(meta.id)])
   const canManage = !!session && (session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId)))
   const base = `/${owner}/${slug}`
+  // Один тернарник на подпись: каждое повторение — отдельное нарушение правила про
+  // двуязычные строки в коде.
+  const newReleaseLabel = ru ? 'Новый релиз' : 'New release'
 
   return (
     <>
@@ -68,12 +72,18 @@ export default async function ReleasesPage({
                 </a>
               </Tooltip>
               {canManage && (
-                <Link
-                  href={`${base}/releases/new`}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
-                >
-                  <Plus size={13} /> {ru ? 'Новый релиз' : 'New release'}
-                </Link>
+                <Tooltip label={newReleaseLabel}>
+                  <Link
+                    href={`${base}/releases/new`}
+                    aria-label={newReleaseLabel}
+                    // Через примитив, а не рукописным `h-8`: высота обязана приходить из
+                    // шкалы, иначе совпадёт с соседями только случайно.
+                    className={buttonClass({ variant: 'primary' })}
+                  >
+                    <Plus size={13} />
+                    <span className="max-sm:hidden">{newReleaseLabel}</span>
+                  </Link>
+                </Tooltip>
               )}
             </>
           }
