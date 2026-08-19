@@ -47,6 +47,21 @@ export interface ListsPanelItem {
   visibility?: ListVisibilityState
 }
 
+/**
+ * Строка, по которой ищет фильтр панели: ВСЕ языки заголовка, а не показанный.
+ *
+ * `tr()` отдаёт одну строку — ту, что видит читатель, — и фильтр по ней расходился с
+ * серверным поиском в том же окне ввода: SQL смотрит `title->>'en' || title->>'ru'`
+ * (см. titleText), то есть список {en:'Bread', ru:'Хлебопечка'} на вкладке профиля
+ * находится по слову «bread», а в панели у русского читателя — нет. Расхождение видно
+ * только на списке с ДВУМЯ заголовками: у одноязычного tr() возвращает то же самое.
+ *
+ * Живёт В МОДУЛЕ, а не в теле компонента: от пропсов и состояния не зависит, а собранная
+ * заново на каждый рендер функция — новая ссылка, то есть промах мемоизации у всякого,
+ * кому её передадут (react-doctor/prefer-module-scope-pure-function).
+ */
+const searchText = (l: ListsPanelItem) => `${Object.values(l.title ?? {}).join(' ')} ${l.handle}/${l.slug}`
+
 export function ListsPanel({
   items,
   lang,
@@ -117,6 +132,17 @@ export function ListsPanel({
    *  до того, как набор сменился или человек ушёл на другую страницу. */
   const generation = useRef(0)
 
+  /** Ввод в поиск гасит прошлую неудачу страницы: она больше не про то, что на экране.
+   *  Гасим ЗДЕСЬ, в обработчике, а не в теле эффекта — синхронный setState в эффекте
+   *  даёт лишний каскад рендеров (react-hooks/set-state-in-effect), и гасить его на
+   *  каждый прогон эффекта незачем: повод ровно один — человек начал набирать. Прятать
+   *  же сообщение при показе нельзя: скрытое `role="alert"` объявится заново, стоит
+   *  очистить поиск. */
+  const onSearchInput = (v: string) => {
+    setQ(v)
+    setPageFailed(false)
+  }
+
   const toggle = () =>
     setOpen((v) => {
       if (storageKey) localStorage.setItem(storageKey, v ? '0' : '1')
@@ -144,10 +170,6 @@ export function ListsPanel({
   const [remote, setRemote] = useState<ListsPanelItem[] | null>(null)
   const [searching, setSearching] = useState(false)
   useEffect(() => {
-    // Начали искать — прежняя неудача страницы больше не про то, что на экране. Гасим её
-    // здесь, а не прячем при показе: спрятанное `role="alert"` объявится заново, стоит
-    // очистить поиск.
-    setPageFailed(false)
     if (!remoteSearch || !query) return
     let alive = true
     const id = setTimeout(() => {
@@ -189,11 +211,18 @@ export function ListsPanel({
     setPage(1)
     setPageRows(null)
     setPageFailed(false)
-    // И гасим поколение: запрос, ушедший ДО смены набора, вернётся со снимком «до» и
-    // молча отменит этот сброс — то есть панель снова покажет устаревшие строки, но уже
-    // без всякого повода их заподозрить.
-    generation.current += 1
   }
+  // И гасим поколение: запрос, ушедший ДО смены набора, вернётся со снимком «до» и молча
+  // отменит сброс выше — то есть панель снова покажет устаревшие строки, но уже без
+  // всякого повода их заподозрить.
+  //
+  // БАМП В ЭФФЕКТЕ, А НЕ В РЕНДЕРЕ. Запись в ref во время рендера — не мелочь стиля:
+  // React вправе отбросить или переиграть рендер, и тогда счётчик уезжает от вычисленного
+  // без всякого коммита, то есть годный ответ выбрасывается как «старый». Сбросы состояния
+  // выше это переживают (React их отменит вместе с рендером), а мутация ref — нет.
+  useEffect(() => {
+    generation.current += 1
+  }, [signature])
 
   // Страниц столько, сколько окон в total. Без total листать некуда: панель просто
   // показывает то, что ей дали.
@@ -206,14 +235,6 @@ export function ListsPanel({
   const shownPage = outOfRange ? 1 : page
   // Что вообще показываем без поиска: страницу с сервера (если листали) или items.
   const base = outOfRange ? items : (pageRows ?? items)
-  // ИЩЕМ ПО ВСЕМ ЯЗЫКАМ ЗАГОЛОВКА, а не по показанному. `tr()` отдаёт одну строку —
-  // ту, что видит читатель, — и фильтр по ней расходился с серверным поиском в том же
-  // окне ввода: SQL смотрит `title->>'en' || title->>'ru'` (см. titleText), то есть
-  // список {en:'Bread', ru:'Хлебопечка'} на вкладке профиля находится по слову «bread», а
-  // в панели у русского читателя — нет. Расхождение видно только на списке с ДВУМЯ
-  // заголовками: на одноязычных tr() возвращает то же самое, поэтому проверка на
-  // английском корпусе его не показывала.
-  const searchText = (l: ListsPanelItem) => `${Object.values(l.title ?? {}).join(' ')} ${l.handle}/${l.slug}`
   const localFiltered = query ? base.filter((l) => searchText(l).toLowerCase().includes(query)) : base
   const filtered = remoteSearch && query ? (remote ?? []) : localFiltered
   // Поиск показывает все совпадения; без поиска и без страниц — рез до initialLimit.
@@ -298,7 +319,7 @@ export function ListsPanel({
         <>
           {hasSearch && (
             <div className="mb-1.5">
-              <SearchField value={q} onValueChange={setQ} placeholder={t('findList', lang)} clearLabel={t('clear', lang)} size="xs" />
+              <SearchField value={q} onValueChange={onSearchInput} placeholder={t('findList', lang)} clearLabel={t('clear', lang)} size="xs" />
             </div>
           )}
           {items.length === 0 ? (
