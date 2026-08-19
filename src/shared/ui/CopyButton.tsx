@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { Check, Copy, X } from 'lucide-react'
+import { IconButton } from './IconButton'
 import { Tooltip } from './Tooltip'
+import { iconSizeFor, type ControlSize } from './control'
 import { t, type Lang } from '@/shared/i18n'
 
 /**
@@ -20,8 +22,13 @@ import { t, type Lang } from '@/shared/i18n'
  * Молчаливая кнопка приводит к тому, что человек вставляет в терминал прошлое
  * содержимое буфера.
  *
- * Бокс кнопки задан явно: у иконки 14px без него тач-цель равна 14×14 при норме
- * 44×44 (Apple HIG) — на крупном указателе цель растёт до полной.
+ * ГЕОМЕТРИЯ — из примитива, а не своя. Кнопка была нарисована руками
+ * (`grid size-8 … rounded-md … pointer-coarse:size-11`) и потому жила по правилу,
+ * отменённому 13.08.2026: на сенсоре РОСЛА до 44px. Правило теперь другое — вид
+ * один на все указатели, а тач-цель добирается невидимой зоной (`touch='hit'`
+ * в buttonClass). Расхождение было видно вживую: строку команды в шаге списка
+ * распирала именно выросшая кнопка. Узда линта её не поймала — она ищет `h-*`
+ * рядом с `rounded-md`, а здесь высота приходила из `size-*`.
  */
 export function CopyButton({
   text,
@@ -29,16 +36,20 @@ export function CopyButton({
   label,
   copiedLabel,
   failedLabel,
+  size = 'md',
 }: {
   text: string
   lang?: Lang
   label?: string
   copiedLabel?: string
   failedLabel?: string
+  /** Ступень шкалы: `sm` — внутри поля или строки команды, где высоту уже задала рамка. */
+  size?: ControlSize
 }) {
   const [state, setState] = useState<'idle' | 'done' | 'failed'>('idle')
   const title =
     state === 'done' ? (copiedLabel ?? t('copied', lang)) : state === 'failed' ? (failedLabel ?? t('copyFailed', lang)) : (label ?? t('copy', lang))
+  const icon = iconSizeFor(size)
 
   const onClick = async () => {
     try {
@@ -53,20 +64,15 @@ export function CopyButton({
 
   return (
     <Tooltip label={title}>
-      <button
-        type="button"
-        aria-label={title}
-        onClick={onClick}
-        className="grid size-8 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-ink pointer-coarse:size-11"
-      >
+      <IconButton variant="ghost" size={size} label={title} onClick={onClick} className="text-muted">
         {state === 'done' ? (
-          <Check size={14} className="text-ok" />
+          <Check size={icon} className="text-ok" />
         ) : state === 'failed' ? (
-          <X size={14} className="text-danger" />
+          <X size={icon} className="text-danger" />
         ) : (
-          <Copy size={14} />
+          <Copy size={icon} />
         )}
-      </button>
+      </IconButton>
     </Tooltip>
   )
 }

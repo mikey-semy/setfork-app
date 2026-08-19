@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ExternalLink, Info, SquareCheckBig, UserRound } from 'lucide-react'
 import { DigChatOpen } from '@/features/dig/DigChat'
-import { CopyButton } from '@/shared/ui/CopyButton'
+import { CopyRow } from '@/shared/ui/CopyRow'
 import { CodeCard } from '@/shared/ui/CodeCard'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SafeLink } from '@/shared/ui/SafeLink'
@@ -101,11 +101,7 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
               {/* На экране команда остаётся компактной и прокручиваемой. Печать этого
                   контейнера обрезала всё правее видимой области, поэтому принтер его
                   не видит — ниже для него полноценная CodeCard. */}
-              <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[0.78125rem] text-ink print:hidden">
-                <span className="shrink-0" style={{ color: 'var(--accent)' }}>$</span>
-                <span className="no-scrollbar min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap">{step.command}</span>
-                <CopyButton text={step.command} lang={lang} />
-              </div>
+              <CopyRow value={step.command} lang={lang} prompt className="mt-3 print:hidden" />
               {/* Команда — shell-код по контракту списка. CodeCard печатает каждую
                   строку целиком, с номером и highlight.js-подсветкой. */}
               <div className="mt-3 hidden print:block">

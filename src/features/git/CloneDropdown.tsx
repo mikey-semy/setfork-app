@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Braces, ChevronDown, Code2, FileCode, FileDown, GitBranch, Printer, Sparkles, Terminal } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
-import { CopyButton } from '@/shared/ui/CopyButton'
+import { CopyRow } from '@/shared/ui/CopyRow'
 import { buttonClass } from '@/shared/ui/button-style'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
 import { AUTHORED_DIALECT, dialectSpec, scriptFilename } from '@/core/domain/script-dialect'
@@ -40,19 +40,8 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
     </SectionLabel>
   )
 
-  /** Адрес для копирования: значение выделяемо, кнопка — общий примитив с тач-целью. */
-  const copyField = (value: string, label: string, mono = true) => (
-    <div className="flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1">
-      <input
-        readOnly
-        value={value}
-        aria-label={label}
-        onFocus={(e) => e.currentTarget.select()}
-        className={`min-w-0 flex-1 bg-transparent text-[0.78125rem] text-ink outline-hidden ${mono ? 'font-mono' : ''}`}
-      />
-      <CopyButton text={value} lang={lang} />
-    </div>
-  )
+  /** Адрес для копирования: значение выделяется по касанию, высота — из шкалы. */
+  const copyField = (value: string, label: string) => <CopyRow value={value} lang={lang} selectLabel={label} />
 
   // Строка-действие: тач-цель добирается на крупном указателе (Apple HIG 44px).
   const row =

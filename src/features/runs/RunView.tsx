@@ -6,7 +6,7 @@ import { ArrowLeft, Award, Ban, Check, CircleAlert, CircleCheckBig, Flag, Gradua
 import type { Lang } from '@/shared/i18n'
 import { t } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
-import { CopyButton } from '@/shared/ui/CopyButton'
+import { CopyRow } from '@/shared/ui/CopyRow'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { useConfirm } from '@/shared/ui/use-confirm'
 import { Markdown } from '@/shared/ui/Markdown'
@@ -341,11 +341,7 @@ export function RunView({
                 )}
 
                 {s.command && (
-                  <div className="flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[0.78125rem] text-ink">
-                    <span className="shrink-0" style={{ color: 'var(--accent)' }}>$</span>
-                    <span className="no-scrollbar min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap">{s.command}</span>
-                    <CopyButton text={s.command} lang={lang} />
-                  </div>
+                  <CopyRow value={s.command} lang={lang} prompt />
                 )}
 
                 {s.subtasks.length > 0 && (

@@ -97,7 +97,7 @@ export function CommitsList({
               {/* Правый край строки: sha (им коммит называют в терминале, отсюда
                   и копируют) и вход в СНИМОК списка на этом коммите. Иконка с
                   тултипом, а не подпись: на мобиле текст сюда не влезает, а
-                  тач-цель добирается padding'ом до полной. */}
+                  тач-цель добирается невидимой зоной нажатия. */}
               <span className="flex shrink-0 items-center gap-1.5 font-mono text-[0.78125rem] text-ink-2">
                 {c.sha.slice(0, 7)}
                 <CopyButton text={c.sha} lang={lang} />

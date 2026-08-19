@@ -4,7 +4,7 @@ import { useId, useState, type ReactNode } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import { OverlayPanel } from './OverlayPanel'
 import { Button } from './button'
-import { CopyButton } from './CopyButton'
+import { CopyRow } from './CopyRow'
 import { confirmMatches } from '@/shared/lib/confirm-phrase'
 import { buttonClass } from '@/shared/ui/button-style'
 
@@ -63,12 +63,7 @@ export function ConfirmDialog({
           <span>{confirmHint}</span>
           {/* Фразу-подтверждение на мобиле выделить нельзя — даём отдельную строку
               с кнопкой «копировать» (горизонтальный скролл внутри бокса, не страницы). */}
-          <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-2.5 py-1.5">
-            <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[0.8125rem] text-ink [scrollbar-width:none]">
-              {confirmPhrase}
-            </code>
-            <CopyButton text={confirmPhrase} />
-          </div>
+          <CopyRow value={confirmPhrase} />
           <input
             name="confirm"
             value={typed}
