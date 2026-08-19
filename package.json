@@ -29,6 +29,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "doctor": "npx react-doctor@latest",
     "itest:env": "tsx scripts/itest-env.ts",
+    "audit:git-parity": "tsx --conditions=react-server scripts/git-parity-audit.ts",
     "itest:local": "tsx scripts/itest-env.ts env"
   },
   "dependencies": {
