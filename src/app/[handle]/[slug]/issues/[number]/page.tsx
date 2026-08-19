@@ -22,7 +22,7 @@ import { PAGE_NARROW } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
 import { cardClass } from '@/shared/ui/card-style'
 import { Pagination } from '@/shared/ui/Pagination'
-import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, decodeCursor } from '@/shared/lib/paging'
+import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
   const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
@@ -49,9 +49,8 @@ export default async function IssueThreadPage({
   // Тред листается ключом, а не отдаётся целиком: у обсуждения на тысячу реплик страница
   // поднимала тысячу строк с аватарами, чтобы показать экран. Мусорный курсор — «показать
   // сначала», а не пятисотка.
-  const back = decodeCursor(sp.before)
-  const cursor = back ?? decodeCursor(sp.after)
-  const thread = await getIssueCommentsPage(issue.id, COMMENTS_PER_PAGE, cursor, back ? 'before' : 'after')
+  const { cursor, dir } = readCursor(sp)
+  const thread = await getIssueCommentsPage(issue.id, COMMENTS_PER_PAGE, cursor, dir)
   const comments = thread.items
   const path = `/${owner}/${slug}/issues/${issue.number}`
   const [issueR, cmtR, assignees, milestoneOpts, custom, participants] = await Promise.all([

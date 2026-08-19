@@ -20,7 +20,7 @@ import { blockFingerprint, isStaleMark } from '@/features/library/viewed-fingerp
 import { closingRefs } from '@/features/library/closing-refs'
 import type { TimelineEvent } from '@/features/library/SuggestionTimeline'
 import { getSuggestionThreads } from '@/features/comments/queries'
-import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, decodeCursor } from '@/shared/lib/paging'
+import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
 import { threadState } from '@/features/comments/state'
 import type { RowThread } from '@/features/library/DiffComments'
 import type { AnchorableBlock } from '@/features/comments/fields'
@@ -75,9 +75,9 @@ export async function loadSuggestionPage({
   const sug = await getSuggestion(meta.id, id)
   if (!sug) notFound()
   // Тред листается ключом; мусорный курсор — «показать сначала», а не пятисотка.
-  const back = decodeCursor(sp.before)
+  const { cursor, dir } = readCursor(sp)
   const [thread, participants, base] = await Promise.all([
-    getSuggestionCommentsPage(sug.id, COMMENTS_PER_PAGE, back ?? decodeCursor(sp.after), back ? 'before' : 'after'),
+    getSuggestionCommentsPage(sug.id, COMMENTS_PER_PAGE, cursor, dir),
     // Участники — по всему треду, а не по показанной порции.
     getSuggestionParticipants(sug.id),
     getVersionSteps(meta.id, sug.baseVersion),

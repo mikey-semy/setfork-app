@@ -7,7 +7,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { getAuditLogPage, type AuditEntry } from '@/features/admin/audit-queries'
 import { Pagination } from '@/shared/ui/Pagination'
-import { AFTER_PARAM, AUDIT_PER_PAGE, BEFORE_PARAM, cursorHref, decodeCursor } from '@/shared/lib/paging'
+import { AFTER_PARAM, AUDIT_PER_PAGE, BEFORE_PARAM, cursorHref, readCursor } from '@/shared/lib/paging'
 import type { AuditAction } from '@/shared/audit'
 
 export const dynamic = 'force-dynamic'
@@ -76,13 +76,13 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   // Журнал листается КЛЮЧОМ: он пополняется сверху непрерывно, и смещение здесь давало бы
   // не медленную выдачу, а неверную. Пропущенная запись аудита читается как «действия не
   // было» — цена ошибки выше, чем где-либо ещё.
-  const back = decodeCursor(sp.before)
+  const { cursor, dir } = readCursor(sp)
   // Проверка прав, язык и сам журнал независимы — ждём их разом, а не по очереди
   // (React Doctor: server-sequential-independent-await).
   const [, lang, log] = await Promise.all([
     requireAdmin(),
     getLang(),
-    getAuditLogPage(AUDIT_PER_PAGE, back ?? decodeCursor(sp.after), back ? 'before' : 'after'),
+    getAuditLogPage(AUDIT_PER_PAGE, cursor, dir),
   ])
   const entries = log.items
 

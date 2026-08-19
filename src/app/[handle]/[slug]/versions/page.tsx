@@ -8,7 +8,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { countCommits, getCommitAuthors, getCommitsPage } from '@/features/library/queries'
 import { Pagination } from '@/shared/ui/Pagination'
-import { AFTER_PARAM, BEFORE_PARAM, COMMITS_PER_PAGE, cursorHref, decodeCursor } from '@/shared/lib/paging'
+import { AFTER_PARAM, BEFORE_PARAM, COMMITS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
 import { CommitFilters } from '@/features/library/CommitFilters'
 import { HistoryNav } from '@/widgets/HistoryNav'
 import { CommitRow } from '@/features/library/CommitRow'
@@ -44,10 +44,9 @@ export default async function CommitsPage({
   const since = sp.since || 'all'
   const cutoff = commitCutoff(since)
   // Ключ истории — НОМЕР ВЕРСИИ, целое; курсор от ленты сюда не подойдёт и честно отсеется.
-  const back = decodeCursor(sp.before, 'int')
-  const cursor = back ?? decodeCursor(sp.after, 'int')
+  const { cursor, dir } = readCursor(sp, 'int')
   const [history, authors, total, branches] = await Promise.all([
-    getCommitsPage(meta.id, COMMITS_PER_PAGE, cursor, back ? 'before' : 'after', {
+    getCommitsPage(meta.id, COMMITS_PER_PAGE, cursor, dir, {
       authorHandle: author === 'all' ? undefined : author,
       since: cutoff ? new Date(cutoff) : undefined,
     }),

@@ -12,7 +12,7 @@ import { UserLine } from '@/shared/ui/UserLine'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getDiscussion, getDiscussionCommentsPage } from '@/features/discussions/queries'
 import { Pagination } from '@/shared/ui/Pagination'
-import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, decodeCursor } from '@/shared/lib/paging'
+import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
 import { addDiscussionComment } from '@/features/discussions/actions'
 import { categoryLabel, categoryMeta } from '@/features/discussions/constants'
 import { PAGE_NARROW } from '@/shared/ui/control'
@@ -42,8 +42,8 @@ export default async function DiscussionThreadPage({
   const disc = number > 0 ? await getDiscussion(meta.id, number) : null
   if (!disc) notFound()
   // Обсуждение листается ключом; мусорный курсор — «показать сначала», а не пятисотка.
-  const back = decodeCursor(sp.before)
-  const thread = await getDiscussionCommentsPage(disc.id, COMMENTS_PER_PAGE, back ?? decodeCursor(sp.after), back ? 'before' : 'after')
+  const { cursor, dir } = readCursor(sp)
+  const thread = await getDiscussionCommentsPage(disc.id, COMMENTS_PER_PAGE, cursor, dir)
   const comments = thread.items
   const base = `/${owner}/${slug}/discussions`
   const path = `${base}/${disc.number}`

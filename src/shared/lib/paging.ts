@@ -353,6 +353,28 @@ export function decodeCursor(raw: string | undefined | null, keyType: CursorKeyT
 }
 
 /**
+ * ШАГ ИЗ АДРЕСА: какой курсор и в какую сторону.
+ *
+ * Шесть страниц читали эти три строки у себя, и это ровно то место, где копии стоят
+ * дорого: перепутать `before` с `after` — молчаливая ошибка, которую видно только глазами
+ * на живой странице, а ни один тест запросов её не увидит. Здесь она проверяется один раз.
+ *
+ * `before` разбирается ПЕРВЫМ и побеждает: одновременно их в адресе быть не может —
+ * `cursorHref` выкидывает оба и ставит ровно один, — но адрес приходит от кого угодно, и
+ * порядок должен быть определён, а не случаен.
+ *
+ * Мусор в обоих — начало ленты: ссылка могла обломаться в письме, и человеку нужна лента,
+ * а не ошибка.
+ */
+export function readCursor(
+  sp: { after?: string; before?: string },
+  keyType: CursorKeyType = 'time',
+): { cursor: Cursor | null; dir: FeedDirection } {
+  const back = decodeCursor(sp.before, keyType)
+  return back ? { cursor: back, dir: 'before' } : { cursor: decodeCursor(sp.after, keyType), dir: 'after' }
+}
+
+/**
  * Предел запроса-разведчика для keyset: на строку больше показанного.
  *
  * То же, что делает `probeWindow` для номеров, но без смещения — у keyset его нет вовсе.

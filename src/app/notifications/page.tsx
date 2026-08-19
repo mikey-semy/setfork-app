@@ -11,7 +11,7 @@ import { MarkRead } from '@/features/notifications/MarkRead'
 import { NOTIF_VERB } from '@/features/notifications/verbs'
 import { Pagination } from '@/shared/ui/Pagination'
 import { PAGE } from '@/shared/ui/control'
-import { AFTER_PARAM, BEFORE_PARAM, cursorHref, decodeCursor, NOTIFICATIONS_PER_PAGE } from '@/shared/lib/paging'
+import { AFTER_PARAM, BEFORE_PARAM, cursorHref, NOTIFICATIONS_PER_PAGE, readCursor } from '@/shared/lib/paging'
 
 
 export async function generateMetadata() {
@@ -40,11 +40,10 @@ export default async function NotificationsPage({
   const sp = await searchParams
   // Мусорный курсор — это «показать сначала», а не пятисотка: ссылка могла обломаться в
   // письме или мессенджере, и человеку нужна лента, а не ошибка.
-  const back = decodeCursor(sp.before)
-  const cursor = back ?? decodeCursor(sp.after)
+  const { cursor, dir } = readCursor(sp)
   const [lang, page] = await Promise.all([
     getLang(),
-    getNotificationsPage(session.userId, NOTIFICATIONS_PER_PAGE, cursor, back ? 'before' : 'after'),
+    getNotificationsPage(session.userId, NOTIFICATIONS_PER_PAGE, cursor, dir),
   ])
   const items = page.items
   const fwdHref = cursorHref('/notifications', sp, AFTER_PARAM)

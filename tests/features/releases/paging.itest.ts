@@ -18,7 +18,6 @@ const { countReleases, getLatestReleaseId, getReleases } = await import('@/featu
 const COUNT = 7
 const PER = 3
 let templateId = ''
-let ids: string[] = []
 
 beforeEach(async () => {
   await resetTables([releases, templates, users])
@@ -28,7 +27,7 @@ beforeEach(async () => {
     .values({ ownerId: u.id, slug: 'rel-list', title: { ru: 'р' } })
     .returning({ id: templates.id })
   templateId = tpl.id
-  const rows = await db
+  await db
     .insert(releases)
     .values(
       Array.from({ length: COUNT }, (_, i) => ({
@@ -45,8 +44,6 @@ beforeEach(async () => {
         createdAt: new Date(Date.UTC(2026, 7, 18, 12, 0, i)),
       })),
     )
-    .returning({ id: releases.id })
-  ids = rows.map((r) => r.id)
 })
 
 const walk = async (total: number): Promise<string[]> => {
@@ -113,7 +110,6 @@ describe('релизы листаются страницами', () => {
 
   it('без окна выдача полная — сборке changelog нужны все релизы', async () => {
     expect(await getReleases(templateId)).toHaveLength(COUNT)
-    expect(ids).toHaveLength(COUNT)
   })
 
   it('битое окно роняет запрос, а не превращается в полный скан', async () => {

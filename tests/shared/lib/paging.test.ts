@@ -15,6 +15,7 @@ import {
   pageWindow,
   probeLimit,
   probeWindow,
+  readCursor,
   takePage,
 } from '@/shared/lib/paging'
 
@@ -330,6 +331,38 @@ describe('keyset: курсор', () => {
       hasNext: true,
     })
     expect(takePage(Array.from({ length: 20 }, (_, i) => i), 20).hasNext).toBe(false)
+  })
+
+  describe('шаг из адреса', () => {
+    const KEY2 = '2026-08-18 19:02:03.092835+00'
+    const ID2 = '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
+    const after = encodeCursor({ key: KEY2, id: ID2 })
+    const before = encodeCursor({ key: '2026-08-17 10:00:00+00', id: ID2 })
+
+    it('пустой адрес — начало ленты', () => {
+      expect(readCursor({})).toEqual({ cursor: null, dir: 'after' })
+    })
+
+    it('`after` ведёт вперёд, `before` — назад', () => {
+      expect(readCursor({ after })).toEqual({ cursor: { key: KEY2, id: ID2 }, dir: 'after' })
+      expect(readCursor({ before }).dir).toBe('before')
+    })
+
+    it('при обоих сразу побеждает `before`', () => {
+      // Одновременно их в адресе быть не может (cursorHref выкидывает оба и ставит один),
+      // но адрес приходит от кого угодно: порядок должен быть определён, а не случаен.
+      expect(readCursor({ after, before }).dir).toBe('before')
+    })
+
+    it('мусор — начало ленты, а не падение', () => {
+      expect(readCursor({ after: 'сломано', before: 'тоже' })).toEqual({ cursor: null, dir: 'after' })
+    })
+
+    it('тип ключа передаётся дальше: курсор ленты не годится истории версий', () => {
+      // Перепутанный тип — молчаливая пятисотка: `'2026-08-18 …'::int`.
+      expect(readCursor({ after }, 'int').cursor).toBeNull()
+      expect(readCursor({ after: encodeCursor({ key: '7', id: ID2 }) }, 'int').cursor).toEqual({ key: '7', id: ID2 })
+    })
   })
 
   describe('cursorHref', () => {
