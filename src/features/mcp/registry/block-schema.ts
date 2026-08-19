@@ -15,12 +15,22 @@ export const itemShape = z.object({
     .optional()
     .describe('Stable block id as returned by get_list. Keep it to edit an existing block; omit it to create a new one'),
   // step
-  title: z.string().optional().describe('Step title (short imperative) — for type "step"'),
+  title: z
+    .string()
+    .optional()
+    .describe(
+      'Step title (short imperative) — for type "step". Do NOT number it ("1. ", "Step 2:"): the UI numbers steps itself, and a number written into the text goes stale the moment a step moves. Leading ordinals are stripped on write',
+    ),
   desc: z.string().optional().describe('Step: one or two clarifying sentences (light markdown ok)'),
   command: z.string().optional().describe('Step: shell command, if any'),
   level: z.enum(['required', 'recommended', 'optional']).optional().describe('Step: how essential it is'),
   why: z.string().optional().describe('Step: why this step matters (rationale)'),
-  section: z.string().optional().describe('Step: optional section header; consecutive steps sharing it are grouped'),
+  section: z
+    .string()
+    .optional()
+    .describe(
+      'Step: optional section header; consecutive steps sharing it are grouped. Do NOT number it — the table of contents numbers sections itself. Leading ordinals are stripped on write',
+    ),
   subtasks: z.array(z.string()).optional().describe('Step: verification checks'),
   needsHuman: z.boolean().optional().describe('Step: mark that this point needs a human — local prices, taste, personal experience'),
   needsHumanAsk: z.string().optional().describe('Step: what exactly to ask the human (shown with the mark)'),
