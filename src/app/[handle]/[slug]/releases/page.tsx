@@ -14,25 +14,36 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { UserLine } from '@/shared/ui/UserLine'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
-import { getReleases } from '@/features/releases/queries'
+import { countReleases, getLatestReleaseId, getReleases } from '@/features/releases/queries'
 import { HistoryNav } from '@/widgets/HistoryNav'
 import { deleteRelease } from '@/features/releases/actions'
 import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
+import { Pagination } from '@/shared/ui/Pagination'
+import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
   return { title: `${t('releasesLabel', lang)} · ${handle}/${slug}` }
 }
 
-export default async function ReleasesPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
+export default async function ReleasesPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ handle: string; slug: string }>
+  searchParams: Promise<{ page?: string }>
+}) {
+  const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  const rels = await getReleases(meta.id)
-  // «Последняя» = первый НЕ пред-релиз (rels новые сверху), как GitHub.
-  const latestId = rels.find((r) => !r.prerelease)?.id
+  const total = await countReleases(meta.id)
+  const totalPages = pageCount(total)
+  const page = pageFromParam(sp.page, totalPages)
+  // «Последний» релиз спрашивается отдельно, а не ищется в показанной странице: попадись
+  // на первой странице одни пред-релизы — метка уехала бы на вторую и встала не на тот.
+  const [rels, latestId] = await Promise.all([getReleases(meta.id, pageWindow(page)), getLatestReleaseId(meta.id)])
   const canManage = !!session && (session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId)))
   const base = `/${owner}/${slug}`
 
@@ -136,6 +147,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
             ))}
           </div>
         )}
+        <Pagination page={page} totalPages={totalPages} makeHref={pageHref(`${base}/releases`, sp)} lang={lang} />
       </div>
     </>
   )

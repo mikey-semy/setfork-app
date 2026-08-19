@@ -268,6 +268,9 @@ function MoreTab({
           type="button"
           aria-label={label}
           data-active={active || undefined}
+          // Кнопка «…» активна, когда текущая вкладка уехала под неё: для читающего с
+          // экрана это единственный признак, что текущее — там.
+          aria-current={active ? 'page' : undefined}
           className={`${moreTabClass} ${active ? 'text-ink' : 'text-ink-2 hover:text-ink'}`}
         >
           <MoreHorizontal size={18} />
@@ -306,6 +309,11 @@ export function TabItem({ href, on, icon, label, count }: TabItemProps) {
     <Link
       href={href}
       data-active={on || undefined}
+      // ТЕКУЩАЯ ВКЛАДКА ОБЪЯВЛЯЕТСЯ, а не только рисуется. `data-active` двигает полоску
+      // и меняет начертание — оба признака чисто зрительные, и в скринридере ряд звучал
+      // как несколько одинаковых ссылок подряд: «где я» не отвечал никто. `aria-current`
+      // — штатный ответ на этот вопрос, и он же у листалки на номере текущей страницы.
+      aria-current={on ? 'page' : undefined}
       className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-2.5 ${
         on ? 'font-semibold text-ink' : 'font-medium text-ink-2 hover:text-ink'
       }`}

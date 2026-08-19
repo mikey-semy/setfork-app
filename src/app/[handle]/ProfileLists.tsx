@@ -1,11 +1,10 @@
 import Link from 'next/link'
-import { t, tr } from '@/shared/i18n'
+import { plural, t, tr } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Pagination } from '@/shared/ui/Pagination'
 import { FeedList } from '@/features/library/FeedList'
 import { BulkSelection } from '@/features/library/bulk/BulkSelection'
 import { SelectionToggle } from '@/features/library/bulk/SelectionToggle'
-import { BULK_MAX } from '@/features/library/bulk/limits'
 import { ListsToolbar } from '@/features/profile/ListsToolbar'
 import type { ProfilePageData } from './load'
 
@@ -16,7 +15,8 @@ type Props = Pick<
   | 'tab'
   | 'isOwner'
   | 'viewer'
-  | 'items'
+  | 'total'
+  | 'allIds'
   | 'pageItems'
   | 'page'
   | 'totalPages'
@@ -46,7 +46,8 @@ export function ProfileLists({
   catalogs,
   catalogFilter,
   unfiledCount,
-  items,
+  total,
+  allIds,
   pageItems,
   page,
   totalPages,
@@ -65,7 +66,9 @@ export function ProfileLists({
     isOwner && tab === 'lists'
       ? {
           catalogs: catalogs.map((c) => ({ name: c.name, title: tr(c.title, lang) })),
-          allIds: items.slice(0, BULK_MAX).map((i) => i.id),
+          // Набор для «выбрать все» приходит запросом: вся текущая выдача с потолком, а не
+          // показанная страница — разбирать полтысячи списков по двадцать штук бессмысленно.
+          allIds,
         }
       : null
 
@@ -118,7 +121,11 @@ export function ProfileLists({
                 >
                   <div className="truncate text-[0.875rem] font-semibold text-ink">{f.name}</div>
                   <div className="mt-1 font-mono text-[0.6875rem] text-muted">
-                    {f.count} {t('lists', lang).toLowerCase()}
+                    {/* Существительное СКЛОНЯЕТСЯ: словарное `lists` — это заголовок
+                        «Списки», и рядом с числом он давал «5 списки», «1 списки». На
+                        английском ошибка видна только при единице («1 lists»), поэтому и
+                        держалась. Формы уже лежат в PLURALS под тем же ключом. */}
+                    {f.count} {plural(f.count, 'lists', lang)}
                   </div>
                 </Link>
               )
@@ -127,22 +134,35 @@ export function ProfileLists({
         </div>
       )}
 
-      {(!bulk || items.length === 0) && toolbar}
+      {(!bulk || total === 0) && toolbar}
 
-      {items.length === 0 ? (
-        <EmptyState hint={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
+      {total === 0 ? (
+        // ДВА РАЗНЫХ ПУСТО. «Списков пока нет» — про человека, «ничего не подошло» — про
+        // фильтр. Раньше отфильтрованная в ноль библиотека из пятисот списков сообщала
+        // владельцу, что у него их нет: неправда, и вдобавок скрывает, что виноват фильтр
+        // и его можно снять. `/my-lists` этот раздел уже делает, а профиль — нет, хотя
+        // `unfilteredItemsCount` лежит тут же в пропсах.
+        <EmptyState
+          hint={
+            unfilteredItemsCount === 0
+              ? tab === 'starred'
+                ? t('noStars', lang)
+                : t('noProfileLists', lang)
+              : t('library.nothingMatchesQuery', lang)
+          }
+        />
       ) : bulk ? (
         // Пакетные действия — только над своей библиотекой: раскладывать по полкам и
         // публиковать можно лишь то, что твоё. «Все» — вся текущая выдача с фильтром, а не
         // одна страница: разбирать полтысячи списков по двадцать штук бессмысленно.
         <BulkSelection lang={lang} catalogs={bulk.catalogs} allIds={bulk.allIds} toolbar={toolbar}>
           <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} selectable />
-          <Pagination page={page} totalPages={totalPages} makeHref={pageHref} lang={lang} />
+          <Pagination page={page} totalPages={totalPages} total={total} makeHref={pageHref} lang={lang} />
         </BulkSelection>
       ) : (
         <>
           <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} />
-          <Pagination page={page} totalPages={totalPages} makeHref={pageHref} lang={lang} />
+          <Pagination page={page} totalPages={totalPages} total={total} makeHref={pageHref} lang={lang} />
         </>
       )}
     </>

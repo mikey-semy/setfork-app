@@ -31,14 +31,3 @@ export async function getFoldersForTemplate(userId: string, templateId: string):
   return rows.map((r) => r.folderId)
 }
 
-/** templateId'ы в папке по имени (для фильтра starred на профиле). null — папки нет. */
-export async function getFolderTemplateIds(userId: string, folderName: string): Promise<string[] | null> {
-  const [f] = await db
-    .select({ id: starFolders.id })
-    .from(starFolders)
-    .where(and(eq(starFolders.userId, userId), eq(starFolders.name, folderName)))
-    .limit(1)
-  if (!f) return null
-  const rows = await db.select({ t: starFolderItems.templateId }).from(starFolderItems).where(eq(starFolderItems.folderId, f.id))
-  return rows.map((r) => r.t)
-}

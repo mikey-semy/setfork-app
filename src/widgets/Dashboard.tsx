@@ -7,12 +7,14 @@ import { getWatchedIds } from '@/features/watch/queries'
 import { getFeedEvents, getRecommended, getStarredIds, type FeedEvent } from '@/features/feed/queries'
 import { Feed } from '@/features/feed/Feed'
 import type { Lang } from '@/shared/i18n'
-import { DASHBOARD_LISTS, ListsPanel } from './ListsPanel'
+import { ListsPanel } from './ListsPanel'
+import { DASHBOARD_LISTS } from '@/shared/lib/paging'
 import { loadMyLists, searchMyLists } from '@/features/library/actions/my-lists'
 import { t, tr } from '@/shared/i18n'
 import { PromoCard } from './PromoCard'
 import { ChangelogCard } from './ChangelogCard'
 import { cardClass } from '@/shared/ui/card-style'
+import { listVisibilityState } from '@/features/library/list-visibility'
 
 // Dashboard залогиненного (GitHub-стиль, full-width):
 //   слева — Your lists (переиспользуемая панель с фильтром),
@@ -72,9 +74,17 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
         <ListsPanel
           lang={lang}
           title={t('yourLists', lang)}
-          items={mine.map((m) => ({ handle: m.ownerHandle, slug: m.slug, title: m.title, avatarUrl: m.ownerAvatarUrl }))}
+          // visibility обязателен и здесь: `loadMyLists` его отдаёт, и без него замок
+          // у приватного списка появлялся бы только со второй страницы панели.
+          items={mine.map((m) => ({
+            handle: m.ownerHandle,
+            slug: m.slug,
+            title: m.title,
+            avatarUrl: m.ownerAvatarUrl,
+            visibility: listVisibilityState(m),
+          }))}
           total={mineTotal}
-          loadMore={loadMyLists}
+          loadPage={loadMyLists}
           remoteSearch={searchMyLists}
           initialLimit={DASHBOARD_LISTS}
           showNew

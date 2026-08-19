@@ -1,6 +1,9 @@
 import 'server-only'
-import { and, desc, eq, ilike, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, ilike, sql, type SQL } from 'drizzle-orm'
 import { db, discussionComments, discussions, users } from '@/shared/db'
+import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
+import { likeContains } from '@/shared/db/like'
+import { feedWindow, probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
 export interface DiscussionRow {
@@ -15,12 +18,52 @@ export interface DiscussionRow {
 }
 
 /** Треды списка (лента): фильтр по категории + поиск по заголовку. */
-export async function getDiscussions(templateId: string, opts: { category?: string; q?: string } = {}): Promise<DiscussionRow[]> {
-  const conds = [eq(discussions.templateId, templateId)]
+export interface DiscussionQuery {
+  category?: string
+  q?: string
+}
+
+/**
+ * Условия отбора обсуждений — ОДИН источник на выдачу и на счёт.
+ *
+ * Порознь их писать нельзя: число страниц берётся из счёта, и разойдись он с выдачей
+ * хоть на одно условие — листалка нарисует страницы, которых нет.
+ */
+function discussionConds(templateId: string, opts: DiscussionQuery): SQL[] {
+  const conds: SQL[] = [eq(discussions.templateId, templateId)]
   if (opts.category) conds.push(eq(discussions.category, opts.category))
-  if (opts.q) conds.push(ilike(discussions.title, `%${opts.q}%`))
+  if (opts.q) conds.push(ilike(discussions.title, likeContains(opts.q)))
+  return conds
+}
+
+/** Сколько обсуждений подходит под ТОТ ЖЕ отбор — для числа страниц. */
+export async function countDiscussions(templateId: string, opts: DiscussionQuery = {}): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(discussions)
+    .where(and(...discussionConds(templateId, opts)))
+  return r?.n ?? 0
+}
+
+/**
+ * Обсуждения списка страницей.
+ *
+ * Каталог, а не лента: их фильтруют по разделу и ищут по названию. Раньше выдача шла без
+ * предела и без доопределения порядка — `createdAt` у обсуждений одной операции совпадает.
+ *
+ * Порядок здесь только «сначала новые», то есть смещение ДРЕЙФУЕТ: новое обсуждение
+ * встаёт сверху, и строка с границы приходит на следующую страницу второй раз. Принято
+ * сознательно — см. `getIssues`: по каталогу прыгают, а курсор прыжка не умеет.
+ */
+export async function getDiscussions(
+  templateId: string,
+  opts: DiscussionQuery = {},
+  /** Окно страницы. Проверяется `feedWindow`: битый предел драйвер выбрасывает молча. */
+  window?: { limit: number; offset?: number },
+): Promise<DiscussionRow[]> {
+  const conds = discussionConds(templateId, opts)
   const commentCount = sql<number>`(select count(*)::int from ${discussionComments} dc where dc.discussion_id = ${discussions.id})`
-  const rows = await db
+  const base = db
     .select({
       id: discussions.id,
       number: discussions.number,
@@ -34,7 +77,9 @@ export async function getDiscussions(templateId: string, opts: { category?: stri
     .from(discussions)
     .innerJoin(users, eq(discussions.authorId, users.id))
     .where(and(...conds))
-    .orderBy(desc(discussions.createdAt))
+    .orderBy(desc(discussions.createdAt), asc(discussions.id))
+  const w = window && feedWindow(window)
+  const rows = await (w ? base.limit(w.limit).offset(w.offset) : base)
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 40) })))
 }
 
@@ -85,7 +130,27 @@ export interface DiscussionCommentRow {
   createdAt: Date
 }
 
-export async function getDiscussionComments(discussionId: string): Promise<DiscussionCommentRow[]> {
+/**
+ * ПОРЦИЯ ОБСУЖДЕНИЯ — тот же рецепт, что у треда задачи (см. issues/queries).
+ *
+ * Порядок показа `asc`: обсуждение читают с начала и дописывают в конец, поэтому «дальше»
+ * значит «в будущее». Ключом, а не смещением, — из-за УДАЛЕНИЯ: снятая реплика сдвигает
+ * всё, что ниже, и следующая порция по смещению перепрыгивает ровно одну.
+ *
+ * Раньше обсуждение отдавалось целиком, без предела.
+ */
+export async function getDiscussionCommentsPage(
+  discussionId: string,
+  perPage: number,
+  cursor: Cursor | null = null,
+  dir: FeedDirection = 'after',
+): Promise<{ items: DiscussionCommentRow[]; next: string | null; prev: string | null }> {
+  // Без курсора шага назад не существует: «перед началом» — не место.
+  const back = dir === 'before' && cursor !== null
+  const step = keysetStep(discussionComments.createdAt, discussionComments.id, cursor, {
+    order: 'asc',
+    dir: back ? 'before' : 'after',
+  })
   const rows = await db
     .select({
       id: discussionComments.id,
@@ -94,10 +159,21 @@ export async function getDiscussionComments(discussionId: string): Promise<Discu
       authorHandle: users.handle,
       authorAvatarUrl: users.avatarUrl,
       createdAt: discussionComments.createdAt,
+      // Ключ ТЕКСТОМ: типизированная колонка приезжает без микросекунд (shared/db/keyset).
+      cursorKey: cursorKey(discussionComments.createdAt),
     })
     .from(discussionComments)
     .innerJoin(users, eq(discussionComments.authorId, users.id))
-    .where(eq(discussionComments.discussionId, discussionId))
-    .orderBy(discussionComments.createdAt)
-  return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 40) })))
+    .where(and(eq(discussionComments.discussionId, discussionId), step.where))
+    .orderBy(...step.order)
+    .limit(probeLimit(perPage))
+
+  const { shown, next, prev } = keysetPage(rows, perPage, cursor, { reverse: step.reverse })
+  return {
+    items: await Promise.all(
+      shown.map(async ({ cursorKey: _k, ...r }) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 40) })),
+    ),
+    next,
+    prev,
+  }
 }

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { db, repositories, stars, templates, users } from '@/shared/db'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { getPopularTags } from '@/features/library/queries'
-import { getProfileCounts, getStarredTemplates } from '@/features/profile/queries'
+import { getProfileCounts } from '@/features/profile/queries'
 import { resetTables } from '../../helpers/reset-db'
 
 describe('видимые счётчики профиля', () => {
@@ -70,12 +70,6 @@ describe('видимые счётчики профиля', () => {
     await expect(getOwnerCatalogs(ownerId, ownerId)).resolves.toEqual([
       expect.objectContaining({ name: 'visible-counts', listCount: 3 }),
     ])
-  })
-
-  it('возвращает статус для общей карточки во вкладке Starred', async () => {
-    const items = await getStarredTemplates(ownerId, ownerId)
-    expect(items.find((item) => item.slug === 'draft')?.status).toBe('draft')
-    expect(items.find((item) => item.slug === 'published')?.status).toBe('published')
   })
 
   it('считает популярные теги по видимым спискам, а не по устаревшему реестру', async () => {

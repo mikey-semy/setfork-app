@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, ListChecks, Plus } from 'lucide-react'
+import { Pagination } from '@/shared/ui/Pagination'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { SearchField } from '@/shared/ui/SearchField'
@@ -18,17 +19,22 @@ import { buttonClass } from '@/shared/ui/button-style'
 //   showNew     — ссылка «+ New» в заголовке
 //   showOwner   — префикс handle/ у названия
 //   showVersion — vN справа
-//   initialLimit — рез до N + кнопка «Показать ещё (M)» (поиск показывает все совпадения)
+//   initialLimit — размер порции: без loadPage это рез до N + «Показать ещё (M)»,
+//                  с loadPage — размер СТРАНИЦЫ (поиск показывает все совпадения)
 
-/**
- * Сколько строк поднимает КАЖДАЯ поверхность. Числа живут здесь, потому что это
- * свойство панели, а не случайный аргумент запроса у вызывающего: разъедутся —
- * и «показать ещё» начнёт просить не тот кусок.
- */
-/** Рейка сайдбара: показывает ровно столько и не листается. */
-export const SIDEBAR_LISTS = 10
-/** Панель дашборда: компактный набор как в GitHub Top repositories. */
-export const DASHBOARD_LISTS = 7
+// Сколько строк поднимает каждая поверхность — SIDEBAR_LISTS/DASHBOARD_LISTS —
+// живёт в `@/shared/lib/paging`, а НЕ здесь. Здесь эти числа читали серверные
+// компоненты через границу RSC и получали ссылку на клиентский модуль вместо
+// числа; почему это тихо ломало запрос — там же, в комментарии у констант.
+
+/** Замер строки списка (px): содержимое ~20 + `py-1.5` сверху и снизу; зазор — `gap-0.5`.
+ *  Числа здесь, а не в разметке, потому что по ним считается резерв высоты страницы. */
+const ROW_H = 32
+const ROW_GAP = 2
+
+/** Сколько ждём страницу, прежде чем считать, что она не придёт. Столько же, сколько
+ *  человек готов смотреть на «Загрузка…», не решив, что интерфейс сломался. */
+const PAGE_TIMEOUT_MS = 15_000
 
 export interface ListsPanelItem {
   handle: string
@@ -40,6 +46,21 @@ export interface ListsPanelItem {
   /** Состояние, а не поле БД: черновик закрыт так же, как приватный (list-visibility). */
   visibility?: ListVisibilityState
 }
+
+/**
+ * Строка, по которой ищет фильтр панели: ВСЕ языки заголовка, а не показанный.
+ *
+ * `tr()` отдаёт одну строку — ту, что видит читатель, — и фильтр по ней расходился с
+ * серверным поиском в том же окне ввода: SQL смотрит `title->>'en' || title->>'ru'`
+ * (см. titleText), то есть список {en:'Bread', ru:'Хлебопечка'} на вкладке профиля
+ * находится по слову «bread», а в панели у русского читателя — нет. Расхождение видно
+ * только на списке с ДВУМЯ заголовками: у одноязычного tr() возвращает то же самое.
+ *
+ * Живёт В МОДУЛЕ, а не в теле компонента: от пропсов и состояния не зависит, а собранная
+ * заново на каждый рендер функция — новая ссылка, то есть промах мемоизации у всякого,
+ * кому её передадут (react-doctor/prefer-module-scope-pure-function).
+ */
+const searchText = (l: ListsPanelItem) => `${Object.values(l.title ?? {}).join(' ')} ${l.handle}/${l.slug}`
 
 export function ListsPanel({
   items,
@@ -57,7 +78,7 @@ export function ListsPanel({
   headerStyle = 'mono',
   activeKey,
   remoteSearch,
-  loadMore,
+  loadPage,
   total,
 }: {
   items: ListsPanelItem[]
@@ -79,12 +100,17 @@ export function ListsPanel({
    *  Функция обязана быть стабильной (модульная или useCallback). */
   remoteSearch?: (q: string) => Promise<ListsPanelItem[]>
   /**
-   * Подгрузка СЛЕДУЮЩЕЙ порции с сервера. Без неё «показать ещё» просто
-   * раскрывает то, что уже прислали, — так и было до 13.08.2026, и на 518
-   * списках это вываливало на экран всё разом (жалоба владельца).
+   * СТРАНИЦА с сервера: окно `initialLimit` строк, начиная с `offset`. Панель
+   * ЗАМЕНЯЕТ показанное этим окном, а не дописывает вниз.
+   *
+   * Дописывала — и в этом была беда. «Показать ещё» копило порции в одном
+   * массиве, поэтому у владельца с 518 списками панель на главной росла до
+   * полной библиотеки: сколько нажал, столько строк и висит в DOM, а свернуть
+   * можно было только всё разом. Со страницей потолок фиксированный —
+   * `initialLimit` строк на любой странице и на любом размере библиотеки.
    */
-  loadMore?: (offset: number, limit: number) => Promise<ListsPanelItem[]>
-  /** Сколько всего есть на сервере — чтобы знать, когда прятать кнопку. */
+  loadPage?: (offset: number, limit: number) => Promise<ListsPanelItem[]>
+  /** Сколько всего есть на сервере — из него считаются страницы. */
   total?: number
 }) {
   // Свёрнутость: ленивый init из LS безопасен — до маунта секция не рендерится с сервера иначе, чем '1'.
@@ -94,10 +120,28 @@ export function ListsPanel({
   })
   const [q, setQ] = useState('')
   const [expanded, setExpanded] = useState(false)
-  // Догруженные порции лежат ОТДЕЛЬНО от items: сервер может прислать items заново
-  // (ревалидация), и подмешивать их в один массив значило бы терять или дублировать.
-  const [more, setMore] = useState<ListsPanelItem[]>([])
-  const [loadingMore, setLoadingMore] = useState(false)
+  // Страница живёт ОТДЕЛЬНО от items: items — это первая страница с сервера, и она
+  // может приехать заново (ревалидация). Держим её как есть, а листание кладём
+  // рядом; page === 1 возвращается к items без запроса.
+  const [page, setPage] = useState(1)
+  const [pageRows, setPageRows] = useState<ListsPanelItem[] | null>(null)
+  const [paging, setPaging] = useState(false)
+  const [pageFailed, setPageFailed] = useState(false)
+  const [searchFailed, setSearchFailed] = useState(false)
+  /** Номер поколения запросов. Ответ старого поколения игнорируется целиком: он мог уйти
+   *  до того, как набор сменился или человек ушёл на другую страницу. */
+  const generation = useRef(0)
+
+  /** Ввод в поиск гасит прошлую неудачу страницы: она больше не про то, что на экране.
+   *  Гасим ЗДЕСЬ, в обработчике, а не в теле эффекта — синхронный setState в эффекте
+   *  даёт лишний каскад рендеров (react-hooks/set-state-in-effect), и гасить его на
+   *  каждый прогон эффекта незачем: повод ровно один — человек начал набирать. Прятать
+   *  же сообщение при показе нельзя: скрытое `role="alert"` объявится заново, стоит
+   *  очистить поиск. */
+  const onSearchInput = (v: string) => {
+    setQ(v)
+    setPageFailed(false)
+  }
 
   const toggle = () =>
     setOpen((v) => {
@@ -132,9 +176,20 @@ export function ListsPanel({
       if (!alive) return
       setRemote(null)
       setSearching(true)
+      setSearchFailed(false)
       remoteSearch(query)
-        .then((r) => alive && setRemote(r))
-        .catch(() => alive && setRemote([]))
+        .then((r) => {
+          if (!alive) return
+          setRemote(r)
+        })
+        // НЕ пустой результат: неудавшийся поиск и поиск без совпадений — разные ответы.
+        // Раньше оба показывали «ничего не найдено», то есть панель уверенно сообщала об
+        // отсутствии того, чего вообще не искала.
+        .catch(() => {
+          if (!alive) return
+          setRemote([])
+          setSearchFailed(true)
+        })
         .finally(() => alive && setSearching(false))
     }, 200)
     return () => {
@@ -143,20 +198,90 @@ export function ListsPanel({
     }
   }, [query, remoteSearch])
 
-  const localFiltered = query
-    ? items.filter((l) => `${tr(l.title, lang)} ${l.handle}/${l.slug}`.toLowerCase().includes(query))
-    : items
-  // Порционная подгрузка приходит ВСЛЕД за items, поиск её не касается.
-  const withMore = query ? localFiltered : [...items, ...more]
-  const filtered = remoteSearch && query ? (remote ?? []) : withMore
-  // Поиск показывает все совпадения; без поиска — рез до initialLimit.
-  const cut = !query && !expanded && !loadMore && filtered.length > initialLimit
+  // ДАННЫЕ МОГЛИ СМЕНИТЬСЯ ПОД ПАНЕЛЬЮ. items и total приезжают с сервера заново после
+  // ревалидации (создали список, удалили, переименовали), а `pageRows` — снимок, снятый
+  // когда-то раньше: панель, стоящая на третьей странице, продолжала бы показывать строки
+  // «до изменения» неограниченно долго. Сравниваем дешёвую подпись набора, а не сам массив:
+  // на каждый рендер он новый, и сброс по нему кидал бы на первую страницу при любом
+  // переходе по сайту.
+  const signature = `${total ?? items.length}|${items[0]?.handle}/${items[0]?.slug}`
+  const [seenSignature, setSeenSignature] = useState(signature)
+  if (seenSignature !== signature) {
+    setSeenSignature(signature)
+    setPage(1)
+    setPageRows(null)
+    setPageFailed(false)
+  }
+  // И гасим поколение: запрос, ушедший ДО смены набора, вернётся со снимком «до» и молча
+  // отменит сброс выше — то есть панель снова покажет устаревшие строки, но уже без
+  // всякого повода их заподозрить.
+  //
+  // БАМП В ЭФФЕКТЕ, А НЕ В РЕНДЕРЕ. Запись в ref во время рендера — не мелочь стиля:
+  // React вправе отбросить или переиграть рендер, и тогда счётчик уезжает от вычисленного
+  // без всякого коммита, то есть годный ответ выбрасывается как «старый». Сбросы состояния
+  // выше это переживают (React их отменит вместе с рендером), а мутация ref — нет.
+  useEffect(() => {
+    generation.current += 1
+  }, [signature])
+
+  // Страниц столько, сколько окон в total. Без total листать некуда: панель просто
+  // показывает то, что ей дали.
+  const totalPages = loadPage && total !== undefined ? Math.max(1, Math.ceil(total / initialLimit)) : 1
+  // ОТКРЫТАЯ СТРАНИЦА МОГЛА ИСЧЕЗНУТЬ, пока панель на ней стояла: items и total приезжают
+  // с сервера заново (список удалили, стало меньше страниц), а `page` — состояние здесь.
+  // Без сброса выходил тупик: на пятой странице из трёх «назад» ведёт на четвёртую,
+  // которой нет, «вперёд» — за край, обе стрелки мертвы, и выйти можно только перезагрузкой.
+  const outOfRange = page > totalPages
+  const shownPage = outOfRange ? 1 : page
+  // Что вообще показываем без поиска: страницу с сервера (если листали) или items.
+  const base = outOfRange ? items : (pageRows ?? items)
+  const localFiltered = query ? base.filter((l) => searchText(l).toLowerCase().includes(query)) : base
+  const filtered = remoteSearch && query ? (remote ?? []) : localFiltered
+  // Поиск показывает все совпадения; без поиска и без страниц — рез до initialLimit.
+  const cut = !query && !expanded && !loadPage && filtered.length > initialLimit
   const shown = cut ? filtered.slice(0, initialLimit) : filtered
-  // Сколько ещё лежит на сервере. Без total считать нечего — значит и кнопки нет.
-  const restOnServer = loadMore && total !== undefined ? Math.max(0, total - (items.length + more.length)) : 0
-  // При серверной пагинации в items лежит ровно первая порция, поэтому решать по
+  // При серверной пагинации в items лежит ровно первая страница, поэтому решать по
   // items.length нельзя: 7 из 500 скрывали бы поиск как будто списков всего семь.
   const hasSearch = searchable === true || (searchable === 'auto' && (total ?? items.length) > initialLimit)
+
+  // Резервируем, только когда листание вообще есть: у профиля с тремя списками пустое
+  // место под семь строк — это дыра на ровном месте.
+  const reserveRows = Boolean(loadPage) && !query && totalPages > 1
+
+  const goToPage = (next: number) => {
+    if (!loadPage || paging || next === shownPage || next < 1 || next > totalPages) return
+    setPageFailed(false)
+    // Первая страница уже пришла с сервера — за ней не ходим, иначе «назад» до
+    // начала стоит запроса на ровном месте.
+    if (next === 1) {
+      setPage(1)
+      setPageRows(null)
+      return
+    }
+    const id = ++generation.current
+    setPaging(true)
+    // ПОТОЛОК ОЖИДАНИЯ ОБЯЗАТЕЛЕН. Обещание, которое не разрешается никогда (оборвалась
+    // сеть на полпути, спящая вкладка), оставляло `paging` включённым навсегда: обе
+    // стрелки неактивны, ошибки нет, выйти можно только перезагрузкой.
+    Promise.race([
+      loadPage((next - 1) * initialLimit, initialLimit),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), PAGE_TIMEOUT_MS)),
+    ])
+      .then((rows) => {
+        if (generation.current !== id) return
+        setPageRows(rows)
+        setPage(next)
+      })
+      // Страница не приехала — остаёмся на текущей и говорим об этом. Молча
+      // подсунуть пустоту нельзя: это читалось бы как «списки кончились».
+      .catch(() => {
+        if (generation.current !== id) return
+        setPageFailed(true)
+      })
+      .finally(() => {
+        if (generation.current === id) setPaging(false)
+      })
+  }
 
   const header =
     headerStyle === 'mono' ? (
@@ -194,7 +319,7 @@ export function ListsPanel({
         <>
           {hasSearch && (
             <div className="mb-1.5">
-              <SearchField value={q} onValueChange={setQ} placeholder={t('findList', lang)} clearLabel={t('clear', lang)} size="xs" />
+              <SearchField value={q} onValueChange={onSearchInput} placeholder={t('findList', lang)} clearLabel={t('clear', lang)} size="xs" />
             </div>
           )}
           {items.length === 0 ? (
@@ -202,11 +327,24 @@ export function ListsPanel({
               <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-[0.78125rem] text-muted">{emptyText}</div>
             ) : null
           ) : shown.length === 0 ? (
+            // «Ничего не найдено» — ответ ПОИСКУ. Без поиска пустая страница означает, что
+            // набор изменился под нами, и говорить о ненайденном там нечего.
             <div className="px-2 py-3 text-[0.78125rem] text-muted">
-              {t(searching ? 'searchingLists' : 'nothingFound', lang)}
+              {t(searching ? 'searchingLists' : searchFailed ? 'loadFailed' : query ? 'nothingFound' : 'loadFailed', lang)}
             </div>
           ) : (
-            <nav className="flex flex-col gap-0.5">
+            <nav
+              // Ориентир обязан быть назван: на дашборде рядом стоит листалка — тоже nav, —
+              // и в списке ориентиров скринридера два безымянных «navigation» неразличимы.
+              aria-label={title || t('yourLists', lang)}
+              className="flex flex-col gap-0.5"
+              // ВЫСОТА ЗАРЕЗЕРВИРОВАНА под полную страницу. Последняя страница короче
+              // остальных, и без резерва панель на ней складывалась: на мобильной главной
+              // она стоит первой, поэтому листалка уезжала вверх на пол-экрана — сразу
+              // после того, как палец по ней ударил. Фиксированный потолок строк, ради
+              // которого всё и затевалось, должен быть виден и как постоянная высота.
+              style={reserveRows ? { minHeight: `${(initialLimit * ROW_H + (initialLimit - 1) * ROW_GAP) / 16}rem` } : undefined}
+            >
               {shown.map((l) => {
                 const active = activeKey === `${l.handle}/${l.slug}`
                 return (
@@ -246,37 +384,27 @@ export function ListsPanel({
               })}
             </nav>
           )}
-          {/* Серверная пагинация приносит небольшие порции, но после первой порции
-              обязана давать и обратный путь: Show less забывает догруженное и снова
-              оставляет компактные семь строк Dashboard. */}
-          {loadMore && !query && (restOnServer > 0 || more.length > 0) && (
-            <div className="mt-1 flex gap-1">
-              {restOnServer > 0 && (
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  disabled={loadingMore}
-                  onClick={() => {
-                    setLoadingMore(true)
-                    loadMore(items.length + more.length, initialLimit)
-                      .then((next) => setMore((p) => [...p, ...next]))
-                      .finally(() => setLoadingMore(false))
-                  }}
-                  className="min-w-0 flex-1 justify-center text-accent"
-                >
-                  {loadingMore ? t('loadingMore', lang) : `${t('showMore', lang)} (${Math.min(initialLimit, restOnServer)})`}
-                </Button>
-              )}
-              {more.length > 0 && (
-                <Button variant="ghost" size="xs" onClick={() => setMore([])} className="min-w-0 flex-1 justify-center text-accent">
-                  {t('showLess', lang)}
-                </Button>
-              )}
+          {/* Страницы, а не бесконечная лента: на экране всегда ровно одно окно,
+              сколько бы списков ни было в библиотеке. Под поиском пагинатора нет —
+              выдача поиска это не страница, а совпадения. */}
+          {loadPage && !query && (
+            // Та же листалка, что на страницах сайта, — здесь только в кнопочном
+            // режиме и compact: колонка узкая, номера в неё не лягут.
+            <Pagination page={shownPage} totalPages={totalPages} onPage={goToPage} busy={paging} compact lang={lang} className="mt-1" />
+          )}
+          {/* Под поиском не показываем: сообщение относится к странице, а выдача поиска
+              страницей не является — иначе «не удалось загрузить» висит над найденным. */}
+          {/* role="alert" — иначе для скринридера неудача НЕМАЯ: живая область листалки
+              вернёт то же «Страница 1 / 72», что читалось до нажатия, и выйдет, будто
+              ничего и не нажимали. Под поиском не показываем: сообщение про страницу. */}
+          {pageFailed && !query && (
+            <div role="alert" className="px-2 py-1 text-[0.6875rem] text-danger">
+              {t('loadFailed', lang)}
             </div>
           )}
           {/* Раскрыли — должно быть чем и свернуть обратно: тот же тумблер, не тупик.
-              Ветка без loadMore: панель получила весь набор и просто режет его. */}
-          {!loadMore && (cut || (expanded && !query && filtered.length > initialLimit)) && (
+              Ветка без loadPage: панель получила весь набор и просто режет его. */}
+          {!loadPage && (cut || (expanded && !query && filtered.length > initialLimit)) && (
             <Button
               variant="ghost"
               size="xs"

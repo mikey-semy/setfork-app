@@ -1,9 +1,11 @@
 import 'server-only'
-import { and, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, stars, templates, templateVersions, users, publiclyVisible } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
+import { feedWindow } from '@/shared/lib/paging'
+import { likeContains } from '@/shared/db/like'
 import type { FeedItem } from './list'
 
 /**
@@ -65,7 +67,7 @@ export const titleText = sql`(coalesce(${templates.title}->>'en','') || ' ' || c
  *  (websearch_to_tsquery, 'simple' — без стемминга, контент EN/RU) +
  *  word_similarity (<%) — устойчивость к опечаткам в заголовке. */
 export function searchCondition(q: string): SQL {
-  const like = `%${q}%`
+  const like = likeContains(q)
   return or(
     ilike(titleText, like),
     ilike(descText, like),
@@ -121,8 +123,12 @@ export async function keywordFeed(
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(...filters))
-    .orderBy(...(viewerLang ? [langPref(viewerLang)] : []), order)
-  const rows = window ? await base.limit(window.limit).offset(window.offset ?? 0) : await base
+    // `asc(id)` в хвосте — доопределение порядка. Без него на равных ключах (у trending
+    // это звёзды+форки, у ленты — дата) соседние страницы вправе показать одну строку
+    // дважды, а другую пропустить. Ключ уникальный, поэтому порядок становится строгим.
+    .orderBy(...(viewerLang ? [langPref(viewerLang)] : []), order, asc(templates.id))
+  const w = window && feedWindow(window)
+  const rows = w ? await base.limit(w.limit).offset(w.offset) : await base
   return rows as FeedItem[]
 }
 
@@ -151,7 +157,15 @@ export async function semanticFeed(
     .innerJoin(templates, eq(embeddings.refId, templates.id))
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(...filters))
-    .orderBy(desc(similarity))
+    // `asc(id)` в хвосте — по той же причине, что в keywordFeed, и здесь она острее.
+    // Одинаковая близость — не редкость, а норма: у повторной заливки того же текста
+    // эмбеддинг совпадает БИТ В БИТ, то есть distance равен точно. На равных ключах
+    // порядок произволен, и рвётся не только он: `limit` отрезает выдачу по этому же
+    // порядку, поэтому на границе отсечки произволен и САМ СОСТАВ — от запроса к запросу
+    // в хвост попадает то одна строка, то другая. Склеенная выдача поиска режется на
+    // страницы уже в памяти (getFeed), так что её страницы наследуют этот произвол
+    // целиком: строка показывается дважды или не показывается ни разу.
+    .orderBy(desc(similarity), asc(templates.id))
     .limit(limit)
   return rows as FeedItem[]
 }

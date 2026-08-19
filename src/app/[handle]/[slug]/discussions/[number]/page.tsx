@@ -10,7 +10,9 @@ import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { UserLine } from '@/shared/ui/UserLine'
 import { requireViewableMeta } from '@/features/library/guard'
-import { getDiscussion, getDiscussionComments } from '@/features/discussions/queries'
+import { getDiscussion, getDiscussionCommentsPage } from '@/features/discussions/queries'
+import { Pagination } from '@/shared/ui/Pagination'
+import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
 import { addDiscussionComment } from '@/features/discussions/actions'
 import { categoryLabel, categoryMeta } from '@/features/discussions/constants'
 import { PAGE_NARROW } from '@/shared/ui/control'
@@ -21,8 +23,14 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
   return { title: `${t('discussionHeading', lang)} #${number} · ${handle}/${slug}` }
 }
 
-export default async function DiscussionThreadPage({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
-  const { handle: owner, slug, number: numStr } = await params
+export default async function DiscussionThreadPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ handle: string; slug: string; number: string }>
+  searchParams: Promise<{ after?: string; before?: string }>
+}) {
+  const [{ handle: owner, slug, number: numStr }, sp] = await Promise.all([params, searchParams])
   const number = Number(numStr)
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const ru = lang === 'ru'
@@ -33,8 +41,12 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
   if (!isFeatureEnabled(meta, 'discussions')) notFound() // раздел выключен (Settings → Features)
   const disc = number > 0 ? await getDiscussion(meta.id, number) : null
   if (!disc) notFound()
-  const comments = await getDiscussionComments(disc.id)
+  // Обсуждение листается ключом; мусорный курсор — «показать сначала», а не пятисотка.
+  const { cursor, dir } = readCursor(sp)
+  const thread = await getDiscussionCommentsPage(disc.id, COMMENTS_PER_PAGE, cursor, dir)
+  const comments = thread.items
   const base = `/${owner}/${slug}/discussions`
+  const path = `${base}/${disc.number}`
 
   const card = 'rounded-lg border border-border bg-surface'
   return (
@@ -74,6 +86,15 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
             ))}
           </div>
         )}
+
+        {/* Шаги обсуждения — номеров нет, порядок показа от старого к новому. */}
+        <Pagination
+          lang={lang}
+          steps={{
+            prev: thread.prev ? cursorHref(path, sp, BEFORE_PARAM)(thread.prev) : null,
+            next: thread.next ? cursorHref(path, sp, AFTER_PARAM)(thread.next) : null,
+          }}
+        />
 
         {/* Ответить */}
         {session ? (

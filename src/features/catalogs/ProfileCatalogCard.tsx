@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { FolderGit2 } from 'lucide-react'
-import { t, tr, type Lang } from '@/shared/i18n'
+import { plural, t, tr, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import type { CatalogRow } from './queries'
 
@@ -15,7 +15,7 @@ export function ProfileCatalogCard({ catalog, handle, lang }: { catalog: Catalog
         <span className="min-w-0 truncate font-semibold text-accent group-hover:underline">{tr(catalog.title, lang) || catalog.name}</span>
       </div>
       <div className="mt-1 font-mono text-[0.6875rem] text-muted">
-        {catalog.listCount} {t('lists', lang).toLowerCase()}
+        {catalog.listCount} {plural(catalog.listCount, 'lists', lang)}
       </div>
     </Link>
   )

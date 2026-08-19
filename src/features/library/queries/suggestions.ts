@@ -1,6 +1,9 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, issues, milestones, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, suggestionViewed, templates, users } from '@/shared/db'
+import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
+import { likeContains } from '@/shared/db/like'
+import { feedWindow, probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
 export type SuggestionFilter = 'open' | 'closed'
@@ -95,20 +98,68 @@ export async function getSuggestionAuthors(templateId: string): Promise<{ handle
  * чего список писал «0 пунктов» у явно непустой правки. Для ветки отдаём null —
  * «неизвестно отсюда», и страница показывает ветку вместо вранья.
  */
-export async function getSuggestions(
-  templateId: string,
-  opts: { status?: SuggestionFilter; q?: string; label?: string; milestone?: string; author?: string; sort?: SuggestionSort } = {},
-) {
-  const conds = [eq(suggestions.templateId, templateId)]
+export interface SuggestionQuery {
+  status?: SuggestionFilter
+  q?: string
+  label?: string
+  milestone?: string
+  author?: string
+  sort?: SuggestionSort
+}
+
+/**
+ * Условия отбора правок — ОДИН источник на выдачу и на счёт.
+ *
+ * Порознь их писать нельзя: счёт даёт число страниц, и разойдись он с выдачей хоть на
+ * одно условие — листалка нарисует страницы, которых нет, либо спрячет существующие,
+ * причём обе функции по отдельности будут выглядеть верными.
+ */
+function suggestionConds(templateId: string, opts: SuggestionQuery): SQL[] {
+  const conds: SQL[] = [eq(suggestions.templateId, templateId)]
   if (opts.status === 'closed') conds.push(sql`${suggestions.status} <> 'open'`)
   else if (opts.status === 'open') conds.push(eq(suggestions.status, 'open'))
   const q = opts.q?.trim()
-  if (q) conds.push(sql`${suggestions.note} ilike ${'%' + q + '%'}`)
+  if (q) conds.push(sql`${suggestions.note} ilike ${likeContains(q)}`)
   if (opts.label) conds.push(sql`${opts.label} = any(${suggestions.labels})`)
   if (opts.milestone) conds.push(eq(suggestions.milestoneId, opts.milestone))
   if (opts.author) conds.push(sql`${users.handle} = ${opts.author}`)
+  return conds
+}
 
-  const rows = await db
+/** Сколько правок подходит под ТОТ ЖЕ отбор — для числа страниц.
+ *  Соединение с `users` обязательно и здесь: по нему идёт фильтр автора. */
+export async function countSuggestions(templateId: string, opts: SuggestionQuery = {}): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(suggestions)
+    .innerJoin(users, eq(suggestions.authorId, users.id))
+    .where(and(...suggestionConds(templateId, opts)))
+  return r?.n ?? 0
+}
+
+/**
+ * Правки списка страницей.
+ *
+ * Правки — каталог: их фильтруют и сортируют.
+ *
+ * Про дрейф смещения — см. `getIssues`: при сортировке «сначала новые» свежая правка
+ * встаёт сверху, и строка с границы показывается дважды. Принято сознательно по той же
+ * причине: по каталогу прыгают, а курсор прыжка не умеет.
+ *
+ * Раньше выдача шла без предела вовсе — и без доопределения порядка: `createdAt` у пачки
+ * правок совпадает (импорт, массовое предложение), а на равных ключах база вправе вернуть
+ * строки как угодно. Пока выдача была целиком, это было незаметно; со страницами ровно
+ * это и теряет строки.
+ */
+export async function getSuggestions(
+  templateId: string,
+  opts: SuggestionQuery = {},
+  /** Окно страницы. Проверяется `feedWindow`: битый предел драйвер выбрасывает молча. */
+  window?: { limit: number; offset?: number },
+) {
+  const conds = suggestionConds(templateId, opts)
+
+  const base = db
     .select({
       id: suggestions.id,
       number: suggestions.number,
@@ -129,7 +180,12 @@ export async function getSuggestions(
     .innerJoin(users, eq(suggestions.authorId, users.id))
     .leftJoin(milestones, eq(milestones.id, suggestions.milestoneId))
     .where(and(...conds))
-    .orderBy(opts.sort === 'oldest' ? asc(suggestions.createdAt) : desc(suggestions.createdAt))
+    .orderBy(
+      opts.sort === 'oldest' ? asc(suggestions.createdAt) : desc(suggestions.createdAt),
+      asc(suggestions.id),
+    )
+  const w = window && feedWindow(window)
+  const rows = w ? await base.limit(w.limit).offset(w.offset) : await base
   return Promise.all(
     rows.map(async (r) => ({
       ...r,
@@ -161,21 +217,72 @@ export async function getSuggestion(templateId: string, idOrNumber: string) {
 }
 
 /** Комментарии-обсуждение к предложению. */
-export async function getSuggestionComments(suggestionId: string) {
+/**
+ * УЧАСТНИКИ ОБСУЖДЕНИЯ — для подсказки @mention.
+ *
+ * Отдельным запросом, а не из показанной порции: с тех пор как тред листается, «все
+ * комментаторы» и «комментаторы этой порции» — разные множества, и picker на второй
+ * порции забыл бы половину людей.
+ */
+export async function getSuggestionParticipants(
+  suggestionId: string,
+): Promise<{ handle: string; avatarUrl: string | null }[]> {
+  const rows = await db
+    .selectDistinct({ handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(suggestionComments)
+    .innerJoin(users, eq(suggestionComments.authorId, users.id))
+    .where(eq(suggestionComments.suggestionId, suggestionId))
+    .orderBy(asc(users.handle))
+    .limit(100)
+  return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+}
+
+/**
+ * ПОРЦИЯ ОБСУЖДЕНИЯ ПРЕДЛОЖЕНИЯ — тот же рецепт, что у треда задачи и обсуждения.
+ *
+ * Порядок показа `asc`: разговор читают с начала. Ключом, а не смещением, — из-за
+ * удаления реплики: она сдвигает всё, что ниже, и следующая порция по смещению
+ * перепрыгивает ровно одну.
+ *
+ * Раньше тред отдавался целиком, без предела.
+ */
+export async function getSuggestionCommentsPage(
+  suggestionId: string,
+  perPage: number,
+  cursor: Cursor | null = null,
+  dir: FeedDirection = 'after',
+) {
+  // Без курсора шага назад не существует: «перед началом» — не место.
+  const back = dir === 'before' && cursor !== null
+  const step = keysetStep(suggestionComments.createdAt, suggestionComments.id, cursor, {
+    order: 'asc',
+    dir: back ? 'before' : 'after',
+  })
   const rows = await db
     .select({
       id: suggestionComments.id,
       body: suggestionComments.body,
       createdAt: suggestionComments.createdAt,
+      // Ключ ТЕКСТОМ: типизированная колонка приезжает без микросекунд (shared/db/keyset).
+      cursorKey: cursorKey(suggestionComments.createdAt),
       authorId: suggestionComments.authorId,
       authorHandle: users.handle,
       authorAvatarUrl: users.avatarUrl,
     })
     .from(suggestionComments)
     .innerJoin(users, eq(suggestionComments.authorId, users.id))
-    .where(eq(suggestionComments.suggestionId, suggestionId))
-    .orderBy(asc(suggestionComments.createdAt))
-  return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
+    .where(and(eq(suggestionComments.suggestionId, suggestionId), step.where))
+    .orderBy(...step.order)
+    .limit(probeLimit(perPage))
+
+  const { shown, next, prev } = keysetPage(rows, perPage, cursor, { reverse: step.reverse })
+  return {
+    items: await Promise.all(
+      shown.map(async ({ cursorKey: _k, ...r }) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })),
+    ),
+    next,
+    prev,
+  }
 }
 
 /** Число открытых предложений. */

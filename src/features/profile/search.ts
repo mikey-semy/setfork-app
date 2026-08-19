@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
 import { db, follows, templates, users } from '@/shared/db'
+import { likeContains } from '@/shared/db/like'
 import { avatarSrc } from '@/shared/media'
 
 export type PeopleSort = 'followers' | 'lists' | 'newest'
@@ -26,7 +27,7 @@ function peopleWhere(q?: string): SQL {
   // Приватные профили не всплывают в поиске людей (скрыты от всех кроме владельца).
   const base = and(eq(users.deleted, false), eq(users.profilePrivate, false))!
   if (!q) return base
-  const like = `%${q}%`
+  const like = likeContains(q)
   return and(base, or(ilike(users.handle, like), ilike(users.name, like)))!
 }
 

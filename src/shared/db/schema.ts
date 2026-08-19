@@ -371,13 +371,28 @@ export const templates = pgTable(
     ownerFork: uniqueIndex('templates_owner_fork_uq').on(t.ownerId, t.forkedFromId),
     // Публичная лента: сорт по updatedAt / starsCount под фильтром видимости —
     // частичные индексы точно под visibleFilter (published+public+active).
+    //
+    // `.nullsFirst()` — НЕ косметика, а условие того, что индекс вообще работает.
+    // `ORDER BY x DESC` в SQL значит `DESC NULLS FIRST`, а `.desc()` у drizzle строит
+    // индекс `DESC NULLS LAST`. Порядки разные, и планировщик такой индекс для сортировки
+    // взять не может — даже когда колонка NOT NULL и разницы физически нет. Замер на
+    // 20 000 строк: с NULLS LAST здесь стоял `Seq Scan` + `top-N heapsort` по всему
+    // корпусу, с NULLS FIRST — `Index Scan` на 20 строк. То есть частичный индекс,
+    // заведённый ровно под этот запрос, лежал мёртвым.
     pubUpdated: index('templates_pub_updated_idx')
-      .on(t.updatedAt.desc())
+      .on(t.updatedAt.desc().nullsFirst())
       .where(sql`status = 'published' and visibility = 'public' and moderation = 'active'`),
     pubStars: index('templates_pub_stars_idx')
-      .on(t.starsCount.desc())
+      .on(t.starsCount.desc().nullsFirst())
       .where(sql`status = 'published' and visibility = 'public' and moderation = 'active'`),
-    ownerUpdated: index('templates_owner_updated_idx').on(t.ownerId, t.updatedAt.desc()), // списки профиля
+    // Списки профиля («мои списки», панель главной, вкладка профиля). Третья колонка —
+    // не украшение: порядок этих выдач доопределён до `id` (feed.ts, profile-lists.ts),
+    // и без `id` в индексе база берёт индексный скан по первым двум колонкам, а равные
+    // `updated_at` дорешивает Incremental Sort — то есть сортировкой в рантайме на
+    // каждой странице. С `id` в индексе порядок выдаётся индексом целиком.
+    // Отдельным индексом это не заводится: `(owner_id, updated_at desc)` — префикс
+    // этого, и старый был бы чистым дублем, за который платят все записи в таблицу.
+    ownerUpdated: index('templates_owner_updated_idx').on(t.ownerId, t.updatedAt.desc().nullsFirst(), t.id),
     repository: index('templates_repository_idx').on(t.repositoryId), // списки каталога
   }),
 )
@@ -608,7 +623,9 @@ export const stars = pgTable(
   (t) => ({
     userTpl: uniqueIndex('stars_user_tpl').on(t.userId, t.templateId),
     tpl: index('stars_tpl_idx').on(t.templateId),
-    userCreated: index('stars_user_created_idx').on(t.userId, t.createdAt.desc()), // вкладка «starred» профиля
+    // Вкладка «starred» профиля. `.nullsFirst()` — из того же соображения, что у
+    // templates_pub_updated_idx: иначе порядок индекса не совпадает с `ORDER BY … DESC`.
+    userCreated: index('stars_user_created_idx').on(t.userId, t.createdAt.desc().nullsFirst()),
   }),
 )
 
@@ -876,8 +893,10 @@ export const agentActions = pgTable(
     idempotencyKey: text('idempotency_key'),
   },
   (t) => [
-    index('agent_actions_loop_idx').on(t.loop, t.occurredAt.desc()),
-    index('agent_actions_agent_idx').on(t.agentId, t.occurredAt.desc()),
+    // `.nullsFirst()` — см. templates_pub_updated_idx: без него порядок индекса
+    // расходится с `ORDER BY occurred_at DESC` и для сортировки не годится.
+    index('agent_actions_loop_idx').on(t.loop, t.occurredAt.desc().nullsFirst()),
+    index('agent_actions_agent_idx').on(t.agentId, t.occurredAt.desc().nullsFirst()),
     uniqueIndex('agent_actions_idem_idx').on(t.idempotencyKey),
   ],
 )
@@ -1152,7 +1171,8 @@ export const suggestionComments = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('suggestion_comments_sug_idx').on(t.suggestionId)],
+  // Порядок треда в индексе — см. issue_comments_issue_idx.
+  (t) => [index('suggestion_comments_sug_idx').on(t.suggestionId, t.createdAt, t.id)],
 )
 
 // ── Reactions (эмодзи на issues/suggestions/комментарии, как в GitHub) ──
@@ -1265,7 +1285,17 @@ export const issueComments = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('issue_comments_issue_idx').on(t.issueId)],
+  // ПОРЯДОК ТРЕДА — В ИНДЕКСЕ, а не в сортировке на каждую порцию.
+  //
+  // Индекса по одному родителю мало: он отдаёт ВЕСЬ тред, и дальше база сортирует его
+  // целиком ради двадцати строк. Замер 19.08 на треде в 20 000 реплик: `Index Scan` по
+  // `issue_id` возвращал все 20 000, следом `top-N heapsort`. То есть цена порции равна
+  // длине треда — ровно то, ради избавления от чего листание и заводилось.
+  //
+  // С этим индексом условие курсора `(created_at, id) > (:key, :id)` становится `Index
+  // Cond`, то есть настоящим диапазонным сканом: замер даёт `Index Only Scan` на 21
+  // строку. Порядок ASC — тред читают с начала (см. shared/db/keyset).
+  (t) => [index('issue_comments_issue_idx').on(t.issueId, t.createdAt, t.id)],
 )
 
 // ── Discussions (форум-треды на список, как GitHub Discussions) ──────
@@ -1304,7 +1334,9 @@ export const discussionComments = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('discussion_comments_discussion_idx').on(t.discussionId)],
+  // Порядок треда в индексе — см. issue_comments_issue_idx: без него каждая порция
+  // сортирует обсуждение целиком.
+  (t) => [index('discussion_comments_discussion_idx').on(t.discussionId, t.createdAt, t.id)],
 )
 export type Discussion = typeof discussions.$inferSelect
 export type DiscussionComment = typeof discussionComments.$inferSelect
@@ -2312,7 +2344,15 @@ export const auditLog = pgTable(
     ip: text('ip'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('audit_log_created_idx').on(t.createdAt), index('audit_log_actor_idx').on(t.actorId)],
+  // Журнал листается ключом `(created_at desc, id desc)`. Без `id` в индексе база
+  // дорешивает порядок `Incremental Sort` — на группах в одну строку это дёшево, но
+  // колонка в уже существующий индекс достаётся даром, а порядок начинает отдаваться
+  // целиком. `nullsFirst` — иначе индекс не совпадёт с `ORDER BY … DESC` вовсе
+  // (см. tests/architecture/index-nulls-order).
+  (t) => [
+    index('audit_log_created_idx').on(t.createdAt.desc().nullsFirst(), t.id.desc().nullsFirst()),
+    index('audit_log_actor_idx').on(t.actorId),
+  ],
 )
 
 // ── Sessions (серверный реестр входов — для отзыва и «кто онлайн») ────
@@ -2350,7 +2390,15 @@ export const notifications = pgTable(
   },
   (t) => [
     index('notifications_recipient_idx').on(t.recipientId, t.read),
-    index('notifications_recipient_created_idx').on(t.recipientId, t.createdAt.desc()), // колокол: последние N
+    // Колокол: последние N. `.nullsFirst()` — см. templates_pub_updated_idx. `id` в
+    // хвосте — потому что лента листается ключом `(created_at desc, id desc)`: без него
+    // порядок дорешивается `Incremental Sort`, а колонка в существующий индекс достаётся
+    // даром.
+    index('notifications_recipient_created_idx').on(
+      t.recipientId,
+      t.createdAt.desc().nullsFirst(),
+      t.id.desc().nullsFirst(),
+    ),
   ],
 )
 

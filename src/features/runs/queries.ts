@@ -2,6 +2,7 @@ import 'server-only'
 import { and, eq, inArray, ne, sql } from 'drizzle-orm'
 import { db, runStepState, runs, steps } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
+import { feedWindow } from '@/shared/lib/paging'
 
 /** Опыт других прогонов шага для «помощи на шаге»: сколько прошло / застряло.
  *  Только счётчики (наш data moat) — чужие тексты причин НЕ выдаём (приватность note).
@@ -29,12 +30,49 @@ export interface UserRunRow {
   title: LocaleText
 }
 
-/** Все прогоны пользователя (для страницы «Мои прогоны»), свежие сверху. */
-export async function getUserRuns(userId: string): Promise<UserRunRow[]> {
+/** Статус прогона как вкладка страницы «Мои прогоны». */
+export type RunStatus = 'active' | 'done' | 'abandoned'
+
+/** Сколько прогонов у пользователя в каждом статусе — числа для вкладок. */
+export async function countUserRunsByStatus(userId: string): Promise<Record<RunStatus, number>> {
+  const rows = await db
+    .select({ status: runs.status, n: sql<number>`count(*)::int` })
+    .from(runs)
+    .where(eq(runs.userId, userId))
+    .groupBy(runs.status)
+  const out: Record<RunStatus, number> = { active: 0, done: 0, abandoned: 0 }
+  for (const r of rows) if (r.status in out) out[r.status as RunStatus] = r.n
+  return out
+}
+
+/**
+ * Прогоны пользователя ОДНОГО статуса, свежие сверху.
+ *
+ * Статус в ЗАПРОСЕ, а не в разметке, и это не мелочь. Страница показывала три раздела
+ * сразу и делила полную выдачу в памяти — то есть поднимала все прогоны человека, сколько
+ * бы их ни было. Со страницами такое деление вообще невозможно: страница могла бы
+ * состоять из одних завершённых, и раздел «в процессе» выглядел бы пустым при живых
+ * прогонах. Поэтому статус стал вкладкой, как у задач и правок.
+ *
+ * Оговорка про порядок: он идёт по `updatedAt`, а тот МЕНЯЕТСЯ — прогон, к которому
+ * вернулись, переезжает наверх. Смещение от этого не спасает ничем (и курсор тоже:
+ * keyset опирается на неизменность ключа). Для собственных прогонов это терпимо —
+ * список меняет тот же человек, который его читает, — но если однажды окажется, что
+ * строки теряются, лечится это сменой ключа на `createdAt`, а не механикой листания.
+ */
+export async function getUserRuns(
+  userId: string,
+  status?: RunStatus,
+  /** Окно страницы. Проверяется `feedWindow`: битый предел драйвер выбрасывает молча. */
+  window?: { limit: number; offset?: number },
+): Promise<UserRunRow[]> {
+  const w = window && feedWindow(window)
   const rows = await db.query.runs.findMany({
-    where: (r) => eq(r.userId, userId),
+    where: (r, { and: a }) => (status ? a(eq(r.userId, userId), eq(r.status, status))! : eq(r.userId, userId)),
     with: { template: { with: { owner: true } } },
-    orderBy: (r, { desc }) => desc(r.updatedAt),
+    // Доопределение до `id`: у пачки прогонов, тронутых одной операцией, время совпадает.
+    orderBy: (r, { desc, asc }) => [desc(r.updatedAt), asc(r.id)],
+    ...(w ? { limit: w.limit, offset: w.offset } : {}),
   })
   if (rows.length === 0) return []
   // Кол-во шагов в версиях прогонов — одним запросом (без relation `version`,

@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { desc, inArray, sql } from 'drizzle-orm'
 import { db, tags } from '@/shared/db'
+import { likeContains } from '@/shared/db/like'
 
 // Реестр тегов (чтение). templates.tags хранит slug'и; здесь — метаданные тега.
 // Курирование/переименование/слияние/удаление — в ./actions (админ).
@@ -42,7 +43,7 @@ export async function listTags(opts: { q?: string; curatedOnly?: boolean; limit?
     .select()
     .from(tags)
     .where(
-      sql`${opts.curatedOnly ? sql`${tags.curated} = true and ` : sql``}(${term ? sql`${tags.slug} like ${'%' + term + '%'}` : sql`true`})`,
+      sql`${opts.curatedOnly ? sql`${tags.curated} = true and ` : sql``}(${term ? sql`${tags.slug} like ${likeContains(term)}` : sql`true`})`,
     )
     .orderBy(desc(tags.curated), desc(tags.usageCount), tags.slug)
     .limit(opts.limit ?? 500)

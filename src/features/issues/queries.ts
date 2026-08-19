@@ -1,6 +1,10 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import { db, issueAssignees, issueComments, issues, listLabels, milestones, users } from '@/shared/db'
+import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
+import { likeContains } from '@/shared/db/like'
+import { feedWindow } from '@/shared/lib/paging'
+import { probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 import type { CustomLabel } from '@/shared/lib/labels'
 
@@ -32,18 +36,68 @@ export interface IssueRow {
 const commentCountSql = sql<number>`(select count(*)::int from ${issueComments} c where c.issue_id = ${issues.id})`
 
 /** Список issue: статус + опц. поиск, фильтр по label/вехе, сортировка. */
-export async function getIssues(
-  templateId: string,
-  opts: { status: IssueFilter; q?: string; label?: string; milestone?: string; sort?: IssueSort },
-): Promise<IssueRow[]> {
-  const conds = [eq(issues.templateId, templateId), eq(issues.status, opts.status)]
+export interface IssueQuery {
+  status: IssueFilter
+  q?: string
+  label?: string
+  milestone?: string
+  sort?: IssueSort
+}
+
+/**
+ * Условия отбора задач — ОДИН источник на выдачу и на счёт.
+ *
+ * Порознь их писать нельзя: счёт даёт число страниц, и разойдись он с выдачей хоть на
+ * одно условие — листалка нарисует страницы, которых нет, либо спрячет существующие.
+ * Ошибка при этом тихая: обе функции по отдельности выглядят верными.
+ */
+function issueConds(templateId: string, opts: IssueQuery): SQL[] {
+  const conds: SQL[] = [eq(issues.templateId, templateId), eq(issues.status, opts.status)]
   const q = opts.q?.trim()
-  if (q) conds.push(sql`${issues.title} ilike ${'%' + q + '%'}`)
+  if (q) conds.push(sql`${issues.title} ilike ${likeContains(q)}`)
   if (opts.label) conds.push(sql`${opts.label} = any(${issues.labels})`)
   if (opts.milestone) conds.push(eq(issues.milestoneId, opts.milestone))
+  return conds
+}
+
+/** Сколько задач подходит под ТОТ ЖЕ отбор — для числа страниц. */
+export async function countListIssues(templateId: string, opts: IssueQuery): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(issues)
+    .where(and(...issueConds(templateId, opts)))
+  return r?.n ?? 0
+}
+
+/**
+ * Задачи списка страницей.
+ *
+ * Задачи — КАТАЛОГ, а не лента: их фильтруют, сортируют и прыгают по ним.
+ *
+ * СМЕЩЕНИЕ ЗДЕСЬ ДРЕЙФУЕТ — и это принято сознательно, а не упущено. При сортировке
+ * «сначала новые» свежая строка встаёт СВЕРХУ, всё едет вниз на одну, и строка с границы
+ * приходит на следующую страницу второй раз. Проверено 19.08: страница 1 показывала
+ * 6,5,4; после создания одной задачи страница 2 показала 4,3,2. При сортировке «сначала
+ * старые» дрейфа нет — там строки приходят в хвост.
+ *
+ * Почему всё равно номера, а не курсор: по каталогу ПРЫГАЮТ. «Открыть страницу 7»,
+ * «уйти на последнюю» — обычные действия для списка задач, и курсор их не умеет вовсе.
+ * Цена дрейфа тут другая, чем на ленте: задачи создают редко, читают их с фильтром, а
+ * повтор одной строки между страницами не мешает так, как пропавшее уведомление.
+ *
+ * Раньше выдача шла без предела вовсе: список с тысячей задач поднимал тысячу строк
+ * вместе с аватарами авторов и счётчиками комментариев, чтобы показать экран.
+ */
+export async function getIssues(
+  templateId: string,
+  opts: IssueQuery,
+  /** Окно страницы. Проверяется `feedWindow`: битый предел драйвер выбрасывает молча. */
+  window?: { limit: number; offset?: number },
+): Promise<IssueRow[]> {
+  const conds = issueConds(templateId, opts)
   const order = opts.sort === 'oldest' ? asc(issues.number) : desc(issues.number)
 
-  const rows = await db
+  const base = db
     .select({
       id: issues.id,
       number: issues.number,
@@ -61,6 +115,8 @@ export async function getIssues(
     .leftJoin(milestones, eq(milestones.id, issues.milestoneId))
     .where(and(...conds))
     .orderBy(order)
+  const w = window && feedWindow(window)
+  const rows = w ? await base.limit(w.limit).offset(w.offset) : await base
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
 }
 
@@ -196,19 +252,79 @@ export async function getIssue(templateId: string, number: number): Promise<Issu
   return { ...row, authorAvatarUrl: await avatarSrc(row.authorAvatarUrl, 64) }
 }
 
-export async function getIssueComments(issueId: string): Promise<IssueComment[]> {
+/**
+ * УЧАСТНИКИ ТРЕДА — для подсказки @mention.
+ *
+ * Отдельным запросом, а не из показанных реплик: с тех пор как тред листается, «все
+ * комментаторы» и «комментаторы этой порции» — разные множества, и picker на второй
+ * порции забыл бы половину людей. Список участников от порции зависеть не должен.
+ *
+ * Предел здесь — не пагинация, а здравый смысл: подсказка под курсором не показывает
+ * сотни людей, а различных участников у треда столько и не бывает.
+ */
+export async function getIssueParticipants(issueId: string): Promise<{ handle: string; avatarUrl: string | null }[]> {
+  const rows = await db
+    .selectDistinct({ handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(issueComments)
+    .innerJoin(users, eq(issueComments.authorId, users.id))
+    .where(eq(issueComments.issueId, issueId))
+    .orderBy(asc(users.handle))
+    .limit(100)
+  return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+}
+
+/**
+ * ПОРЦИЯ ТРЕДА — листается ключом, как и лента уведомлений, но порядок ПОКАЗА обратный.
+ *
+ * Тред читают с начала и дописывают в конец, поэтому `order: 'asc'`, и «дальше» здесь
+ * значит «в будущее», а не «в прошлое». Путать это с лентой нельзя: с порядком ленты
+ * шаг «дальше» открывал бы тред с конца.
+ *
+ * Почему вообще ключом, если у треда вставка идёт в ХВОСТ и смещение от неё не едет.
+ * Едет от УДАЛЕНИЯ: снятый модерацией или убранный автором комментарий сдвигает всё,
+ * что ниже, на одну строку вверх — и следующая порция начинается не с той строки,
+ * теряя ровно одну. Вставка сверху для треда редкость, удаление — нет.
+ *
+ * Раньше тред отдавался ЦЕЛИКОМ, без предела вовсе: у обсуждения на тысячу реплик
+ * страница поднимала тысячу строк с аватарами, чтобы показать экран.
+ */
+export async function getIssueCommentsPage(
+  issueId: string,
+  perPage: number,
+  cursor: Cursor | null = null,
+  dir: FeedDirection = 'after',
+): Promise<{ items: IssueComment[]; next: string | null; prev: string | null }> {
+  // Без курсора шага назад не существует: «перед началом» — не место. Иначе скан против
+  // показа без условия открыл бы тред с ПОСЛЕДНЕЙ реплики.
+  const back = dir === 'before' && cursor !== null
+  const step = keysetStep(issueComments.createdAt, issueComments.id, cursor, {
+    order: 'asc',
+    dir: back ? 'before' : 'after',
+  })
   const rows = await db
     .select({
       id: issueComments.id,
       body: issueComments.body,
       createdAt: issueComments.createdAt,
+      // Ключ курсора ТЕКСТОМ: типизированная колонка приезжает без микросекунд, и курсор
+      // из неё пропускал бы реплики (см. shared/db/keyset).
+      cursorKey: cursorKey(issueComments.createdAt),
       authorId: issueComments.authorId,
       authorHandle: users.handle,
       authorAvatarUrl: users.avatarUrl,
     })
     .from(issueComments)
     .innerJoin(users, eq(issueComments.authorId, users.id))
-    .where(eq(issueComments.issueId, issueId))
-    .orderBy(asc(issueComments.createdAt))
-  return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
+    .where(and(eq(issueComments.issueId, issueId), step.where))
+    .orderBy(...step.order)
+    .limit(probeLimit(perPage))
+
+  const { shown, next, prev } = keysetPage(rows, perPage, cursor, { reverse: step.reverse })
+  return {
+    items: await Promise.all(
+      shown.map(async ({ cursorKey: _k, ...r }) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })),
+    ),
+    next,
+    prev,
+  }
 }

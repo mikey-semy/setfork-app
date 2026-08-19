@@ -6,7 +6,9 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
-import { getCommits } from '@/features/library/queries'
+import { countCommits, getCommitAuthors, getCommitsPage } from '@/features/library/queries'
+import { Pagination } from '@/shared/ui/Pagination'
+import { AFTER_PARAM, BEFORE_PARAM, COMMITS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
 import { CommitFilters } from '@/features/library/CommitFilters'
 import { HistoryNav } from '@/widgets/HistoryNav'
 import { CommitRow } from '@/features/library/CommitRow'
@@ -29,33 +31,37 @@ export default async function CommitsPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ author?: string; since?: string }>
+  searchParams: Promise<{ author?: string; since?: string; after?: string; before?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  const [commits, branches] = await Promise.all([
-    getCommits(meta.id),
-    gitCore.listBranches({ owner, slug }).catch(() => [] as { name: string }[]),
-  ])
-  const base = `/${owner}/${slug}`
-  const versionsBase = `${base}/versions`
-  const branchCount = Math.max(1, branches.length) // как минимум main
 
-  // Список авторов для дропдауна (по всем коммитам, а не по отфильтрованным).
-  const authorMap = new Map<string, string | null>()
-  for (const c of commits) if (c.author) authorMap.set(c.author.handle, c.author.name)
-  const authors = [...authorMap].map(([handle, name]) => ({ handle, name }))
-
-  // Применяем фильтры автор/дата.
+  // Фильтры уходят В ЗАПРОС вместе с окном. Отбирать показанную порцию нельзя: страница
+  // отдавала бы «двадцать штук, из которых подошли три», а следующая начиналась бы не там,
+  // где кончилась предыдущая.
   const author = sp.author || 'all'
   const since = sp.since || 'all'
   const cutoff = commitCutoff(since)
-  const filtered = commits.filter(
-    (c) =>
-      (author === 'all' || c.author?.handle === author) &&
-      (!cutoff || new Date(c.createdAt).getTime() >= cutoff),
-  )
+  // Ключ истории — НОМЕР ВЕРСИИ, целое; курсор от ленты сюда не подойдёт и честно отсеется.
+  const { cursor, dir } = readCursor(sp, 'int')
+  const [history, authors, total, branches] = await Promise.all([
+    getCommitsPage(meta.id, COMMITS_PER_PAGE, cursor, dir, {
+      authorHandle: author === 'all' ? undefined : author,
+      since: cutoff ? new Date(cutoff) : undefined,
+    }),
+    // Авторы — по всей истории, а не по показанной порции: иначе фильтр по человеку
+    // исчезал бы ровно тогда, когда его правок нет на текущей странице.
+    getCommitAuthors(meta.id),
+    // Число в шапке — по всему списку и без фильтров; раньше за него платили подъёмом
+    // всей истории целиком.
+    countCommits(meta.id),
+    gitCore.listBranches({ owner, slug }).catch(() => [] as { name: string }[]),
+  ])
+  const filtered = history.items
+  const base = `/${owner}/${slug}`
+  const versionsBase = `${base}/versions`
+  const branchCount = Math.max(1, branches.length) // как минимум main
 
   // Группировка по локальному дню (коммиты уже по убыванию версии).
   const dayFmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'long', year: 'numeric' })
@@ -86,7 +92,7 @@ export default async function CommitsPage({
             </span>
           </Tooltip>
           <span className="text-ink-2">
-            <b className="text-ink">{commits.length}</b> {t('commitsLabel', lang)}
+            <b className="text-ink">{total}</b> {t('commitsLabel', lang)}
           </span>
           <span className="inline-flex items-center gap-1 text-ink-2">
             <GitBranch size={13} className="text-muted" /> <b className="text-ink">{branchCount}</b> {t('branchesLabel', lang)}
@@ -160,6 +166,15 @@ export default async function CommitsPage({
           </Fragment>
         ))
       )}
+      {/* Шаги истории. Фильтры автор/дата переносятся сами: cursorHref тащит остальные
+          параметры и меняет ровно курсор. */}
+      <Pagination
+        lang={lang}
+        steps={{
+          prev: history.prev ? cursorHref(versionsBase, sp, BEFORE_PARAM)(history.prev) : null,
+          next: history.next ? cursorHref(versionsBase, sp, AFTER_PARAM)(history.next) : null,
+        }}
+      />
     </div>
   )
 }

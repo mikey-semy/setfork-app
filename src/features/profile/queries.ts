@@ -199,63 +199,7 @@ export async function getProfileCounts(userId: string, viewerId?: string) {
   return { lists: l?.c ?? 0, stars: s?.c ?? 0, runs: r?.c ?? 0 }
 }
 
-/** Списки, отмеченные звездой пользователем. viewerId скрывает чужие приватные. */
-export async function getStarredTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
-  // Публично видимый = public + published + active. Раньше фильтр смотрел только на
-  // visibility → в публичной вкладке «Starred» светились ставшие flagged/hidden списки
-  // и чужие публичные черновики. Свои (owner) видны в любом статусе.
-  const publicVisible = and(
-    publiclyVisible(),
-  )!
-  const visible = viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
-  const rows = await db
-    .select({
-      id: templates.id,
-      ownerHandle: users.handle,
-      ownerAvatarUrl: users.avatarUrl,
-      slug: templates.slug,
-      title: templates.title,
-      desc: templates.desc,
-      tags: templates.tags,
-      version: templates.currentVersion,
-      origin: templates.origin,
-      status: templates.status,
-      runsCount: templates.runsCount,
-      forksCount: templates.forksCount,
-      starsCount: templates.starsCount,
-      visibility: templates.visibility,
-      verified: templates.verified,
-      updatedAt: templates.updatedAt,
-    })
-    .from(stars)
-    .innerJoin(templates, eq(stars.templateId, templates.id))
-    .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(and(eq(stars.userId, userId), visible))
-    .orderBy(desc(stars.createdAt))
-  return Promise.all(
-    (rows as FeedItem[]).map(async (r) => ({ ...r, ownerAvatarUrl: await avatarSrc(r.ownerAvatarUrl, 96) })),
-  )
-}
 
-/** Прогоны пользователя (для вкладки профиля). */
-export async function getProfileRuns(userId: string) {
-  return db
-    .select({
-      id: runs.id,
-      status: runs.status,
-      doneCount: runs.doneCount,
-      version: runs.version,
-      updatedAt: runs.updatedAt,
-      ownerHandle: users.handle,
-      slug: templates.slug,
-      title: templates.title,
-    })
-    .from(runs)
-    .innerJoin(templates, eq(runs.templateId, templates.id))
-    .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(eq(runs.userId, userId))
-    .orderBy(desc(runs.updatedAt))
-}
 
 
 // ── Раскрытие темы: списки внутри неё и события внутри списка ──────────

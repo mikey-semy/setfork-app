@@ -5,24 +5,24 @@ import { getSession } from '@/shared/auth/session'
 import { agentProfile } from '@/shared/ai/gnome-account'
 import { avatarSrc } from '@/shared/media'
 import type { Lang } from '@/shared/i18n'
-import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries'
+import { countUnfiledLists, getPinnedTemplates, getProfileListIds, getProfileListPage, type ProfileListFilter } from '@/features/library/queries'
 import {
   getActivityTopics,
   getContributions,
   getOwnListsLight,
   getProfileCounts,
   getReceivedStats,
-  getStarredTemplates,
   getUserByHandle,
   getUserCompletions,
 } from '@/features/profile/queries'
 import { getAchievementDisplay } from '@/features/profile/achievement-config'
 import { getFollowers, getFollowing } from '@/features/profile/search'
-import { getFolderTemplateIds, getUserFolders } from '@/features/star-folders/queries'
+import { getUserFolders } from '@/features/star-folders/queries'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
+import { BULK_MAX } from '@/features/library/bulk/limits'
 import { dayKey } from '@/features/profile/activity/types'
-import { pageCount, pageFromParam, pageWindow } from '@/shared/lib/paging'
+import { pageCount, pageFromParam, pageHref as buildPageHref, pageWindow } from '@/shared/lib/paging'
 
 export type ProfileTab = 'overview' | 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
 
@@ -45,19 +45,20 @@ type FolderSort = (typeof FOLDER_SORTS)[number]
  *  адресе неотличимо от «фильтр не задан», и ссылку нельзя ни отправить, ни сохранить. */
 export const NO_CATALOG = 'none'
 
-export type ProfileSearchParams = {
-  tab?: string
-  catalog?: string
-  folder?: string
-  q?: string
-  sort?: string
-  fsort?: string
-  month?: string
-  year?: string
-  e?: string
-  type?: string
-  page?: string
-}
+/**
+ * ОДНО ЗНАЧЕНИЕ ИЗ ПАРАМЕТРА. `?q=a&q=b` приходит массивом — Next отдаёт
+ * `string | string[]`, и объявленный ниже `q?: string` это просто неправда.
+ * До нормализации `(sp.q ?? '').trim()` падал на массиве, то есть ЛЮБОЙ профиль
+ * отдавал пятисотку по адресу, который может собрать кто угодно и без входа.
+ */
+const one = (v: string | string[] | undefined): string | undefined => (Array.isArray(v) ? v[0] : v)
+
+/** Как параметры приходят НА САМОМ ДЕЛЕ: каждый может повториться в адресе. */
+export type ProfileSearchParams = Partial<
+  Record<'tab' | 'catalog' | 'folder' | 'q' | 'sort' | 'fsort' | 'month' | 'year' | 'e' | 'type' | 'page', string | string[]>
+>
+
+const PARAM_KEYS = ['tab', 'catalog', 'folder', 'q', 'sort', 'fsort', 'month', 'year', 'e', 'type', 'page'] as const
 
 /** Всё, что странице профиля нужно знать, прежде чем что-то показать. */
 export type ProfilePageData = Awaited<ReturnType<typeof loadProfilePage>>
@@ -69,7 +70,10 @@ export type ProfilePageData = Awaited<ReturnType<typeof loadProfilePage>>
  *
  * Отдельно от разметки: здесь решается, ЧТО показать, там — как это выглядит.
  */
-export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp: ProfileSearchParams; lang: Lang }) {
+export async function loadProfilePage({ handle, sp: raw, lang }: { handle: string; sp: ProfileSearchParams; lang: Lang }) {
+  // Нормализуем ОДИН РАЗ на входе, а не на каждом обращении: иначе достаточно забыть в
+  // одном месте — и повтор параметра в адресе снова роняет страницу.
+  const sp = Object.fromEntries(PARAM_KEYS.map((k) => [k, one(raw[k])])) as Partial<Record<(typeof PARAM_KEYS)[number], string>>
   const viewer = await getSession()
   const user = await getUserByHandle(handle)
   // Промах может означать «ник сменили»: прежний продолжает вести на человека
@@ -100,14 +104,13 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   // «2026» — это он и есть (решение владельца 12.08).
   const graphYear = graphYears.includes(rawYear) ? rawYear : nowY
 
-  const [counts, followCounts, following, bigAvatar, contributions, received, rawItems, pinned, catalogs, achDisplay] = await Promise.all([
+  const [counts, followCounts, following, bigAvatar, contributions, received, pinned, catalogs, achDisplay] = await Promise.all([
     getProfileCounts(user.id, viewer?.userId),
     getFollowCounts(user.id),
     viewer && !isOwner ? isFollowing(viewer.userId, user.id) : Promise.resolve(false),
     avatarSrc(user.avatarUrl, 180),
     getContributions(user.id, graphYear, viewer?.userId),
     getReceivedStats(user.id),
-    !isListsTab ? Promise.resolve([]) : tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),
     getOwnerCatalogs(user.id, viewer?.userId),
     getAchievementDisplay(),
@@ -134,8 +137,12 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   // Папки для звёзд (как GitHub Lists): карточки + сорт; звёзды — поиск + сорт.
   const rawFolders = tab === 'starred' ? await getUserFolders(user.id) : []
   const fsort: FolderSort = FOLDER_SORTS.find((s) => s === sp.fsort) ?? 'name'
-  const starFolders = [...rawFolders].sort((a, b) => (fsort === 'count' ? b.count - a.count : a.name.localeCompare(b.name)))
-  const folderIds = tab === 'starred' && sp.folder ? await getFolderTemplateIds(user.id, sp.folder) : null
+  // Локаль сравнения — ЧИТАТЕЛЯ, и задана явно. Без неё `localeCompare` берёт локаль
+  // процесса: на `LANG=ru_RU` кириллица встаёт перед латиницей, на `C`/`en_US` — после,
+  // то есть «A-Z» у одного и того же человека зависит от того, как поднят сервер, и ни
+  // при одном значении не совпадает с алфавитом читателя. Проверено: те же шесть имён
+  // дают два разных порядка под разными LANG.
+  const starFolders = [...rawFolders].sort((a, b) => (fsort === 'count' ? b.count - a.count : a.name.localeCompare(b.name, lang)))
 
   const query = (sp.q ?? '').trim().toLowerCase()
   const sort: Sort = SORTS.find((s) => s === sp.sort) ?? 'recent'
@@ -144,38 +151,61 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
   // Фильтр по полке: имя каталога или NO_CATALOG. Неизвестное имя фильтром не считаем —
   // иначе опечатка в адресе показывает пустую библиотеку без объяснения.
   const catalogFilter = sp.catalog === NO_CATALOG ? NO_CATALOG : catalogs.find((c) => c.name === sp.catalog)?.name
-  // Set, а не includes внутри фильтра: у активного пользователя и папка, и выдача —
-  // сотни строк, и поиск по массиву в цикле превращается в перебор на перебор.
-  const inFolder = folderIds ? new Set(folderIds) : null
   const catalogIdByName = new Map(catalogs.map((c) => [c.name, c.id]))
-  const items = selectItems({
-    items: inFolder ? rawItems.filter((it) => inFolder.has(it.id)) : rawItems,
-    tab,
+
+  // ОТБОР, ПОРЯДОК И ОКНО — В ЗАПРОСЕ. Раньше страница поднимала весь подходящий набор
+  // и разбиралась с ним в памяти; теперь она спрашивает ровно свою страницу.
+  const filter: ProfileListFilter = {
+    ownerId: user.id,
+    viewerId: viewer?.userId,
+    tab: tab === 'starred' ? 'starred' : 'lists',
     query,
     sort,
     listType,
-    catalog: catalogFilter,
-    catalogId: catalogFilter && catalogFilter !== NO_CATALOG ? catalogIdByName.get(catalogFilter) : undefined,
-  })
-
-  // Пагинация вкладок со списками (много списков = боль без страниц).
-  const totalPages = pageCount(items.length)
-  const page = pageFromParam(sp.page, totalPages)
-  const { limit, offset } = pageWindow(page)
-  const pageItems = isListsTab ? items.slice(offset, offset + limit) : items
-  const pageHref = (p: number) => {
-    const qs = new URLSearchParams()
-    qs.set('tab', tab)
-    if (sp.folder) qs.set('folder', sp.folder)
-    if (sp.q) qs.set('q', sp.q)
-    if (sp.sort) qs.set('sort', sp.sort)
-    if (sp.type) qs.set('type', sp.type)
-    // Фильтр полки переживает переход по страницам: иначе со второй страницы человек
-    // молча возвращается ко всей библиотеке и не понимает, куда делся отбор.
-    if (catalogFilter) qs.set('catalog', catalogFilter)
-    if (p > 1) qs.set('page', String(p))
-    return `/${handle}?${qs.toString()}`
+    // undefined = фильтра нет, null = «без полки» (очередь разбора).
+    catalogId: catalogFilter === undefined ? undefined : catalogFilter === NO_CATALOG ? null : (catalogIdByName.get(catalogFilter) ?? undefined),
+    // Имя папки разрешаем ЗДЕСЬ, из уже загруженных папок: второй запрос за тем же id
+    // блокировал бы пару «строки + счёт». И правило то же, что у полки — неизвестное имя
+    // фильтром не считается, иначе опечатка в адресе даёт пустую вкладку без объяснения.
+    folderId: tab === 'starred' && sp.folder ? rawFolders.find((f) => f.name === sp.folder)?.id : undefined,
   }
+
+  // Номер страницы теперь узнаётся ВМЕСТЕ с выдачей, а не до неё: сколько всего строк,
+  // знает тот же запрос. Просим запрошенную страницу, а если её не существует —
+  // переспрашиваем последнюю. Лишний запрос бывает только на битом номере в адресе,
+  // а не на каждом показе, как было бы при отдельном предварительном счёте.
+  // Полный видимый набор до фильтров — он уже посчитан для панели, второй раз не считаем.
+  const unfiltered = !isListsTab ? 0 : tab === 'starred' ? counts.stars : counts.lists
+  // ПОТОЛОК НОМЕРА — ИЗ ЭТОГО ЧИСЛА, а не из общего MAX_PAGE. Отбор не может дать строк
+  // больше, чем есть без отбора, поэтому страниц заведомо не больше. Без этого
+  // `?tab=lists&page=999999` уходил в базу с OFFSET 19 999 980 и счётом по всей вкладке, а
+  // потом, обнаружив что страницы нет, повторял оба запроса для приведённого номера — то
+  // есть один параметр адреса, доступный кому угодно без входа, давал шестикратную работу.
+  const asked = Math.min(Math.max(1, Math.floor(Number(sp.page)) || 1), pageCount(unfiltered))
+  // ВСЁ НЕЗАВИСИМОЕ — ПАРАЛЛЕЛЬНО. Набор для «выбрать все» и очередь разбора не читают из
+  // выдачи ни строки, а стояли за ней в очереди: лишний круг к базе на каждый показ
+  // своей вкладки, просто потому что код шёл сверху вниз.
+  const [firstTry, allIds, unfiledCount] = await Promise.all([
+    isListsTab ? getProfileListPage(filter, pageWindow(asked)) : Promise.resolve({ items: [], total: 0 }),
+    // Пакетные действия берут ВСЮ текущую выдачу, а не показанную страницу: разбирать
+    // полтысячи списков по двадцать штук бессмысленно. Потолок у «всего» всё равно есть.
+    isOwner && tab === 'lists' ? getProfileListIds({ ...filter, tab: 'lists' }, BULK_MAX) : Promise.resolve([]),
+    // Очередь разбора считается ДО фильтров: по ней решается, показывать ли сам фильтр полок.
+    isOwner && tab === 'lists' ? countUnfiledLists(user.id, viewer?.userId) : Promise.resolve(0),
+  ])
+  const totalPages = pageCount(firstTry.total)
+  const page = pageFromParam(sp.page, totalPages)
+  // Повторный запрос идёт с УЖЕ ИЗВЕСТНЫМ числом: условия те же, считать второй раз нечего.
+  const listPage = isListsTab && page !== asked ? await getProfileListPage(filter, pageWindow(page), firstTry.total) : firstTry
+  const pageItems = listPage.items
+  // Общий построитель: он и переносит остальные параметры сам. Вкладка и фильтр полки
+  // названы явно, потому что берутся не из адреса, а из разбора выше (`tab` нормализован,
+  // а неизвестное имя полки фильтром не считается) — переносить сырой `sp.catalog` значило
+  // бы тащить дальше опечатку, от которой страница только что защитилась.
+  // `e` НЕ переносим: это одноразовое уведомление («упёрся в квоту»), а не состояние
+  // выдачи. Уехав в ссылку страницы, оно показывало бы баннер снова на второй, третьей
+  // и далее — прежний рукописный построитель его не переносил, и это надо сохранить.
+  const pageHref = buildPageHref(`/${handle}`, { ...sp, e: undefined, tab, catalog: catalogFilter })
 
   return {
     handle,
@@ -196,7 +226,7 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     catalogs,
     catalogFilter,
     /** Сколько списков ещё не разложено по полкам — очередь разбора одним числом. */
-    unfiledCount: rawItems.filter((it) => !it.repositoryId).length,
+    unfiledCount,
     achDisplay,
     people,
     ownLight,
@@ -216,9 +246,13 @@ export async function loadProfilePage({ handle, sp, lang }: { handle: string; sp
     sort,
     listType,
     /** Полный видимый набор до поиска и фильтров. Нужен, чтобы на действительно
-     *  пустой вкладке не показывать панель, которой нечего фильтровать. */
-    unfilteredItemsCount: rawItems.length,
-    items,
+     *  пустой вкладке не показывать панель, которой нечего фильтровать. Берётся из уже
+     *  посчитанных счётчиков профиля — второй раз то же самое не считаем. */
+    unfilteredItemsCount: unfiltered,
+    /** Сколько строк в ТЕКУЩЕЙ выдаче (после поиска и фильтров) — по нему и страницы. */
+    total: listPage.total,
+    /** id всей текущей выдачи для «выбрать все» (только своя вкладка «Списки»). */
+    allIds,
     pageItems,
     page,
     totalPages,
@@ -233,46 +267,6 @@ function asTab(raw: string | undefined): ProfileTab {
   return tabs.find((t) => t === raw) ?? 'overview'
 }
 
-/**
- * Поиск, фильтр по типу и полке, порядок — ровно для той вкладки, где они есть.
- *
- * Экспортируется ради теста: это ПРАВИЛА выдачи, и проверять их надо отдельно от
- * страницы, которая тянет БД и сессию. Внутри — чистая функция над массивом.
- */
-export function selectItems<
-  T extends {
-    id: string
-    slug: string
-    title: Record<string, string | undefined>
-    starsCount: number
-    visibility: string
-    origin: string | null
-    repositoryId?: string | null
-  },
->(ctx: {
-  items: T[]
-  tab: ProfileTab
-  query: string
-  sort: Sort
-  listType: ListType
-  catalog?: string
-  catalogId?: string
-}): T[] {
-  const { tab, query, sort, listType, catalog, catalogId } = ctx
-  if (tab !== 'lists' && tab !== 'starred') return ctx.items
-
-  let items = ctx.items
-  if (query) items = items.filter((it) => it.slug.toLowerCase().includes(query) || Object.values(it.title).some((v) => v?.toLowerCase().includes(query)))
-  if (tab === 'lists' && listType !== 'all') {
-    items = items.filter((it) => (listType === 'forks' ? it.origin === 'forked' : it.visibility === listType))
-  }
-  if (tab === 'lists' && catalog) {
-    items = catalog === NO_CATALOG ? items.filter((it) => !it.repositoryId) : items.filter((it) => it.repositoryId === catalogId)
-  }
-  if (sort === 'name') items = [...items].sort((a, b) => a.slug.localeCompare(b.slug))
-  else if (sort === 'stars') items = [...items].sort((a, b) => b.starsCount - a.starsCount)
-  return items
-}
 
 /**
  * Лента активности за месяц (?month=YYYY-MM) и стрелки листания: назад — не раньше

@@ -1,6 +1,7 @@
 'use server'
 
 import { requireSession } from '@/shared/auth/session'
+import { DASHBOARD_LISTS, pageWindow } from '@/shared/lib/paging'
 import { countUserTemplates, getUserTemplates, searchTemplatesByOwnerHandle } from '../queries'
 import { listVisibilityState } from '../list-visibility'
 
@@ -13,17 +14,26 @@ const panelItem = (l: Awaited<ReturnType<typeof getUserTemplates>>[number]) => (
 })
 
 /**
- * Следующая порция СВОИХ списков для панели дашборда.
+ * СТРАНИЦА своих списков для панели дашборда: окно `limit` строк от `offset`.
  *
  * Отдельным экшеном, а не «прислать всё сразу»: у владельца 518 списков, и до
- * 13.08.2026 дашборд грузил их целиком, чтобы показать пять, — кнопка «Показать
- * ещё» лишь раскрывала уже присланное. Теперь она приносит ровно следующий кусок.
+ * 13.08.2026 дашборд грузил их целиком, чтобы показать пять. Панель этим окном
+ * ЗАМЕНЯЕТ показанное, поэтому и на 518 списках в ней остаётся одна страница.
  *
  * Своё берём по СЕССИИ, а не по переданному id: чужой набор так не запросить.
  */
 export async function loadMyLists(offset: number, limit: number) {
   const session = await requireSession()
-  const rows = await getUserTemplates(session.userId, session.userId, { limit, offset })
+  // ПОТОЛОК ОБЯЗАТЕЛЕН: это серверный экшен, то есть точка входа, доступная браузеру
+  // напрямую, а не только через панель. `feedWindow` проверяет, что окно — целое
+  // положительное, но верхнего края у него нет: `limit: 5_000_000` вытянул бы всю
+  // библиотеку вместе с подписью картинки на каждую строку, а `offset: 1e300` прошёл бы
+  // проверку и уронил запрос уже в базе. Панель просит ровно страницу, всё сверх неё —
+  // не наш вызов.
+  const size = Math.min(Math.max(1, Math.floor(limit) || DASHBOARD_LISTS), DASHBOARD_LISTS)
+  // Через pageWindow, а не напрямую: у него есть и потолок номера страницы, то есть
+  // смещение не может улететь за пределы, которые переварит bigint.
+  const rows = await getUserTemplates(session.userId, session.userId, pageWindow(Math.floor(Math.max(0, offset) / size) + 1, size))
   return rows.map(panelItem)
 }
 

@@ -1,9 +1,11 @@
 import 'server-only'
-import { and, desc, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { canViewList } from '@/core'
 import { collaborators, db, issues, notifications, templates, users } from '@/shared/db'
+import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
 import type { LocaleText } from '@/shared/i18n'
+import { probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
 export type NotificationType =
@@ -57,7 +59,7 @@ export async function getBrowserNotifyEnabled(userId: string): Promise<boolean> 
  * (canViewList), и дублировать его в SQL значит однажды с ним разойтись.
  */
 export async function getUnreadCount(userId: string): Promise<number> {
-  const rows = await visibleNotifications(userId, UNREAD_SCAN_LIMIT)
+  const rows = await keepVisible(userId, await fetchNotifications(userId, UNREAD_SCAN_LIMIT))
   return rows.filter((r) => !r.read).length
 }
 
@@ -65,7 +67,24 @@ export async function getUnreadCount(userId: string): Promise<number> {
  *  ради единого предиката доступа. */
 const UNREAD_SCAN_LIMIT = 500
 
-async function visibleNotifications(userId: string, limit: number) {
+/**
+ * СЫРЫЕ строки ленты — без отсева видимости.
+ *
+ * Отсев вынесен отдельно СОЗНАТЕЛЬНО: смешанные вместе, они рвали листание. Разведчик
+ * берёт на строку больше показанного, чтобы ответить «есть ли дальше»; если фильтр
+ * успевал убрать именно эту строку, ответом становилось «дальше ничего», и лента
+ * ОБРЫВАЛАСЬ на середине. Проверено 19.08: шесть уведомлений, одно скрытое на границе,
+ * порция по три — показаны три строки и «дальше нет», а два видимых уведомления
+ * оказывались недостижимы вовсе.
+ */
+async function fetchNotifications(
+  userId: string,
+  limit: number,
+  cursor: Cursor | null = null,
+  dir: FeedDirection = 'after',
+) {
+  // Порядок показа — свежее сверху; направление шага задаёт вызывающий.
+  const step = keysetStep(notifications.createdAt, notifications.id, cursor, { order: 'desc', dir })
   const actor = alias(users, 'actor')
   const owner = alias(users, 'owner')
   const rows = await db
@@ -74,6 +93,9 @@ async function visibleNotifications(userId: string, limit: number) {
       type: notifications.type,
       read: notifications.read,
       createdAt: notifications.createdAt,
+      // Ключ курсора — ТЕКСТОМ из базы. Из `createdAt` его строить нельзя: drizzle
+      // отдаёт колонку JS-датой, то есть без микросекунд (см. shared/db/keyset).
+      cursorKey: cursorKey(notifications.createdAt),
       actorHandle: actor.handle,
       actorAvatarUrl: actor.avatarUrl,
       ownerHandle: owner.handle,
@@ -92,11 +114,22 @@ async function visibleNotifications(userId: string, limit: number) {
     .leftJoin(templates, eq(notifications.templateId, templates.id))
     .leftJoin(owner, eq(owner.id, templates.ownerId))
     .leftJoin(issues, eq(notifications.issueId, issues.id))
-    .where(eq(notifications.recipientId, userId))
-    .orderBy(desc(notifications.createdAt))
+    .where(and(eq(notifications.recipientId, userId), step.where))
+    // Условие и порядок берутся ОДНИМ шагом: порознь они могли бы смотреть в разные
+    // стороны, и запрос молча отдавал бы хвост ленты вместо соседней порции. Заодно
+    // порядок доопределён до `id` — раньше здесь стоял один `createdAt desc`, а у пачки
+    // уведомлений от одной операции время совпадает, и порядок между ними был произволен.
+    .orderBy(...step.order)
     .limit(limit)
 
-  // Соредакторство спрашиваем ОДНИМ запросом на всю ленту: приватный список виден и тем,
+  return rows
+}
+
+type RawNotification = Awaited<ReturnType<typeof fetchNotifications>>[number]
+
+/** Отсев по видимости списка — ПОСЛЕ того, как порция уже нарезана (см. fetchNotifications). */
+async function keepVisible(userId: string, rows: RawNotification[]): Promise<RawNotification[]> {
+  // Соредакторство спрашиваем ОДНИМ запросом на всю порцию: приватный список виден и тем,
   // кто ведёт его вместе с владельцем.
   const listIds = [...new Set(rows.map((r) => r.templateId).filter((v): v is string => !!v))]
   const collab = new Set(
@@ -133,12 +166,57 @@ async function visibleNotifications(userId: string, limit: number) {
  * факт «в этом списке что-то произошло» тоже часть приватного.
  */
 export async function getNotifications(userId: string, limit = 50): Promise<NotificationItem[]> {
-  const rows = await visibleNotifications(userId, limit)
-  return Promise.all(
-    rows.map(async ({ templateId: _t, listOwnerId: _o, visibility: _v, status: _s, moderation: _m, ...r }) => ({
-      ...r,
-      actorAvatarUrl: await avatarSrc(r.actorAvatarUrl, 64),
-    })),
+  return toItems(await keepVisible(userId, await fetchNotifications(userId, limit)))
+}
+
+const toItems = (rows: RawNotification[]): Promise<NotificationItem[]> =>
+  Promise.all(
+    rows.map(
+      async ({ templateId: _t, listOwnerId: _o, visibility: _v, status: _s, moderation: _m, cursorKey: _k, ...r }) => ({
+        ...r,
+        actorAvatarUrl: await avatarSrc(r.actorAvatarUrl, 64),
+      }),
+    ),
   ) as Promise<NotificationItem[]>
+
+/**
+ * ПОРЦИЯ ЛЕНТЫ УВЕДОМЛЕНИЙ — листается КЛЮЧОМ, а не номером страницы.
+ *
+ * Уведомления прилетают сверху постоянно, и это тот самый случай, где смещение даёт не
+ * медленную выдачу, а неверную: пока читают вторую порцию, начало отсчёта уезжает вниз, и
+ * строка с границы либо пропадает, либо приходит дважды. Прыжок на «страницу 7» здесь и
+ * не нужен — ленту читают сверху вниз.
+ *
+ * Края считаются по СЫРЫМ строкам, до отсева видимости, и это несущая деталь. Видимость
+ * решает `canViewList` в приложении (предикат один на всё приложение; дублировать его в
+ * SQL — однажды с ним разойтись), поэтому порция может ПОКАЗАТЬ меньше строк, чем взяла.
+ * Считать «дальше есть» по показанным нельзя: скрытая строка на границе съедала бы ответ
+ * разведчика, и лента обрывалась бы на середине. Ровно это и происходило, пока отсев
+ * стоял внутри запроса.
+ *
+ * Плата за это — порции разной высоты. Убрать её можно только перенеся предикат доступа
+ * в SQL; это отдельное решение, а не побочный эффект перевода на keyset.
+ *
+ * ОТКУДА БЕРЁТСЯ ПРОТИВОПОЛОЖНЫЙ КРАЙ. Разведчик отвечает только про ту сторону, в
+ * которую шагнули. Про другую спрашивать базу не нужно: если мы пришли шагом «вниз» с
+ * курсором, значит выше что-то есть — мы оттуда и приехали. Второй запрос ради того, что
+ * и так известно из адреса, — лишняя работа на каждый показ ленты.
+ */
+export async function getNotificationsPage(
+  userId: string,
+  perPage: number,
+  cursor: Cursor | null = null,
+  dir: FeedDirection = 'after',
+): Promise<{ items: NotificationItem[]; next: string | null; prev: string | null }> {
+  // Без курсора шага вверх не существует: «перед началом» — не место. Иначе порядок `asc`
+  // без условия отдал бы САМЫЕ СТАРЫЕ уведомления, и лента открывалась бы с конца.
+  const up = dir === 'before' && cursor !== null
+  const raw = await fetchNotifications(userId, probeLimit(perPage), cursor, up ? 'before' : 'after')
+  // Курсоры строятся по ВЗЯТЫМ строкам, а не по показанным: иначе скрытая строка на
+  // границе перечитывалась бы бесконечно.
+  const { shown, next, prev } = keysetPage(raw, perPage, cursor, { reverse: up })
+  // Отсев — ПОСЛЕ нарезки: края уже посчитаны по сырым строкам, и скрытая строка их не
+  // трогает. Плата — порции разной высоты; см. выше, почему это принято.
+  return { items: await toItems(await keepVisible(userId, shown)), next, prev }
 }
 

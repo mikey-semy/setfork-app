@@ -8,11 +8,13 @@ import { SelectionToggle } from '@/features/library/bulk/SelectionToggle'
 import { SelectableCard } from '@/features/library/bulk/SelectableCard'
 
 const push = vi.fn()
+/** Адрес, «на котором стоит» панель: тесты подменяют его, когда важен номер страницы. */
+let currentParams = new URLSearchParams()
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/alice',
   useRouter: () => ({ push }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => currentParams,
 }))
 
 const emptyProps = {
@@ -21,7 +23,8 @@ const emptyProps = {
   tab: 'lists' as const,
   isOwner: false,
   viewer: null,
-  items: [],
+  total: 0,
+  allIds: [],
   pageItems: [],
   page: 1,
   totalPages: 1,
@@ -102,5 +105,32 @@ describe('панель списков профиля', () => {
     await user.click(cancel)
     expect(screen.getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.queryByRole('checkbox', { name: 'Example list' })).not.toBeInTheDocument()
+  })
+})
+
+describe('смена отбора и номер страницы', () => {
+  it('смена отбора возвращает на ПЕРВУЮ страницу', async () => {
+    // Номер страницы осмыслен только внутри одного отбора: пятой страницы «звёзд по
+    // имени» может не быть у «звёзд по дате», и остаться на ней значило бы показать
+    // пустоту вместо выдачи. Правило держится одной строкой в панели, поэтому и
+    // закреплено проверкой.
+    currentParams = new URLSearchParams('tab=lists&sort=recent&page=5')
+    push.mockClear()
+    const user = userEvent.setup()
+    render(<ListsToolbar tab="lists" lang="en" isOwner={false} q="" type="all" sort="recent" />)
+
+    // Через поиск, а не через выпадающий список: оба идут одним и тем же `navigate`,
+    // но поле — нативное, и проверка не зависит от внутренностей Select.
+    await user.type(screen.getByRole('textbox'), 'докер{Enter}')
+
+    expect(push).toHaveBeenCalledTimes(1)
+    const url = new URL(push.mock.calls[0][0] as string, 'https://example.test')
+    expect(url.searchParams.get('page')).toBeNull()
+    // Остальной отбор при этом обязан сохраниться — иначе смена поиска молча сбрасывала
+    // бы вкладку и сортировку.
+    expect(url.searchParams.get('tab')).toBe('lists')
+    expect(url.searchParams.get('sort')).toBe('recent')
+    expect(url.searchParams.get('q')).toBe('докер')
+    currentParams = new URLSearchParams()
   })
 })

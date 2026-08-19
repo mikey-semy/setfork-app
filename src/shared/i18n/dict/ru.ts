@@ -349,6 +349,14 @@ export const ru: Record<DictKey, string> = {
   noFileChosen: 'Файл не выбран.',
   showMore: 'Показать ещё',
   showLess: 'Свернуть',
+  prevPage: 'Назад, на предыдущую страницу',
+  nextPage: 'Вперёд, на следующую страницу',
+  paginationLabel: 'Постранично',
+  /** Сколько строк подошло под текущий отбор — рядом с листалкой. */
+  foundLabel: 'Найдено',
+  pageLabel: 'Страница',
+  prevPageShort: 'Назад',
+  nextPageShort: 'Вперёд',
   allLabels: 'Все метки',
   allMilestones: 'Все вехи',
   prCoauthors: 'Соавторы',
@@ -618,6 +626,8 @@ export const ru: Record<DictKey, string> = {
   runsCompleted: 'Завершённые',
   runsAbandoned: 'Брошенные',
   noRunsYet: 'Пока нет прогонов. Начните с любого списка.',
+  /** Вкладка пуста, а прогоны у человека есть: «пока нет прогонов» здесь было бы ложью. */
+  noRunsInTab: 'В этой вкладке пусто.',
   runResume: 'Продолжить',
   runOpen: 'Открыть',
   runContinue: 'Продолжить прогон',

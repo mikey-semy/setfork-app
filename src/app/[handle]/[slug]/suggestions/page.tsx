@@ -24,6 +24,7 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
 import { SuggestionCheckbox, SuggestionSelection } from '@/features/library/SuggestionSelection'
 import {
+  countSuggestions,
   getSuggestionAuthors,
   getSuggestionCounts,
   getSuggestionLabelsInUse,
@@ -33,6 +34,8 @@ import {
   type SuggestionSort,
 } from '@/features/library/queries'
 import { getListLabels } from '@/features/issues/queries'
+import { Pagination } from '@/shared/ui/Pagination'
+import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { resolveChip } from '@/shared/lib/labels'
 import { PAGE } from '@/shared/ui/control'
@@ -70,7 +73,7 @@ export default async function SuggestionsPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ status?: string; q?: string; label?: string; milestone?: string; author?: string; sort?: string }>
+  searchParams: Promise<{ status?: string; q?: string; label?: string; milestone?: string; author?: string; sort?: string; page?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
@@ -84,9 +87,15 @@ export default async function SuggestionsPage({
   const sort: SuggestionSort = sp.sort === 'oldest' ? 'oldest' : 'newest'
   const base = `/${owner}/${slug}/suggestions`
 
+  // Счёт идёт по ТОМУ ЖЕ отбору, что и выдача (countSuggestions делит с ней условия),
+  // иначе листалка нарисовала бы страницы, которых нет.
+  const query = { status, q, label, milestone, author, sort }
+  const total = await countSuggestions(meta.id, query)
+  const totalPages = pageCount(total)
+  const page = pageFromParam(sp.page, totalPages)
   const [counts, list, labels, mstones, custom, authors] = await Promise.all([
     getSuggestionCounts(meta.id),
-    getSuggestions(meta.id, { status, q, label, milestone, author, sort }),
+    getSuggestions(meta.id, query, pageWindow(page)),
     getSuggestionLabelsInUse(meta.id),
     getMilestonesForPicker(meta.id),
     getListLabels(meta.id),
@@ -275,6 +284,8 @@ export default async function SuggestionsPage({
         </div>
         </SuggestionSelection>
       )}
+      {/* Отбор переносится сам: pageHref тащит остальные параметры и меняет номер. */}
+      <Pagination page={page} totalPages={totalPages} total={total} makeHref={pageHref(base, sp)} lang={lang} />
     </div>
   )
 }

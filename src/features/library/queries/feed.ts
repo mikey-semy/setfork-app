@@ -1,12 +1,14 @@
 import 'server-only'
-import { and, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, stars, templates, templateVersions, users, publiclyVisible } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
+import { feedWindow } from '@/shared/lib/paging'
 import type { ActivityItem, FeedItem, FeedSort, ListSuggestion, TagRow, TrendRange } from './list'
 import { descText, extraFilters, FEED_COLS, langPref, keywordFeed, searchCondition, semanticFeed, tagFilter, titleText, visibleFilter, withAvatar } from './shared'
+import { likeContains } from '@/shared/db/like'
 
 /**
  * Ленты и поиск: обзор, тренды, подборки, списки пользователя, активность, теги.
@@ -157,7 +159,9 @@ export async function countLists(
 export async function searchListSuggestions(q: string, limit = 6): Promise<ListSuggestion[]> {
   const term = q.trim()
   if (!term) return []
-  const like = `%${term}%`
+  // likeContains, а не `%q%`: подсказки в шапке доступны АНОНИМУ, и без экранирования
+  // запрос из одного `_` разворачивался в «любой символ» — то есть в обход всего корпуса.
+  const like = likeContains(term)
   const rows = await db
     .select({ handle: users.handle, slug: templates.slug, title: templates.title })
     .from(templates)
@@ -212,8 +216,15 @@ export async function getUserTemplates(
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(templates.ownerId, userId), visibleFilter(viewerId), onlyIds ? inArray(templates.id, onlyIds) : undefined))
-    .orderBy(desc(templates.updatedAt))
-  const rows = window ? await q.limit(window.limit).offset(window.offset ?? 0) : await q
+    // Доопределение до `id` обязательно: по этому запросу листаются и «мои списки», и
+    // панель главной, а `updatedAt` у пачки списков совпадает сплошь и рядом (импорт,
+    // форк, массовая правка). На равных ключах база вправе вернуть строки в любом
+    // порядке — соседние страницы тогда показывают одну дважды, а другую ни разу.
+    .orderBy(desc(templates.updatedAt), asc(templates.id))
+  // Окно проверяем ПЕРЕД запросом: битый предел драйвер выбрасывает молча, и та же
+  // строка кода начинает поднимать весь корпус (feedWindow, там же вся история).
+  const w = window && feedWindow(window)
+  const rows = w ? await q.limit(w.limit).offset(w.offset) : await q
   return withAvatar(rows as FeedItem[])
 }
 
@@ -236,7 +247,8 @@ export async function searchTemplatesByOwnerHandle(
   limit = 20,
 ): Promise<FeedItem[]> {
   const term = q.trim()
-  const like = `%${term}%`
+  // То же экранирование, что в поиске профиля: `%` и `_` — буквы запроса, а не шаблон.
+  const like = likeContains(term)
   const rows = await db
     .select(FEED_COLS)
     .from(templates)
@@ -268,8 +280,11 @@ export async function getListsInCatalog(repositoryId: string, viewerId?: string,
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(templates.repositoryId, repositoryId), visibleFilter(viewerId)))
-    .orderBy(desc(templates.updatedAt))
-  const rows = window ? await base.limit(window.limit).offset(window.offset ?? 0) : await base
+    .orderBy(desc(templates.updatedAt), asc(templates.id))
+  // Через feedWindow, как и все прочие окна: непригодный предел драйвер выбрасывает
+  // молча, и запрос начинает поднимать всю полку целиком.
+  const w = window && feedWindow(window)
+  const rows = w ? await base.limit(w.limit).offset(w.offset) : await base
   return withAvatar(rows as FeedItem[])
 }
 

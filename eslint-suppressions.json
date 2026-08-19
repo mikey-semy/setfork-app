@@ -536,11 +536,6 @@
       "count": 2
     }
   },
-  "src/shared/ui/Pagination.tsx": {
-    "no-restricted-syntax": {
-      "count": 5
-    }
-  },
   "src/shared/ui/TagChip.tsx": {
     "no-restricted-syntax": {
       "count": 1
