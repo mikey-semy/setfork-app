@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { JSON_SHAPE } from '@/shared/ai/generate'
 import { itemShape } from '@/features/mcp/registry/block-schema'
-import { stripOrdinal, toProposed, toStepInput } from '@/shared/lib/step-input'
+import { splitOrdinal, stripOrdinal } from '@/shared/lib/ordinal'
+import { toProposed, toStepInput } from '@/shared/lib/step-input'
 
 /**
  * НОМЕР РИСУЕТ ИНТЕРФЕЙС, А НЕ ТЕКСТ.
@@ -73,4 +74,29 @@ describe('узда на записи', () => {
     expect(steps[0].title).toEqual({ ru: 'Подтверждение оповещения' })
     expect(steps[0].section).toEqual({ ru: 'Обнаружение' })
   })
+})
+
+/**
+ * ПОКАЗ УЖЕ ЗАПИСАННОГО. Узда на записи новые списки лечит, а созданные раньше — нет:
+ * номер лежит в тексте, и убрать его можно только правкой с публикацией. Владелец на это
+ * и указал — «неубираемая информация». Поэтому при показе номер автора уходит в колонку
+ * номера вместо нашего: дубля нет, и авторская многоуровневая нумерация видна.
+ */
+describe('номер при показе', () => {
+  it.each([
+    ['1. Подтверждение оповещения', '1', 'Подтверждение оповещения'],
+    ['1.1. Введение', '1.1', 'Введение'],
+    ['2.3.4) Проверка', '2.3.4', 'Проверка'],
+  ])('«%s» → номер «%s», текст «%s»', (given, num, text) => {
+    expect(splitOrdinal(given)).toEqual({ num, text })
+  })
+
+  // Без разделителя «1.5 л воды» неотличимо от «1.1 Введение» — и заголовок рецепта
+  // развалился бы на номер и «л воды». Не распознали — показываем как есть.
+  it.each(['1.5 л воды', '7 способов заварить чай', '2026 год: итоги', 'Проверить связь'])(
+    '«%s» остаётся заголовком целиком',
+    (given) => {
+      expect(splitOrdinal(given)).toEqual({ num: null, text: given })
+    },
+  )
 })

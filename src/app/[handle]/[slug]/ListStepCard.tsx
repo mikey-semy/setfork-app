@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ExternalLink, Info, SquareCheckBig, UserRound } from 'lucide-react'
 import { DigChatOpen } from '@/features/dig/DigChat'
 import { CopyRow } from '@/shared/ui/CopyRow'
+import { splitOrdinal } from '@/shared/lib/ordinal'
 import { CodeCard } from '@/shared/ui/CodeCard'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SafeLink } from '@/shared/ui/SafeLink'
@@ -37,6 +38,11 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
   }))
   const desc = tr(step.desc, lang)
   const why = tr(step.why, lang)
+  // Автор пронумеровал заголовок сам — его номер идёт в колонку номера вместо нашего.
+  // Иначе дубль: «1» слева и «1. Проверить связь» рядом. Новые списки такого номера уже
+  // не получают (снимается на записи), но у созданных раньше он лежит в тексте, и без
+  // этого его не убрать. Многоуровневую нумерацию интерфейс не рисует — она остаётся.
+  const { num: titleNum, text: titleText } = splitOrdinal(tr(step.title, lang))
 
   return (
     <div className={cardClass({ className: `relative break-inside-avoid${step.command ? ' print:break-inside-auto' : ''}` })}>
@@ -48,12 +54,12 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
         </span>
       )}
       <div className="flex gap-3">
-        <span className="mt-0.5 font-mono text-[0.8125rem] text-muted">{number}</span>
+        <span className="mt-0.5 font-mono text-[0.8125rem] text-muted">{titleNum ?? number}</span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 pr-7">
             {/* Заголовок шага пишет человек: слово без пробелов иначе уезжает
                 за правый край и тянет за собой страницу (мобила 390px). */}
-            <span className="min-w-0 text-[0.875rem] font-semibold text-ink [overflow-wrap:anywhere]">{tr(step.title, lang)}</span>
+            <span className="min-w-0 text-[0.875rem] font-semibold text-ink [overflow-wrap:anywhere]">{titleText}</span>
             <StepLevelBadge level={step.level} lang={lang} />
             {/* Разрушительный пункт виден ДО того, как его скопировали
                 в терминал, — на сайте, а не только в скрипте. */}

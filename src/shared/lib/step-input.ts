@@ -1,5 +1,6 @@
 import type { GeneratedItem } from '@/shared/ai/generate'
 import { cleanText } from './text-input'
+import { stripOrdinal } from './ordinal'
 import type { ProposedItem } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
 import { isRiskyCommand } from '@/core/domain/destructive-command'
@@ -37,27 +38,9 @@ export function toProposed(items: GeneratedItem[], lang: Lang): ProposedItem[] {
   }))
 }
 
-/**
- * НУМЕРУЕТ ИНТЕРФЕЙС, А НЕ ТЕКСТ.
- *
- * Порядковый номер пункта рисует карточка, номер секции — оглавление. Модель об этом не
- * знала и писала его ещё и в сам заголовок: «1. Подтверждение оповещения» в секции, под
- * которой оглавление ставит свою единицу. Выходила двойная нумерация, и она же ломалась
- * при перестановке пункта — номер в тексте остаётся прежним, а порядок уже другой.
- *
- * Снимаем на ЗАПИСИ, а не при показе: показ бы лечил симптом на одном экране, а тот же
- * текст уехал бы в экспорт, в поиск и в предложение правки. Место одно на все пути записи
- * (редактор, генерация, садовник, MCP) — по той же причине, что и остальное в этом модуле.
- *
- * Форма узкая намеренно: номер, затем точка/скобка/двоеточие, затем ПРОБЕЛ. «1.5 л воды»
- * и «7 способов» так не срежутся — там за разделителем нет пробела либо нет разделителя.
- */
-const ORDINAL_PREFIX = /^\s*(?:(?:шаг|step)\s+)?\d{1,3}\s*[.):\]]\s+(?=\S)/i
-
-/** Заголовок без ведущего номера. Пустая строка и текст без номера возвращаются как есть. */
-export const stripOrdinal = (s: string): string => s.replace(ORDINAL_PREFIX, '')
-
-/** То же по всем языкам LocaleText: заголовок переведён, номер продублирован в каждом. */
+/** То же по всем языкам LocaleText: заголовок переведён, номер продублирован в каждом.
+ *  Сама узда живёт в shared/lib/ordinal — её вторая половина (`splitOrdinal`) нужна показу,
+ *  и держать правило в двух местах значило бы разъехаться в первый же раз. */
 const withoutOrdinal = <T extends Record<string, string | undefined> | undefined>(t: T): T =>
   (t ? (Object.fromEntries(Object.entries(t).map(([k, v]) => [k, typeof v === 'string' ? stripOrdinal(v) : v])) as T) : t)
 
