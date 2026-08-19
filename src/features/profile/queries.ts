@@ -201,26 +201,6 @@ export async function getProfileCounts(userId: string, viewerId?: string) {
 
 
 
-/** Прогоны пользователя (для вкладки профиля). */
-export async function getProfileRuns(userId: string) {
-  return db
-    .select({
-      id: runs.id,
-      status: runs.status,
-      doneCount: runs.doneCount,
-      version: runs.version,
-      updatedAt: runs.updatedAt,
-      ownerHandle: users.handle,
-      slug: templates.slug,
-      title: templates.title,
-    })
-    .from(runs)
-    .innerJoin(templates, eq(runs.templateId, templates.id))
-    .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(eq(runs.userId, userId))
-    .orderBy(desc(runs.updatedAt))
-}
-
 
 // ── Раскрытие темы: списки внутри неё и события внутри списка ──────────
 

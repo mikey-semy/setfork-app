@@ -9,7 +9,9 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
-import { getDiscussions } from '@/features/discussions/queries'
+import { countDiscussions, getDiscussions } from '@/features/discussions/queries'
+import { Pagination } from '@/shared/ui/Pagination'
+import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { DISCUSSION_CATEGORIES, categoryLabel, categoryMeta } from '@/features/discussions/constants'
 import { PAGE } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
@@ -25,7 +27,7 @@ export default async function DiscussionsPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ category?: string }>
+  searchParams: Promise<{ category?: string; page?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const ru = lang === 'ru'
@@ -36,7 +38,12 @@ export default async function DiscussionsPage({
   if (!isFeatureEnabled(meta, 'discussions')) notFound() // раздел выключен (Settings → Features)
 
   const category = sp.category && DISCUSSION_CATEGORIES.some((c) => c.key === sp.category) ? sp.category : undefined
-  const list = await getDiscussions(meta.id, { category })
+  // Счёт идёт по ТОМУ ЖЕ отбору, что и выдача, иначе листалка нарисует несуществующие
+  // страницы.
+  const total = await countDiscussions(meta.id, { category })
+  const totalPages = pageCount(total)
+  const page = pageFromParam(sp.page, totalPages)
+  const list = await getDiscussions(meta.id, { category }, pageWindow(page))
   const base = `/${owner}/${slug}/discussions`
 
   return (
@@ -91,6 +98,8 @@ export default async function DiscussionsPage({
             ))}
           </div>
         )}
+        {/* Раздел переносится сам: pageHref тащит остальные параметры. */}
+        <Pagination page={page} totalPages={totalPages} makeHref={pageHref(base, sp)} lang={lang} />
       </div>
     </>
   )

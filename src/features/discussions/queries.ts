@@ -1,8 +1,8 @@
 import 'server-only'
-import { and, desc, eq, ilike, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, ilike, sql, type SQL } from 'drizzle-orm'
 import { db, discussionComments, discussions, users } from '@/shared/db'
 import { cursorKey, keysetStep } from '@/shared/db/keyset'
-import { encodeCursor, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
+import { encodeCursor, feedWindow, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
 export interface DiscussionRow {
@@ -17,12 +17,48 @@ export interface DiscussionRow {
 }
 
 /** Треды списка (лента): фильтр по категории + поиск по заголовку. */
-export async function getDiscussions(templateId: string, opts: { category?: string; q?: string } = {}): Promise<DiscussionRow[]> {
-  const conds = [eq(discussions.templateId, templateId)]
+export interface DiscussionQuery {
+  category?: string
+  q?: string
+}
+
+/**
+ * Условия отбора обсуждений — ОДИН источник на выдачу и на счёт.
+ *
+ * Порознь их писать нельзя: число страниц берётся из счёта, и разойдись он с выдачей
+ * хоть на одно условие — листалка нарисует страницы, которых нет.
+ */
+function discussionConds(templateId: string, opts: DiscussionQuery): SQL[] {
+  const conds: SQL[] = [eq(discussions.templateId, templateId)]
   if (opts.category) conds.push(eq(discussions.category, opts.category))
   if (opts.q) conds.push(ilike(discussions.title, `%${opts.q}%`))
+  return conds
+}
+
+/** Сколько обсуждений подходит под ТОТ ЖЕ отбор — для числа страниц. */
+export async function countDiscussions(templateId: string, opts: DiscussionQuery = {}): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(discussions)
+    .where(and(...discussionConds(templateId, opts)))
+  return r?.n ?? 0
+}
+
+/**
+ * Обсуждения списка страницей.
+ *
+ * Каталог, а не лента: их фильтруют по разделу и ищут по названию. Раньше выдача шла без
+ * предела и без доопределения порядка — `createdAt` у обсуждений одной операции совпадает.
+ */
+export async function getDiscussions(
+  templateId: string,
+  opts: DiscussionQuery = {},
+  /** Окно страницы. Проверяется `feedWindow`: битый предел драйвер выбрасывает молча. */
+  window?: { limit: number; offset?: number },
+): Promise<DiscussionRow[]> {
+  const conds = discussionConds(templateId, opts)
   const commentCount = sql<number>`(select count(*)::int from ${discussionComments} dc where dc.discussion_id = ${discussions.id})`
-  const rows = await db
+  const base = db
     .select({
       id: discussions.id,
       number: discussions.number,
@@ -36,7 +72,9 @@ export async function getDiscussions(templateId: string, opts: { category?: stri
     .from(discussions)
     .innerJoin(users, eq(discussions.authorId, users.id))
     .where(and(...conds))
-    .orderBy(desc(discussions.createdAt))
+    .orderBy(desc(discussions.createdAt), asc(discussions.id))
+  const w = window && feedWindow(window)
+  const rows = await (w ? base.limit(w.limit).offset(w.offset) : base)
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 40) })))
 }
 
