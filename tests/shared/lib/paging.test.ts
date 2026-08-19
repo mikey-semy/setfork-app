@@ -302,6 +302,27 @@ describe('keyset: курсор', () => {
     expect(decodeCursor('a'.repeat(513))).toBeNull()
   })
 
+  it('целый ключ за потолком int4 отсеивается, а не роняет запрос', () => {
+    // Форма — половина дела. `999999999999999999` проходит любую проверку цифр, доезжает
+    // до `::int` и роняет запрос «integer out of range» — ровно та пятисотка, которую
+    // разбор обязан не допускать. Проверено на живой базе: без потолка запрос падал.
+    const id = '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
+    expect(decodeCursor(btoa(`999999999999999999~${id}`), 'int')).toBeNull()
+    expect(decodeCursor(btoa(`2147483648~${id}`), 'int')).toBeNull()
+    expect(decodeCursor(btoa(`-2147483648~${id}`), 'int')).toBeNull()
+    // Ровно потолок — годится: это существующий номер, а не мусор.
+    expect(decodeCursor(btoa(`2147483647~${id}`), 'int')).toEqual({ key: '2147483647', id })
+  })
+
+  it('непригодный размер порции роняет вызов, а не превращается в пустую ленту', () => {
+    // `feedWindow` бросает на том же самом, а `probeLimit` — не бросал: дробный размер
+    // давал `limit 3.5`, отрицательный — `limit 0`, то есть вечно пустую ленту без
+    // единой ошибки. Дыра стояла ровно в паре к тому, ради чего заведён feedWindow.
+    expect(() => probeLimit(2.5)).toThrow(TypeError)
+    expect(() => probeLimit(0)).toThrow(TypeError)
+    expect(() => probeLimit(-1)).toThrow(TypeError)
+  })
+
   it('разведчик берёт на строку больше показанного', () => {
     expect(probeLimit(20)).toBe(21)
     expect(takePage(Array.from({ length: 21 }, (_, i) => i), 20)).toEqual({

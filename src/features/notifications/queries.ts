@@ -3,9 +3,9 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { canViewList } from '@/core'
 import { collaborators, db, issues, notifications, templates, users } from '@/shared/db'
-import { cursorKey, keysetStep } from '@/shared/db/keyset'
+import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
 import type { LocaleText } from '@/shared/i18n'
-import { encodeCursor, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
+import { probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
 export type NotificationType =
@@ -196,22 +196,9 @@ export async function getNotificationsPage(
   // без условия отдал бы САМЫЕ СТАРЫЕ уведомления, и лента открывалась бы с конца.
   const up = dir === 'before' && cursor !== null
   const raw = await visibleNotifications(userId, probeLimit(perPage), cursor, up ? 'before' : 'after')
-  // Отсекаем лишнюю строку разведчика ДО разворота: развернуть раньше — отрезать не тот
-  // конец, то есть терять ближайшую к читателю строку и показывать вместо неё дальнюю.
-  const { items: taken, hasNext: more } = takePage(raw, perPage)
-  const shown = up ? [...taken].reverse() : taken
-  const first = shown[0]
-  const last = shown[shown.length - 1]
   // Курсоры строятся по ВЗЯТЫМ строкам, а не по показанным: иначе скрытая строка на
   // границе перечитывалась бы бесконечно.
-  const at = (row: (typeof shown)[number] | undefined): string | null =>
-    row ? encodeCursor({ key: row.cursorKey, id: row.id }) : null
-  return {
-    items: await toItems(shown),
-    // Шагнули вниз — разведчик знает про низ, а верх известен из того, что мы пришли с
-    // курсором. Шагнули вверх — наоборот.
-    next: up ? at(last) : more ? at(last) : null,
-    prev: up ? (more ? at(first) : null) : cursor ? at(first) : null,
-  }
+  const { shown, next, prev } = keysetPage(raw, perPage, cursor, { reverse: up })
+  return { items: await toItems(shown), next, prev }
 }
 

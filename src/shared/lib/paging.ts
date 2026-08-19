@@ -282,8 +282,18 @@ export type CursorKeyType = 'time' | 'int'
 
 /** Текстовая форма `timestamptz` из Postgres: `2026-08-18 19:02:03.092835+00`. */
 const TS_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?$/
-/** Целое без плюса, ведущих нулей и хвостов: номер версии, счётчик. */
-const INT_RE = /^-?(0|[1-9]\d{0,17})$/
+/**
+ * Целое без плюса, ведущих нулей и хвостов: номер версии, счётчик.
+ *
+ * Форма — половина дела; вторая половина — ДИАПАЗОН. Ключ уходит в `::int`, а это int4:
+ * `999999999999999999` проходит любую проверку формы, доезжает до базы и роняет запрос
+ * «integer out of range». Ровно та пятисотка, которую этот разбор и обязан не допускать,
+ * поэтому диапазон проверяется отдельно (`INT_MAX` ниже), а не подгонкой регулярки:
+ * регулярка про цифры, а не про то, во что они превращаются в SQL.
+ */
+const INT_RE = /^-?(0|[1-9]\d{0,9})$/
+/** Потолок int4 — типа, в который приводится целый ключ. */
+const INT_MAX = 2_147_483_647
 
 const toBase64Url = (s: string): string =>
   btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
@@ -338,6 +348,7 @@ export function decodeCursor(raw: string | undefined | null, keyType: CursorKeyT
   // Разделитель ровно один: две пары в одном курсоре — признак подделки, а не опечатки.
   if (id.includes(CURSOR_SEP)) return null
   if (!(keyType === 'int' ? INT_RE : TS_RE).test(key) || !UUID_RE.test(id)) return null
+  if (keyType === 'int' && Math.abs(Number(key)) > INT_MAX) return null
   return { key, id }
 }
 
@@ -349,6 +360,14 @@ export function decodeCursor(raw: string | undefined | null, keyType: CursorKeyT
  * который запрос и так читает. Разбирается тем же `takePage`.
  */
 export function probeLimit(perPage = LISTS_PER_PAGE): number {
+  // Проверяем ТАК ЖЕ строго, как `feedWindow` проверяет окно по смещению, и по той же
+  // причине: непригодный предел драйвер выбрасывает молча, и запрос уходит в базу без
+  // предела. Без этой проверки keyset был бы дырой ровно в том месте, ради которого
+  // заводился парный `feedWindow`: дробный размер порции давал `limit 3.5`, а
+  // отрицательный — `limit 0`, то есть вечно пустую ленту без единой ошибки.
+  if (!Number.isInteger(perPage) || perPage <= 0) {
+    throw new TypeError(`paging: perPage must be a positive integer, got ${typeof perPage}`)
+  }
   return perPage + 1
 }
 

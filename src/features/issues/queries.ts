@@ -1,9 +1,9 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import { db, issueAssignees, issueComments, issues, listLabels, milestones, users } from '@/shared/db'
-import { cursorKey, keysetStep } from '@/shared/db/keyset'
+import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
 import { feedWindow } from '@/shared/lib/paging'
-import { encodeCursor, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
+import { probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 import type { CustomLabel } from '@/shared/lib/labels'
 
@@ -310,19 +310,12 @@ export async function getIssueCommentsPage(
     .orderBy(...step.order)
     .limit(probeLimit(perPage))
 
-  // Отсекаем лишнюю строку разведчика ДО разворота: развернуть раньше — отрезать не тот
-  // конец, то есть потерять ближайшую к читателю реплику.
-  const { items: taken, hasNext: more } = takePage(rows, perPage)
-  const shown = step.reverse ? [...taken].reverse() : taken
-  const at = (row: (typeof shown)[number] | undefined): string | null =>
-    row ? encodeCursor({ key: row.cursorKey, id: row.id }) : null
+  const { shown, next, prev } = keysetPage(rows, perPage, cursor, { reverse: step.reverse })
   return {
     items: await Promise.all(
       shown.map(async ({ cursorKey: _k, ...r }) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })),
     ),
-    // Разведчик знает только про ту сторону, в которую шагнули; про другую известно из
-    // того, что мы оттуда пришли.
-    next: back ? at(shown[shown.length - 1]) : more ? at(shown[shown.length - 1]) : null,
-    prev: back ? (more ? at(shown[0]) : null) : cursor ? at(shown[0]) : null,
+    next,
+    prev,
   }
 }

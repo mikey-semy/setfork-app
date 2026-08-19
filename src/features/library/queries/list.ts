@@ -2,8 +2,8 @@ import 'server-only'
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, issues, listDrafts, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, suggestionViewed, templates, templateVersions, users, publiclyVisible } from '@/shared/db'
 import type { Lang, LocaleText } from '@/shared/i18n'
-import { cursorKey, keysetStep } from '@/shared/db/keyset'
-import { encodeCursor, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
+import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
+import { probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
@@ -211,11 +211,7 @@ export async function getCommitsPage(
     .orderBy(...step.order)
     .limit(probeLimit(perPage))
 
-  // Отсекаем лишнюю строку разведчика ДО разворота — иначе отрезался бы не тот конец.
-  const { items: taken, hasNext: more } = takePage(rows, perPage)
-  const shown = step.reverse ? [...taken].reverse() : taken
-  const at = (row: (typeof shown)[number] | undefined): string | null =>
-    row ? encodeCursor({ key: row.cursorKey, id: row.id }) : null
+  const { shown, next, prev } = keysetPage(rows, perPage, cursor, { reverse: step.reverse })
   return {
     items: await Promise.all(
       shown.map(async (r) => ({
@@ -229,9 +225,8 @@ export async function getCommitsPage(
             : null,
       })),
     ),
-    // Разведчик знает про ту сторону, в которую шагнули; про другую известно из адреса.
-    next: back ? at(shown[shown.length - 1]) : more ? at(shown[shown.length - 1]) : null,
-    prev: back ? (more ? at(shown[0]) : null) : cursor ? at(shown[0]) : null,
+    next,
+    prev,
   }
 }
 

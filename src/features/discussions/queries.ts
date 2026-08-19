@@ -1,8 +1,8 @@
 import 'server-only'
 import { and, asc, desc, eq, ilike, sql, type SQL } from 'drizzle-orm'
 import { db, discussionComments, discussions, users } from '@/shared/db'
-import { cursorKey, keysetStep } from '@/shared/db/keyset'
-import { encodeCursor, feedWindow, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
+import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
+import { feedWindow, probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
 export interface DiscussionRow {
@@ -163,16 +163,12 @@ export async function getDiscussionCommentsPage(
     .orderBy(...step.order)
     .limit(probeLimit(perPage))
 
-  // Отсекаем лишнюю строку разведчика ДО разворота — иначе отрезался бы не тот конец.
-  const { items: taken, hasNext: more } = takePage(rows, perPage)
-  const shown = step.reverse ? [...taken].reverse() : taken
-  const at = (row: (typeof shown)[number] | undefined): string | null =>
-    row ? encodeCursor({ key: row.cursorKey, id: row.id }) : null
+  const { shown, next, prev } = keysetPage(rows, perPage, cursor, { reverse: step.reverse })
   return {
     items: await Promise.all(
       shown.map(async ({ cursorKey: _k, ...r }) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 40) })),
     ),
-    next: back ? at(shown[shown.length - 1]) : more ? at(shown[shown.length - 1]) : null,
-    prev: back ? (more ? at(shown[0]) : null) : cursor ? at(shown[0]) : null,
+    next,
+    prev,
   }
 }

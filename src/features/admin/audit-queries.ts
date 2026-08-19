@@ -1,8 +1,8 @@
 import 'server-only'
 import { desc, eq } from 'drizzle-orm'
 import { auditLog, db, users } from '@/shared/db'
-import { cursorKey, keysetStep } from '@/shared/db/keyset'
-import { encodeCursor, probeLimit, takePage, type Cursor, type FeedDirection } from '@/shared/lib/paging'
+import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
+import { probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import type { AuditAction } from '@/shared/audit'
 
 export interface AuditEntry {
@@ -57,15 +57,11 @@ export async function getAuditLogPage(
     .orderBy(...step.order)
     .limit(probeLimit(perPage))
 
-  // Отсекаем лишнюю строку разведчика ДО разворота — иначе отрезался бы не тот конец.
-  const { items: taken, hasNext: more } = takePage(rows, perPage)
-  const shown = step.reverse ? [...taken].reverse() : taken
-  const at = (row: (typeof shown)[number] | undefined): string | null =>
-    row ? encodeCursor({ key: row.cursorKey, id: row.id }) : null
+  const { shown, next, prev } = keysetPage(rows, perPage, cursor, { reverse: step.reverse })
   return {
     items: shown.map(({ cursorKey: _k, ...r }) => ({ ...r, action: r.action as AuditAction })),
-    next: back ? at(shown[shown.length - 1]) : more ? at(shown[shown.length - 1]) : null,
-    prev: back ? (more ? at(shown[0]) : null) : cursor ? at(shown[0]) : null,
+    next,
+    prev,
   }
 }
 

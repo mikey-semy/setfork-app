@@ -97,6 +97,25 @@ describe('журнал аудита листается ключом', () => {
     expect(bogus.items.map((e) => e.id)).toEqual(idsOf(start))
   })
 
+  it('порция за краем ленты — НЕ тупик: назад увести обязано', async () => {
+    // Ссылку на порцию сохранили, а строки с тех пор удалили — курсор указывает за край.
+    // Выдача приходит пустой, и построить шаги из показанных строк не из чего. Раньше оба
+    // шага оказывались null: листалка не рисовалась, и из ленты было НЕ ВЫБРАТЬСЯ вовсе.
+    const p1 = await getAuditLogPage(PER)
+    const p2 = await getAuditLogPage(PER, decodeCursor(p1.next))
+    const p3 = await getAuditLogPage(PER, decodeCursor(p2.next))
+    // p3.prev — курсор первой показанной строки последней порции; шаг «дальше» от нижней
+    // строки ленты даёт пустоту.
+    const bottom = await getAuditLogPage(PER, decodeCursor(p3.prev), 'after')
+    const past = await getAuditLogPage(PER, decodeCursor(bottom.next ?? p3.prev), 'after')
+
+    expect(past.items).toHaveLength(0)
+    expect(past.prev).not.toBeNull()
+    // И шаг назад обязан привести к настоящим строкам, а не в ту же пустоту.
+    const back = await getAuditLogPage(PER, decodeCursor(past.prev), 'before')
+    expect(back.items.length).toBeGreaterThan(0)
+  })
+
   it('записи старше двухсотой ДОСТИЖИМЫ — раньше их не было видно вовсе', async () => {
     await resetTables([auditLog])
     await seed(0, 250)

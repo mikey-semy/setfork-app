@@ -1,6 +1,6 @@
 import 'server-only'
 import { sql, type Column, type SQL } from 'drizzle-orm'
-import type { Cursor, CursorKeyType, FeedDirection, FeedOrder } from '@/shared/lib/paging'
+import { encodeCursor, takePage, type Cursor, type CursorKeyType, type FeedDirection, type FeedOrder } from '@/shared/lib/paging'
 
 /**
  * KEYSET НА УРОВНЕ ЗАПРОСА — два кусочка, из которых собирается пополняемая лента.
@@ -95,4 +95,46 @@ export function keysetStep(
  */
 export function cursorKey(key: Column): SQL<string> {
   return sql<string>`${key}::text`
+}
+
+/** Строка, из которой можно построить курсор: ключ текстом плюс id. */
+export interface CursorRow {
+  cursorKey: string
+  id: string
+}
+
+/**
+ * РАЗБОР ВЫДАЧИ РАЗВЕДЧИКА В ПОРЦИЮ: что показать и куда шагать дальше.
+ *
+ * Вынесено из шести поверхностей, где лежало копиями. Копии были одинаковы построчно, и
+ * это ровно тот случай, когда дублирование стоит дорого: найденный в одной дефект надо
+ * править в шести местах, а разъехаться они могут молча.
+ *
+ * ПУСТАЯ ПОРЦИЯ — НЕ ТУПИК. Если курсор указывает за край (ссылку сохранили, а строки с
+ * тех пор удалили), выдача приходит пустой, и построить шаги из показанных строк не из
+ * чего. Тогда шаг НАЗАД берётся из САМОГО курсора: «строки перед вот этой» — это
+ * последняя настоящая порция. Без этого из ленты было не выбраться вовсе: оба шага
+ * оказывались `null`, листалка не рисовалась, и оставался экран без выхода. У номерных
+ * страниц от этого спасает приведение номера к существующему (`pageFromParam`), у keyset
+ * такого клампа нет и быть не может — курсор непрозрачен.
+ */
+export function keysetPage<T extends CursorRow>(
+  rows: T[],
+  perPage: number,
+  cursor: Cursor | null,
+  opts: { reverse: boolean },
+): { shown: T[]; next: string | null; prev: string | null } {
+  // Отсекаем лишнюю строку разведчика ДО разворота: развернуть раньше — отрезать не тот
+  // конец, то есть потерять ближайшую к читателю строку и показать вместо неё дальнюю.
+  const { items: taken, hasNext: more } = takePage(rows, perPage)
+  const shown = opts.reverse ? [...taken].reverse() : taken
+  const at = (row: T | undefined): string | null => (row ? encodeCursor({ key: row.cursorKey, id: row.id }) : null)
+  const here = cursor ? encodeCursor(cursor) : null
+  return {
+    shown,
+    // Разведчик знает только про ту сторону, в которую шагнули; про другую известно из
+    // того, что мы оттуда пришли. `?? here` — выход из пустой порции (см. выше).
+    next: opts.reverse ? (at(shown[shown.length - 1]) ?? here) : more ? at(shown[shown.length - 1]) : null,
+    prev: opts.reverse ? (more ? at(shown[0]) : null) : cursor ? (at(shown[0]) ?? here) : null,
+  }
 }
