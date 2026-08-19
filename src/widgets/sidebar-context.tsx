@@ -24,13 +24,21 @@ export function useSidebar(): Ctx {
 }
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false)
+  // ПО УМОЛЧАНИЮ СВЁРНУТ. Раньше открывался развёрнутым, и на дашборде получалось два
+  // списка рядом: панель «Топ списков» в сайдбаре и модуль «Списки» в основной области —
+  // одно и то же, дважды и одновременно. Свёрнутый сайдбар оставляет навигацию (значки на
+  // месте), а место отдаёт содержимому.
+  //
+  // Развернувшего это НЕ трогает: его выбор лежит в localStorage и восстанавливается ниже.
+  // Меняется только состояние ПЕРВОГО захода, когда выбора ещё нет.
+  const [collapsed, setCollapsed] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Восстанавливаем выбор пользователя после гидрации (SSR не знает LS).
+  // Восстанавливаем выбор пользователя после гидрации (SSR не знает LS). Явное «развёрнут»
+  // (`0`) возвращает панель; отсутствие записи оставляет свёрнутым — это и есть умолчание.
   useEffect(() => {
     try {
-      if (localStorage.getItem(LS_KEY) === '1') setCollapsed(true)
+      if (localStorage.getItem(LS_KEY) === '0') setCollapsed(false)
     } catch {}
   }, [])
 
