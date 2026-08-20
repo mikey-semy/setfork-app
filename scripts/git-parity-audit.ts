@@ -7,8 +7,22 @@
  * этого не выправляются: расхождение всплывёт при первой же публикации — сайт покажет одно,
  * `git clone` отдаст другое.
  *
- * Скрипт только ЧИТАЕТ. Он отвечает на вопрос «сколько списков разошлось и какие», а чинит
- * их обычная запись: любая новая версия рождается через ядро и выравнивает канон.
+ * ⚠️ СКРИПТ НЕ ТОЛЬКО ЧИТАЕТ, и это выяснилось на первом же прогоне против прода. Репозитории
+ * материализуются ЛЕНИВО: пока список никто не клонировал, репозитория на томе нет вовсе.
+ * Запрос снимка его создаёт — из Postgres. На проде 19.08 из 598 списков репозитории имели
+ * ПЯТЬ, и один прогон сверки завёл остальные 598 (около 100 МБ на томе).
+ *
+ * Отсюда главное ограничение метода: у только что материализованного репозитория сверка
+ * ТАВТОЛОГИЧНА — git собран из той же базы секунду назад и обязан совпасть. Осмысленный ответ
+ * даёт только список, чей репозиторий существовал ДО правки. Поэтому:
+ *
+ *   ONLY_IDS=<файл со списком id> — сверять лишь эти списки (по одному id в строке).
+ *
+ * Набор берётся на хосте: имена каталогов на томе ядра — это id списков.
+ *   docker exec setfork-core sh -c 'ls /data/git' | sed 's/\.git$//'
+ *
+ * Чинит расхождение обычная запись: любая новая версия рождается через ядро и выравнивает
+ * канон.
  *
  *   DATABASE_URL=… SETFORK_CORE_ADDR=… npx tsx --conditions=react-server scripts/git-parity-audit.ts
  *
@@ -35,6 +49,17 @@ const flat = (v: unknown): string =>
 const fingerprint = (s: { title: unknown; command: unknown }) => `${flat(s.title)} | ${flat(s.command) || ''}`
 
 async function main() {
+  // Ограничение набора: без него прогон МАТЕРИАЛИЗУЕТ все репозитории и сверка становится
+  // тавтологичной (см. шапку). Пустое значение — сверять все, осознанно.
+  const onlyPath = process.env.ONLY_IDS
+  const only = onlyPath
+    ? new Set(
+        (await import('node:fs')).readFileSync(onlyPath, 'utf8').split('\n').map((x) => x.trim().replace(/\.git$/, '')).filter(Boolean),
+      )
+    : null
+  if (only) console.log(`Сверяем только ${only.size} списков из ${onlyPath}`)
+  else console.log('⚠️ Сверяем ВСЕ списки: репозитории, которых нет на томе, будут созданы из базы, и для них сверка тавтологична.')
+
   const rows = await db
     .select({ id: templates.id, slug: templates.slug, status: templates.status, current: templates.currentVersion, handle: users.handle })
     .from(templates)
@@ -47,6 +72,7 @@ async function main() {
   const bad: string[] = []
 
   for (const t of rows) {
+    if (only && !only.has(t.id)) continue
     const [ver] = await db
       .select({ id: templateVersions.id })
       .from(templateVersions)
