@@ -1,6 +1,7 @@
 import type { GeneratedItem } from '@/shared/ai/generate'
 import { cleanText } from './text-input'
 import { stripOrdinal } from './ordinal'
+import { newBlockId } from './block-id'
 import type { ProposedItem } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
 import { isRiskyCommand } from '@/core/domain/destructive-command'
@@ -54,7 +55,19 @@ export function toStepInput(items: ProposedItem[]) {
     // merge по идентичности. Раньше её переносила только копия конвертера в
     // features/library/actions.ts — а та, в свою очередь, теряла пометку
     // «здесь нужен человек». Обе половины должны жить в ОДНОЙ функции.
-    blockId: it.blockId ?? null,
+    // ИДЕНТИЧНОСТЬ ВЫДАЁТСЯ ЗДЕСЬ, если её нет. Без неё блок не переживает запись как «тот
+    // же»: на block_id держатся комментарии к пункту, merge по идентичности и ПЕРЕНОС
+    // надстроек при пуше (CarryOver в ядре ключуется по нему). Линза ядра 02 измерила цену
+    // пропуска: шаг без идентичности теряет при пуше все четыре надстройки разом —
+    // «здесь нужен человек», вопрос к человеку, «разрушительный пункт» и картинку. На проде
+    // 20.08 таких шагов 610 из 5116 в 86 списках, и 85 из них несут пометку или картинку.
+    //
+    // Место одно на все пути записи — как и остальное в этом модуле. Редактор выдавал id
+    // сам (toProposedItems), а пути генерации (садовник, самогенерация, гном) — нет, и
+    // писали строки без идентичности. Выдавать её В `toProposed` было НЕЛЬЗЯ: садовник
+    // сравнивает `JSON.stringify(toProposed(...))` как отпечаток «изменилось ли», и
+    // случайный uuid внутри ломал бы правило остановки «два прохода без изменений».
+    blockId: it.blockId ?? newBlockId(),
     title: withoutOrdinal(it.title),
     desc: it.desc,
     command: it.command,
