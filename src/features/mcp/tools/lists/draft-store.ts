@@ -40,18 +40,19 @@ export function duplicateBid(items: ProposedItem[]): string | null {
 export const lockList = (tx: Tx, listId: string) =>
   tx.execute(sql`select id from ${templates} where ${templates.id} = ${listId} for update`)
 
-/** Состояние списка ПОД ЗАМКОМ: пока правку готовили, его могли опубликовать,
- *  заморозить или заархивировать. Прямая правка черновика идёт мимо фасада
- *  listStore, который стережёт эти запреты у опубликованного пути, — значит
- *  проверяем сами и на свежих данных, а не на прочитанных до замка. */
-export async function draftWritable(tx: Tx, listId: string): Promise<{ error: string } | null> {
+/** Состояние списка ПОД ЗАМКОМ: пока правку готовили, его могли заморозить или
+ *  заархивировать. Проверяем на свежих данных, а не на прочитанных до замка.
+ *
+ *  СТАТУС здесь НЕ проверяется. Раньше функция требовала `status = 'draft'` — она
+ *  обслуживала правку черновика на месте, и вне черновика её звать было незачем. Путь
+ *  удалён (ADR-0020), а требование осталось бы запретом копить правки у опубликованного
+ *  списка — то есть ровно тем, что рабочая копия и делает (находка авто-ревью по #812, P1). */
+export async function listWritable(tx: Tx, listId: string): Promise<{ error: string } | null> {
   const [row] = await tx
-    .select({ status: templates.status, archivedAt: templates.archivedAt, frozenAt: templates.frozenAt })
+    .select({ archivedAt: templates.archivedAt, frozenAt: templates.frozenAt })
     .from(templates)
     .where(eq(templates.id, listId))
   if (!row) return { error: 'list not found' }
   if (!canEditList(row)) return { error: 'forbidden: list is archived or frozen' }
-  if (row.status !== 'draft')
-    return { error: 'the list was published while the edit was being prepared — read it again (get_list) and write to the published version' }
   return null
 }

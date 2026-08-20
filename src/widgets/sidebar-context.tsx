@@ -80,12 +80,14 @@ export function SidebarProvider({ children, initialCollapsed = true }: { childre
     return () => window.removeEventListener('keydown', onKey)
   }, [mobileOpen])
 
-  const toggleCollapsed = () =>
-    setCollapsed((v) => {
-      const next = !v
-      writeCookie(next)
-      return next
-    })
+  // Запись куки — ВНЕ обновлятора состояния: React вправе позвать его повторно, и побочный
+  // эффект внутри выполнился бы дважды (замечание авто-ревью по #812). Считаем следующее
+  // состояние из текущего, пишем куку, потом ставим состояние.
+  const toggleCollapsed = () => {
+    const next = !collapsed
+    writeCookie(next)
+    setCollapsed(next)
+  }
 
   // Бургер один, а поведение зависит от ширины: десктоп — свернуть/развернуть,
   // мобилка — открыть сайдбар оверлеем (там сворачивать нечего).

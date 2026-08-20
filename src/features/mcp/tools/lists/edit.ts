@@ -10,7 +10,7 @@ import { getDraft } from '@/features/library/queries'
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { detailByRefOrMoved, toProposed, type DetailStep, type McpItemInput } from '../shared'
 import { patchBlock, rowsToProposed } from './patch-block'
-import { draftWritable, duplicateBid, lockList } from './draft-store'
+import { duplicateBid, listWritable, lockList } from './draft-store'
 import { destructiveError, ownedList, writeProposed } from './write'
 
 /** Обновить список (только владелец): новая версия через ядро, либо накопление в рабочей
@@ -49,7 +49,7 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
         // Под тем же замком, что и патч: иначе полная замена и патч читают один состав,
         // а пишут по очереди целиком, и чья-то работа исчезает при двух «успехах».
         await lockList(tx, tpl.id)
-        const denied = await draftWritable(tx, tpl.id)
+        const denied = await listWritable(tx, tpl.id)
         if (denied) return denied
         const [fresh] = await tx.select({ current: templates.currentVersion }).from(templates).where(eq(templates.id, tpl.id))
         if (!fresh) return { error: 'list not found' }
@@ -64,6 +64,17 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
         // Страж исполняемого выхода стоит и на рабочей копии: иначе `rm -rf /` доехал бы
         // до человека при публикации, на непонятном ему шаге.
         assertNoDestructiveSteps(stepInput(proposed))
+        // МЕТА едет вместе с составом: `tags` и `ordered` — часть того же запроса, и
+        // публикация черновика берёт их ИЗ НЕГО (publishDraftFor читает draft.meta).
+        // Без этого API отвечал бы «правки приняты», а теги с порядком молча пропадали
+        // при публикации — находка авто-ревью по #812, P1. Заданное перекрывает
+        // накопленное, незаданное остаётся как было (в т.ч. `gated`, которого у этого
+        // инструмента нет вовсе).
+        const meta = {
+          ...(existing?.meta ?? {}),
+          ...(input.tags ? { tags } : {}),
+          ...(input.ordered === undefined ? {} : { ordered: input.ordered }),
+        }
         await tx
           .insert(listDrafts)
           .values({
@@ -71,12 +82,12 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
             authorId: userId,
             baseVersion: base,
             items: proposed,
-            meta: existing?.meta ?? {},
+            meta,
             note: input.note?.trim() || existing?.note || '',
           })
           .onConflictDoUpdate({
             target: [listDrafts.templateId, listDrafts.authorId],
-            set: { items: proposed, note: input.note?.trim() || existing?.note || '', rev: sql`${listDrafts.rev} + 1`, updatedAt: new Date() },
+            set: { items: proposed, meta, note: input.note?.trim() || existing?.note || '', rev: sql`${listDrafts.rev} + 1`, updatedAt: new Date() },
           })
         return {
           ref: `${handle}/${slug}`,

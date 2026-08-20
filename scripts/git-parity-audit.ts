@@ -52,7 +52,23 @@ const flat = (v: unknown): string =>
  * потерь, ради которого он заведён: расхождение в описании, секции, ссылках, картинке или
  * пометке «здесь нужен человек» читалось как «совпадает» (находка авто-ревью по #811).
  * Не-step блоки она выбрасывала целиком — то есть текст, опросы и квизы не сверялись вовсе.
+ *
+ * ⚠️ Вложенный `content` КАНОНИЗИРУЕТСЯ по ключам. С одной стороны он приезжает из колонки
+ * jsonb, с другой — разобранным из git-JSON, и порядок ключей там не гарантирован и смысла
+ * не несёт. Голый `JSON.stringify` объявлял бы расхождением одинаковые опросы и картинки,
+ * у которых ключи легли в разном порядке — то есть гейт падал бы на ровном месте (находка
+ * авто-ревью по #812).
  */
+const canon = (v: unknown): unknown => {
+  if (Array.isArray(v)) return v.map(canon)
+  if (v && typeof v === 'object')
+    return Object.fromEntries(
+      Object.entries(v as Record<string, unknown>)
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(([k, val]) => [k, canon(val)]),
+    )
+  return v
+}
 const fingerprint = (s: Record<string, unknown>): string =>
   JSON.stringify({
     type: (s.type as string) || 'step',
@@ -68,7 +84,7 @@ const fingerprint = (s: Record<string, unknown>): string =>
     needsHumanAsk: flat(s.needsHumanAsk),
     danger: !!s.danger,
     image: (s.imageKey as string) || (s.imageRef as string) || '',
-    content: s.content ?? {},
+    content: canon(s.content ?? {}),
   })
 
 async function main() {
