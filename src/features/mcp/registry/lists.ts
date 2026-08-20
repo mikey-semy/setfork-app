@@ -47,6 +47,10 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
         note: z.string().optional().describe('Change note (for published lists)'),
         tags: z.array(z.string()).optional(),
         ordered: z.boolean().optional(),
+        publish: z
+          .boolean()
+          .optional()
+          .describe('false — collect the replacement in the working copy instead of publishing a version; publish_draft turns it into ONE version'),
       },
     },
     async (userId, { handle, slug, ...rest }) => {

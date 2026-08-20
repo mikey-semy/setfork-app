@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { SIDEBAR_COOKIE } from '@/shared/lib/sidebar-cookie'
 
 // Общее состояние ОДНОГО сайдбара: свёрнут/развёрнут (desktop, память в LS) и
 // открыт оверлеем (мобилка, дёргает бургер в топ-баре). Провайдер оборачивает
@@ -16,6 +17,17 @@ type Ctx = {
 
 const SidebarCtx = createContext<Ctx | null>(null)
 const LS_KEY = 'sf.sidebar.collapsed'
+// Имя куки живёт в общем модуле: серверу из 'use client' можно брать только компоненты.
+export { SIDEBAR_COOKIE } from '@/shared/lib/sidebar-cookie'
+/** Год: это настройка вида, а не сессия. */
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
+/** Кука видна серверу на следующем запросе — на ней и держится отсутствие прыжка. */
+function writeCookie(collapsed: boolean): void {
+  try {
+    document.cookie = `${SIDEBAR_COOKIE}=${collapsed ? '1' : '0'}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`
+  } catch {}
+}
 
 export function useSidebar(): Ctx {
   const c = useContext(SidebarCtx)
@@ -23,22 +35,40 @@ export function useSidebar(): Ctx {
   return c
 }
 
-export function SidebarProvider({ children }: { children: React.ReactNode }) {
+/**
+ * Начальное состояние приходит С СЕРВЕРА — куки, а не localStorage.
+ *
+ * Раньше выбор жил только в localStorage, а сервер о нём не знал: страница приезжала со
+ * свёрнутым сайдбаром, эффект после гидрации разворачивал его, и развернувший видел
+ * прыжок на каждом переходе. Лишняя перерисовка — это и есть замечание авто-ревью
+ * (react-doctor/no-initialize-state по #811), но чинить его сменой хука было бы лечением
+ * симптома: сервер всё равно рисовал бы не то, пока не знает выбора.
+ *
+ * localStorage остаётся ЧИТАТЬСЯ ради тех, кто уже разворачивал сайдбар до этой правки:
+ * первый заход переносит их выбор в куку. Писать в него больше незачем.
+ */
+export function SidebarProvider({ children, initialCollapsed = true }: { children: React.ReactNode; initialCollapsed?: boolean }) {
   // ПО УМОЛЧАНИЮ СВЁРНУТ. Раньше открывался развёрнутым, и на дашборде получалось два
   // списка рядом: панель «Топ списков» в сайдбаре и модуль «Списки» в основной области —
   // одно и то же, дважды и одновременно. Свёрнутый сайдбар оставляет навигацию (значки на
   // месте), а место отдаёт содержимому.
   //
-  // Развернувшего это НЕ трогает: его выбор лежит в localStorage и восстанавливается ниже.
+  // Развернувшего это НЕ трогает: его выбор приезжает с сервера кукой.
   // Меняется только состояние ПЕРВОГО захода, когда выбора ещё нет.
-  const [collapsed, setCollapsed] = useState(true)
+  const [collapsed, setCollapsed] = useState(initialCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Восстанавливаем выбор пользователя после гидрации (SSR не знает LS). Явное «развёрнут»
-  // (`0`) возвращает панель; отсутствие записи оставляет свёрнутым — это и есть умолчание.
+  // ПЕРЕНОС старого выбора: у тех, кто разворачивал сайдбар до перехода на куку, он лежит
+  // в localStorage, а сервер его не видит. Один раз переносим и больше туда не пишем.
+  // Кука уже есть — значит перенос сделан, и localStorage игнорируется.
   useEffect(() => {
+    if (document.cookie.includes(`${SIDEBAR_COOKIE}=`)) return
     try {
-      if (localStorage.getItem(LS_KEY) === '0') setCollapsed(false)
+      const legacy = localStorage.getItem(LS_KEY)
+      if (legacy !== '0' && legacy !== '1') return
+      const wasCollapsed = legacy === '1'
+      writeCookie(wasCollapsed)
+      setCollapsed(wasCollapsed)
     } catch {}
   }, [])
 
@@ -53,9 +83,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const toggleCollapsed = () =>
     setCollapsed((v) => {
       const next = !v
-      try {
-        localStorage.setItem(LS_KEY, next ? '1' : '0')
-      } catch {}
+      writeCookie(next)
       return next
     })
 
