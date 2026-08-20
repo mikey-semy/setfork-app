@@ -24,8 +24,10 @@ export const ACCENTS = [
 
 const FONTS = [
   { value: '', label: 'Hanken Grotesk', css: 'var(--font-sans)' },
-  { value: 'inter', label: 'Inter', css: 'var(--font-inter)' },
-  { value: 'manrope', label: 'Manrope', css: 'var(--font-manrope)' },
+  // Латиница и кириллица у этих двух — разные файлы, поэтому в образце тоже стек:
+  // иначе русское имя шрифта в списке рисовалось бы запасным системным.
+  { value: 'inter', label: 'Inter', css: 'var(--font-inter-latin), var(--font-inter-cyr)' },
+  { value: 'manrope', label: 'Manrope', css: 'var(--font-manrope-latin), var(--font-manrope-cyr)' },
   { value: 'system', label: 'System', css: 'system-ui, sans-serif' },
 ]
 

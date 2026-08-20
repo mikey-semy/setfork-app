@@ -185,8 +185,10 @@
 
 /* ── Шрифт интерфейса (data-font на html; переменные шрифтов задаёт next/font
       в layout). Специфичность html[data-font] бьёт класс next/font. ── */
-html[data-font='inter'] { --font-sans: var(--font-inter), system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
-html[data-font='manrope'] { --font-sans: var(--font-manrope), system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
+/* Латиница и кириллица — РАЗНЫЕ файлы (шрифты лежат в репозитории, см. layout): подмножества
+   собираются стеком, браузер берёт второе семейство для символов, которых нет в первом. */
+html[data-font='inter'] { --font-sans: var(--font-inter-latin), var(--font-inter-cyr), system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
+html[data-font='manrope'] { --font-sans: var(--font-manrope-latin), var(--font-manrope-cyr), system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
 html[data-font='system'] { --font-sans: system-ui, -apple-system, 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
 
 * {
