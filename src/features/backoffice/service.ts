@@ -2,7 +2,7 @@ import 'server-only'
 import { and, desc, eq, gt, gte, inArray, sql } from 'drizzle-orm'
 import { agentActions, aiUsage, db, jobs, users } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
-import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
+import { loopPolicy, recordAgentAction, type Executor } from '@/shared/agents/policy'
 import { autonomyHealthy } from '@/shared/agents/canary'
 import { AI_DAILY_USD } from '@/shared/quota'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
@@ -374,22 +374,38 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   // Предыдущая попытка могла ещё не закончиться: заявка занята, письмо в полёте, записи
   // об успехе пока нет. Начинать вторую в этот момент значит слать дубль — ждём, пока
   // первая договорит. Своих таймаутов SMTP у отправителя нет, поэтому окно берём с запасом.
-  const inFlight = await claimFresh(action, episode, DELIVERY_IN_FLIGHT_MS)
-  if (inFlight) {
-    out.skipped = ALREADY_SENT
-    return out
-  }
-  const attempt = await attemptsFor(action, episode)
-  const claimed = await recordAgentAction({
-    loop: 'aiwatch',
-    action,
-    resultStatus: 'skipped', // «попытка начата»; доставку подтверждает отдельная запись
-    signal: { model: state.lastModel, episode, attempt },
-    decision: { verdict: out.verdict, stage: 'claim' },
-    idempotencyKey: `aiwatch:${out.verdict}:${episode}:${attempt}`,
-    policyVersion: policy.policyVersion,
+  // ЗАЯВКА ЗАНИМАЕТСЯ ПОД ЗАМКОМ, и это не перестраховка. Сама вставка атомарна (ключ
+  // идемпотентности), но НОМЕР попытки в ключе читался отдельным запросом — и два прохода
+  // получали РАЗНЫЕ ключи: первый вставлял попытку 0, второй читал журнал уже с ней и брал
+  // попытку 1. Оба «занимали» заявку, оба слали письмо. Ловилось это плавающим падением
+  // теста «два прохода разом — письмо одно» ([1,1] вместо [0,1]) — то есть гейт краснел
+  // через раз, а в проде владелец получал бы дубль тревоги.
+  //
+  // Замок на пару (действие, эпизод) — транзакционный: он сам снимается при коммите и
+  // откате, поэтому упавший проход не оставляет его висеть. Внутри транзакции только
+  // чтение журнала и вставка заявки; письмо уходит ЗА её пределами — держать соединение
+  // открытым на время SMTP нельзя.
+  // Возвращаем НОМЕР попытки, а не флаг: он уходит в журнал прогона, по нему видно, с
+  // какого раза тревога дошла. `null` — заявку занять не удалось.
+  const attempt = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`aiwatch:${action}:${episode}`}))`)
+    if (await claimFresh(action, episode, DELIVERY_IN_FLIGHT_MS, tx)) return null
+    const n = await attemptsFor(action, episode, tx)
+    const ok = await recordAgentAction(
+      {
+        loop: 'aiwatch',
+        action,
+        resultStatus: 'skipped', // «попытка начата»; доставку подтверждает отдельная запись
+        signal: { model: state.lastModel, episode, attempt: n },
+        decision: { verdict: out.verdict, stage: 'claim' },
+        idempotencyKey: `aiwatch:${out.verdict}:${episode}:${n}`,
+        policyVersion: policy.policyVersion,
+      },
+      tx,
+    )
+    return ok ? n : null
   })
-  if (!claimed) {
+  if (attempt === null) {
     out.skipped = ALREADY_SENT
     return out
   }
@@ -421,8 +437,8 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
 const DELIVERY_IN_FLIGHT_MS = 5 * 60_000
 
 /** Есть ли заявка по этому эпизоду моложе окна — то есть письмо ещё в полёте. */
-async function claimFresh(action: string, episode: string, windowMs: number): Promise<boolean> {
-  const [row] = await db
+async function claimFresh(action: string, episode: string, windowMs: number, exec: Executor = db): Promise<boolean> {
+  const [row] = await exec
     .select({ id: agentActions.id })
     .from(agentActions)
     .where(
@@ -439,8 +455,8 @@ async function claimFresh(action: string, episode: string, windowMs: number): Pr
 }
 
 /** Сколько раз уже пробовали сообщить об этом эпизоде — номер следующей попытки. */
-async function attemptsFor(action: string, episode: string): Promise<number> {
-  const [row] = await db
+async function attemptsFor(action: string, episode: string, exec: Executor = db): Promise<number> {
+  const [row] = await exec
     .select({ n: sql<number>`count(*)::int` })
     .from(agentActions)
     .where(

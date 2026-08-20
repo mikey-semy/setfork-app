@@ -163,10 +163,17 @@ export interface AgentActionInput {
  *
  * Журнал не должен ронять работу: сбой записи логируем, но наверх не бросаем — кроме
  * случая дубля, который как раз является значимым ответом.
+ *
+ * `exec` — необязательная транзакция вызывающего. Нужна там, где заявка на действие
+ * занимается ПОД ЗАМКОМ: снаружи транзакции вставка легла бы отдельным соединением, и
+ * замок, взятый вызывающим, её бы не покрывал.
  */
-export async function recordAgentAction(input: AgentActionInput): Promise<boolean> {
+/** Кто исполняет запрос: сам пул или транзакция вызывающего. */
+export type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+export async function recordAgentAction(input: AgentActionInput, exec: Executor = db): Promise<boolean> {
   try {
-    const inserted = await db
+    const inserted = await exec
       .insert(agentActions)
       .values({
         loop: input.loop,
