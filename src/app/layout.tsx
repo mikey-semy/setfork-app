@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import type { Metadata, Viewport } from 'next'
-import { Chakra_Petch, Hanken_Grotesk, IBM_Plex_Mono, Inter, Manrope } from 'next/font/google'
+import localFont from 'next/font/local'
 import { ThemeProvider } from '@/shared/providers/theme-provider'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
@@ -25,26 +25,91 @@ import { ScrollToTop } from '@/shared/ui/ScrollToTop'
 import './globals.css'
 import { SITE_ORIGIN } from '@/shared/site'
 
-const sans = Hanken_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+/**
+ * ШРИФТЫ ЛЕЖАТ В РЕПОЗИТОРИИ, а не качаются на сборке.
+ *
+ * Было `next/font/google`: каждая сборка ходила на `fonts.gstatic.com`. 20.08 этот адрес
+ * перестал отвечать через рабочий туннель — и перестало собираться ВСЁ, локально и в CI
+ * (раннеры на той же машине), при полностью исправном коде. Внешний сервис в середине гейта
+ * — это его отказ, засчитанный нам.
+ *
+ * Файлы взяты из npm-пакетов `@fontsource/*` (те же оригиналы Google) и лежат в
+ * `src/shared/fonts` — 236 КБ на пять семейств. Не в `src/app`: каталог внутри `app` это
+ * МАРШРУТ, и `app/fonts` занял бы ник «fonts» у людей (поймано уздой `reserved-top`). Сборка теперь не ходит наружу вовсе, прогон воспроизводим, и
+ * заодно закрыт юридический хвост — при `next/font/google` часть настроек грузила шрифт у
+ * посетителя, то есть его IP уезжал в Google.
+ *
+ * Обновлять так: `npm i -D @fontsource/<семейство>`, скопировать нужные `.woff2` в
+ * `src/app/fonts/`, пакет удалить. В зависимостях он не нужен — нужны только файлы.
+ */
+const sans = localFont({
+  src: [
+    { path: '../shared/fonts/hanken-grotesk-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: '../shared/fonts/hanken-grotesk-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: '../shared/fonts/hanken-grotesk-latin-600-normal.woff2', weight: '600', style: 'normal' },
+    { path: '../shared/fonts/hanken-grotesk-latin-700-normal.woff2', weight: '700', style: 'normal' },
+  ],
   variable: '--font-sans',
+  display: 'swap',
 })
-const mono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+const mono = localFont({
+  src: [
+    { path: '../shared/fonts/ibm-plex-mono-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: '../shared/fonts/ibm-plex-mono-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: '../shared/fonts/ibm-plex-mono-latin-600-normal.woff2', weight: '600', style: 'normal' },
+  ],
   variable: '--font-mono',
+  display: 'swap',
 })
-// Логотип: гротеск с прямыми/квадратными углами (Chakra Petch), жирный.
-const logoFont = Chakra_Petch({
-  subsets: ['latin'],
-  weight: ['700'],
+
+const logoFont = localFont({
+  src: '../shared/fonts/chakra-petch-latin-700-normal.woff2',
+  weight: '700',
+  style: 'normal',
   variable: '--font-logo',
+  display: 'swap',
 })
-// Альтернативные шрифты интерфейса (Настройки → Appearance, data-font на html).
-// С кириллицей — интерфейс двуязычный.
-const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-inter' })
-const manrope = Manrope({ subsets: ['latin', 'cyrillic'], variable: '--font-manrope' })
+
+/**
+ * Inter и Manrope — переменные шрифты и нужны с кириллицей, а она лежит ОТДЕЛЬНЫМ файлом:
+ * `@fontsource` режет по подмножествам, и объединённого файла у него нет. `next/font/local`
+ * не умеет `unicode-range`, поэтому подмножества объявлены двумя семействами, а собираются
+ * в стек в globals.css: латиница первой, кириллица следом. Браузер сам берёт второй шрифт
+ * для символов, которых нет в первом, — это обычное поведение стека, а не хитрость.
+ *
+ * `preload: false` у кириллицы намеренно: качать её заранее незачем — на английской странице
+ * она не понадобится, а понадобится — загрузится по первому же символу.
+ */
+const interLatin = localFont({
+  src: '../shared/fonts/inter-latin-wght-normal.woff2',
+  weight: '100 900',
+  style: 'normal',
+  variable: '--font-inter-latin',
+  display: 'swap',
+})
+const interCyr = localFont({
+  src: '../shared/fonts/inter-cyrillic-wght-normal.woff2',
+  weight: '100 900',
+  style: 'normal',
+  variable: '--font-inter-cyr',
+  display: 'swap',
+  preload: false,
+})
+const manropeLatin = localFont({
+  src: '../shared/fonts/manrope-latin-wght-normal.woff2',
+  weight: '200 800',
+  style: 'normal',
+  variable: '--font-manrope-latin',
+  display: 'swap',
+})
+const manropeCyr = localFont({
+  src: '../shared/fonts/manrope-cyrillic-wght-normal.woff2',
+  weight: '200 800',
+  style: 'normal',
+  variable: '--font-manrope-cyr',
+  display: 'swap',
+  preload: false,
+})
 
 const SITE_URL = SITE_ORIGIN
 const DESCRIPTION = 'Canonical, runnable, versioned reference lists — run them, check off steps, and fork from the library.'
@@ -126,7 +191,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang={lang}
-      className={`${sans.variable} ${mono.variable} ${logoFont.variable} ${inter.variable} ${manrope.variable}`}
+      className={`${sans.variable} ${mono.variable} ${logoFont.variable} ${interLatin.variable} ${interCyr.variable} ${manropeLatin.variable} ${manropeCyr.variable}`}
       // Аккаунтный вид применяем на SSR (no-flash на новом устройстве); на своём
       // браузере localStorage-скрипт ниже перекроет, если выбор там уже есть.
       data-accent={appearance.accent || undefined}
