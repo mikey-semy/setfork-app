@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { startRegistration } from '@simplewebauthn/browser'
 import { Fingerprint, Loader2, Plus, Trash2 } from 'lucide-react'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { beginPasskeyRegistration, deletePasskey, finishPasskeyRegistration, listPasskeys } from '@/features/auth/passkeys'
 import { buttonClass } from '@/shared/ui/button-style'
 
@@ -42,9 +42,16 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
     }
   }
 
+  // Оптимистично убираем строку, но ОТКАЗ возвращаем на экран: правило последнего способа
+  // входа отказывает молча только в коде, а человек должен понять, почему ключ остался.
   async function remove(id: string) {
+    setErr('')
+    const before = list
     setList((prev) => prev.filter((p) => p.id !== id))
-    await deletePasskey(id)
+    const outcome = await deletePasskey(id)
+    if (outcome === 'removed') return
+    setList(before)
+    setErr(t(outcome === 'last-method' ? 'auth.passkey.lastMethod' : 'auth.passkey.notFound', lang))
   }
 
   const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat(ru ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d)) : null)

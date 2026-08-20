@@ -58,3 +58,12 @@ export const db: NodePgDatabase<typeof schema> = new Proxy(
 
 export * from './schema'
 export { publiclyVisible } from './visibility'
+
+/**
+ * Кто исполняет запрос: сам пул или транзакция вызывающего.
+ *
+ * Нужен там, где проверка и запись обязаны идти ПОД ОДНИМ замком: помощник, зовущий `db`
+ * напрямую, взял бы отдельное соединение — и замок вызывающего его бы не покрывал. Живёт
+ * рядом с `db`, а не в фиче: просят его уже двое (правило последнего входа, заявка тревоги).
+ */
+export type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]

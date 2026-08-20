@@ -140,6 +140,8 @@ export const en = {
   'auth.link': 'Link',
   'auth.link.alreadyYours': 'This account is already linked to your profile.',
   'auth.link.lastMethod': 'This is your only way in — link another one first.',
+  'auth.passkey.lastMethod': 'This is your only way to sign in — add a password or another method first.',
+  'auth.passkey.notFound': 'Key not found.',
   'auth.link.linked': 'Sign-in method linked.',
   'auth.link.notLinked': 'This method is not linked to your account.',
   'auth.link.taken': 'That account already belongs to another profile. Sign in with it, or unlink it there first.',
