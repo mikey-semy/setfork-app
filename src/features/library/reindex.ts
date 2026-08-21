@@ -97,20 +97,52 @@ async function rebuildWikiLinks(templateId: string, contents: string[]): Promise
 /** Точечная переиндексация одного списка (или удаление из индекса, если его нет).
  *  Список + его шаги эмбеддятся ОДНИМ батч-вызовом (embedTexts) — не по HTTP на шаг. */
 export async function reindexList(templateId: string): Promise<void> {
+  /**
+   * ПИШЕМ ТОЛЬКО ТО, ЧТО ЕЩЁ АКТУАЛЬНО.
+   *
+   * Две джобы по одному списку могут идти внахлёст (публикация ставит свою поверх идущей),
+   * и порядок их завершения очередью не гарантирован. Снимок «список ещё черновик»,
+   * собранный раньше, дописывался ПОСЛЕ свежего и стирал публичный эмбеддинг — список
+   * исчезал из смыслового поиска, хотя проход только что был (находка авто-ревью по #819).
+   *
+   * Замка тут быть не может: между сбором и записью идёт вызов модели, и держать на нём
+   * транзакцию нельзя. Поэтому сверка снимка: запомнили состояние до сбора, перед записью
+   * перечитали. Разошлось — записывать не наше дело, свежий проход уже идёт или поставлен.
+   */
+  const snapshot = async () => {
+    const [row] = await db
+      .select({ updatedAt: templates.updatedAt, status: templates.status, visibility: templates.visibility })
+      .from(templates)
+      .where(eq(templates.id, templateId))
+    return row ? `${row.updatedAt?.toISOString() ?? ''}|${row.status}|${row.visibility}` : ''
+  }
+
+  const before = await snapshot()
   const mine = await collectItems(templateId)
-  await db.delete(embeddings).where(eq(embeddings.refId, templateId))
-  await rebuildWikiLinks(templateId, mine.map((i) => i.content))
-  if (!mine.length) return
-  const { embedTexts } = await import('@/shared/ai/embeddings')
-  const vecs = await embedTexts(mine.map((i) => i.content), 'doc') // модель/мерность диктует пространство индекса (embed-space)
-  await db.insert(embeddings).values(
-    mine.map((it, i) => ({
-      kind: it.kind,
-      refId: it.refId,
-      // Вектор уже посчитан из ПОЛНОГО текста; приватный плейнтекст в корпус не пишем.
-      content: it.isPublic ? it.content : '',
-      embedding: vecs?.[i] ?? null,
-      metadata: it.isPublic ? it.metadata : { private: true },
-    })),
-  )
+  const vecs = mine.length ? await (await import('@/shared/ai/embeddings')).embedTexts(mine.map((i) => i.content), 'doc') : null
+
+  await db.transaction(async (tx) => {
+    // Состояние читаем ВНУТРИ транзакции записи: снаружи между проверкой и записью снова
+    // осталось бы окно.
+    const [fresh] = await tx
+      .select({ updatedAt: templates.updatedAt, status: templates.status, visibility: templates.visibility })
+      .from(templates)
+      .where(eq(templates.id, templateId))
+    const now = fresh ? `${fresh.updatedAt?.toISOString() ?? ''}|${fresh.status}|${fresh.visibility}` : ''
+    if (now !== before) return // список уехал вперёд — его переиндексирует свежий проход
+    await tx.delete(embeddings).where(eq(embeddings.refId, templateId))
+    await rebuildWikiLinks(templateId, mine.map((i) => i.content))
+    if (!mine.length) return
+    await tx.insert(embeddings).values(
+      mine.map((it, i) => ({
+        kind: it.kind,
+        refId: it.refId,
+        // Вектор уже посчитан из ПОЛНОГО текста; приватный плейнтекст в корпус не пишем.
+        content: it.isPublic ? it.content : '',
+        embedding: vecs?.[i] ?? null,
+        metadata: it.isPublic ? it.metadata : { private: true },
+      })),
+    )
+  })
 }
+
