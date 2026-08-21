@@ -204,9 +204,9 @@ async function publishDraft(templateId: string): Promise<void> {
   const handle = await ownerHandle(tpl.ownerId)
   if (!canEditList(tpl)) redirect(`/${handle}/${tpl.slug}?e=${editBlockReason(tpl) ?? 'frozen'}`)
 
-  // Теги черновика — в реестр (иначе новый тег не появится в каталоге и подсказках).
-  const pending = await getDraft(tpl.id, session.userId)
-  if (pending?.meta.tags?.length) await registerTags(pending.meta.tags)
+  // Теги черновика в реестр здесь БОЛЬШЕ НЕ ЗОВЁМ: это делает сама публикация черновика
+  // (features/library/draft), одной точкой на веб и MCP. Ручной вызов на каждом входе
+  // однажды уже разъехался — у MCP его просто не было.
   let res: PublishResult
   try {
     res = await publishDraftFor(tpl, session.userId)

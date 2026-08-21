@@ -30,6 +30,15 @@ export async function register() {
   // Тот же барьер для АВТОНОМНОЙ публикации: список, опубликованный гейтом готовности
   // без человека, обязан пройти модерацию — иначе петля стала бы единственным путём в
   // паблик мимо проверки.
+  // Теги черновика → в реестр на единой точке публикации. Портом, потому что
+  // features/library не может импортировать features/tags (границы слоёв), а ручной
+  // вызов на каждом входе уже разъезжался: веб звал, MCP нет.
+  const [{ registerTagsRegistrar }, { registerTags }] = await Promise.all([
+    import('@/features/library/draft'),
+    import('@/features/tags/service'),
+  ])
+  registerTagsRegistrar(registerTags)
+
   const [{ registerModerationGate }, { gateListPublication }] = await Promise.all([
     import('@/shared/agents/publication'),
     import('@/features/moderation/moderate-list'),
