@@ -24,10 +24,10 @@ const { channelDown, channelState } = await import('@/features/backoffice/ai-wat
 const { ERROR_STREAK_TRIP } = await import('@/shared/agents/canary')
 
 /** Вызов модели в журнале. Порядок задаётся сдвигом времени: считаем именно «подряд с конца». */
-const call = async (outcome: string, opts: { minutesAgo?: number; feature?: string; model?: string } = {}) => {
+const call = async (outcome: string, opts: { minutesAgo?: number; feature?: string; model?: string; refType?: string } = {}) => {
   const [row] = await db
     .insert(aiUsage)
-    .values({ feature: (opts.feature ?? 'refine') as 'refine', model: opts.model ?? 'openrouter/auto', outcome })
+    .values({ feature: (opts.feature ?? 'refine') as 'refine', model: opts.model ?? 'openrouter/auto', outcome, ...(opts.refType ? { refType: opts.refType } : {}) } as never)
     .returning({ id: aiUsage.id })
   if (opts.minutesAgo) {
     await db.execute(sql`update ${aiUsage} set created_at = now() - (${opts.minutesAgo}::int * interval '1 minute') where id = ${row.id}`)
@@ -241,5 +241,31 @@ describe('сторож канала к модели', () => {
 
     expect(state.failStreak).toBe(ERROR_STREAK_TRIP)
     expect(channelDown(state)).toBe(true)
+  })
+})
+
+/**
+ * СЛУЖЕБНАЯ ОТМЕТКА УЧЁТА — НЕ ВЫЗОВ МОДЕЛИ.
+ *
+ * `council-run` пишется ПОСЛЕ работы совета с нулевыми токенами: это расход слота лимита, а
+ * не обращение к каналу. Считая её успехом, сторож объявлял канал ожившим без единого
+ * удачного вызова — и слал владельцу «канал восстановлен» посреди обрыва (авто-ревью #775).
+ */
+describe('служебные отметки не путаются с вызовами', () => {
+  it('отметка учёта не считается успехом и не прерывает серию отказов', async () => {
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 30 - i })
+    await call('ok', { refType: 'council-run' }) // «успех», за которым модель не звалась
+
+    const state = await channelState()
+
+    expect(state.failStreak).toBe(ERROR_STREAK_TRIP)
+    expect(channelDown(state)).toBe(true)
+  })
+
+  it('настоящий успех серию прерывает', async () => {
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 30 - i })
+    await call('ok')
+
+    expect(channelDown(await channelState())).toBe(false)
   })
 })
