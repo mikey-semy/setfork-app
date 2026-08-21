@@ -70,6 +70,19 @@ describe('publish_lists: адреса', () => {
     expect(res.skipped).toBe(1)
   })
 
+  it('идущая переиндексация не глотает постановку после публикации', async () => {
+    // Джоба, взятая в работу, читала список ЧЕРНОВИКОМ и запишет пустоту приватного.
+    // Считать её дублем — значит оставить опубликованный список вне смыслового поиска до
+    // первой посторонней правки (находка авто-ревью по #819).
+    const id = await mkList(meId, 'inflight')
+    await db.insert(jobs).values({ type: 'reindex', status: 'processing', payload: { templateId: id } } as never)
+
+    await mcpPublishLists(meId, ['inflight'], false)
+
+    const queued = await db.select({ type: jobs.type, status: jobs.status }).from(jobs)
+    expect(queued.filter((j) => j.type === 'reindex' && j.status === 'pending')).toHaveLength(1)
+  })
+
   it('опубликованный черновик уходит в переиндексацию', async () => {
     await mkList(meId, 'deploy')
 

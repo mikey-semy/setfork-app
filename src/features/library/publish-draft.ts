@@ -223,8 +223,12 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
   // становился публичным и не появлялся ни в смысловом поиске, ни в прецедентах совета —
   // до первой посторонней правки (находка авто-ревью на #789). Смысловой поиск ходит через
   // таблицу эмбеддингов, а её заполняет только очередь.
+  //
+  // `afterStateChange` — потому что изменилось СОСТОЯНИЕ, а не текст: идущая джоба читала
+  // список ещё черновиком и запишет пустоту, поэтому дублем считается только ожидающая.
+  // Ставим разом, а не по очереди: списки независимы, ждать друг друга им незачем.
   const { enqueueReindex } = await import('./jobs')
-  for (const row of landed) await enqueueReindex(row.id)
+  await Promise.all(landed.map((row) => enqueueReindex(row.id, { afterStateChange: true })))
   return report
 }
 
