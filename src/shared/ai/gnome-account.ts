@@ -201,6 +201,51 @@ export async function unnamedGnomesCount(): Promise<number> {
  *
  * id НЕ трогаем: он же ключ аватарки и значение who в истории беседы.
  */
+/** Снимок строки, каким его прочитала раздача имён: по нему и сверяется сторож. */
+type ExpertSeen = { id: string; nameEn: string; nameRu: string; professionEn: string; professionRu: string; userId: string | null }
+
+/**
+ * Переименовать, ЕСЛИ строка всё ещё та, что мы прочитали.
+ *
+ * Сторож сравнивал только английскую пару, и правка админа, менявшая ТОЛЬКО русское имя или
+ * должность, пролетала мимо: условие совпадало, и свежие русские значения затирались
+ * (находка авто-ревью на #770, P1). Теперь в условии все четыре поля, которые эта запись
+ * перезаписывает.
+ *
+ * Вынесено отдельной функцией не ради красоты: сторожа иначе нечем проверить — гонку в
+ * цикле не воспроизвести, а здесь снимок передаётся явно, и «строку успели поправить»
+ * выражается обычным тестом.
+ *
+ * Обе записи в одной транзакции: упади вторая после первой — состав звался бы новым именем,
+ * а публичный профиль остался бы старым, и кнопка чинить это отказалась бы (профессия уже
+ * заполнена, то есть строка считается названной).
+ */
+export async function renameIfUnchanged(
+  seen: ExpertSeen,
+  next: { nameEn: string; nameRu: string; professionEn: string; professionRu: string },
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const done = await tx
+      .update(councilExperts)
+      .set({ ...next, updatedAt: new Date() })
+      .where(
+        and(
+          eq(councilExperts.id, seen.id),
+          eq(councilExperts.nameEn, seen.nameEn),
+          eq(councilExperts.nameRu, seen.nameRu),
+          eq(councilExperts.professionEn, seen.professionEn),
+          eq(councilExperts.professionRu, seen.professionRu),
+        ),
+      )
+      .returning({ id: councilExperts.id })
+    if (!done.length) return false
+    // Аккаунт заведён раньше и держит СВОЮ копию имени: не обновить его значит развести
+    // состав и публичный профиль — в ростере Brokkr, в профиле по-прежнему Devops.
+    if (seen.userId) await tx.update(users).set({ name: next.nameEn, profession: next.professionEn }).where(eq(users.id, seen.userId))
+    return true
+  })
+}
+
 export async function assignMythicNames(): Promise<{ renamed: number; names: Record<string, string> }> {
   const rows = await db.select().from(councilExperts)
   const pending = rows.filter((r) => needsOwnName(r.nameEn, r.professionEn))
@@ -221,18 +266,7 @@ export async function assignMythicNames(): Promise<{ renamed: number; names: Rec
     // затёрта; а упади вторая запись после первой — состав звался бы Brokkr, профиль
     // остался бы Devops, и кнопка чинить это отказалась бы (профессия уже заполнена, то
     // есть строка считается названной).
-    const renamed = await db.transaction(async (tx) => {
-      const done = await tx
-        .update(councilExperts)
-        .set({ nameEn: n.name, nameRu: n.nameRu, professionEn, professionRu, updatedAt: new Date() })
-        .where(and(eq(councilExperts.id, r.id), eq(councilExperts.nameEn, r.nameEn), eq(councilExperts.professionEn, r.professionEn)))
-        .returning({ id: councilExperts.id })
-      if (!done.length) return false
-      // Аккаунт заведён раньше и держит СВОЮ копию имени: не обновить его значит развести
-      // состав и публичный профиль — в ростере Brokkr, в профиле по-прежнему Devops.
-      if (r.userId) await tx.update(users).set({ name: n.name, profession: professionEn }).where(eq(users.id, r.userId))
-      return true
-    })
+    const renamed = await renameIfUnchanged(r, { nameEn: n.name, nameRu: n.nameRu, professionEn, professionRu })
     if (!renamed) continue // строку успели поправить руками — её имя теперь дело владельца
     taken.add(n.name)
     names[r.id] = `${n.name} / ${n.nameRu} (${n.source}: ${n.meaning})`
