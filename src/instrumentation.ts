@@ -84,8 +84,18 @@ export async function register() {
       import('@/features/library/mirror-jobs'),
       import('@/features/git/push-effects'),
     ])
+  // РАБОТА КОМПАНИИ ПОМЕЧАЕТСЯ ЗДЕСЬ — в одной точке, а не в каждом вызове модели.
+  // Всё, что петля позовёт внутри, попадёт в журнал расхода как вызов компании, а не
+  // человека; забыть пометку негде, потому что помечать больше нечего
+  // (см. shared/ai/actor-context).
+  const { runAsCompany } = await import('@/shared/ai/actor-context')
   const loopHandlers = Object.fromEntries(
-    await Promise.all(LOOPS.map(async (l) => [l.jobType, await LOOP_WIRING[l.name].handler()] as const)),
+    await Promise.all(
+      LOOPS.map(async (l) => {
+        const handler = await LOOP_WIRING[l.name].handler()
+        return [l.jobType, ((payload: never) => runAsCompany(() => handler(payload))) as typeof handler] as const
+      }),
+    ),
   )
   // Финализаторы (второй реестр, необязательный) — для задач, чья смерть оставляет
   // что-то незакрытым. У генерации это статус 'pending': умер процесс, не дойдя до

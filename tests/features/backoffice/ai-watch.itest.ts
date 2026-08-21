@@ -24,10 +24,10 @@ const { channelDown, channelState } = await import('@/features/backoffice/ai-wat
 const { ERROR_STREAK_TRIP } = await import('@/shared/agents/canary')
 
 /** Вызов модели в журнале. Порядок задаётся сдвигом времени: считаем именно «подряд с конца». */
-const call = async (outcome: string, opts: { minutesAgo?: number; feature?: string; model?: string; refType?: string } = {}) => {
+const call = async (outcome: string, opts: { minutesAgo?: number; feature?: string; model?: string; refType?: string; actor?: 'user' | 'company' } = {}) => {
   const [row] = await db
     .insert(aiUsage)
-    .values({ feature: (opts.feature ?? 'refine') as 'refine', model: opts.model ?? 'openrouter/auto', outcome, ...(opts.refType ? { refType: opts.refType } : {}) } as never)
+    .values({ feature: (opts.feature ?? 'refine') as 'refine', model: opts.model ?? 'openrouter/auto', outcome, actor: opts.actor ?? 'company', ...(opts.refType ? { refType: opts.refType } : {}) } as never)
     .returning({ id: aiUsage.id })
   if (opts.minutesAgo) {
     await db.execute(sql`update ${aiUsage} set created_at = now() - (${opts.minutesAgo}::int * interval '1 minute') where id = ${row.id}`)
@@ -267,5 +267,29 @@ describe('служебные отметки не путаются с вызов�
     await call('ok')
 
     expect(channelDown(await channelState())).toBe(false)
+  })
+})
+
+/**
+ * СВОДКА ДНЯ СЧИТАЕТ ВЫЗОВЫ КОМПАНИИ, А НЕ ВСЕ ПОДРЯД.
+ *
+ * Признака «кто позвал» не было, и пять неудачных генераций ЧЕЛОВЕКА читались как «компания
+ * не сделала ничего»: сводка объявляла её бездельницей за чужие отказы (авто-ревью #775).
+ * Признак ставит контекст исполнения петли, а не аргумент вызова.
+ */
+describe('день компании и чужие вызовы', () => {
+  it('пользовательские вызовы в счёт дня не идут', async () => {
+    const { callsOnDay } = await import('@/features/backoffice/ai-watch')
+    for (let i = 0; i < 5; i++) await call('error', { minutesAgo: 60, actor: 'user' })
+
+    expect(await callsOnDay(0)).toEqual({ calls: 0, failed: 0 })
+  })
+
+  it('вызовы компании идут', async () => {
+    const { callsOnDay } = await import('@/features/backoffice/ai-watch')
+    await call('ok', { minutesAgo: 60 })
+    await call('error', { minutesAgo: 60 })
+
+    expect(await callsOnDay(0)).toEqual({ calls: 2, failed: 1 })
   })
 })

@@ -151,6 +151,12 @@ export async function callsOnDay(daysAgo: number): Promise<{ calls: number; fail
     .where(
       and(
         ne(aiUsage.feature, 'embed'),
+        notAccounting,
+        // ТОЛЬКО ВЫЗОВЫ КОМПАНИИ: сводка говорит про её день, и чужие отказы ей приписывать
+        // нельзя. Раньше признака не было, и пять неудачных генераций ЧЕЛОВЕКА читались как
+        // «компания не сделала ничего» (находка авто-ревью #775). Признак ставит контекст
+        // исполнения петли — см. shared/ai/actor-context.
+        eq(aiUsage.actor, 'company'),
         sql`${aiUsage.createdAt} >= date_trunc('day', now()) - (${daysAgo}::int * interval '1 day')`,
         sql`${aiUsage.createdAt} < date_trunc('day', now()) - ((${daysAgo}::int - 1) * interval '1 day')`,
       ),

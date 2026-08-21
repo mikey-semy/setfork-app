@@ -49,6 +49,19 @@ export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted',
 // 'gate' — линзы готовности к публикации (отдельно от 'moderate': та решает «безопасно ли
 // показывать», эта — «готово ли к показу»; смешивать их в учёте расхода нельзя).
 export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate', 'mcp-gnome', 'dig', 'assist', 'gate', 'landing'])
+/**
+ * КТО ПОЗВАЛ МОДЕЛЬ: человек или компания (автономные петли).
+ *
+ * Различить было нечем, и сводка дня объявляла компанию бездельницей за чужие отказы:
+ * пять неудачных пользовательских генераций читались как «компания не сделала ничего»
+ * (находка авто-ревью #775). Признак ставится НЕ на каждом вызове руками, а из контекста
+ * исполнения — см. shared/ai/actor-context.
+ *
+ * ⚠️ Строки, записанные ДО появления колонки, все считаются пользовательскими: чем они были
+ * на самом деле, восстановить неоткуда. На счётчиках дня это скажется один раз — за прошлые
+ * сутки компания будет выглядеть тише, чем была.
+ */
+export const aiActor = pgEnum('ai_actor', ['user', 'company'])
 export const notificationType = pgEnum('notification_type', [
   'suggestion_new',
   'suggestion_accepted',
@@ -2095,6 +2108,8 @@ export const aiUsage = pgTable(
     costUsd: numeric('cost_usd', { precision: 12, scale: 6 }).notNull().default('0'),
     refType: text('ref_type'), // 'generation' | 'template' | …
     refId: uuid('ref_id'),
+    /** Человек или компания — см. комментарий у `aiActor`. */
+    actor: aiActor('actor').notNull().default('user'),
     /**
      * КТО расходовал: id специалиста в ростере ('chef', 'devops'). Раньше здесь была
      * только модель, поэтому здоровье считалось по model id, а «сколько тратит этот

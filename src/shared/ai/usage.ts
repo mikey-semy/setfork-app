@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, desc, eq, gte, sql } from 'drizzle-orm'
 import { aiUsage, db, users } from '@/shared/db'
+import { currentAiActor } from './actor-context'
 import type { AiProviderId } from '@/shared/settings/ai'
 
 export type AiFeature = 'generate' | 'regenerate' | 'refine' | 'note' | 'moderate' | 'embed' | 'translate' | 'mcp-gnome' | 'dig' | 'assist' | 'gate' | 'landing'
@@ -77,6 +78,9 @@ export async function recordUsage(row: {
       refType: row.refType ?? null,
       refId: row.refId ?? null,
       outcome: row.outcome ?? 'ok',
+      // Кто позвал — из контекста исполнения: помечать тридцать одно место руками значило бы
+      // завести тридцать одну возможность забыть (см. shared/ai/actor-context).
+      actor: currentAiActor(),
       durationMs: Math.max(0, Math.round(row.durationMs ?? 0)),
       gnomeId: row.gnomeId ?? '',
     })
