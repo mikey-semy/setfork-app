@@ -150,6 +150,17 @@ describe('последний способ входа', () => {
     expect(await unlinkIdentity(u.id, 'github')).toBe('last-method')
   })
 
+  it('НЕПРИГОДНЫЙ провайдер отвязывается — он ничего не отнимает', async () => {
+    // Пароль плюс выключенный провайдер: пригодная дверь одна, но убираем мы НЕ её.
+    // Запрещать тут нечего — а прежнее правило запрещало, мешая навести порядок.
+    const u = await mkUser('tidy', { yandexId: 'ya-1', passwordHash: 'x' })
+    process.env.AUTH_DISABLED_PROVIDERS = 'yandex'
+
+    expect(await signInMethodsCount(u.id)).toBe(1)
+    expect(await unlinkIdentity(u.id, 'yandex')).toBe('unlinked')
+    expect((await rowOf(u.id)).yandexId).toBeNull()
+  })
+
   it('две отвязки разом не оставляют аккаунт без входа', async () => {
     const u = await mkUser('racer', { githubId: 1, yandexId: 'ya-1' })
 
