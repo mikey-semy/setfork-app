@@ -1,7 +1,7 @@
 import 'server-only'
 import { eq, type SQL } from 'drizzle-orm'
 import { db, passkeys, users, type Executor } from '@/shared/db'
-import type { OauthProvider } from './oauth'
+import { oauthEnabled, type OauthProvider } from './oauth'
 
 /**
  * СПОСОБЫ ВХОДА как данные.
@@ -87,5 +87,11 @@ export async function signInMethodsCount(userId: string, exec: Executor = db): P
     .limit(1)
   if (!u) return 0
   const keys = await exec.select({ id: passkeys.id }).from(passkeys).where(eq(passkeys.userId, userId))
-  return linkedProviders(u).length + (u.passwordHash ? 1 : 0) + keys.length
+  // Считаем только ПРИГОДНЫЕ двери. Провайдер, выключенный настройкой инстанса
+  // (AUTH_DISABLED_PROVIDERS) или оставшийся без ключей приложения, остаётся привязанным и
+  // показывается в настройках — намеренно, — но войти им нельзя: стартовый маршрут
+  // откажет. Считая его наравне с рабочим, счёт разрешал отвязать ПОСЛЕДНИЙ рабочий вход и
+  // оставить человека с дверью, которая не открывается (находка авто-ревью на #782, P1).
+  const enabled = oauthEnabled()
+  return linkedProviders(u).filter((p) => enabled[p]).length + (u.passwordHash ? 1 : 0) + keys.length
 }
