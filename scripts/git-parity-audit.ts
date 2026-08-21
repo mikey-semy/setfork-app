@@ -45,8 +45,47 @@ import { gitCore } from '@/features/git/core'
 const flat = (v: unknown): string =>
   typeof v === 'string' ? v : v && typeof v === 'object' ? String(Object.values(v as Record<string, string>)[0] ?? '') : ''
 
-/** Отпечаток шага: заголовок и команда. Их видно и в клоне, и на странице. */
-const fingerprint = (s: { title: unknown; command: unknown }) => `${flat(s.title)} | ${flat(s.command) || ''}`
+/**
+ * Отпечаток блока — ПО ВСЕМУ содержимому, а не по паре полей.
+ *
+ * Первая версия сверяла заголовок и команду, и это делало гейт слепым ровно к тому классу
+ * потерь, ради которого он заведён: расхождение в описании, секции, ссылках, картинке или
+ * пометке «здесь нужен человек» читалось как «совпадает» (находка авто-ревью по #811).
+ * Не-step блоки она выбрасывала целиком — то есть текст, опросы и квизы не сверялись вовсе.
+ *
+ * ⚠️ Вложенный `content` КАНОНИЗИРУЕТСЯ по ключам. С одной стороны он приезжает из колонки
+ * jsonb, с другой — разобранным из git-JSON, и порядок ключей там не гарантирован и смысла
+ * не несёт. Голый `JSON.stringify` объявлял бы расхождением одинаковые опросы и картинки,
+ * у которых ключи легли в разном порядке — то есть гейт падал бы на ровном месте (находка
+ * авто-ревью по #812).
+ */
+const canon = (v: unknown): unknown => {
+  if (Array.isArray(v)) return v.map(canon)
+  if (v && typeof v === 'object')
+    return Object.fromEntries(
+      Object.entries(v as Record<string, unknown>)
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(([k, val]) => [k, canon(val)]),
+    )
+  return v
+}
+const fingerprint = (s: Record<string, unknown>): string =>
+  JSON.stringify({
+    type: (s.type as string) || 'step',
+    title: flat(s.title),
+    desc: flat(s.desc),
+    command: (s.command as string) || '',
+    level: (s.level as string) || '',
+    why: flat(s.why),
+    section: flat(s.section),
+    subtasks: ((s.subtasks as unknown[]) || []).map(flat),
+    refs: ((s.refs as { label?: unknown; url?: unknown }[]) || []).map((r) => [flat(r.label), (r.url as string) || '']),
+    needsHuman: !!s.needsHuman,
+    needsHumanAsk: flat(s.needsHumanAsk),
+    danger: !!s.danger,
+    image: (s.imageKey as string) || (s.imageRef as string) || '',
+    content: canon(s.content ?? {}),
+  })
 
 async function main() {
   // Ограничение набора: без него прогон МАТЕРИАЛИЗУЕТ все репозитории и сверка становится
@@ -78,14 +117,10 @@ async function main() {
       .from(templateVersions)
       .where(and(eq(templateVersions.templateId, t.id), eq(templateVersions.version, t.current)))
     if (!ver) continue
-    const rowsDb = await db
-      .select({ title: steps.title, command: steps.command, type: steps.type })
-      .from(steps)
-      .where(eq(steps.versionId, ver.id))
-      .orderBy(asc(steps.n))
-    const inDb = rowsDb.filter((s) => (s.type ?? 'step') === 'step').map(fingerprint)
+    const rowsDb = await db.select().from(steps).where(eq(steps.versionId, ver.id)).orderBy(asc(steps.n))
+    const inDb = rowsDb.map((r) => fingerprint(r as unknown as Record<string, unknown>))
 
-    type Snap = { steps?: { title: unknown; command: unknown; type?: string }[] }
+    type Snap = { steps?: Record<string, unknown>[] }
     let snap: Snap | null = null
     try {
       snap = (await gitCore.branchSnapshot({ owner: t.handle, slug: t.slug }, 'main')) as Snap | null
@@ -97,7 +132,7 @@ async function main() {
       console.log(`НЕТ GIT   ${t.handle}/${t.slug} (${t.status}, v${t.current})`)
       continue
     }
-    const inGit = (snap.steps ?? []).filter((s) => (s.type ?? 'step') === 'step').map(fingerprint)
+    const inGit = (snap.steps ?? []).map(fingerprint)
 
     checked++
     if (JSON.stringify(inDb) !== JSON.stringify(inGit)) {
@@ -117,7 +152,12 @@ async function main() {
     console.log('Лечение: любая новая версия списка рождается через ядро и выравнивает канон.')
   }
   // Код возврата — чтобы годился в гейт: расхождение это отказ, а не отчёт.
-  process.exit(diverged > 0 ? 1 : 0)
+  //
+  // НЕДОСТУПНЫЙ git считается отказом наравне с расхождением. Иначе упавшее ядро, сбитая
+  // авторизация или пустой ответ давали бы «Проверено: 0 · расхождений: 0» и код 0 — то есть
+  // гейт рапортовал бы успех, не сравнив ни одного репозитория (находка авто-ревью по #811).
+  if (unreachable > 0) console.log(`⚠️ у ${unreachable} списков не удалось получить снимок git — сверка по ним НЕ выполнена`)
+  process.exit(diverged > 0 || unreachable > 0 ? 1 : 0)
 }
 
 // Верхнеуровневый await здесь не годится: tsx собирает скрипты в cjs и падает на нём ещё до

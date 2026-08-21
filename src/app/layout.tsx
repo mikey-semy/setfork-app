@@ -19,7 +19,9 @@ import { TooltipProvider } from '@/shared/ui/Tooltip'
 import { AppToaster } from '@/shared/ui/toast'
 import { TopNav } from '@/widgets/TopNav'
 import { Sidebar } from '@/widgets/Sidebar'
+import { cookies } from 'next/headers'
 import { SidebarProvider } from '@/widgets/sidebar-context'
+import { SIDEBAR_COOKIE } from '@/shared/lib/sidebar-cookie'
 import { Footer } from '@/widgets/Footer'
 import { ScrollToTop } from '@/shared/ui/ScrollToTop'
 import './globals.css'
@@ -164,7 +166,10 @@ export const viewport: Viewport = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [lang, user] = await Promise.all([getLang(), getSession()])
+  const [lang, user, jar] = await Promise.all([getLang(), getSession(), cookies()])
+  // Сайдбар: свёрнут по умолчанию, развёрнут — только по явному выбору человека.
+  // Выбор приходит КУКОЙ, чтобы сервер нарисовал его сразу и не было прыжка после гидрации.
+  const sidebarCollapsed = jar.get(SIDEBAR_COOKIE)?.value !== '0'
   const [unread, notifications, browserNotify, ownLists, appearance] = user
     ? await Promise.all([
         getUnreadCount(user.userId),
@@ -213,7 +218,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <TooltipProvider>
             <div className="flex min-h-screen flex-col bg-canvas">
-              <SidebarProvider>
+              {/* Состояние сайдбара приходит из куки: сервер рисует его сразу таким, каким
+                  человек его оставил, и разворачивавший не видит прыжка после гидрации. */}
+              <SidebarProvider initialCollapsed={sidebarCollapsed}>
                 <Suspense>
                   <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
                 </Suspense>

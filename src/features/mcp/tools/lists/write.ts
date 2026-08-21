@@ -15,7 +15,7 @@ import { listStore } from '@/features/library/list-store'
 // Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { resolveListRefOrMoved } from '../shared'
-import { draftWritable, duplicateBid, lockList } from './draft-store'
+import { duplicateBid } from './draft-store'
 
 /** Отказ стража разрушительных команд → ответ инструмента. Это не сбой, а
  *  вердикт: агенту нужно назвать причину, а не увидеть стектрейс. */

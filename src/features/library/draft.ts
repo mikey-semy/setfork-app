@@ -46,6 +46,18 @@ export async function deleteDraft(templateId: string, authorId: string): Promise
   await db.delete(listDrafts).where(and(eq(listDrafts.templateId, templateId), eq(listDrafts.authorId, authorId)))
 }
 
+/**
+ * Пополнение реестра тегов — портом, а не импортом: `features/library` не может тянуть
+ * `features/tags` (границы слоёв). Связывает их composition root, как `registerAfterVersion`
+ * и `registerModerationGate`. До регистрации пусто — безопасно: публикация до старта
+ * воркера не случается.
+ */
+type TagsRegistrar = (slugs: string[]) => Promise<void>
+let tagsRegistrar: TagsRegistrar | null = null
+export function registerTagsRegistrar(fn: TagsRegistrar): void {
+  tagsRegistrar = fn
+}
+
 export type PublishResult =
   | { version: number; blocks: number }
   | { error: 'no draft' | 'stale' | 'empty'; message: string; currentVersion?: number; baseVersion?: number }
@@ -74,9 +86,17 @@ export async function publishDraftFor(tpl: ListRow, authorId: string, note?: str
 
   const tags = draft.meta.tags ?? tpl.tags
   const ordered = draft.meta.ordered ?? tpl.ordered
-  // Реестр тегов пополняет ВЫЗЫВАЮЩИЙ (см. actions.publishDraft): границы слоёв не
-  // дают features/library тянуть features/tags, а класть новую копию реестра сюда
-  // ради обхода правила — хуже, чем один явный вызов на входе.
+  // Реестр тегов пополняется ЗДЕСЬ, на единой точке публикации черновика.
+  //
+  // Раньше это делал вызывающий, и в комментарии рядом стояло объяснение: границы слоёв
+  // не дают features/library тянуть features/tags. Объяснение верное, а решение — нет:
+  // вызывающих оказалось двое, веб звал, а MCP нет, и тег, заведённый ассистентом, в
+  // каталоге и подсказках не появлялся вовсе (находка авто-ревью по #812). Ровно тем же
+  // однажды кончился ручной вызов пере-проверки модерации на каждом пути записи.
+  //
+  // Границу слоёв держим инверсией, как уже сделано для модерации и индекса: порт
+  // регистрирует composition root (instrumentation), фича его не импортирует.
+  if (draft.meta.tags?.length) await tagsRegistrar?.(draft.meta.tags)
   let created: { version: number }
   try {
     created = await listStore.addVersion(tpl.id, {

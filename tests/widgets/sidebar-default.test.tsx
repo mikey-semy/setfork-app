@@ -9,9 +9,14 @@ import { SidebarProvider, useSidebar } from '@/widgets/sidebar-context'
  * списков» в сайдбаре и модуль «Списки» в основной области — одно и то же, дважды и
  * одновременно. Найдено владельцем на живом сайте.
  *
- * Проверяется ровно граница между «умолчанием» и «выбором человека»: запись в хранилище
- * сильнее умолчания, её отсутствие — нет. Иначе правка умолчания однажды затрёт чужой
- * выбор, и заметят это не сразу.
+ * Проверяется ровно граница между «умолчанием» и «выбором человека»: выбор сильнее
+ * умолчания, его отсутствие — нет. Иначе правка умолчания однажды затрёт чужой выбор,
+ * и заметят это не сразу.
+ *
+ * Выбор живёт КУКОЙ и приходит с сервера пропом: страница сразу рисуется такой, какой
+ * человек её оставил. Раньше он лежал только в localStorage, сервер о нём не знал, и
+ * развернувший видел прыжок после гидрации (замечание авто-ревью по #811). Старая запись
+ * в localStorage поэтому не выбрасывается, а ОДИН РАЗ переносится в куку.
  */
 
 function Probe() {
@@ -21,30 +26,44 @@ function Probe() {
   return <span data-testid="state" data-collapsed={String(collapsed)} />
 }
 
-const show = () =>
+const show = (initialCollapsed?: boolean) =>
   render(
-    <SidebarProvider>
+    <SidebarProvider initialCollapsed={initialCollapsed}>
       <Probe />
     </SidebarProvider>,
   )
 
-beforeEach(() => localStorage.clear())
+const state = () => screen.getByTestId('state').getAttribute('data-collapsed')
+
+beforeEach(() => {
+  localStorage.clear()
+  // Куки в jsdom общие на документ — чистим, иначе соседний тест решит, что перенос уже был.
+  for (const c of document.cookie.split(';')) document.cookie = `${c.split('=')[0].trim()}=; max-age=0; path=/`
+})
 
 describe('состояние сайдбара при заходе', () => {
-  it('без выбора в хранилище — свёрнут', () => {
+  it('без выбора — свёрнут', () => {
     show()
-    expect(screen.getByTestId('state')).toHaveAttribute('data-collapsed', 'true')
+    expect(state()).toBe('true')
   })
 
-  it('человек развернул — так и остаётся', () => {
+  it('выбор с сервера сильнее умолчания', () => {
+    // Сервер прочитал куку и прислал «развёрнут» — рисуем сразу таким, без эффекта.
+    show(false)
+    expect(state()).toBe('false')
+  })
+
+  it('старый выбор из localStorage переносится в куку один раз', () => {
     localStorage.setItem('sf.sidebar.collapsed', '0')
     show()
-    expect(screen.getByTestId('state')).toHaveAttribute('data-collapsed', 'false')
+    expect(state()).toBe('false')
+    expect(document.cookie).toContain('sf_sidebar=0')
   })
 
-  it('человек свернул — тоже остаётся', () => {
-    localStorage.setItem('sf.sidebar.collapsed', '1')
-    show()
-    expect(screen.getByTestId('state')).toHaveAttribute('data-collapsed', 'true')
+  it('кука есть — localStorage больше не смотрим', () => {
+    document.cookie = 'sf_sidebar=1; path=/'
+    localStorage.setItem('sf.sidebar.collapsed', '0')
+    show(true)
+    expect(state()).toBe('true')
   })
 })

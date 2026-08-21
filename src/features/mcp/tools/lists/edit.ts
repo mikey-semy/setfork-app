@@ -10,7 +10,7 @@ import { getDraft } from '@/features/library/queries'
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { detailByRefOrMoved, toProposed, type DetailStep, type McpItemInput } from '../shared'
 import { patchBlock, rowsToProposed } from './patch-block'
-import { draftWritable, duplicateBid, lockList } from './draft-store'
+import { duplicateBid, listWritable, lockList } from './draft-store'
 import { destructiveError, ownedList, writeProposed } from './write'
 
 /** Обновить список (только владелец): новая версия через ядро, либо накопление в рабочей
@@ -20,6 +20,10 @@ export interface McpUpdateInput {
   note?: string
   tags?: string[]
   ordered?: boolean
+  /** false — правки НЕ создают версию, а ложатся в рабочую копию (ту же, что видит
+   *  редактор). Молча игнорировать этот флаг нельзя: агент решил бы, что правки ждут
+   *  публикации, тогда как они уже в живом списке. */
+  publish?: boolean
 }
 
 export async function mcpUpdateList(userId: string, handle: string, slug: string, input: McpUpdateInput) {
@@ -29,7 +33,78 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
   const tags = input.tags
     ? input.tags.map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
     : tpl.tags
-  return writeProposed(tpl, handle, slug, toProposed(input.items ?? []), input.note?.trim() || 'updated via API', {
+  const proposed = toProposed(input.items ?? [])
+
+  // publish:false — полная замена ложится в РАБОЧУЮ КОПИЮ, версии не создавая. Тот же
+  // черновик, что видит редактор и наполняет patch_list: путь накопления один на оба
+  // инструмента (ADR-0020). Обещание про publish:false стояло в описании инструмента, а
+  // кода за ним не было — находка авто-ревью по #811, P1: флаг молча отбрасывался
+  // валидатором, и агент получал версию там, где просил её не создавать.
+  if (input.publish === false) {
+    if (!proposed.length) return { error: 'at least one item with a title is required' }
+    const dup = duplicateBid(proposed)
+    if (dup) return { error: `two blocks share the same bid "${dup}" — a block id must be unique within a list` }
+    try {
+      return await db.transaction(async (tx) => {
+        // Под тем же замком, что и патч: иначе полная замена и патч читают один состав,
+        // а пишут по очереди целиком, и чья-то работа исчезает при двух «успехах».
+        await lockList(tx, tpl.id)
+        const denied = await listWritable(tx, tpl.id)
+        if (denied) return denied
+        const [fresh] = await tx.select({ current: templates.currentVersion }).from(templates).where(eq(templates.id, tpl.id))
+        if (!fresh) return { error: 'list not found' }
+        const [existing] = await tx
+          .select()
+          .from(listDrafts)
+          .where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, userId)))
+          .limit(1)
+        // База НЕ сдвигается у уже начатого черновика: сказать «правки сделаны от свежей
+        // версии», когда они сделаны от старой, значит затереть чужую работу при публикации.
+        const base = existing?.baseVersion ?? fresh.current
+        // Страж исполняемого выхода стоит и на рабочей копии: иначе `rm -rf /` доехал бы
+        // до человека при публикации, на непонятном ему шаге.
+        assertNoDestructiveSteps(stepInput(proposed))
+        // МЕТА едет вместе с составом: `tags` и `ordered` — часть того же запроса, и
+        // публикация черновика берёт их ИЗ НЕГО (publishDraftFor читает draft.meta).
+        // Без этого API отвечал бы «правки приняты», а теги с порядком молча пропадали
+        // при публикации — находка авто-ревью по #812, P1. Заданное перекрывает
+        // накопленное, незаданное остаётся как было (в т.ч. `gated`, которого у этого
+        // инструмента нет вовсе).
+        const meta = {
+          ...(existing?.meta ?? {}),
+          ...(input.tags ? { tags } : {}),
+          ...(input.ordered === undefined ? {} : { ordered: input.ordered }),
+        }
+        await tx
+          .insert(listDrafts)
+          .values({
+            templateId: tpl.id,
+            authorId: userId,
+            baseVersion: base,
+            items: proposed,
+            meta,
+            note: input.note?.trim() || existing?.note || '',
+          })
+          .onConflictDoUpdate({
+            target: [listDrafts.templateId, listDrafts.authorId],
+            set: { items: proposed, meta, note: input.note?.trim() || existing?.note || '', rev: sql`${listDrafts.rev} + 1`, updatedAt: new Date() },
+          })
+        return {
+          ref: `${handle}/${slug}`,
+          status: 'pending' as const,
+          baseVersion: base,
+          blocks: proposed.length,
+          hint: `nothing is published yet — call publish_draft to turn these edits into version ${base + 1}, or drop them with discard_draft`,
+        }
+      })
+    } catch (e) {
+      const refused = destructiveError(e)
+      if (refused) return refused
+      throw e
+    }
+  }
+
+  return writeProposed(tpl, handle, slug, proposed, input.note?.trim() || 'updated via API', {
     tags,
     ordered: input.ordered ?? tpl.ordered,
   })
