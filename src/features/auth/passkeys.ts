@@ -1,6 +1,6 @@
 'use server'
 
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { SignJWT, jwtVerify } from 'jose'
 import {
@@ -12,6 +12,7 @@ import {
   type RegistrationResponseJSON,
 } from '@simplewebauthn/server'
 import { db, passkeys, users } from '@/shared/db'
+import { removePasskey, type PasskeyRemoval } from './passkey-core'
 import { requireSession, startSession } from '@/shared/auth/session'
 import { secretKey } from '@/shared/auth/tokens'
 import { clientIpFromHeaders } from '@/shared/auth/app-origin'
@@ -145,10 +146,15 @@ export async function listPasskeys() {
     .orderBy(desc(passkeys.createdAt))
 }
 
-export async function deletePasskey(id: string): Promise<void> {
+// Ядро удаления живёт в passkey-core (БЕЗ 'use server'): экспорт из серверного модуля —
+// это сетевая точка входа, и функция, принимающая чужой userId аргументом, дала бы удаление
+// ключей ЛЮБОГО пользователя по прямому запросу. Поймал караул
+// `tests/security/server-action-actor-identity` — ровно та проверка, ради которой он заведён.
+export async function deletePasskey(id: string): Promise<PasskeyRemoval> {
   const session = await requireSession()
-  await db.delete(passkeys).where(and(eq(passkeys.id, id), eq(passkeys.userId, session.userId)))
-  await recordAudit('passkey.remove', { actorId: session.userId })
+  const outcome = await removePasskey(session.userId, id)
+  if (outcome === 'removed') await recordAudit('passkey.remove', { actorId: session.userId })
+  return outcome
 }
 
 export async function renamePasskey(id: string, name: string): Promise<void> {

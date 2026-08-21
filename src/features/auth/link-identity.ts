@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, ne } from 'drizzle-orm'
+import { and, eq, ne, sql } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
 import { IDENTITIES, linkedProviders, signInMethodsCount } from '@/shared/auth/identities'
 import type { OauthProvider } from '@/shared/auth/oauth'
@@ -55,17 +55,24 @@ export type UnlinkOutcome = 'unlinked' | 'not-linked' | 'last-method'
 /** Отвязать идентичность. Последний способ входа отвязать нельзя. */
 export async function unlinkIdentity(userId: string, provider: OauthProvider): Promise<UnlinkOutcome> {
   const spec = IDENTITIES[provider]
-  const [u] = await db
-    .select({ githubId: users.githubId, yandexId: users.yandexId, vkId: users.vkId, telegramId: users.telegramId })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
-  if (!u || !linkedProviders(u).includes(provider)) return 'not-linked'
-  if ((await signInMethodsCount(userId)) <= 1) return 'last-method'
-
-  await db.update(users).set(spec.value(null)).where(eq(users.id, userId))
-  await recordAudit('auth.identity-unlink', { actorId: userId, targetType: 'user', targetId: userId, meta: { provider } })
-  return 'unlinked'
+  // Проверка и снятие — ПОД ОДНИМ замком строки. Раздельно они разрешают две отвязки разом
+  // (две вкладки, повтор запроса): обе видят «способов два», обе срабатывают, и у аккаунта
+  // не остаётся ни одного входа при двух «успехах». Замечание авто-ревью на #782 (P1).
+  const outcome = await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${users} where ${users.id} = ${userId} for update`)
+    const [u] = await tx
+      .select({ githubId: users.githubId, yandexId: users.yandexId, vkId: users.vkId, telegramId: users.telegramId })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    if (!u || !linkedProviders(u).includes(provider)) return 'not-linked' as const
+    if ((await signInMethodsCount(userId, tx)) <= 1) return 'last-method' as const
+    await tx.update(users).set(spec.value(null)).where(eq(users.id, userId))
+    return 'unlinked' as const
+  })
+  if (outcome === 'unlinked')
+    await recordAudit('auth.identity-unlink', { actorId: userId, targetType: 'user', targetId: userId, meta: { provider } })
+  return outcome
 }
 
 /**

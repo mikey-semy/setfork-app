@@ -1,6 +1,6 @@
 import 'server-only'
 import { eq, type SQL } from 'drizzle-orm'
-import { db, passkeys, users } from '@/shared/db'
+import { db, passkeys, users, type Executor } from '@/shared/db'
 import type { OauthProvider } from './oauth'
 
 /**
@@ -68,9 +68,13 @@ export function linkedProviders(u: IdentityRow): OauthProvider[] {
  *
  * Нужно ради одного правила: последний способ входа отвязать нельзя. Иначе человек
  * закрывает себе дверь снаружи, и вернуть доступ сможет только владелец инстанса руками.
+ *
+ * `exec` — транзакция вызывающего. Считать надо ПОД ЗАМКОМ строки пользователя: проверка и
+ * снятие двумя отдельными запросами разрешают две отвязки разом — обе видят «способов два»,
+ * обе срабатывают, и у аккаунта не остаётся ни одного входа при двух «успехах».
  */
-export async function signInMethodsCount(userId: string): Promise<number> {
-  const [u] = await db
+export async function signInMethodsCount(userId: string, exec: Executor = db): Promise<number> {
+  const [u] = await exec
     .select({
       githubId: users.githubId,
       yandexId: users.yandexId,
@@ -82,6 +86,6 @@ export async function signInMethodsCount(userId: string): Promise<number> {
     .where(eq(users.id, userId))
     .limit(1)
   if (!u) return 0
-  const keys = await db.select({ id: passkeys.id }).from(passkeys).where(eq(passkeys.userId, userId))
+  const keys = await exec.select({ id: passkeys.id }).from(passkeys).where(eq(passkeys.userId, userId))
   return linkedProviders(u).length + (u.passwordHash ? 1 : 0) + keys.length
 }

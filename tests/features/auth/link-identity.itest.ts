@@ -9,6 +9,7 @@ import { resetTables } from '../../helpers/reset-db'
 
 const { db, passkeys, users } = await import('@/shared/db')
 const { linkIdentity, unlinkIdentity } = await import('@/features/auth/link-identity')
+const { removePasskey } = await import('@/features/auth/passkey-core')
 const { linkedProviders, signInMethodsCount } = await import('@/shared/auth/identities')
 
 const mkUser = async (handle: string, over: Partial<typeof users.$inferInsert> = {}) => {
@@ -95,5 +96,48 @@ describe('отвязка способа входа', () => {
     const u = await mkUser('no-vk', { githubId: 5, yandexId: 'ya-5' })
 
     expect(await unlinkIdentity(u.id, 'vk')).toBe('not-linked')
+  })
+})
+
+/**
+ * ПРАВИЛО ПОСЛЕДНЕГО СПОСОБА ВХОДА ДЕЙСТВУЕТ НА ВСЕХ ДВЕРЯХ, А НЕ НА ОДНОЙ.
+ *
+ * Оно было заведено при отвязке провайдера, но удаление passkey шло мимо: у человека, чей
+ * единственный вход — ключ, удаление ключа закрывало дверь снаружи навсегда. Вернуть доступ
+ * мог бы только владелец инстанса руками. Замечание авто-ревью на #782 (P1), непрочитанное:
+ * PR смержили, тред остался открытым, дыра — в проде.
+ *
+ * Второе правило — атомарность. Проверка и снятие шли двумя запросами, поэтому две отвязки
+ * разом (две вкладки, повтор запроса) обе видели «способов два» и обе срабатывали: у аккаунта
+ * не оставалось ни одного входа при двух «успехах».
+ */
+describe('последний способ входа', () => {
+  it('единственный passkey удалить нельзя', async () => {
+    const u = await mkUser('keyonly')
+    await db.insert(passkeys).values({ userId: u.id, credentialId: 'c1', publicKey: 'k', counter: 0, name: 'ключ' } as never)
+
+    expect(await removePasskey(u.id, (await db.select().from(passkeys).where(eq(passkeys.userId, u.id)))[0].id)).toBe('last-method')
+    expect(await db.select().from(passkeys).where(eq(passkeys.userId, u.id))).toHaveLength(1)
+  })
+
+  it('второй passkey удаляется свободно', async () => {
+    const u = await mkUser('twokeys')
+    await db.insert(passkeys).values([
+      { userId: u.id, credentialId: 'c1', publicKey: 'k', counter: 0, name: 'первый' },
+      { userId: u.id, credentialId: 'c2', publicKey: 'k', counter: 0, name: 'второй' },
+    ] as never)
+    const rows = await db.select().from(passkeys).where(eq(passkeys.userId, u.id))
+
+    expect(await removePasskey(u.id, rows[0].id)).toBe('removed')
+    expect(await db.select().from(passkeys).where(eq(passkeys.userId, u.id))).toHaveLength(1)
+  })
+
+  it('две отвязки разом не оставляют аккаунт без входа', async () => {
+    const u = await mkUser('racer', { githubId: 1, yandexId: 'ya-1' })
+
+    await Promise.all([unlinkIdentity(u.id, 'github'), unlinkIdentity(u.id, 'yandex')])
+
+    // Какой бы ни выиграл, ОДИН способ обязан остаться.
+    expect(await signInMethodsCount(u.id)).toBeGreaterThanOrEqual(1)
   })
 })
