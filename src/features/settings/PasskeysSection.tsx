@@ -44,13 +44,17 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
 
   // Оптимистично убираем строку, но ОТКАЗ возвращаем на экран: правило последнего способа
   // входа отказывает молча только в коде, а человек должен понять, почему ключ остался.
+  //
+  // После отказа список берём У СЕРВЕРА, а не восстанавливаем снимок из замыкания. Два
+  // удаления внахлёст берут замок строки в любом порядке: если позже нажатое прошло первым,
+  // а раньше нажатое получило отказ, снимок вернул бы на экран УЖЕ УДАЛЁННЫЙ ключ — человек
+  // видел бы то, чего нет (замечание авто-ревью по #815).
   async function remove(id: string) {
     setErr('')
-    const before = list
     setList((prev) => prev.filter((p) => p.id !== id))
     const outcome = await deletePasskey(id)
     if (outcome === 'removed') return
-    setList(before)
+    setList(await listPasskeys())
     setErr(t(outcome === 'last-method' ? 'auth.passkey.lastMethod' : 'auth.passkey.notFound', lang))
   }
 
