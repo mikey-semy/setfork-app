@@ -178,15 +178,19 @@ export async function mcpPublishLists(userId: string, refs: string[], dryRun = t
   const out: McpPublishResult = { dryRun, planned: list.length, published: 0, skipped: 0, lists: [] }
   list.forEach((ref) => {
     const id = idOfRef.get(ref)
-    if (id && firstRefOf.get(id) !== ref) {
-      out.skipped++
-      out.lists.push({ ref, status: 'skipped', reason: `same list as ${firstRefOf.get(id)}` })
-      return
-    }
     const outcome = id ? byId.get(id) : null
+    // ОТКАЗ ПРОВЕРЯЕМ ПЕРВЫМ, и только потом повтор. Иначе два ЧУЖИХ адреса одного списка
+    // получали ответ «тот же список, что X» — то есть инструмент подтверждал постороннему,
+    // что два адреса ведут в одну запись, хотя про чужое он обязан отвечать одинаково:
+    // «нет такого среди твоих». Находка линзы 02 на этом же PR.
     if (!outcome || outcome.skip) {
       out.skipped++
       out.lists.push({ ref, status: 'skipped', reason: SKIP_REASON[outcome?.skip ?? 'not-yours'] })
+      return
+    }
+    if (id && firstRefOf.get(id) !== ref) {
+      out.skipped++
+      out.lists.push({ ref, status: 'skipped', reason: `same list as ${firstRefOf.get(id)}` })
       return
     }
     if (dryRun) {

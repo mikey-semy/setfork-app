@@ -52,6 +52,19 @@ describe('publish_lists: адреса', () => {
     expect((await db.select({ s: templates.status }).from(templates).where(eq(templates.id, mine)))[0].s).toBe('draft')
   })
 
+  it('два ЧУЖИХ адреса одного списка не выдают, что это один список', async () => {
+    // Линза 02: ответ про чужое обязан быть одинаковым — иначе инструмент подтверждает
+    // постороннему связь двух адресов, которую тот только предполагал.
+    const foreign = await mkList(otherId, 'secretplan')
+    await db.update(templates).set({ visibility: 'private' }).where(eq(templates.id, foreign))
+
+    const res = (await mcpPublishLists(meId, ['other/secretplan', 'other/secretplan '], false)) as {
+      lists: { ref: string; reason?: string }[]
+    }
+
+    for (const l of res.lists) expect(l.reason).not.toMatch(/same list/)
+  })
+
   it('свой адрес с ником публикует', async () => {
     const mine = await mkList(meId, 'deploy')
 
