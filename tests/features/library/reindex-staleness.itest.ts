@@ -25,13 +25,21 @@ const h = vi.hoisted(() => {
   const gate = new Promise<void>((r) => {
     open = r
   })
+  // Ворота СООБЩАЮТ, что проход в них вошёл. Без этого сигнала тест ждал фиксированные
+  // 50 мс — на загруженной машине первый проход мог не успеть, ворота доставались бы
+  // ВТОРОМУ, и тест висел бы до таймаута (находка авто-ревью по #819).
+  let entered: (() => void) | null = null
+  const entrance = new Promise<void>((r) => {
+    entered = r
+  })
   // Задержку ВЗВОДИМ явно: иначе первый же проход любого теста повиснет на воротах.
-  return { gate, open: () => open?.(), armed: false }
+  return { gate, entrance, open: () => open?.(), armed: false, enter: () => entered?.() }
 })
 vi.mock('@/shared/ai/embeddings', () => ({
   embedTexts: async (xs: string[]) => {
     if (h.armed) {
       h.armed = false
+      h.enter()
       await h.gate
     }
     return xs.map(() => null)
@@ -72,7 +80,7 @@ describe('переиндексация и устаревший снимок', ()
     // Первый проход собрал состав ИЗ ОДНОГО шага и замер на вызове модели.
     h.armed = true
     const stale = reindexList(id)
-    await new Promise((r) => setTimeout(r, 50))
+    await h.entrance // ждём СИГНАЛ, а не время: иначе гонка теста с самим собой
 
     // Пока он ждёт, список уехал вперёд: добавился второй шаг.
     const [ver] = await db.select({ id: templateVersions.id }).from(templateVersions).where(eq(templateVersions.templateId, id))
