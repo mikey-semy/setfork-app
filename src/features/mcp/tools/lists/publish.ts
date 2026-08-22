@@ -146,20 +146,39 @@ export async function mcpPublishLists(userId: string, refs: string[], dryRun = t
   // (находка авто-ревью на #789). Полный адрес резолвится общим резолвером, поэтому и
   // ПРЕЖНИЕ адреса своих списков продолжают работать; чужое отсеет общий слой кодом
   // `not-yours` — здесь для этого ничего решать не надо.
+  //
+  // ОДИН запрос на все свои адреса, резолвер — только там, где без него никак. Первая версия
+  // звала резолвер на КАЖДЫЙ адрес, а `my_drafts` отдаёт их с ником — то есть пачка из
+  // двадцати превращалась в сорок запросов вместо одного (находка линзы 09 на этом же PR).
+  // Свой нынешний ник — это обычный слаг; резолвер нужен для ПРЕЖНИХ своих адресов и чтобы
+  // честно опознать чужие.
+  const [me] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId)).limit(1)
+  const bareOf = (ref: string) => {
+    if (!ref.includes('/')) return ref
+    const [handle, ...rest] = ref.split('/')
+    return me?.handle && handle === me.handle ? rest.join('/') : null
+  }
   const idOfRef = new Map<string, string>()
+  const bare = list.map(bareOf)
+  const slugs = [...new Set(bare.filter((x): x is string => !!x))]
+  const rows = slugs.length
+    ? await db
+        .select({ id: templates.id, slug: templates.slug })
+        .from(templates)
+        .where(and(eq(templates.ownerId, userId), inArray(templates.slug, slugs)))
+    : []
+  const idBySlug = new Map(rows.map((r) => [r.slug, r.id]))
   await Promise.all(
-    list.map(async (ref) => {
-      if (ref.includes('/')) {
-        const found = await resolveListRefOrMoved(ref)
-        if (found) idOfRef.set(ref, found.id)
+    list.map(async (ref, i) => {
+      const own = bare[i]
+      if (own !== null) {
+        const id = idBySlug.get(own)
+        if (id) idOfRef.set(ref, id)
         return
       }
-      const [row] = await db
-        .select({ id: templates.id })
-        .from(templates)
-        .where(and(eq(templates.ownerId, userId), eq(templates.slug, ref)))
-        .limit(1)
-      if (row) idOfRef.set(ref, row.id)
+      // Чужой ник или прежний адрес: тут без резолвера нельзя — он же понимает переезды.
+      const found = await resolveListRefOrMoved(ref)
+      if (found) idOfRef.set(ref, found.id)
     }),
   )
 
