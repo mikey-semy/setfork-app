@@ -31,6 +31,17 @@ export async function markLinkIntent(): Promise<void> {
   })
 }
 
+/**
+ * ПОДСМОТРЕТЬ намерение, не гася его.
+ *
+ * Нужно шагу входа через Telegram: он показывается ДО возврата от провайдера, и решить,
+ * пускать ли туда уже вошедшего, можно только по намерению. Гасить куку здесь нельзя —
+ * её ждёт `takeIntent` в конце потока, иначе привязка снова станет входом.
+ */
+export async function hasLinkIntent(): Promise<boolean> {
+  return (await cookies()).get(INTENT_COOKIE)?.value === 'link'
+}
+
 /** Прочитать и погасить намерение: кука одноразовая, как и state. */
 async function takeIntent(): Promise<'link' | 'login'> {
   const c = await cookies()

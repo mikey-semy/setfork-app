@@ -21,6 +21,13 @@ const rowOf = async (id: string) => (await db.select().from(users).where(eq(user
 
 beforeEach(async () => {
   await resetTables([passkeys, users])
+  // Счёт способов входа считает только ПРИГОДНЫЕ двери, а пригодность зависит от ключей
+  // приложения. Без них любой привязанный провайдер справедливо считается непригодным, и
+  // проверки про отвязку проверяли бы не то.
+  process.env.GITHUB_CLIENT_ID ||= 'test-client'
+  process.env.YANDEX_CLIENT_ID ||= 'test-client'
+  process.env.VK_CLIENT_ID ||= 'test-client'
+  delete process.env.AUTH_DISABLED_PROVIDERS
 })
 afterAll(async () => {
   await resetTables([passkeys, users])
@@ -130,6 +137,28 @@ describe('последний способ входа', () => {
 
     expect(await removePasskey(u.id, rows[0].id)).toBe('removed')
     expect(await db.select().from(passkeys).where(eq(passkeys.userId, u.id))).toHaveLength(1)
+  })
+
+  it('выключенный провайдер за вход не считается', async () => {
+    // Привязано два, но один выключен настройкой инстанса: войти им нельзя, значит и
+    // считать его дверью нельзя — иначе отвяжется последний РАБОЧИЙ вход, а человек
+    // останется с дверью, которая не открывается.
+    const u = await mkUser('halfoff', { githubId: 1, yandexId: 'ya-1' })
+    process.env.AUTH_DISABLED_PROVIDERS = 'yandex'
+
+    expect(await signInMethodsCount(u.id)).toBe(1)
+    expect(await unlinkIdentity(u.id, 'github')).toBe('last-method')
+  })
+
+  it('НЕПРИГОДНЫЙ провайдер отвязывается — он ничего не отнимает', async () => {
+    // Пароль плюс выключенный провайдер: пригодная дверь одна, но убираем мы НЕ её.
+    // Запрещать тут нечего — а прежнее правило запрещало, мешая навести порядок.
+    const u = await mkUser('tidy', { yandexId: 'ya-1', passwordHash: 'x' })
+    process.env.AUTH_DISABLED_PROVIDERS = 'yandex'
+
+    expect(await signInMethodsCount(u.id)).toBe(1)
+    expect(await unlinkIdentity(u.id, 'yandex')).toBe('unlinked')
+    expect((await rowOf(u.id)).yandexId).toBeNull()
   })
 
   it('две отвязки разом не оставляют аккаунт без входа', async () => {

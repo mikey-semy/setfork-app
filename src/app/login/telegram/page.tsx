@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/shared/auth/session'
+import { hasLinkIntent } from '@/features/auth/oauth-entry'
 import { oauthEnabled } from '@/shared/auth/oauth'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -16,8 +17,12 @@ export async function generateMetadata() {
 
 /** Шаг Telegram-входа: t.me-ссылка на бота + поллинг подтверждения. */
 export default async function TelegramLoginPage() {
-  const [lang, session, c] = await Promise.all([getLang(), getSession(), cookies()])
-  if (session) redirect('/')
+  const [lang, session, c, linking] = await Promise.all([getLang(), getSession(), cookies(), hasLinkIntent()])
+  // Вошедшего гоним на главную — но НЕ когда он пришёл ПРИВЯЗЫВАТЬ телеграм к своему
+  // аккаунту. Без этой оговорки привязка из настроек не работала вовсе: маршрут ставил
+  // намерение и вёл сюда, а страница тут же отправляла обратно, и бот-шаг не показывался
+  // ни разу (находка авто-ревью на #782, P1 — прожила от мержа до этого разбора).
+  if (session && !linking) redirect('/')
   const token = c.get('tg_login')?.value
   if (!token || !oauthEnabled().telegram) redirect('/login')
   const botLink = `https://t.me/${process.env.TELEGRAM_BOT_USERNAME}?start=tl_${token}`

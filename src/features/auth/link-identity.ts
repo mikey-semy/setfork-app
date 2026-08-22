@@ -2,6 +2,7 @@ import 'server-only'
 import { and, eq, ne, sql } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
 import { IDENTITIES, linkedProviders, signInMethodsCount } from '@/shared/auth/identities'
+import { oauthEnabled } from '@/shared/auth/oauth'
 import type { OauthProvider } from '@/shared/auth/oauth'
 import { recordAudit } from '@/shared/audit'
 
@@ -66,7 +67,14 @@ export async function unlinkIdentity(userId: string, provider: OauthProvider): P
       .where(eq(users.id, userId))
       .limit(1)
     if (!u || !linkedProviders(u).includes(provider)) return 'not-linked' as const
-    if ((await signInMethodsCount(userId, tx)) <= 1) return 'last-method' as const
+    // Считаем, СКОЛЬКО ОСТАНЕТСЯ, а не сколько есть. Отвязка НЕПРИГОДНОГО провайдера
+    // (выключен настройкой инстанса или без ключей приложения) ничего не отнимает: войти им
+    // и так нельзя. Прежнее `<= 1` запрещало убрать именно такой провайдер у человека с
+    // паролем — то есть мешало навести порядок там, где риска не было (находка авто-ревью
+    // по #816).
+    const usable = await signInMethodsCount(userId, tx)
+    const removes = oauthEnabled()[provider] ? 1 : 0
+    if (usable - removes < 1) return 'last-method' as const
     await tx.update(users).set(spec.value(null)).where(eq(users.id, userId))
     return 'unlinked' as const
   })
