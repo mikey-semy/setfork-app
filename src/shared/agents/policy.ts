@@ -168,8 +168,11 @@ export interface AgentActionInput {
  * занимается ПОД ЗАМКОМ: снаружи транзакции вставка легла бы отдельным соединением, и
  * замок, взятый вызывающим, её бы не покрывал.
  */
-/** Кто исполняет запрос: сам пул или транзакция вызывающего. */
-export type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
+// Тип исполнителя живёт рядом с `db` (shared/db): его просят уже трое — заявка тревоги,
+// правило последнего входа и журнал агентов. Вторая копия появилась здесь на день раньше,
+// чем общая, и осталась дублем — ровно то, что ищет линза 11.
+import type { Executor } from '@/shared/db'
+export type { Executor }
 
 export async function recordAgentAction(input: AgentActionInput, exec: Executor = db): Promise<boolean> {
   try {
