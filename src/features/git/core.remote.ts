@@ -338,6 +338,9 @@ const REASON_TO_CODE: Record<string, BranchOpError['code']> = {
   // Спросить приложение не удалось — писать нельзя, но это не вина правки.
   GATE_UNAVAILABLE: 'internal',
   RESERVED_TAG_NAME: 'bad-name',
+  // Репозиторий разошёлся с базой. Отдельный код, а НЕ 'internal': человеку важно
+  // знать, что повторять бесполезно и что его правка ни при чём.
+  OUT_OF_SYNC: 'out-of-sync',
 }
 
 // gRPC-статусы ядра → машиночитаемые коды порта.

@@ -5,6 +5,7 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 import { db, suggestions } from '@/shared/db'
 import { toStepInput } from '@/shared/lib/step-input'
+import { ListWriteError } from '@/core'
 import { listStore } from '../list-store'
 import { enqueueReindex } from '../jobs'
 import { withPrDefaults } from '../pr-settings'
@@ -54,7 +55,18 @@ export async function applySuggestion(
 
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
-  const ver = await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items), authorId: actorUserId })
+  // Отказ ядра по предусловию — ОТВЕТ этой функции, а не исключение: её контракт
+  // ({ ok: false, reason }) читают и веб-действие, и MCP, и оба показывают причину
+  // человеку. Веточный путь слияния так и делает (merge.ts ловит BranchOpError), а
+  // здесь исключение улетало наружу — то есть ровно та же поломка, которую чинит
+  // этот PR, оставалась в соседней половине слияния (замечание авто-ревью на #824).
+  let ver
+  try {
+    ver = await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items), authorId: actorUserId })
+  } catch (e) {
+    if (e instanceof ListWriteError) return { ok: false, reason: e.code }
+    throw e
+  }
   // Пере-проверку делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await db
     .update(suggestions)

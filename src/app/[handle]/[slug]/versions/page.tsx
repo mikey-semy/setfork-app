@@ -5,6 +5,7 @@ import { GitBranch, GitCommitHorizontal } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Alert } from '@/shared/ui/Alert'
 import { requireViewableMeta } from '@/features/library/guard'
 import { countCommits, getCommitAuthors, getCommitsPage } from '@/features/library/queries'
 import { Pagination } from '@/shared/ui/Pagination'
@@ -31,7 +32,7 @@ export default async function CommitsPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ author?: string; since?: string; after?: string; before?: string }>
+  searchParams: Promise<{ author?: string; since?: string; after?: string; before?: string; e?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const meta = await requireViewableMeta(owner, slug)
@@ -75,6 +76,13 @@ export default async function CommitsPage({
 
   return (
     <div className={PAGE}>
+      {/* Отказ отката — здесь, а не молча: действие начинается на этой странице,
+          и ответ на него человек ждёт тоже здесь. */}
+      {sp.e === 'outofsync' && (
+        <Alert variant="danger" className="mb-4">
+          <span className="block">{t('versionRestoreOutOfSync', lang)}</span>
+        </Alert>
+      )}
       <HistoryNav
         base={base}
         active="commits"

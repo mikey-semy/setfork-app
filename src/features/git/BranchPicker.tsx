@@ -18,6 +18,7 @@ const ERR: Record<string, TKey> = {
   'exists': 'branch.errExists',
   'not-found': 'branch.errNotFound',
   'protected': 'branch.errProtected',
+  'out-of-sync': 'branch.errOutOfSync',
   'internal': 'branch.errInternal',
 }
 
