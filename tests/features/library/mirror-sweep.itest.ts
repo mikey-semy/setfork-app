@@ -79,6 +79,50 @@ beforeEach(async () => {
 
 const mirrorJobs = async () => await db.select().from(jobs).where(eq(jobs.type, 'mirror'))
 
+/** Зеркало БЕЗ ошибки, но синхронизированное раньше последней правки списка. */
+async function laggingMirror(slug: string, syncedMinutesAgo: number, updatedMinutesAgo: number): Promise<void> {
+  await db.insert(templates).values({
+    ownerId,
+    slug,
+    title: { en: slug },
+    mirrorUrl: `https://github.com/u/${slug}`,
+    mirrorToken: 'enc',
+    mirrorError: null,
+    mirrorAttempts: 0,
+    mirrorSyncedAt: new Date(Date.now() - syncedMinutesAgo * MIN),
+    updatedAt: new Date(Date.now() - updatedMinutesAgo * MIN),
+  })
+}
+
+/**
+ * Пуш зеркала после записи — задача в ПАМЯТИ ядра, и рестарт внутри окна
+ * схлопывания теряет её, не оставив в базе ни ошибки, ни следа. Пока подметальщик
+ * брал только строки с ошибкой, такая потеря не лечилась ничем: зеркало отставало
+ * до следующей версии, а настройки показывали «синхронизировано» (линза ядра 03 §6).
+ */
+describe('зеркало отстало без ошибки', () => {
+  it('подметальщик берёт его, хотя ошибки нет', async () => {
+    await laggingMirror('lag', 30, 5) // синхронизировано полчаса назад, правка — пять минут назад
+    await sweepFailedMirrors()
+    expect(pushed).toEqual(['mirror-owner/lag'])
+  })
+
+  it('свежее зеркало не трогает', async () => {
+    await laggingMirror('fresh', 1, 30) // правка старше синхронизации — отставания нет
+    await sweepFailedMirrors()
+    expect(pushed).toEqual([])
+  })
+
+  it('отставшее, но синхронизированное только что, ждёт паузу', async () => {
+    // Обычный путь пуша (окно схлопывания в ядре) укладывается в секунды, и
+    // подметальщик не имеет права соваться следом: иначе каждая правка давала бы
+    // ДВА пуша в чужую форджу.
+    await laggingMirror('just-now', 0, 0)
+    await sweepFailedMirrors()
+    expect(pushed).toEqual([])
+  })
+})
+
 /**
  * Цепочка держится на том, что задача перед завершением ставит следующую. Пока
  * это была голая вставка, дубли получались двумя способами — и каждый НАВСЕГДА
@@ -297,6 +341,10 @@ describe('отбор зеркал на повтор', () => {
       mirrorToken: 'enc',
       mirrorError: null,
       mirrorAttempts: 0,
+      // Синхронизация ПОЗЖЕ последней правки — это и значит «исправно». Без
+      // явного updated_at строка изображала бы список, правленный только что при
+      // синхронизации десятичасовой давности, то есть отставание, а не порядок.
+      updatedAt: new Date(Date.now() - 700 * MIN),
       mirrorSyncedAt: new Date(Date.now() - 600 * MIN),
     })
     await sweepFailedMirrors()
