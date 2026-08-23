@@ -1331,6 +1331,8 @@ export const en = {
   'ach.streakUnit': 'day streak',
   prMergeErrConflict: 'Conflict: main has diverged and cannot be merged automatically. Update the branch (merge main into it) and retry.',
   prMergeErrNothing: 'The branch has no new commits over main.',
+  versionRestoreOutOfSync:
+    'This list’s repository disagrees with its history, so the version could not be restored. Nothing was changed — retrying will not help until it is repaired.',
   prMergeErrOutOfSync:
     'This list’s repository disagrees with its history, so merging is paused until it is repaired. Retrying will not help — we already know about it.',
   prMergeErrNotLinear: 'This list requires linear history: only fast-forward merges are allowed. Update the branch from main and retry.',

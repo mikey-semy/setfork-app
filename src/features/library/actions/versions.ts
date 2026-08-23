@@ -258,7 +258,10 @@ export async function revertToVersion(templateId: string, version: number): Prom
     // Расхождение git и базы — не сбой кнопки: без этой ветки человек получал
     // безымянный экран ошибки и не мог узнать, что откат вообще не при чём.
     if (e instanceof ListWriteError && e.code === 'out-of-sync') {
-      redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/edit?e=outofsync`)
+      // Ведём туда, ОТКУДА нажали, — в историю версий, и своим текстом: сообщение
+      // экрана правки обещает, что черновик цел, а у отката черновика обычно нет
+      // вовсе (замечание авто-ревью на #824).
+      redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/versions?e=outofsync`)
     }
     throw e
   }
