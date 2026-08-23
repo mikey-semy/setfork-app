@@ -394,9 +394,13 @@ export interface MagicPush {
 
 /** Запись версии отклонена ядром по предусловию.
  *  'stale' — правка основана не на текущей версии (её готовили, пока список ушёл
- *  вперёд). Не сбой: писавший перечитывает список и накладывает правку заново. */
+ *  вперёд). Не сбой: писавший перечитывает список и накладывает правку заново.
+ *  'out-of-sync' — история списка в git разошлась с базой так, что автолечение не
+ *  берётся. Повтор бесполезен: чинит оператор по runbook git-projection-catchup.
+ *  Различать их обязательно — иначе второе показывается как безымянный сбой, а
+ *  человеку советуют «повторить», что ничего не меняет. */
 export class ListWriteError extends Error {
-  constructor(public code: 'stale') {
+  constructor(public code: 'stale' | 'out-of-sync') {
     super(`list write rejected: ${code}`)
     this.name = 'ListWriteError'
   }
@@ -413,6 +417,9 @@ export class BranchOpError extends Error {
       | 'nothing-to-merge'
       // Ветку подвинули с момента чтения — писать поверх нельзя (см. commitToBranch).
       | 'stale'
+      // История списка в git разошлась с базой: не вина правки и не гонка,
+      // повтор не поможет — до починки оператором записи не будет.
+      | 'out-of-sync'
       | 'internal',
   ) {
     super(code)

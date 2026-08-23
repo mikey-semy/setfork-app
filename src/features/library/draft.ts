@@ -60,7 +60,7 @@ export function registerTagsRegistrar(fn: TagsRegistrar): void {
 
 export type PublishResult =
   | { version: number; blocks: number }
-  | { error: 'no draft' | 'stale' | 'empty'; message: string; currentVersion?: number; baseVersion?: number }
+  | { error: 'no draft' | 'stale' | 'empty' | 'out-of-sync'; message: string; currentVersion?: number; baseVersion?: number }
 
 /**
  * Опубликовать черновик автора ОДНОЙ версией. Запись идёт обычным путём
@@ -109,6 +109,10 @@ export async function publishDraftFor(tpl: ListRow, authorId: string, note?: str
   } catch (e) {
     if (e instanceof ListWriteError && e.code === 'stale') {
       return { error: 'stale', message: 'the list changed while publishing — read it again (get_list) and redo the edits' }
+    }
+    // Черновик НЕ удаляем и ничего не теряем: правки остаются лежать до починки.
+    if (e instanceof ListWriteError && e.code === 'out-of-sync') {
+      return { error: 'out-of-sync', message: 'the list history is out of sync with its repository — publishing is on hold until it is repaired; the draft is kept' }
     }
     throw e
   }

@@ -781,6 +781,8 @@ export const en = {
   openDraft: 'Open draft',
   draftSaved: 'Draft saved.',
   draftStaleRefused: 'The list moved on while your edits sat in the draft. Publishing was cancelled — nothing was overwritten.',
+  draftOutOfSync:
+    'This list’s history and its repository disagree, so writing is paused until it is repaired. Your draft is untouched — retrying will not help, we already know about it.',
   draftEmpty: 'No items left in the draft, so it was deleted.',
   draftNothing: 'Nothing to publish — there are no pending edits.',
   draftSavedAt: 'Draft saved {when}. A version appears only when you publish.',
@@ -1298,6 +1300,7 @@ export const en = {
   'branch.errExists': 'Branch already exists',
   'branch.errNotFound': 'Not found',
   'branch.errProtected': 'main is protected',
+  'branch.errOutOfSync': 'This list’s repository disagrees with its history — writes are paused until it is repaired',
   'branch.errInternal': 'Something went wrong',
   'release.errBadtag': 'Tag: letters/digits and .-_ (max 40 chars).',
   'release.errBadversion': 'No such version.',
@@ -1328,6 +1331,8 @@ export const en = {
   'ach.streakUnit': 'day streak',
   prMergeErrConflict: 'Conflict: main has diverged and cannot be merged automatically. Update the branch (merge main into it) and retry.',
   prMergeErrNothing: 'The branch has no new commits over main.',
+  prMergeErrOutOfSync:
+    'This list’s repository disagrees with its history, so merging is paused until it is repaired. Retrying will not help — we already know about it.',
   prMergeErrNotLinear: 'This list requires linear history: only fast-forward merges are allowed. Update the branch from main and retry.',
   prMergeErrUnresolved: 'Not all conflicts were resolved (or the branch changed) — pick again.',
   prMergeErrOrphaned: 'The item this suggestion pointed at is gone — there is nothing to apply it to.',

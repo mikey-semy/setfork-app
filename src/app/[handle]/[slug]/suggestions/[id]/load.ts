@@ -41,6 +41,8 @@ const MERGE_ERR: Record<string, TKey> = {
   stale: 'prStaleWrite',
   // Применяли предложенную правку, а пункта уже нет — применять некуда.
   orphaned: 'prMergeErrOrphaned',
+  // Хранилище списка разошлось с базой: слияние ждёт починки, а не повтора.
+  'out-of-sync': 'prMergeErrOutOfSync',
 }
 
 /**

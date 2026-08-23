@@ -9,7 +9,7 @@ import { getLang } from '@/shared/i18n/server'
 import { type LocaleText } from '@/shared/i18n'
 import { listQuota } from '@/shared/quota'
 import { toStepInput } from '@/shared/lib/step-input'
-import { canEditList, editBlockReason } from '@/core'
+import { canEditList, editBlockReason, ListWriteError } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { isCollaborator } from '@/features/collab/queries'
 // eslint-disable-next-line boundaries/dependencies -- полки принадлежат каталогам; правило «положить на полку» держим ОДНОЙ точкой на все три входа (форма, MCP, пачка MCP), а не копией здесь
@@ -219,7 +219,8 @@ async function publishDraft(templateId: string): Promise<void> {
   // Причины РАЗНЫЕ: «нечего публиковать» и «черновик опустел» — разные сообщения,
   // иначе человек читает про удаление, которого не было.
   if ('error' in res) {
-    const reason = res.error === 'stale' ? 'stale' : res.error === 'empty' ? 'empty' : 'nodraft'
+    const reason =
+      res.error === 'stale' ? 'stale' : res.error === 'empty' ? 'empty' : res.error === 'out-of-sync' ? 'outofsync' : 'nodraft'
     redirect(`/${handle}/${tpl.slug}/edit?e=${reason}`)
   }
 
@@ -247,11 +248,20 @@ export async function revertToVersion(templateId: string, version: number): Prom
   const snap = await getVersionSteps(tpl.id, version)
   if (!snap) return
 
-  await listStore.addVersion(tpl.id, {
-    note: `revert to v${version}`,
-    steps: toStepInput(snap.steps as unknown as ProposedItem[]),
-    authorId: session.userId,
-  })
+  try {
+    await listStore.addVersion(tpl.id, {
+      note: `revert to v${version}`,
+      steps: toStepInput(snap.steps as unknown as ProposedItem[]),
+      authorId: session.userId,
+    })
+  } catch (e) {
+    // Расхождение git и базы — не сбой кнопки: без этой ветки человек получал
+    // безымянный экран ошибки и не мог узнать, что откат вообще не при чём.
+    if (e instanceof ListWriteError && e.code === 'out-of-sync') {
+      redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/edit?e=outofsync`)
+    }
+    throw e
+  }
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
 

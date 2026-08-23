@@ -33,6 +33,12 @@ async function callAddVersion(req: Parameters<typeof writeClient.addVersion>[0])
     if (e instanceof ConnectError && (e.metadata.get('sf-reason') === 'STALE' || e.code === Code.Aborted)) {
       throw new ListWriteError('stale')
     }
+    // Расхождение git и базы: тоже предусловие, но НЕ гонка — повтор его не лечит.
+    // По коду не страхуемся: FAILED_PRECONDITION носят и другие отказы, а причина
+    // OUT_OF_SYNC появилась вместе с этой веткой.
+    if (e instanceof ConnectError && e.metadata.get('sf-reason') === 'OUT_OF_SYNC') {
+      throw new ListWriteError('out-of-sync')
+    }
     throw e
   }
 }

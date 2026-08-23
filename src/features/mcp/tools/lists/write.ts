@@ -83,6 +83,10 @@ export async function writeProposed(
     // правку готовили, список ушёл вперёд. Агент перечитывает и накладывает заново.
     if (e instanceof ListWriteError && e.code === 'stale')
       return { error: 'list changed while the patch was being applied — read it again (get_list) and rebuild the ops' }
+    // Повторять НЕ предлагаем: расхождение git и базы чинит человек, и агент,
+    // которому сказали «попробуй снова», будет долбиться в отказ бесконечно.
+    if (e instanceof ListWriteError && e.code === 'out-of-sync')
+      return { error: 'the list history is out of sync with its repository — writing is on hold until it is repaired, do not retry' }
     // Вердикт стража разрушительных команд — тоже ответ, а не сбой: агенту нужно назвать
     // причину. Раньше он превращался в ответ только в ветке правки черновика; когда та
     // ушла, стражевой отказ полетел исключением — то есть агент получал бы стектрейс
