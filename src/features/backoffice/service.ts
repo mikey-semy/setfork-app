@@ -255,10 +255,19 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   const quiet = nothingDone && !broken
 
   if (policy.dryRun || quiet) {
+    // ТИХИЙ ДЕНЬ — ЭТО СДЕЛАННАЯ РАБОТА, а не пропуск. Летописец наблюдательный: посмотреть
+    // и убедиться, что писать не о чем, — и есть его дело. Раньше такой проход писался тем
+    // же действием со статусом `skipped`, а детектор холостого хода считает прогрессом
+    // только `ok` — и свежая установка, где событий ещё не было, объявлялась застрявшей с
+    // первого же нормального прохода (находка авто-ревью на fe#800).
+    //
+    // Отдельное действие, а не `ok` у `day.report`: у того «ok» значит ДОСТАВЛЕНО, и
+    // размывать его тихим днём нельзя — иначе «сводка дошла» и «сводки не было» станут
+    // неразличимы, а на них держится проверка доставки.
     await recordAgentAction({
       loop: 'chronicle',
-      action: 'day.report',
-      resultStatus: policy.dryRun ? 'dry-run' : 'skipped',
+      action: quiet && !policy.dryRun ? 'day.quiet' : 'day.report',
+      resultStatus: policy.dryRun ? 'dry-run' : 'ok',
       signal: { date, ...Object.fromEntries(rows) },
       decision: { reason: quiet ? QUIET_DAY : DRY_RUN },
       policyVersion: policy.policyVersion,
