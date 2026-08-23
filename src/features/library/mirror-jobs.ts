@@ -147,9 +147,16 @@ const dueSql = sql`(${dueAtSql} <= now())`
  * записью, что и `current_version`, — значит «синхронизировано раньше последней
  * правки» и есть отставание. Ложное срабатывание безвредно: пуш неинкрементальный,
  * и «нечего слать» — это успех, который сразу двигает `mirror_synced_at`.
+ *
+ * ⚠️ ЛЬГОТА СЧИТАЕТСЯ ОТ ПРАВКИ, а не от прошлой синхронизации. Иначе у зеркала,
+ * которое давно не трогали, лестница пауз УЖЕ истекла, и версия, легшая за секунду
+ * до прохода, тут же получала бы второй пуш — поверх того, что ядро в этот момент
+ * ещё придерживает своим окном (замечание авто-ревью на #825). Отсюда же следует,
+ * что `dueSql` этой ветке не подходит вовсе: он про повтор НЕУДАЧИ.
  */
 const behindSql = sql`(${templates.mirrorError} is null
-  and coalesce(${templates.mirrorSyncedAt}, to_timestamp(0)) < ${templates.updatedAt})`
+  and coalesce(${templates.mirrorSyncedAt}, to_timestamp(0)) < ${templates.updatedAt}
+  and ${templates.updatedAt} + make_interval(secs => ${MIRROR_BACKOFF_MS / 1000}) <= now())`
 
 /**
  * Тот же вопрос без базы — для интерфейса и тестов. Оставлен потому, что
@@ -177,7 +184,7 @@ export async function sweepFailedMirrors(): Promise<void> {
     })
     .from(templates)
     .innerJoin(users, eq(users.id, templates.ownerId))
-    .where(and(isNotNull(templates.mirrorUrl), or(isNotNull(templates.mirrorError), behindSql), dueSql))
+    .where(and(isNotNull(templates.mirrorUrl), or(and(isNotNull(templates.mirrorError), dueSql), behindSql)))
     // Кто дольше ЖДЁТ СВОЕЙ ОЧЕРЕДИ — первым, то есть по времени готовности, а
     // не по времени последней попытки.
     .orderBy(asc(dueAtSql))
