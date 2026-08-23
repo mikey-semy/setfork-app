@@ -158,20 +158,24 @@ export async function bulkRestoreCatalog(move: Pick<MoveResult, 'restore' | 'mov
   // дополнение, а часть смысла отмены, и вторым необязательным доводом его легко забыть.
   const { restore: groups, movedTo = null } = move
   const mine = new Set(await ownIds(session.userId, groups.flatMap((g) => g.ids)))
-  let changed = 0
-  // Полок в возврате столько, сколько их было у пачки, — единицы. Раскладывать эти
-  // несколько запросов параллельно нечего: выигрыш микроскопический, а порядок записи
-  // перестаёт быть предсказуемым.
-  for (const group of groups) {
-    const ids = group.ids.filter((id) => mine.has(id))
-    if (!ids.length) continue
-    // Проверка полки и запись — одной транзакцией с замком, как и в прямом переносе. Порознь
-    // они разъезжаются: полку успевают удалить между «нашли» и «записали», и отмена вернула
-    // бы списки на исчезнувшую полку (внешнего ключа у `repositoryId` нет — база смолчит).
-    // Владельца проверяем здесь же: карта возврата пришла из браузера и могла бы указать на
-    // чужую полку не хуже, чем прямой вызов.
-    const stillThere = movedTo ? eq(templates.repositoryId, movedTo) : isNull(templates.repositoryId)
-    const back = await db.transaction(async (tx) => {
+  // ВОЗВРАТ — ОДНОЙ ТРАНЗАКЦИЕЙ НА ВСЕ ПОЛКИ. Раньше каждая группа возвращалась своей: сбой
+  // на середине (или смерть процесса) оставлял ранние группы возвращёнными, а поздние — на
+  // месте назначения. Человек нажал «Отменить», получил отказ и библиотеку, разложенную
+  // наполовину, — а понять, что именно вернулось, ему неоткуда (находка авто-ревью на #793).
+  //
+  // Полки берём в замок в УСТОЙЧИВОМ порядке: две одновременные отмены, идущие по своим
+  // наборам, иначе встретятся в разном порядке и упрутся друг в друга насмерть.
+  const ordered = [...groups].sort((a, b) => String(a.catalogId ?? '').localeCompare(String(b.catalogId ?? '')))
+  const stillThere = movedTo ? eq(templates.repositoryId, movedTo) : isNull(templates.repositoryId)
+  const changed = await db.transaction(async (tx) => {
+    let done = 0
+    for (const group of ordered) {
+      const ids = group.ids.filter((id) => mine.has(id))
+      if (!ids.length) continue
+      // Проверка полки и запись — под замком: полку успевают удалить между «нашли» и
+      // «записали», и отмена вернула бы списки на исчезнувшую (внешнего ключа у
+      // `repositoryId` нет — база смолчит). Владельца проверяем здесь же: карта возврата
+      // пришла из браузера и могла бы указать на чужую полку не хуже прямого вызова.
       let catalogId: string | null = null
       if (group.catalogId) {
         const [live] = await tx
@@ -184,10 +188,15 @@ export async function bulkRestoreCatalog(move: Pick<MoveResult, 'restore' | 'mov
         // удали её владелец без всякой пачки.
         catalogId = live?.id ?? null
       }
-      return tx.update(templates).set({ repositoryId: catalogId }).where(and(editable(session.userId, ids), stillThere)).returning({ id: templates.id })
-    })
-    changed += back.length
-  }
+      const back = await tx
+        .update(templates)
+        .set({ repositoryId: catalogId })
+        .where(and(editable(session.userId, ids), stillThere))
+        .returning({ id: templates.id })
+      done += back.length
+    }
+    return done
+  })
   revalidatePath(`/${session.handle}`)
   return { changed }
 }
