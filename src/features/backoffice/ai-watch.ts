@@ -53,34 +53,53 @@ const FRESH_WINDOW_MS = 24 * 3_600_000
  * эндпоинт) и в инциденте 12.08 проходили, пока чат-вызовы падали. Считать их вместе
  * значило бы прятать поломку за успехами соседнего канала.
  */
+/** Служебная отметка учёта, а не вызов модели: нулевые токены, записывается ПОСЛЕ работы
+ *  (например, `council-run` — расход слота лимита). Считать её успехом канала нельзя: модель
+ *  за ней не звалась, а «канал ожил» по такой строке — обещание, которого никто не давал
+ *  (находка авто-ревью по #775). */
+// ⚠️ `is distinct from`, а не `<>`: у обычного вызова `ref_type` пуст, а сравнение с NULL
+// даёт NULL — то есть строка молча выпадает из отбора, и хвост отказов оказывается пустым.
+// Ровно так первая версия этой правки погасила сторожа целиком.
+const notAccounting = sql`${aiUsage.refType} is distinct from 'council-run'`
+
 export async function channelState(): Promise<ChannelState> {
-  const [rows, success] = await Promise.all([
-    db
-      .select({ outcome: aiUsage.outcome, model: aiUsage.model })
-      .from(aiUsage)
-      .where(and(ne(aiUsage.feature, 'embed'), gte(aiUsage.createdAt, new Date(Date.now() - FRESH_WINDOW_MS))))
-      .orderBy(desc(aiUsage.createdAt))
-      .limit(ERROR_STREAK_TRIP),
-    // Последний успех берём БЕЗ окна свежести: имя эпизода должно быть устойчивым, даже
-    // когда сам успех состарился и из хвоста уехал.
-    db
-      .select({ at: aiUsage.createdAt })
-      .from(aiUsage)
-      .where(and(ne(aiUsage.feature, 'embed'), eq(aiUsage.outcome, 'ok')))
-      .orderBy(desc(aiUsage.createdAt))
-      .limit(1),
-  ])
-  const outcomes: string[] = []
-  for (const r of rows) {
-    if (r.outcome === 'ok') break
-    outcomes.push(r.outcome)
-  }
-  return {
-    failStreak: outcomes.length,
-    lastModel: rows[0]?.model ?? '',
-    outcomes,
-    episode: success[0]?.at?.toISOString() ?? NO_SUCCESS_YET,
-  }
+  // ОБА чтения — из ОДНОГО снимка. Порознь они видят разное: успех, записанный между ними,
+  // попадал во второй запрос и не попадал в первый, и состояние выходило противоречивым —
+  // «канал лежит», но эпизод назван именем этого самого успеха. Тревога уходила про уже
+  // законченный обрыв, а «восстановлен» потом не приходил вовсе: эпизод закрыт заранее
+  // (находка авто-ревью по #775). Repeatable read даёт обоим запросам одну картину мира.
+  return db.transaction(
+    async (tx) => {
+      const [rows, success] = await Promise.all([
+        tx
+          .select({ outcome: aiUsage.outcome, model: aiUsage.model })
+          .from(aiUsage)
+          .where(and(ne(aiUsage.feature, 'embed'), notAccounting, gte(aiUsage.createdAt, new Date(Date.now() - FRESH_WINDOW_MS))))
+          .orderBy(desc(aiUsage.createdAt))
+          .limit(ERROR_STREAK_TRIP),
+        // Последний успех берём БЕЗ окна свежести: имя эпизода должно быть устойчивым, даже
+        // когда сам успех состарился и из хвоста уехал.
+        tx
+          .select({ at: aiUsage.createdAt })
+          .from(aiUsage)
+          .where(and(ne(aiUsage.feature, 'embed'), notAccounting, eq(aiUsage.outcome, 'ok')))
+          .orderBy(desc(aiUsage.createdAt))
+          .limit(1),
+      ])
+      const outcomes: string[] = []
+      for (const r of rows) {
+        if (r.outcome === 'ok') break
+        outcomes.push(r.outcome)
+      }
+      return {
+        failStreak: outcomes.length,
+        lastModel: rows[0]?.model ?? '',
+        outcomes,
+        episode: success[0]?.at?.toISOString() ?? NO_SUCCESS_YET,
+      }
+    },
+    { isolationLevel: 'repeatable read' },
+  )
 }
 
 /** Успешных вызовов не было вовсе — тоже устойчивое имя эпизода (свежий стенд). */
@@ -132,6 +151,12 @@ export async function callsOnDay(daysAgo: number): Promise<{ calls: number; fail
     .where(
       and(
         ne(aiUsage.feature, 'embed'),
+        notAccounting,
+        // ТОЛЬКО ВЫЗОВЫ КОМПАНИИ: сводка говорит про её день, и чужие отказы ей приписывать
+        // нельзя. Раньше признака не было, и пять неудачных генераций ЧЕЛОВЕКА читались как
+        // «компания не сделала ничего» (находка авто-ревью #775). Признак ставит контекст
+        // исполнения петли — см. shared/ai/actor-context.
+        eq(aiUsage.actor, 'company'),
         sql`${aiUsage.createdAt} >= date_trunc('day', now()) - (${daysAgo}::int * interval '1 day')`,
         sql`${aiUsage.createdAt} < date_trunc('day', now()) - ((${daysAgo}::int - 1) * interval '1 day')`,
       ),
