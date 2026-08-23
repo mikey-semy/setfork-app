@@ -465,3 +465,72 @@ describe('публикация пачкой', () => {
     expect((await rowOf(foreign.id)).status).toBe('draft')
   })
 })
+
+/**
+ * ОТМЕНА ВОЗВРАЩАЕТ ВСЁ ИЛИ НИЧЕГО.
+ *
+ * Раньше каждая полка возвращалась своей транзакцией: сбой на середине оставлял ранние
+ * группы возвращёнными, а поздние — на месте назначения. Человек нажимал «Отменить»,
+ * получал отказ и библиотеку, разложенную наполовину, — и понять, что именно вернулось,
+ * ему было неоткуда (авто-ревью на #793).
+ */
+describe('отмена раскладки — целиком', () => {
+  it('списки из РАЗНЫХ полок возвращаются каждый на свою', async () => {
+    const a = await shelf('первая')
+    const b = await shelf('вторая')
+    const l1 = await seed({ repositoryId: a })
+    const l2 = await seed({ repositoryId: b })
+    const l3 = await seed({})
+    await shelf('общая') // цель должна существовать: раскладка полок не создаёт
+
+    const moved = await bulkSetCatalog([l1, l2, l3], 'общая')
+    expect(moved.changed).toBe(3)
+
+    const undone = await bulkRestoreCatalog(moved)
+
+    expect(undone.changed).toBe(3)
+    expect((await rowOf(l1)).repositoryId).toBe(a)
+    expect((await rowOf(l2)).repositoryId).toBe(b)
+    expect((await rowOf(l3)).repositoryId).toBeNull()
+  })
+
+  it('сбой на поздней группе откатывает и ранние — половины не остаётся', async () => {
+    // Раньше каждая группа возвращалась своей транзакцией: первая уже закоммичена, вторая
+    // падает — и библиотека остаётся разложенной наполовину при отказе на экране.
+    // Срываем ВТОРУЮ группу заведомо негодным идентификатором полки.
+    const a = await shelf('первая')
+    const l1 = await seed({ repositoryId: a })
+    const l2 = await seed({})
+    await shelf('общая')
+    const moved = await bulkSetCatalog([l1, l2], 'общая')
+    const target = (await rowOf(l1)).repositoryId
+
+    const broken = {
+      movedTo: moved.movedTo,
+      restore: [
+        { catalogId: a, ids: [l1] },
+        { catalogId: 'это-не-uuid', ids: [l2] },
+      ],
+    }
+    await expect(bulkRestoreCatalog(broken as never)).rejects.toThrow()
+
+    // Ранняя группа НЕ вернулась: транзакция откатилась целиком.
+    expect((await rowOf(l1)).repositoryId).toBe(target)
+  })
+
+  it('исчезнувшая полка не роняет отмену — список возвращается без полки', async () => {
+    const a = await shelf('пропадёт')
+    const l1 = await seed({ repositoryId: a })
+    const l2 = await seed({})
+    await shelf('общая')
+
+    const moved = await bulkSetCatalog([l1, l2], 'общая')
+    await db.delete(repositories).where(eq(repositories.id, a))
+
+    const undone = await bulkRestoreCatalog(moved)
+
+    expect(undone.changed).toBe(2)
+    expect((await rowOf(l1)).repositoryId).toBeNull()
+    expect((await rowOf(l2)).repositoryId).toBeNull()
+  })
+})
