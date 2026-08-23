@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNotNull, ne, or, sql } from 'drizzle-orm'
 import { db, jobs, templates, users } from '@/shared/db'
 import { jobStallSec, type Job } from '@/shared/jobs/queue'
 import { captureError, log } from '@/shared/observability'
@@ -134,6 +134,31 @@ const dueAtSql = sql<Date>`coalesce(${templates.mirrorSyncedAt}, to_timestamp(0)
 const dueSql = sql`(${dueAtSql} <= now())`
 
 /**
+ * «Зеркало отстало, но ошибки нет».
+ *
+ * Пуш зеркала после записи — задача В ПАМЯТИ ядра (`spawn_mirror`, схлопывание
+ * окном): рестарт ядра внутри окна теряет её молча, и в базе не остаётся НИЧЕГО —
+ * ни ошибки, ни следа попытки. Подметальщик до этой правки брал только строки с
+ * `mirror_error`, поэтому такая потеря не лечилась ничем: зеркало отставало до
+ * следующей версии списка, а у законченного списка её может не быть никогда, и
+ * настройки при этом показывали «синхронизировано» (находка линзы ядра 03 §6).
+ *
+ * Признак берём тот, что нельзя потерять: `updated_at` списка ядро двигает ТОЙ ЖЕ
+ * записью, что и `current_version`, — значит «синхронизировано раньше последней
+ * правки» и есть отставание. Ложное срабатывание безвредно: пуш неинкрементальный,
+ * и «нечего слать» — это успех, который сразу двигает `mirror_synced_at`.
+ *
+ * ⚠️ ЛЬГОТА СЧИТАЕТСЯ ОТ ПРАВКИ, а не от прошлой синхронизации. Иначе у зеркала,
+ * которое давно не трогали, лестница пауз УЖЕ истекла, и версия, легшая за секунду
+ * до прохода, тут же получала бы второй пуш — поверх того, что ядро в этот момент
+ * ещё придерживает своим окном (замечание авто-ревью на #825). Отсюда же следует,
+ * что `dueSql` этой ветке не подходит вовсе: он про повтор НЕУДАЧИ.
+ */
+const behindSql = sql`(${templates.mirrorError} is null
+  and coalesce(${templates.mirrorSyncedAt}, to_timestamp(0)) < ${templates.updatedAt}
+  and ${templates.updatedAt} + make_interval(secs => ${MIRROR_BACKOFF_MS / 1000}) <= now())`
+
+/**
  * Тот же вопрос без базы — для интерфейса и тестов. Оставлен потому, что
  * настройки называют владельцу время следующей попытки, и оно обязано совпадать
  * с тем, когда подметальщик реально придёт.
@@ -143,9 +168,10 @@ export function dueMirrors<T extends MirrorCandidate>(candidates: T[], now: numb
 }
 
 /**
- * Один проход: найти зеркала с ошибкой, у которых ещё остались попытки и прошла
- * пауза, и толкнуть пуш. Результат (успех или новая ошибка) пишет ядро — здесь
- * только повод повторить.
+ * Один проход: найти зеркала, которые ОТСТАЛИ, — с ошибкой (и у которых прошла
+ * пауза) либо без ошибки, но синхронизированные раньше последней правки списка.
+ * Толкнуть пуш; результат (успех или новая ошибка) пишет ядро — здесь только повод
+ * повторить.
  */
 export async function sweepFailedMirrors(): Promise<void> {
   const due = await db
@@ -158,7 +184,7 @@ export async function sweepFailedMirrors(): Promise<void> {
     })
     .from(templates)
     .innerJoin(users, eq(users.id, templates.ownerId))
-    .where(and(isNotNull(templates.mirrorUrl), isNotNull(templates.mirrorError), dueSql))
+    .where(and(isNotNull(templates.mirrorUrl), or(and(isNotNull(templates.mirrorError), dueSql), behindSql)))
     // Кто дольше ЖДЁТ СВОЕЙ ОЧЕРЕДИ — первым, то есть по времени готовности, а
     // не по времени последней попытки.
     .orderBy(asc(dueAtSql))
