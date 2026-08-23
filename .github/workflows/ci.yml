@@ -62,23 +62,14 @@ jobs:
             exit 1
           }
       - run: npm test
-      # Сборка тянет 5 шрифтов с fonts.googleapis.com (next/font/google в layout.tsx),
-      # то есть КАЖДАЯ сборка зависит от внешнего хоста. С российских адресов это
-      # лотерея: 30.07 master покраснел на «Failed to fetch `Manrope` from Google
-      # Fonts» — при полностью зелёных тестах. Теперь деплой ждёт зелёный master-CI,
-      # значит такой срыв ещё и останавливает выкладку.
-      #
-      # Повтор лечит именно СЕТЕВОЙ срыв: настоящая поломка сборки падает все три
-      # раза одинаково. Понадобился повтор — пишем notice, чтобы флейк не стал
-      # невидимым (настоящее лечение — держать шрифты у себя, next/font/local).
-      - name: Сборка (до 3 попыток — внешние шрифты)
-        run: |
-          for i in 1 2 3; do
-            npm run build && exit 0
-            [ $i -lt 3 ] && { echo "::notice::сборка сорвалась (попытка $i/3) — вероятно загрузка шрифтов; повторяю"; sleep 15; }
-          done
-          echo "::error::сборка не прошла за 3 попытки"
-          exit 1
+      # Повтор сборки СНЯТ 23.08. Он лечил ровно один срыв — загрузку шрифтов с
+      # fonts.googleapis.com, от которой зависела каждая сборка. С 20.08 шрифты лежат
+      # у нас (next/font/local, src/shared/fonts), внешнего хоста в сборке нет, и
+      # три попытки теперь только прячут настоящую поломку за полутора минутами
+      # ожидания. Вернётся внешняя зависимость — вернётся и повтор, но со своей
+      # причиной, а не с этой.
+      - name: Сборка
+        run: npm run build
         env:
           # Плейсхолдеры: build динамических роутов к БД не ходит; нужны лишь для чтения env.
           DATABASE_URL: postgres://ci:ci@localhost:5432/ci
@@ -159,6 +150,9 @@ jobs:
           docker logs "core-$CI_NET" 2>&1 | tail -3
           echo "SETFORK_CORE_URL=1" >> "$GITHUB_ENV"
           echo "SETFORK_CORE_ADDR=core-$CI_NET:50051" >> "$GITHUB_ENV"
+          # Имя контейнера ядра — пробам, которые портят само репо и проверяют
+          # отказ записи. Без переменной они пропускаются молча.
+          echo "ITEST_CORE_CONTAINER=core-$CI_NET" >> "$GITHUB_ENV"
       - run: npm run test:integration
       - name: core log (on failure)
         if: failure()
@@ -239,6 +233,9 @@ jobs:
           done
           echo "SETFORK_CORE_URL=1" >> "$GITHUB_ENV"
           echo "SETFORK_CORE_ADDR=core-$CI_NET:50051" >> "$GITHUB_ENV"
+          # Имя контейнера ядра — пробам, которые портят само репо и проверяют
+          # отказ записи. Без переменной они пропускаются молча.
+          echo "ITEST_CORE_CONTAINER=core-$CI_NET" >> "$GITHUB_ENV"
       - run: npm run coverage:unit
       - run: npm run coverage:integration
       - run: npm run coverage:check # порог --min из package.json
