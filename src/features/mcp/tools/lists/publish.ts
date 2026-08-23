@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, steps, templates, templateVersions, users } from '@/shared/db'
 import { tr } from '@/shared/i18n'
 import { PUBLISH_BATCH_MAX, publishOwnedDrafts, type PublishSkip } from '@/features/library/publish-draft'
+import { resolveListRefOrMoved } from '../shared'
 
 /**
  * РАЗБОР ЧЕРНОВИКОВ ЧЕРЕЗ MCP.
@@ -139,13 +140,27 @@ export async function mcpPublishLists(userId: string, refs: string[], dryRun = t
   if (!list.length) return { error: 'nothing to publish: pass refs from my_drafts' }
   if (list.length > PUBLISH_BATCH_MAX) return { error: `too many lists in one call: ${list.length} > ${PUBLISH_BATCH_MAX}` }
 
-  // Дедуп идёт по КАНОНИЧЕСКОМУ адресу, а не по строке: `owner/foo`, `foo` и `other/foo`
-  // указывают на один и тот же список (владельца определяет токен, не префикс). Схлопывать
-  // надо после приведения — иначе отчёт снова насчитает «опубликовано 2» на одну запись
-  // (находка авто-ревью).
-  const slugs = list.map((ref) => (ref.includes('/') ? ref.split('/').slice(1).join('/') : ref))
-  const firstRefOf = new Map<string, string>()
-  for (let i = 0; i < list.length; i++) if (!firstRefOf.has(slugs[i])) firstRefOf.set(slugs[i], list[i])
+  // АДРЕС РАЗБИРАЕТСЯ ЦЕЛИКОМ, вместе с владельцем. Раньше префикс отбрасывался — «владельца
+  // определяет токен, не префикс», — и `чужой/deploy` публиковал СВОЙ `deploy`, отчитываясь
+  // при этом чужим адресом. Ассистент просил одно, получал другое и читал ответ как успех
+  // (находка авто-ревью на #789). Полный адрес резолвится общим резолвером, поэтому и
+  // ПРЕЖНИЕ адреса своих списков продолжают работать; чужое отсеет общий слой кодом
+  // `not-yours` — здесь для этого ничего решать не надо.
+  //
+  // ОДИН запрос на все свои адреса, резолвер — только там, где без него никак. Первая версия
+  // звала резолвер на КАЖДЫЙ адрес, а `my_drafts` отдаёт их с ником — то есть пачка из
+  // двадцати превращалась в сорок запросов вместо одного (находка линзы 09 на этом же PR).
+  // Свой нынешний ник — это обычный слаг; резолвер нужен для ПРЕЖНИХ своих адресов и чтобы
+  // честно опознать чужие.
+  const [me] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId)).limit(1)
+  const bareOf = (ref: string) => {
+    if (!ref.includes('/')) return ref
+    const [handle, ...rest] = ref.split('/')
+    return me?.handle && handle === me.handle ? rest.join('/') : null
+  }
+  const idOfRef = new Map<string, string>()
+  const bare = list.map(bareOf)
+  const slugs = [...new Set(bare.filter((x): x is string => !!x))]
   const rows = slugs.length
     ? await db
         .select({ id: templates.id, slug: templates.slug })
@@ -153,24 +168,48 @@ export async function mcpPublishLists(userId: string, refs: string[], dryRun = t
         .where(and(eq(templates.ownerId, userId), inArray(templates.slug, slugs)))
     : []
   const idBySlug = new Map(rows.map((r) => [r.slug, r.id]))
-  // Промах по адресу — не «чужое», а «нет такого»: для общего слоя это один код отказа,
-  // и подставлять ему несуществующий id не нужно.
-  const ids = slugs.map((s) => idBySlug.get(s)).filter((id): id is string => !!id)
+  await Promise.all(
+    list.map(async (ref, i) => {
+      const own = bare[i]
+      if (own !== null) {
+        const id = idBySlug.get(own)
+        if (id) idOfRef.set(ref, id)
+        return
+      }
+      // Чужой ник или прежний адрес: тут без резолвера нельзя — он же понимает переезды.
+      const found = await resolveListRefOrMoved(ref)
+      if (found) idOfRef.set(ref, found.id)
+    }),
+  )
+
+  // Дедуп — по РАЗРЕШЁННОМУ id, а не по строке и не по слагу: `owner/foo`, `foo` и прежний
+  // адрес того же списка — одна запись. Иначе отчёт насчитает «опубликовано 2» на один
+  // список, а ассистент читает эти числа как результат, а не как эхо запроса.
+  const firstRefOf = new Map<string, string>()
+  for (const ref of list) {
+    const id = idOfRef.get(ref)
+    if (id && !firstRefOf.has(id)) firstRefOf.set(id, ref)
+  }
+  const ids = [...firstRefOf.keys()]
   const report = await publishOwnedDrafts(userId, ids, { dryRun })
   const byId = new Map(report.outcomes.map((o) => [o.id, o]))
 
   const out: McpPublishResult = { dryRun, planned: list.length, published: 0, skipped: 0, lists: [] }
-  list.forEach((ref, i) => {
-    if (firstRefOf.get(slugs[i]) !== ref) {
-      out.skipped++
-      out.lists.push({ ref, status: 'skipped', reason: `same list as ${firstRefOf.get(slugs[i])}` })
-      return
-    }
-    const id = idBySlug.get(slugs[i])
+  list.forEach((ref) => {
+    const id = idOfRef.get(ref)
     const outcome = id ? byId.get(id) : null
+    // ОТКАЗ ПРОВЕРЯЕМ ПЕРВЫМ, и только потом повтор. Иначе два ЧУЖИХ адреса одного списка
+    // получали ответ «тот же список, что X» — то есть инструмент подтверждал постороннему,
+    // что два адреса ведут в одну запись, хотя про чужое он обязан отвечать одинаково:
+    // «нет такого среди твоих». Находка линзы 02 на этом же PR.
     if (!outcome || outcome.skip) {
       out.skipped++
       out.lists.push({ ref, status: 'skipped', reason: SKIP_REASON[outcome?.skip ?? 'not-yours'] })
+      return
+    }
+    if (id && firstRefOf.get(id) !== ref) {
+      out.skipped++
+      out.lists.push({ ref, status: 'skipped', reason: `same list as ${firstRefOf.get(id)}` })
       return
     }
     if (dryRun) {

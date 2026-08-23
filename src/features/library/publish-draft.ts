@@ -34,6 +34,22 @@ const isBlocked = (row: { moderation: string }) => row.moderation === 'flagged' 
 /** Список, который публикация выставляет наружу и потому ведёт через барьер. */
 const needsGate = (row: { moderation: string; visibility: string }) => row.visibility === 'public' && !isBlocked(row)
 
+/**
+ * Куда засчитать список — ОДНО правило на план и на запись.
+ *
+ * Раньше их было два: план считал снятым модерацией любой такой список, а запись — только
+ * публичный, потому что у приватного отметка могла остаться с прошлой публичной жизни, и
+ * «на проверке» про список, которого никто не видит, — чепуха. Расхождение видел человек:
+ * диалог отказывался публиковать набор из одних приватных снятых («всё заблокировано»),
+ * хотя исполнение опубликовало бы их без вопросов (находка авто-ревью на #793).
+ */
+type Bucket = 'published' | 'pending' | 'blocked'
+const bucketOf = (row: { visibility: string }, moderation: string | null): Bucket => {
+  if (row.visibility !== 'public') return 'published'
+  if (moderation === 'flagged' || moderation === 'hidden') return 'blocked'
+  return moderation === 'pending' ? 'pending' : 'published'
+}
+
 /** Почему список не опубликован. Коды: текст добавляет вызывающий на своём языке. */
 export type PublishSkip = 'not-yours' | 'not-draft' | 'over-limit' | 'read-only' | 'changed-meanwhile'
 
@@ -123,9 +139,7 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
     for (const row of go) {
       const moderation = isBlocked(row) ? row.moderation : needsGate(row) && decision === 'hold' ? 'pending' : 'active'
       report.outcomes.push({ id: row.id, skip: null, moderation })
-      if (isBlocked(row)) report.blocked++
-      else if (moderation === 'pending') report.pending++
-      else report.published++
+      report[bucketOf(row, moderation)]++
     }
     return report
   }
@@ -201,13 +215,20 @@ export async function publishOwnedDrafts(userId: string, ids: string[], opts: { 
   for (const row of landed) {
     const moderation = modOf.get(row.id) ?? null
     report.outcomes.push({ id: row.id, skip: null, moderation })
-    // Считаем по видимости: у приватного отметка модерации может остаться с прошлой
-    // публичной жизни, и «на проверке» про список, которого никто не видит, — чепуха.
-    if (row.visibility !== 'public') report.published++
-    else if (moderation === 'flagged' || moderation === 'hidden') report.blocked++
-    else if (moderation === 'pending') report.pending++
-    else report.published++
+    report[bucketOf(row, moderation)]++
   }
+
+  // ПЕРЕИНДЕКСАЦИЯ — здесь, на единой точке публикации списка. Её ставили вызывающие, и у
+  // публикации ЧЕРНОВИКА не ставил никто: ни MCP, ни пакетное действие профиля. Список
+  // становился публичным и не появлялся ни в смысловом поиске, ни в прецедентах совета —
+  // до первой посторонней правки (находка авто-ревью на #789). Смысловой поиск ходит через
+  // таблицу эмбеддингов, а её заполняет только очередь.
+  //
+  // `afterStateChange` — потому что изменилось СОСТОЯНИЕ, а не текст: идущая джоба читала
+  // список ещё черновиком и запишет пустоту, поэтому дублем считается только ожидающая.
+  // Ставим разом, а не по очереди: списки независимы, ждать друг друга им незачем.
+  const { enqueueReindex } = await import('./jobs')
+  await Promise.all(landed.map((row) => enqueueReindex(row.id, { afterStateChange: true })))
   return report
 }
 

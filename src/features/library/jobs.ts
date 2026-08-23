@@ -19,14 +19,22 @@ export async function runReindexJob(payload: unknown): Promise<void> {
  * создания/новой версии списка. Сам эмбеддинг делает воркер (durable + ретраи при
  * флапах embedding-API). Best-effort: сбой постановки не должен ронять действие.
  */
-export async function enqueueReindex(listId: string): Promise<void> {
+export async function enqueueReindex(listId: string, opts: { afterStateChange?: boolean } = {}): Promise<void> {
   try {
     // Дедуп: одна невыполненная reindex-джоба на список уже переиндексирует его
     // последнюю версию. Без этого каждая правка/merge плодила лишний embedding-вызов.
+    //
+    // `afterStateChange` — когда изменилось не содержимое, а СОСТОЯНИЕ списка (публикация).
+    // Тогда идущая джоба не годится: она прочитала список ЧЕРНОВИКОМ и запишет пустой
+    // эмбеддинг приватного, а нового прохода не будет — список так и не появится ни в
+    // смысловом поиске, ни в прецедентах совета до посторонней правки (находка авто-ревью
+    // по #819). Поэтому здесь дублем считается только ОЖИДАЮЩАЯ джоба: она возьмёт свежее
+    // состояние сама, а идущая — уже нет.
+    const stale: ('pending' | 'processing')[] = opts.afterStateChange ? ['pending'] : ['pending', 'processing']
     const [dup] = await db
       .select({ id: jobs.id })
       .from(jobs)
-      .where(and(eq(jobs.type, 'reindex'), inArray(jobs.status, ['pending', 'processing']), sql`${jobs.payload}->>'templateId' = ${listId}`))
+      .where(and(eq(jobs.type, 'reindex'), inArray(jobs.status, stale), sql`${jobs.payload}->>'templateId' = ${listId}`))
       .limit(1)
     if (dup) return
     await enqueueJob('reindex', { templateId: listId })

@@ -97,20 +97,53 @@ async function rebuildWikiLinks(templateId: string, contents: string[]): Promise
 /** Точечная переиндексация одного списка (или удаление из индекса, если его нет).
  *  Список + его шаги эмбеддятся ОДНИМ батч-вызовом (embedTexts) — не по HTTP на шаг. */
 export async function reindexList(templateId: string): Promise<void> {
-  const mine = await collectItems(templateId)
-  await db.delete(embeddings).where(eq(embeddings.refId, templateId))
-  await rebuildWikiLinks(templateId, mine.map((i) => i.content))
-  if (!mine.length) return
-  const { embedTexts } = await import('@/shared/ai/embeddings')
-  const vecs = await embedTexts(mine.map((i) => i.content), 'doc') // модель/мерность диктует пространство индекса (embed-space)
-  await db.insert(embeddings).values(
-    mine.map((it, i) => ({
-      kind: it.kind,
-      refId: it.refId,
-      // Вектор уже посчитан из ПОЛНОГО текста; приватный плейнтекст в корпус не пишем.
-      content: it.isPublic ? it.content : '',
-      embedding: vecs?.[i] ?? null,
-      metadata: it.isPublic ? it.metadata : { private: true },
-    })),
-  )
+  /**
+   * ПИШЕМ ТОЛЬКО ТО, ЧТО ЕЩЁ АКТУАЛЬНО.
+   *
+   * Две джобы по одному списку могут идти внахлёст (публикация ставит свою поверх идущей),
+   * и порядок их завершения очередью не гарантирован. Снимок «список ещё черновик»,
+   * собранный раньше, дописывался ПОСЛЕ свежего и стирал публичный эмбеддинг — список
+   * исчезал из смыслового поиска, хотя проход только что был (находка авто-ревью по #819).
+   *
+   * Замка тут быть не может: между сбором и записью идёт вызов модели, и держать на нём
+   * транзакцию нельзя. Поэтому сверка снимка: запомнили состояние до сбора, перед записью
+   * перечитали. Разошлось — записывать не наше дело, свежий проход уже идёт или поставлен.
+   */
+  // В снимок входит ВСЁ, от чего зависит содержимое индекса. `moderation` — тоже: пока идёт
+  // вызов модели, проверка может одобрить список (`pending` → `active`), и собранный состав
+  // с `isPublic: false` записал бы пустой текст уже публичному списку. Через `updated_at`
+  // это не видно: пути модерации его не двигают (находка авто-ревью по #819).
+  const stateOf = (row?: { updatedAt: Date | null; status: string; visibility: string; moderation: string }) =>
+    row ? `${row.updatedAt?.toISOString() ?? ''}|${row.status}|${row.visibility}|${row.moderation}` : ''
+  const cols = { updatedAt: templates.updatedAt, status: templates.status, visibility: templates.visibility, moderation: templates.moderation }
+
+  // Снимок и сбор состава друг от друга не зависят — читаем разом.
+  const [beforeRow, mine] = await Promise.all([
+    db.select(cols).from(templates).where(eq(templates.id, templateId)).then((r) => r[0]),
+    collectItems(templateId),
+  ])
+  const before = stateOf(beforeRow)
+  const vecs = mine.length ? await (await import('@/shared/ai/embeddings')).embedTexts(mine.map((i) => i.content), 'doc') : null
+
+  await db.transaction(async (tx) => {
+    // Строку БЕРЁМ ПОД ЗАМОК и только потом сверяем. Простого чтения мало: на READ COMMITTED
+    // публикация успевает закоммититься между сравнением и удалением, и устаревший проход
+    // снова стирает свежее — сверка окно сужала, но не закрывала (находка авто-ревью #819).
+    const [fresh] = await tx.select(cols).from(templates).where(eq(templates.id, templateId)).for('update')
+    if (stateOf(fresh) !== before) return // список уехал вперёд — его переиндексирует свежий проход
+    await tx.delete(embeddings).where(eq(embeddings.refId, templateId))
+    await rebuildWikiLinks(templateId, mine.map((i) => i.content))
+    if (!mine.length) return
+    await tx.insert(embeddings).values(
+      mine.map((it, i) => ({
+        kind: it.kind,
+        refId: it.refId,
+        // Вектор уже посчитан из ПОЛНОГО текста; приватный плейнтекст в корпус не пишем.
+        content: it.isPublic ? it.content : '',
+        embedding: vecs?.[i] ?? null,
+        metadata: it.isPublic ? it.metadata : { private: true },
+      })),
+    )
+  })
 }
+
