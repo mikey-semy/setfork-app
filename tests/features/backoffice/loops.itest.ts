@@ -116,8 +116,15 @@ describe('летописец', () => {
     const res = await runChronicleSweep()
     expect(res.sent).toBe(0)
     expect(mail.sent).toHaveLength(0)
+
+    // Проверяем СМЫСЛ, а не способ записи: сводка не уходила. Тихий проход пишется
+    // отдельным действием `day.quiet` и статусом `ok` — для наблюдательной петли это
+    // сделанная работа, иначе детектор холостого хода объявляет свежую установку застрявшей
+    // (авто-ревью на #800). Прежняя проверка требовала `skipped` у `day.report`, то есть
+    // кодировала способ записи и мешала его исправить.
     const [act] = await journal()
-    expect(act.resultStatus).toBe('skipped')
+    expect(act.action).toBe('day.quiet')
+    expect(act.action).not.toBe('day.report') // доставки не было
   })
 
   it('был день с событиями — сводка уходит владельцу', async () => {
