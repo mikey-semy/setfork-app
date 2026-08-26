@@ -35,7 +35,7 @@ export function StatTile({
 }) {
   const toneClass =
     tone === 'accent'
-      ? 'text-(--accent)'
+      ? 'text-accent'
       : tone === 'warn'
         ? 'text-warn'
         : tone === 'ok'
@@ -48,13 +48,13 @@ export function StatTile({
       <SectionLabel>{label}</SectionLabel>
       {na ? (
         <>
-          <div className="mt-1.5 text-[1.375rem] font-bold text-muted">—</div>
-          <div className="mt-0.5 text-[0.6875rem] text-muted [overflow-wrap:anywhere]">{na}</div>
+          <div className="mt-1.5 text-stat font-bold text-muted">—</div>
+          <div className="mt-0.5 text-caption text-muted [overflow-wrap:anywhere]">{na}</div>
         </>
       ) : (
         <>
-          <div className={cn('mt-1.5 text-[1.375rem] font-bold tabular-nums', toneClass)}>{value}</div>
-          {hint && <div className="mt-0.5 text-[0.6875rem] text-muted [overflow-wrap:anywhere]">{hint}</div>}
+          <div className={cn('mt-1.5 text-stat font-bold tabular-nums', toneClass)}>{value}</div>
+          {hint && <div className="mt-0.5 text-caption text-muted [overflow-wrap:anywhere]">{hint}</div>}
         </>
       )}
     </>

@@ -103,10 +103,10 @@ export function Tooltip({
           side={side}
           sideOffset={6}
           collisionPadding={8}
-          className="sf-pop-in z-60 max-w-[15rem] rounded-md border border-border bg-surface px-2 py-1 text-[0.6875rem] leading-snug text-ink shadow-card"
+          className="sf-pop-in z-60 max-w-[15rem] rounded-md border border-border bg-surface px-2 py-1 text-caption leading-snug text-ink shadow-card"
         >
           {label}
-          <TooltipPrimitive.Arrow className="fill-(--surface)" width={10} height={5} />
+          <TooltipPrimitive.Arrow className="fill-surface" width={10} height={5} />
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

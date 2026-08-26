@@ -42,14 +42,14 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
   return (
     <div className={cardClass({ tone: 'inset', pad: 'sm', className: 'space-y-4' })}>
       <div>
-        <div className="text-[0.8125rem] font-medium text-ink">{t('admin.expertCouncilMultiModel', lang)}</div>
-        <p className="mt-0.5 text-[0.78125rem] text-muted">
+        <div className="text-body font-medium text-ink">{t('admin.expertCouncilMultiModel', lang)}</div>
+        <p className="mt-0.5 text-body-sm text-muted">
           {t('admin.stewardExpertsInnovatorDevil', lang)}
         </p>
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <div className="text-[0.8125rem] text-ink">{t('admin.enableCouncil', lang)}</div>
+        <div className="text-body text-ink">{t('admin.enableCouncil', lang)}</div>
         <Switch name="councilEnabled" checked={enabled} onCheckedChange={setEnabled} />
       </div>
 
@@ -99,16 +99,16 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
 
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[0.8125rem] text-ink">{t('admin.elderWebSearchAdvanced', lang)}</div>
-          <p className="text-[0.78125rem] text-muted">{t('admin.alsoSearchWebPrecedents', lang)}</p>
+          <div className="text-body text-ink">{t('admin.elderWebSearchAdvanced', lang)}</div>
+          <p className="text-body-sm text-muted">{t('admin.alsoSearchWebPrecedents', lang)}</p>
         </div>
         <Switch name="councilWebSeek" checked={webSeek} onCheckedChange={setWebSeek} />
       </div>
 
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[0.8125rem] text-ink">{t('admin.clarifyingQuestions', lang)}</div>
-          <p className="text-[0.78125rem] text-muted">{t('admin.askBeforeGeneratingWhen', lang)}</p>
+          <div className="text-body text-ink">{t('admin.clarifyingQuestions', lang)}</div>
+          <p className="text-body-sm text-muted">{t('admin.askBeforeGeneratingWhen', lang)}</p>
         </div>
         <Switch name="councilClarify" checked={clarify} onCheckedChange={setClarify} />
       </div>

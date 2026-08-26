@@ -42,18 +42,18 @@ export function CouncilBubble({ who, name, badge, badgeTitle, typing, src, child
       <GnomeAvatar src={src || builtinSrc(who)} size={44} className="size-11 shrink-0" />
       <div className="min-w-0">
         {/* Пузырь с хвостиком к аватарке; имя ВНУТРИ первой строкой цветом — как в Telegram. */}
-        <div className="w-fit max-w-full rounded-2xl rounded-bl-md bg-(--surface-2) px-3.5 py-2 text-[0.8125rem] leading-[1.5] text-ink-2">
+        <div className="w-fit max-w-full rounded-2xl rounded-bl-md bg-surface-2 px-3.5 py-2 text-body leading-[1.5] text-ink-2">
           {name ? (
-            <div className="mb-0.5 flex items-center gap-1.5 text-[0.78125rem] font-semibold text-accent">
+            <div className="mb-0.5 flex items-center gap-1.5 text-body-sm font-semibold text-accent">
               {name}
               {/* Репутация (HQ §6): доля советов, принятых людьми, — почему этому голосу можно верить. */}
               {badge ? (
                 badgeTitle ? (
                   <Tooltip label={badgeTitle}>
-                    <span className="rounded-full bg-(--accent-soft) px-1.5 py-px text-[0.6875rem] font-semibold text-accent">{badge}</span>
+                    <span className="rounded-full bg-accent-soft px-1.5 py-px text-caption font-semibold text-accent">{badge}</span>
                   </Tooltip>
                 ) : (
-                  <span className="rounded-full bg-(--accent-soft) px-1.5 py-px text-[0.6875rem] font-semibold text-accent">{badge}</span>
+                  <span className="rounded-full bg-accent-soft px-1.5 py-px text-caption font-semibold text-accent">{badge}</span>
                 )
               ) : null}
             </div>

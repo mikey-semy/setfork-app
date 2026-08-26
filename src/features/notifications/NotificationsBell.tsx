@@ -33,7 +33,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
         <IconButton variant="ghost" label={t('notifications', lang)} className="relative">
           <Bell size={17} />
           {count > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 grid h-[0.9375rem] min-w-[0.9375rem] place-items-center rounded-full bg-danger px-1 text-[0.6875rem] font-bold text-white">
+            <span className="absolute -right-0.5 -top-0.5 grid h-[0.9375rem] min-w-[0.9375rem] place-items-center rounded-full bg-danger px-1 text-caption font-bold text-white">
               {count > 9 ? '9+' : count}
             </span>
           )}
@@ -51,7 +51,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
         <PanelHead title={t('notifications', lang)} />
 
         {items.length === 0 ? (
-          <div className="px-3 py-8 text-center text-[0.78125rem] text-muted">{t('noNotifications', lang)}</div>
+          <div className="px-3 py-8 text-center text-body-sm text-muted">{t('noNotifications', lang)}</div>
         ) : (
           // min-h-0 обязателен: без него flex-ребёнок не сжимается ниже содержимого,
           // и прокрутка не включается — список снова выдавит хвост за край.
@@ -70,14 +70,14 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
                 <Link
                   key={n.id}
                   href={href}
-                  className={`flex items-start gap-2.5 px-3 py-2.5 hover:bg-surface-2 ${n.read ? '' : 'bg-(--accent-soft)'}`}
+                  className={`flex items-start gap-2.5 px-3 py-2.5 hover:bg-surface-2 ${n.read ? '' : 'bg-accent-soft'}`}
                 >
                   <Avatar handle={n.actorHandle ?? '?'} avatarUrl={n.actorAvatarUrl} size={26} />
-                  <div className="min-w-0 flex-1 text-[0.78125rem] leading-snug text-ink-2">
+                  <div className="min-w-0 flex-1 text-body-sm leading-snug text-ink-2">
                     <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(NOTIF_VERB[n.type], lang)}
                     {!isFollow && <> <span className="text-ink">{n.title ? tr(n.title, lang) : t('aList', lang)}</span></>}
                   </div>
-                  <span className="shrink-0 font-mono text-[0.6875rem] text-muted">{timeAgo(n.createdAt, lang)}</span>
+                  <span className="shrink-0 font-mono text-caption text-muted">{timeAgo(n.createdAt, lang)}</span>
                 </Link>
               )
             })}

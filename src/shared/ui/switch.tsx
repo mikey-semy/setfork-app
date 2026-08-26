@@ -11,13 +11,13 @@ function Switch({ className, ...props }: React.ComponentProps<typeof SwitchPrimi
     <SwitchPrimitive.Root
       className={cn(
       'peer inline-flex h-[1.375rem] w-[2.5rem] shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors outline-hidden',
-      'focus-visible:ring-2 focus-visible:ring-(--accent) disabled:cursor-not-allowed disabled:opacity-50',
+      'focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50',
       // Пилюля 40×22 — вид, менять его нельзя; пальцу же нужна цель 44. Растёт
       // ОБЛАСТЬ нажатия, а не размер: ровно так это решают Apple HIG и Material.
       // Вариант ROW: переключатели стоят в столбик, и зоне нужно СВОЁ место —
       // иначе она накрывает соседнюю настройку.
       TOUCH_HIT_ROW,
-      'data-[state=checked]:bg-ok data-[state=unchecked]:bg-(--border-strong)',
+      'data-[state=checked]:bg-ok data-[state=unchecked]:bg-border-strong',
       className,
     )}
       {...props}

@@ -121,7 +121,7 @@ export function FormSaveBar({ lang }: { lang: Lang }) {
         >
           <div className={`${PAGE_X} flex items-center justify-between gap-3 py-2.5`}>
             {/* На телефоне текста нет: там важнее две крупные кнопки, а не пояснение. */}
-            <span className="hidden min-w-0 truncate text-[0.8125rem] text-ink-2 sm:inline">
+            <span className="hidden min-w-0 truncate text-body text-ink-2 sm:inline">
               {t('ui.unsavedChanges', lang)}
             </span>
             <div className="flex flex-1 items-center justify-end gap-2 sm:flex-none">

@@ -120,7 +120,7 @@ export function CanonPanel({
     <div className="flex flex-col gap-2">
       <p className={`${TEXT.bodySm} text-muted`}>{t('canon.hint', lang)}</p>
       {text === null ? (
-        <div className={cardClass({ tone: 'inset', className: 'flex items-center gap-2 text-[0.8125rem] text-muted' })}>
+        <div className={cardClass({ tone: 'inset', className: 'flex items-center gap-2 text-body text-muted' })}>
           <Spinner size="md" /> {t('canon.loading', lang)}
         </div>
       ) : (

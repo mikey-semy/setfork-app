@@ -285,9 +285,9 @@ export function ListsPanel({
 
   const header =
     headerStyle === 'mono' ? (
-      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.07em] text-muted">{title}</span>
+      <span className="text-caption font-semibold uppercase tracking-[0.07em] text-muted">{title}</span>
     ) : (
-      <span className="text-[0.78125rem] font-semibold text-muted">{title}</span>
+      <span className="text-body-sm font-semibold text-muted">{title}</span>
     )
 
   return (
@@ -309,7 +309,7 @@ export function ListsPanel({
           header
         )}
         {showNew && (
-          <Link href="/new" className="inline-flex shrink-0 items-center gap-1 text-[0.78125rem] font-semibold text-accent hover:underline">
+          <Link href="/new" className="inline-flex shrink-0 items-center gap-1 text-body-sm font-semibold text-accent hover:underline">
             <Plus size={13} /> {t('newListShort', lang)}
           </Link>
         )}
@@ -324,12 +324,12 @@ export function ListsPanel({
           )}
           {items.length === 0 ? (
             emptyText ? (
-              <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-[0.78125rem] text-muted">{emptyText}</div>
+              <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-body-sm text-muted">{emptyText}</div>
             ) : null
           ) : shown.length === 0 ? (
             // «Ничего не найдено» — ответ ПОИСКУ. Без поиска пустая страница означает, что
             // набор изменился под нами, и говорить о ненайденном там нечего.
-            <div className="px-2 py-3 text-[0.78125rem] text-muted">
+            <div className="px-2 py-3 text-body-sm text-muted">
               {t(searching ? 'searchingLists' : searchFailed ? 'loadFailed' : query ? 'nothingFound' : 'loadFailed', lang)}
             </div>
           ) : (
@@ -356,7 +356,7 @@ export function ListsPanel({
                   // Строка навигации, не контрол фиксированной высоты: вертикальный
                   // padding задаёт плотность списка, а не конкурирует с кнопкой в ряду.
                   // eslint-disable-next-line no-restricted-syntax
-                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[0.8125rem] hover:bg-surface-2 hover:text-ink ${
+                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-body hover:bg-surface-2 hover:text-ink ${
                     active ? 'bg-surface-2 text-ink' : 'text-ink-2'
                   }`}
                 >
@@ -374,10 +374,10 @@ export function ListsPanel({
                       поэтому он уходит в хвост, сжимается первым и на узкой колонке
                       скрывается совсем. */}
                   <span className="min-w-0 flex-1 truncate font-semibold text-ink">{tr(l.title, lang)}</span>
-                  {showOwner && <span className="hidden min-w-0 shrink truncate text-[0.6875rem] font-normal text-muted sm:inline">{l.handle}</span>}
+                  {showOwner && <span className="hidden min-w-0 shrink truncate text-caption font-normal text-muted sm:inline">{l.handle}</span>}
                   {active && <Check size={14} className="ml-auto shrink-0 text-accent" />}
                   {showVersion && l.version !== undefined && (
-                    <span className="ml-auto shrink-0 font-mono text-[0.6875rem] text-muted">v{l.version}</span>
+                    <span className="ml-auto shrink-0 font-mono text-caption text-muted">v{l.version}</span>
                   )}
                 </Link>
                 )
@@ -398,7 +398,7 @@ export function ListsPanel({
               вернёт то же «Страница 1 / 72», что читалось до нажатия, и выйдет, будто
               ничего и не нажимали. Под поиском не показываем: сообщение про страницу. */}
           {pageFailed && !query && (
-            <div role="alert" className="px-2 py-1 text-[0.6875rem] text-danger">
+            <div role="alert" className="px-2 py-1 text-caption text-danger">
               {t('loadFailed', lang)}
             </div>
           )}

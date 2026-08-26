@@ -151,7 +151,7 @@ export function DataTableV2<T>({
                   className={cn(
                     'inline-flex min-h-8 items-center gap-1 rounded-md border px-2.5 pointer-coarse:min-h-11',
                     TEXT.bodySm,
-                    dir ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2',
+                    dir ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2',
                   )}
                 >
                   {typeof c.columnDef.header === 'string' ? c.columnDef.header : c.id}

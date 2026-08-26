@@ -28,10 +28,10 @@ export const CONTROL_H: Record<ControlSize, string> = {
 }
 
 export const CONTROL_TEXT: Record<ControlSize, string> = {
-  xs: 'text-[0.75rem]',
-  sm: 'text-[0.78125rem]',
-  md: 'text-[0.8125rem]',
-  lg: 'text-[0.875rem]',
+  xs: 'text-caption-lg',
+  sm: 'text-body-sm',
+  md: 'text-body',
+  lg: 'text-body-lg',
 }
 
 /** Горизонтальные отступы полей ввода; у Button свои (шире на md — текст в
@@ -43,7 +43,7 @@ export const CONTROL_PX: Record<ControlSize, string> = {
   lg: 'px-3',
 }
 
-// FIELD_TEXT_MOBILE (`max-sm:text-[1rem]`) УДАЛЁН 13.08.2026 — он дублировал уже
+// FIELD_TEXT_MOBILE (`max-sm:text-title`) УДАЛЁН 13.08.2026 — он дублировал уже
 // существующее правило и делал это ХУЖЕ оригинала.
 //
 // Анти-зум iOS живёт в globals.css одним блоком `@media (pointer: coarse)` по типу
@@ -60,22 +60,30 @@ export const CONTROL_PX: Record<ControlSize, string> = {
 // До неё в коде жило 20 разных кеглей с полупиксельными шагами (13 ×406,
 // 12.5 ×313, 12 ×254, 11 ×134, 11.5 ×130, 13.5 ×108…). Ролей — семь; всё
 // новое пишется ролью, свип старого — Ф5b, после него text-[..px] вне
-// shared/ui запрещает линт (Ф7). Герои (20/22/24) в лестницу не входят.
+// shared/ui запрещает линт (Ф7).
+//
+// 26.08.2026 лестница переехала В ТЕМУ Tailwind (`@theme` в globals.css): роли стали
+// НАСТОЯЩИМИ утилитами (`text-body-sm`), а не строками произвольных значений. До этого
+// лестница существовала только на бумаге — в разметке стояло 1190 записей `text-[…rem]`,
+// то есть число вместо роли, и любой новый кегль проходил незамеченным. Здесь остались
+// ИМЕНА для тех, кто собирает класс в коде; в разметке пишут утилиту напрямую.
+//
+// Герои тоже названы (`text-display`, `text-logo`): роль без имени возвращается числом.
 export const TEXT = {
   /** Мелкие подписи: бейджи, моно-меты, uppercase-заголовки групп. */
-  caption: 'text-[0.6875rem]',
+  caption: 'text-caption',
   /** Вторичный текст: подписи полей, хинты, меты. */
-  bodySm: 'text-[0.78125rem]',
+  bodySm: 'text-body-sm',
   /** Основной текст интерфейса. */
-  body: 'text-[0.8125rem]',
+  body: 'text-body',
   /** Крупный текст: поля ввода md, важные абзацы. */
-  bodyLg: 'text-[0.875rem]',
+  bodyLg: 'text-body-lg',
   /** Заголовок раздела/секции. */
-  title: 'text-[1rem]',
+  title: 'text-title',
   /** Заголовок страницы (PageHeader). */
-  page: 'text-[1.125rem]',
+  page: 'text-page',
   /** Число-показатель (StatTile). */
-  stat: 'text-[1.375rem]',
+  stat: 'text-stat',
 } as const
 
 /** Размер lucide-иконки при размере контрола: единый вместо 12 разных чисел. */

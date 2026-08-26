@@ -80,18 +80,18 @@ export function ModerationTable({
             <div key={it.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-3.5 py-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Link href={`/${it.ownerHandle}/${it.slug}`} className="truncate font-mono text-[0.8125rem] text-accent hover:underline">
+                  <Link href={`/${it.ownerHandle}/${it.slug}`} className="truncate font-mono text-body text-accent hover:underline">
                     {it.ownerHandle}/{it.slug}
                   </Link>
                   {it.verified && <BadgeCheck size={15} className="text-ok" />}
                   <StatusBadge s={it.moderation} lang={lang} />
                   {it.appealedAt && <Badge variant="accent">{t('appealedLabel', lang)}</Badge>}
                   {it.moderationSeverity >= 3 && <Badge variant="danger">{t('severeLabel', lang)}</Badge>}
-                  {it.visibility === 'private' && <span className="text-[0.6875rem] text-muted">private</span>}
-                  <span className="font-mono text-[0.6875rem] text-muted">★{it.starsCount}</span>
+                  {it.visibility === 'private' && <span className="text-caption text-muted">private</span>}
+                  <span className="font-mono text-caption text-muted">★{it.starsCount}</span>
                 </div>
-                <div className="truncate text-[0.78125rem] text-ink-2">{tr(it.title, lang)}</div>
-                {it.moderationReason && <div className="text-[0.6875rem] text-warn">{it.moderationReason}</div>}
+                <div className="truncate text-body-sm text-ink-2">{tr(it.title, lang)}</div>
+                {it.moderationReason && <div className="text-caption text-warn">{it.moderationReason}</div>}
               </div>
 
               {/* Действия — компактные иконки с тултипами (фидбек владельца: кнопки-простыни

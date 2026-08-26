@@ -34,8 +34,8 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{t('admin.now', lang)}</h2>
-        <span className="flex items-center gap-1.5 text-[0.6875rem] text-muted">
+        <h2 className="text-body font-semibold uppercase tracking-wide text-ink-2">{t('admin.now', lang)}</h2>
+        <span className="flex items-center gap-1.5 text-caption text-muted">
           <span className={`inline-block h-1.5 w-1.5 rounded-full ${stale ? 'bg-warn' : 'bg-ok'}`} />
           {stale ? t('admin.reconnecting', lang) : t('admin.live', lang)}
         </span>
@@ -87,7 +87,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
         />
       </div>
 
-      <h2 className="mt-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{t('admin.today', lang)}</h2>
+      <h2 className="mt-2 text-body font-semibold uppercase tracking-wide text-ink-2">{t('admin.today', lang)}</h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           label={t('admin.generations2', lang)}

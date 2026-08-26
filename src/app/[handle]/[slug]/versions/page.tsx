@@ -91,7 +91,7 @@ export default async function CommitsPage({
       />
       {/* Шапка: ветка + счётчики слева, фильтры автор/дата справа (как GitHub Commits). */}
       <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.8125rem]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-body">
           {/* Оставляем ИМЯ РЕФА main (его же пользователь набирает в git push
               origin main), а по-русски поясняем тултипом — UI не расходится с git. */}
           <Tooltip label={t('defaultBranchHint', lang)}>
@@ -129,7 +129,7 @@ export default async function CommitsPage({
 
       {groups.length === 0 ? (
         <EmptyState hint={t('noCommitsMatch', lang)}>
-          <Link href={versionsBase} className="text-[0.8125rem] font-semibold text-accent hover:underline">
+          <Link href={versionsBase} className="text-body font-semibold text-accent hover:underline">
             {t('resetFilters', lang)}
           </Link>
         </EmptyState>
@@ -137,7 +137,7 @@ export default async function CommitsPage({
         groups.map((g) => (
           <Fragment key={g.day}>
             {/* Заголовок-дата группы. */}
-            <div className="mb-2 mt-4 flex items-center gap-2 text-[0.78125rem] font-medium text-ink-2 first:mt-0">
+            <div className="mb-2 mt-4 flex items-center gap-2 text-body-sm font-medium text-ink-2 first:mt-0">
               <GitCommitHorizontal size={15} className="text-muted" /> {t('versionsTab', lang)} · {g.day}
             </div>
             {/* Ветвь-линия слева с узлами-точками; каждая строка — аккордеон (тап → дифф). */}

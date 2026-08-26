@@ -29,7 +29,7 @@ export function QuizBlanks({ quiz, set, lang, caseBox, nth }: QuizKindProps) {
         <div className="flex flex-col gap-1.5">
           {Array.from({ length: n }, (_, bi) => (
             <div key={bi} className="flex items-center gap-2">
-              <span className="w-5 shrink-0 text-right font-mono text-[0.6875rem] text-muted">#{bi + 1}</span>
+              <span className="w-5 shrink-0 text-right font-mono text-caption text-muted">#{bi + 1}</span>
               <LineField
                 value={quiz.blanks[bi] ?? ''}
                 onChange={(v) => set({ blanks: Array.from({ length: n }, (_, i) => (i === bi ? v : (quiz.blanks[i] ?? ''))) })}
@@ -41,7 +41,7 @@ export function QuizBlanks({ quiz, set, lang, caseBox, nth }: QuizKindProps) {
           ))}
         </div>
       )}
-      <div className="self-start text-[0.78125rem]">{caseBox}</div>
+      <div className="self-start text-body-sm">{caseBox}</div>
     </>
   )
 }

@@ -54,7 +54,7 @@ export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; l
       {ACHIEVEMENT_KEYS.map((key) => (
         <AchRow key={key} k={key} d={map[key]} lang={lang} pending={pending} onToggle={toggle} onUpload={upload} onClear={clearImage} />
       ))}
-      <p className="mt-1 text-[0.78125rem] text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         {ru
           ? 'Перетащи картинку на плитку или кликни по ней. Выключенное достижение не показывается ни на одном профиле.'
           : 'Drag an image onto a tile or click it. A disabled achievement is hidden on all profiles.'}
@@ -104,7 +104,7 @@ function AchRow({
           }}
           className={buttonClass({
             variant: 'ghost',
-            className: `relative size-11 shrink-0 overflow-hidden border p-0 ${over ? 'border-accent bg-(--accent-soft)' : 'border-dashed border-border'}`,
+            className: `relative size-11 shrink-0 overflow-hidden border p-0 ${over ? 'border-accent bg-accent-soft' : 'border-dashed border-border'}`,
           })}
         >
           {d.imageUrl ? (
@@ -121,8 +121,8 @@ function AchRow({
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => onUpload(k, e.target.files?.[0])} />
 
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[0.8125rem] font-medium text-ink">{t(meta.label, lang)}</div>
-        <div className="font-mono text-[0.6875rem] text-muted">{k}</div>
+        <div className="truncate text-body font-medium text-ink">{t(meta.label, lang)}</div>
+        <div className="font-mono text-caption text-muted">{k}</div>
       </div>
 
       {d.imageUrl && (

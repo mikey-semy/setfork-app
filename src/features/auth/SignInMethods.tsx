@@ -42,8 +42,8 @@ export function SignInMethods({ rows, lang, notice }: { rows: SignInMethodRow[];
         <div key={r.provider} className={cardClass({ pad: 'sm', className: 'flex min-w-0 items-center gap-3' })}>
           <ProviderMark provider={r.provider} size={18} />
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[0.8125rem] text-ink">{t(r.labelKey as TKey, lang)}</div>
-            <div className="truncate text-[0.6875rem] text-ink-2">
+            <div className="truncate text-body text-ink">{t(r.labelKey as TKey, lang)}</div>
+            <div className="truncate text-caption text-ink-2">
               {t(r.linked ? 'auth.methodLinked' : 'auth.methodNotLinked', lang)}
             </div>
           </div>

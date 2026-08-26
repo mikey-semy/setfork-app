@@ -64,8 +64,8 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
         }
       >
         <form id={handleFormId} action={hAction} className="flex flex-col gap-4">
-          <p className="text-[0.8125rem] leading-relaxed text-ink-2">{t('changeHandleWarn', lang)}</p>
-          <label className="flex flex-col gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
+          <p className="text-body leading-relaxed text-ink-2">{t('changeHandleWarn', lang)}</p>
+          <label className="flex flex-col gap-1.5 text-body-sm font-semibold text-ink-2">
             {t('changeHandleField', lang)}
             <div className="mt-0.5 flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 focus-within:border-danger">
               <span className="text-muted">@</span>
@@ -75,11 +75,11 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
                 autoComplete="off"
                 spellCheck={false}
                 placeholder={handle}
-                className="w-full bg-transparent py-2 font-mono text-[0.8125rem] text-ink outline-hidden"
+                className="w-full bg-transparent py-2 font-mono text-body text-ink outline-hidden"
               />
             </div>
           </label>
-          {hState?.error && <div className="text-[0.8125rem] text-danger">{hState.error}</div>}
+          {hState?.error && <div className="text-body text-danger">{hState.error}</div>}
         </form>
       </OverlayPanel>
 

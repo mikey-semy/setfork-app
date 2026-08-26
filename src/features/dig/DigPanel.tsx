@@ -83,16 +83,16 @@ export function DigPanel({
             {layers.length === 0 ? t('dig.digDeeper2', lang) : t('dig.digLowerN', lang).replace('{a}', String(layers.length)).replace('{b}', String(MAX_LEVEL))}
           </button>
         )}
-        {err && <span className="text-[0.6875rem] text-warn">{err}</span>}
+        {err && <span className="text-caption text-warn">{err}</span>}
       </div>
       {open && layers.length > 0 && (
         <div className="mt-2 space-y-2 border-l-2 border-border pl-3">
           {layers.map((l) => (
             <div key={l.level}>
-              <div className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
+              <div className="mb-0.5 text-caption font-semibold uppercase tracking-wide text-muted">
                 {t('dig.layerN', lang).replace('{n}', String(l.level))} · {levelTitle(l.level)}
               </div>
-              <Markdown className="text-[0.78125rem] leading-relaxed text-ink-2">{l.content}</Markdown>
+              <Markdown className="text-body-sm leading-relaxed text-ink-2">{l.content}</Markdown>
             </div>
           ))}
         </div>

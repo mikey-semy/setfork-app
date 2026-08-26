@@ -20,7 +20,7 @@ type Size = 'hero' | ControlSize
 // разнобой, который эта шкала лечит.
 const SIZES: Record<Size, { box: string; text: string; icon: number; clear: number }> = {
   // eslint-disable-next-line no-restricted-syntax -- hero = поиск главной, сознательно вне лестницы ролей (см. коммент выше)
-  hero: { box: 'h-[2.75rem] px-3.5', text: 'text-[0.9375rem]', icon: 16, clear: 16 },
+  hero: { box: 'h-[2.75rem] px-3.5', text: 'text-lead', icon: 16, clear: 16 },
   lg: { box: `${CONTROL_H.lg} ${CONTROL_PX.lg}`, text: CONTROL_TEXT.lg, icon: ICON_SIZE.lg, clear: ICON_SIZE.lg },
   md: { box: `${CONTROL_H.md} ${CONTROL_PX.md}`, text: CONTROL_TEXT.md, icon: ICON_SIZE.md, clear: ICON_SIZE.md },
   sm: { box: `${CONTROL_H.sm} ${CONTROL_PX.sm}`, text: CONTROL_TEXT.sm, icon: ICON_SIZE.sm, clear: ICON_SIZE.sm },

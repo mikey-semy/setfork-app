@@ -110,14 +110,14 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
     setMsg('error' in res ? res.error : t('admin.removedOrphaned', lang).replace('{n}', String(res.removed)))
   }
 
-  const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[0.8125rem] font-semibold disabled:opacity-60'
+  const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-body font-semibold disabled:opacity-60'
 
   return (
     // Та же читаемая ширина, что у карточек-секций /admin (const card на странице):
     // без кэпа панель растягивалась на весь экран и выбивалась из колонны секций.
     <div className={cardClass({ className: 'w-full max-w-[53.75rem]' })}>
       <div className="mb-1 font-semibold text-ink">{t('admin.searchIndexEmbeddings', lang)}</div>
-      <p className="mb-3 text-[0.8125rem] text-ink-2">
+      <p className="mb-3 text-body text-ink-2">
         {t('admin.rebuildVectorIndexLists', lang)}
       </p>
 
@@ -126,32 +126,32 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
           <div className="flex flex-wrap items-center gap-3">
             {/* Мерность — крупным бейджем: в чём реально построен индекс */}
             <span className="inline-flex items-baseline gap-1 rounded-md bg-primary px-2.5 py-1.5 font-mono text-primary-fg">
-              <span className="text-[1.125rem] font-bold leading-none">{space.index.dim}</span>
-              <span className="text-[0.6875rem] uppercase opacity-80">{t('admin.dim', lang)}</span>
+              <span className="text-page font-bold leading-none">{space.index.dim}</span>
+              <span className="text-caption uppercase opacity-80">{t('admin.dim', lang)}</span>
             </span>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-2 text-[0.8125rem] font-medium text-ink">
+              <div className="flex flex-wrap items-center gap-x-2 text-body font-medium text-ink">
                 {t('admin.indexSpace', lang)}
-                <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[0.6875rem] font-semibold">
+                <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-caption font-semibold">
                   {providerLabel(space.index.provider)}
                 </span>
                 <Tooltip label={space.index.docModel}>
-                  <span className="truncate font-mono text-[0.6875rem] text-ink-2">{space.index.docLabel}</span>
+                  <span className="truncate font-mono text-caption text-ink-2">{space.index.docLabel}</span>
                 </Tooltip>
               </div>
-              <div className="mt-0.5 text-[0.78125rem] text-muted">
+              <div className="mt-0.5 text-body-sm text-muted">
                 {space.vectorized}/{space.rows} {t('admin.rowsVectorized', lang)}
                 {space.index.at ? ` · ${t('admin.reindexed', lang)} ${new Date(space.index.at).toLocaleString()}` : ''}
               </div>
             </div>
           </div>
           {!space.inSync && (
-            <div className="mt-2 text-[0.78125rem] font-medium text-warn">
+            <div className="mt-2 text-body-sm font-medium text-warn">
               {t('admin.targetChanged', lang).replace('{p}', providerLabel(space.target.provider)).replace('{d}', String(space.target.dim))}
             </div>
           )}
           <div className="mt-2.5 flex items-center gap-2">
-            <label htmlFor="reindex-target" className="text-[0.78125rem] text-ink-2">{t('admin.target', lang)}</label>
+            <label htmlFor="reindex-target" className="text-body-sm text-ink-2">{t('admin.target', lang)}</label>
             <Select
               value={space.target.provider}
               disabled={switching || running}
@@ -163,7 +163,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
                 setSwitching(false)
               }}
             >
-              <SelectTrigger id="reindex-target" className="h-auto w-auto min-w-[11.875rem] px-2 py-1 text-[0.78125rem]">
+              <SelectTrigger id="reindex-target" className="h-auto w-auto min-w-[11.875rem] px-2 py-1 text-body-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -179,14 +179,14 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
           {/* Мерность — свойство ВЫБРАННОЙ МОДЕЛИ, поэтому у пунктов её нет (раньше там
               стояло вписанное руками «· 1536» при колонке 768). Здесь — измеренный факт
               для текущей цели, а пока не измерен — так и сказано. */}
-          <p className="mt-1.5 text-[0.78125rem] text-muted">
+          <p className="mt-1.5 text-body-sm text-muted">
             {targetDimText(space, lang)}
           </p>
         </div>
       )}
 
       <div className="mb-3">
-        <label htmlFor="reindex-spread" className="mb-1 block text-[0.78125rem] text-ink-2">{t('admin.spreadOverMin', lang)}</label>
+        <label htmlFor="reindex-spread" className="mb-1 block text-body-sm text-ink-2">{t('admin.spreadOverMin', lang)}</label>
         <input
           id="reindex-spread"
           type="number"
@@ -199,10 +199,10 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
         />
       </div>
 
-      {msg && <div className="mb-3 text-[0.78125rem] text-ink-2">{msg}</div>}
+      {msg && <div className="mb-3 text-body-sm text-ink-2">{msg}</div>}
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-[0.78125rem] text-muted">
+        <div className="flex items-center justify-between text-body-sm text-muted">
           <span>
             {stalled
               ? t('admin.interruptedRunAgain', lang)
@@ -237,7 +237,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
               <span
                 key={i}
                 className={`aspect-square w-full rounded-[2px] transition-colors ${
-                  filled ? 'animate-cell-pop bg-ok' : errored ? 'bg-danger' : 'bg-(--border)'
+                  filled ? 'animate-cell-pop bg-ok' : errored ? 'bg-danger' : 'bg-border'
                 }`}
               />
             )

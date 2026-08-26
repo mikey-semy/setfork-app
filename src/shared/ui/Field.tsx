@@ -46,16 +46,16 @@ export function Field({
     })
   }
 
-  const caption = <span className="mb-1.5 block text-[0.78125rem] font-semibold text-ink-2">{label}</span>
+  const caption = <span className="mb-1.5 block text-body-sm font-semibold text-ink-2">{label}</span>
   const tail = (
     <>
       {hasError && (
-        <span id={errId} role="alert" className="mt-1 block text-[0.78125rem] text-danger">
+        <span id={errId} role="alert" className="mt-1 block text-body-sm text-danger">
           {error}
         </span>
       )}
       {hasHint && (
-        <span id={hintId} className="mt-1 block text-[0.78125rem] text-muted">
+        <span id={hintId} className="mt-1 block text-body-sm text-muted">
           {hint}
         </span>
       )}

@@ -87,13 +87,13 @@ export function TelegramLoginWatcher({ lang }: { lang: Lang }) {
   }
 
   if (phase === 'expired') {
-    return <div className="text-[0.78125rem] text-danger">{t('tgLoginExpired', lang)}</div>
+    return <div className="text-body-sm text-danger">{t('tgLoginExpired', lang)}</div>
   }
 
   if (phase === 'code') {
     return (
       <form onSubmit={submitCode} className="flex flex-col gap-3 text-left">
-        <label htmlFor="tg-code" className="text-[0.78125rem] text-ink-2">
+        <label htmlFor="tg-code" className="text-body-sm text-ink-2">
           {t('tgLoginCodePrompt', lang)}
         </label>
         <Input
@@ -107,9 +107,9 @@ export function TelegramLoginWatcher({ lang }: { lang: Lang }) {
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
           aria-label={t('tgLoginCodePrompt', lang)}
           size="lg"
-          className="text-center text-[1.25rem] tracking-[0.4em]"
+          className="text-center text-heading tracking-[0.4em]"
         />
-        {badCode && <div className="text-[0.78125rem] text-danger">{t('tgLoginBadCode', lang)}</div>}
+        {badCode && <div className="text-body-sm text-danger">{t('tgLoginBadCode', lang)}</div>}
         <Button type="submit" variant="primary" size="lg" disabled={submitting || code.length < 6} className="w-full">
           {submitting ? <Spinner size="lg" /> : t('tgLoginCodeSubmit', lang)}
         </Button>
@@ -118,7 +118,7 @@ export function TelegramLoginWatcher({ lang }: { lang: Lang }) {
   }
 
   return (
-    <div className="flex items-center justify-center gap-2 text-[0.78125rem] text-ink-2">
+    <div className="flex items-center justify-center gap-2 text-body-sm text-ink-2">
       <Spinner size="md" />
       {t('tgLoginWaiting', lang)}
     </div>

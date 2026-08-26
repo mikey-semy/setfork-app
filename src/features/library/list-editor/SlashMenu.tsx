@@ -67,7 +67,7 @@ export function SlashMenu({ menu, lang }: { menu: ReturnType<typeof useSlashMenu
             // наведения нет, и первый же тап сразу выбирает.
             onMouseEnter={() => menu.highlight(type)}
             onClick={() => menu.pick(type)}
-            className={`flex w-full items-center gap-2 rounded-[0.3125rem] px-2 text-left text-[0.8125rem] ${TOUCH_MIN_H} ${type === menu.active ? 'bg-accent text-white' : 'text-ink-2 hover:text-ink'}`}
+            className={`flex w-full items-center gap-2 rounded-[0.3125rem] px-2 text-left text-body ${TOUCH_MIN_H} ${type === menu.active ? 'bg-accent text-white' : 'text-ink-2 hover:text-ink'}`}
           >
             <Icon size={14} className="shrink-0" />
             {blockLabel(type, lang)}

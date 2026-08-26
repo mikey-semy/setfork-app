@@ -102,7 +102,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
 
       <div className="mt-2 border-t border-border pt-2">
         {shareViaLabel && (
-          <div className="mb-1.5 px-1.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted">{shareViaLabel}</div>
+          <div className="mb-1.5 px-1.5 text-caption font-semibold uppercase tracking-wider text-muted">{shareViaLabel}</div>
         )}
         <div className="grid grid-cols-3 gap-1">
           {nets.map((n) => (
@@ -115,7 +115,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
               className={buttonClass({ variant: 'ghost', className: 'flex-col hover:bg-surface-2' })}
             >
               {ICON[n.name]}
-              <span className="text-[0.6875rem] leading-none">{n.name}</span>
+              <span className="text-caption leading-none">{n.name}</span>
             </a>
           ))}
         </div>
@@ -125,7 +125,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
         <div className="mt-2 flex flex-col items-center border-t border-border pt-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qr} alt="QR" width={160} height={160} className="rounded-md bg-white p-1" />
-          <span className="mt-1.5 text-[0.6875rem] text-muted">{qrHint}</span>
+          <span className="mt-1.5 text-caption text-muted">{qrHint}</span>
         </div>
       )}
     </>

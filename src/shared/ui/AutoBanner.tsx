@@ -40,7 +40,7 @@ export function AutoBanner({
       }}
     >
       <span
-        className="absolute right-2.5 bottom-2 rounded-md border px-2 py-0.5 text-[0.78125rem] leading-none font-extrabold tracking-wide uppercase"
+        className="absolute right-2.5 bottom-2 rounded-md border px-2 py-0.5 text-body-sm leading-none font-extrabold tracking-wide uppercase"
         style={{ color: a, background: 'var(--surface)', borderColor: `color-mix(in srgb, ${a} 40%, var(--border))` }}
       >
         {mono}

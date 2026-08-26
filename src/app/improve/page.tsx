@@ -49,11 +49,11 @@ export default async function ImprovePage() {
               <li key={it.id} className="rounded-lg border border-border bg-surface px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <Link href={base} className="truncate text-[0.875rem] font-semibold text-accent hover:underline">
+                    <Link href={base} className="truncate text-body-lg font-semibold text-accent hover:underline">
                       {tr(it.title, lang)}
                     </Link>
-                    {tr(it.desc, lang) && <p className="mt-0.5 line-clamp-1 text-[0.78125rem] text-ink-2">{tr(it.desc, lang)}</p>}
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.6875rem] text-muted">
+                    {tr(it.desc, lang) && <p className="mt-0.5 line-clamp-1 text-body-sm text-ink-2">{tr(it.desc, lang)}</p>}
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-caption text-muted">
                       <span className="inline-flex items-center gap-1"><Star size={12} /> {it.starsCount}</span>
                       {it.openSuggestions > 0 && (
                         <span className="inline-flex items-center gap-1 text-accent"><GitPullRequest size={12} /> {it.openSuggestions} {ru ? 'правок' : 'edits'}</span>

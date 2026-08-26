@@ -34,13 +34,13 @@ export function CodeCard({ code, name, lang }: { code: string; name?: string; la
         <span className={`rounded bg-surface-2/85 px-1.5 py-0.5 font-mono ${TEXT.caption} uppercase tracking-wide text-muted`}>{label}</span>
         <CopyButton text={code} lang={lang} />
       </div>
-      <div className="py-2 font-mono text-[0.78125rem] leading-[1.55] text-ink">
+      <div className="py-2 font-mono text-body-sm leading-[1.55] text-ink">
         {lines.map((tokens, i) => (
           // Отступ под бейдж и кнопку нужен только первой строке: 44px тач-цель +
           // бейдж + зазор. Остальные строки во всю ширину — иначе узкий экран теряет
           // сотню пикселей на каждой строке кода.
           <div key={i} className={`flex gap-2 px-2.5 ${i === 0 ? 'pr-[6.5rem]' : ''}`}>
-            <span className="w-5 shrink-0 select-none text-right text-[0.6875rem] leading-[1.7] text-muted">{i + 1}</span>
+            <span className="w-5 shrink-0 select-none text-right text-caption leading-[1.7] text-muted">{i + 1}</span>
             <span className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">
               {tokens.length === 0 ? ' ' : tokens.map((t, j) => (t.cls ? <span key={j} className={t.cls}>{t.text}</span> : <span key={j}>{t.text}</span>))}
             </span>

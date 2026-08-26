@@ -30,7 +30,7 @@ export function IssueRefList({
             onPick(h)
           }}
           onMouseEnter={() => onHover(i)}
-          className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[0.8125rem] ${i === index ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
+          className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-body ${i === index ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
         >
           <span className={`font-mono ${h.status === 'closed' ? 'text-accent' : 'text-ok'}`}>#{h.number}</span>
           <span className="min-w-0 flex-1 truncate">{h.title}</span>

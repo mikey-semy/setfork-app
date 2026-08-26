@@ -9,9 +9,9 @@ import { Avatar } from './Avatar'
 // (timeAgo/дата — на вызывающем: там язык и контекст).
 
 const SIZES = {
-  xs: { avatar: 18, text: 'text-[0.78125rem]' },
-  sm: { avatar: 22, text: 'text-[0.78125rem]' },
-  md: { avatar: 28, text: 'text-[0.8125rem]' },
+  xs: { avatar: 18, text: 'text-body-sm' },
+  sm: { avatar: 22, text: 'text-body-sm' },
+  md: { avatar: 28, text: 'text-body' },
 } as const
 
 export function UserLine({

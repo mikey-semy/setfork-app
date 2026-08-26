@@ -44,7 +44,7 @@ export function FileDrop({ kind, uploading, onFile, lang }: { kind: DropKind; up
         take(e.dataTransfer.files?.[0])
       }}
       className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 ${TEXT.bodySm} transition-colors ${TOUCH_MIN_H} ${
-        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
+        over ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:border-border-strong'
       }`}
     >
       {uploading ? <Spinner size="md" /> : <Icon size={14} />}

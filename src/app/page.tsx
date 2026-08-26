@@ -48,7 +48,7 @@ export default async function HomePage() {
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="flex w-full max-w-[40rem] flex-col items-center gap-6 text-center">
-        <div className="font-logo text-[2.75rem] leading-none tracking-tight text-ink sm:text-[4rem]">SetFork</div>
+        <div className="font-logo text-logo-lg leading-none tracking-tight text-ink sm:text-logo-xl">SetFork</div>
 
         <HeroSearch placeholder={placeholder} clearLabel={t('clear', lang)} />
 
@@ -57,7 +57,7 @@ export default async function HomePage() {
             <Link
               key={c}
               href={`/search?q=${encodeURIComponent(c)}`}
-              className="rounded-full border border-border bg-surface-2 px-3.5 py-[0.4375rem] text-[0.8125rem] text-ink-2 hover:text-ink"
+              className="rounded-full border border-border bg-surface-2 px-3.5 py-[0.4375rem] text-body text-ink-2 hover:text-ink"
             >
               {c}
             </Link>

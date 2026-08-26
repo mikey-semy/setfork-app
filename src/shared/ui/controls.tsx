@@ -22,7 +22,7 @@ export function LangSwitch({ lang }: { lang: Lang }) {
           type="button"
           onClick={() => set(l)}
           // eslint-disable-next-line no-restricted-syntax -- сегмент переключателя, а не кнопка в ряду
-          className={`cursor-pointer rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold uppercase transition-colors ${
+          className={`cursor-pointer rounded-full px-2.5 py-1 text-caption font-semibold uppercase transition-colors ${
             lang === l ? 'bg-primary text-primary-fg' : 'text-ink-2'
           }`}
         >
@@ -93,8 +93,8 @@ export function ThemeModeSwitch({ labels = false, lang }: { labels?: boolean; la
           type="button"
           onClick={() => setTheme(value)}
           // eslint-disable-next-line no-restricted-syntax -- карточка варианта выбора: высота от содержимого, а не от шкалы
-          className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[0.8125rem] text-ink transition-colors ${
-            current === value ? 'border-accent bg-(--accent-soft)' : 'border-border hover:border-border-strong'
+          className={`flex items-center gap-2 rounded-md border px-3 py-2 text-body text-ink transition-colors ${
+            current === value ? 'border-accent bg-accent-soft' : 'border-border hover:border-border-strong'
           }`}
         >
           <Icon size={14} className="text-muted" /> {label}

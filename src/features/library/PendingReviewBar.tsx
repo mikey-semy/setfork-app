@@ -26,7 +26,7 @@ export function PendingReviewBar({
   if (count === 0) return null
   return (
     <div className="sticky bottom-3 z-10 mt-3 flex flex-wrap items-center gap-2.5 rounded-lg border border-warn/40 bg-surface px-3.5 py-2.5 shadow-lg">
-      <span className="text-[0.78125rem] font-semibold text-warn">
+      <span className="text-body-sm font-semibold text-warn">
         {labels.pending}: {count}
       </span>
       <Button variant="primary" size="md" disabled={busy} onClick={() => start(() => void action())} className="ml-auto">

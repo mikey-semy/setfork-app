@@ -92,7 +92,7 @@ export function VideoBlockBody({ item, onPatch, uploading, onFile, lang }: BodyP
 export function FileBlockBody({ item, onPatch, uploading, onFile, lang }: BodyProps) {
   if (!item.fileUrl) return <FileDrop kind="file" uploading={uploading} onFile={onFile} lang={lang} />
   return (
-    <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.8125rem]">
+    <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-body">
       <Paperclip size={14} className="shrink-0 text-muted" />
       <a href={item.fileUrl} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-accent hover:underline">
         {item.fileName || item.fileUrl}

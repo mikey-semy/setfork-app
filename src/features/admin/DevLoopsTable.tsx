@@ -25,14 +25,14 @@ export function DevLoopsTable({ rows, lang }: { rows: LoopRow[]; lang: Lang }) {
     nodeColumn<LoopRow>({
       id: 'loop',
       header: t('admin.loop', lang),
-      render: (r) => <span className="block min-w-0 truncate font-mono text-[0.78125rem] text-ink">{r.type}</span>,
+      render: (r) => <span className="block min-w-0 truncate font-mono text-body-sm text-ink">{r.type}</span>,
     }),
     nodeColumn<LoopRow>({
       id: 'state',
       header: t('admin.state', lang),
       size: 112,
       render: (r) => (
-        <span className={`block text-right text-[0.78125rem] ${r.circuitTripped ? 'text-danger' : r.paused ? 'text-warn' : 'text-ok'}`}>
+        <span className={`block text-right text-body-sm ${r.circuitTripped ? 'text-danger' : r.paused ? 'text-warn' : 'text-ok'}`}>
           {r.circuitTripped
             ? t('admin.breakerTripped', lang)
             : r.paused
@@ -85,7 +85,7 @@ export function DevLoopsTable({ rows, lang }: { rows: LoopRow[]; lang: Lang }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <DataTableV2<LoopRow> cardOnMobile rowKey={(r) => r.type} columns={columns} data={rows} />
-      <p className="text-[0.6875rem] text-muted">
+      <p className="text-caption text-muted">
         {t('admin.pauseStopsQueueFrom', lang)}
       </p>
     </div>

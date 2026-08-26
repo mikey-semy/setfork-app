@@ -57,7 +57,7 @@ export function DayTip({ anchor }: { anchor: TipAnchor }) {
     <div
       ref={ref}
       aria-hidden
-      className={`sf-fade-in pointer-events-none fixed z-50 whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-[0.6875rem] leading-snug text-ink shadow-card ${place ? '' : 'opacity-0'}`}
+      className={`sf-fade-in pointer-events-none fixed z-50 whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-caption leading-snug text-ink shadow-card ${place ? '' : 'opacity-0'}`}
       style={{
         left: place?.left ?? anchor.x,
         top: place?.top ?? anchor.top - GAP,

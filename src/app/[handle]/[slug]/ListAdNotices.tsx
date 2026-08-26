@@ -19,7 +19,7 @@ export function ListAdNotices({ mon, showAdMarking, showDisclosure, adAdvertiser
           self-start: во flex-колонке элемент иначе растянулся бы на всю
           ширину, а пометка должна быть по содержимому. */}
       {showAdMarking && (
-        <div className="inline-flex flex-wrap items-center gap-x-1.5 self-start rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] font-medium text-ink-2">
+        <div className="inline-flex flex-wrap items-center gap-x-1.5 self-start rounded-md border border-border bg-surface-2 px-2.5 py-1 text-caption font-medium text-ink-2">
           <span>{mon.adMarkingText}</span>
           {adAdvertisers.length > 0 && (
             <span className="font-normal text-muted">
@@ -34,7 +34,7 @@ export function ListAdNotices({ mon, showAdMarking, showDisclosure, adAdvertiser
 
       {/* FTC-дисклеймер: показывается ДО ссылок (требование к affiliate-раскрытию). */}
       {showDisclosure && (
-        <div className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[0.78125rem] text-ink-2">
+        <div className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-body-sm text-ink-2">
           <Info size={15} className="shrink-0 text-muted" /> {mon.disclosureText}
         </div>
       )}

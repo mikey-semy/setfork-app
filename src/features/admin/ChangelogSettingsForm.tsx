@@ -29,8 +29,8 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[0.8125rem] font-medium text-ink">{t('changelogShow', lang)}</div>
-          <p className="mt-0.5 text-[0.78125rem] leading-snug text-ink-2">
+          <div className="text-body font-medium text-ink">{t('changelogShow', lang)}</div>
+          <p className="mt-0.5 text-body-sm leading-snug text-ink-2">
             {t('changelogShowHint', lang)}
           </p>
         </div>
@@ -63,13 +63,13 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
             <SelectItem value="merged">
               <span className="flex flex-col">
                 <span>{t('changelogMerged', lang)}</span>
-                <span className="text-[0.6875rem] text-muted">{t('changelogMergedHint', lang)}</span>
+                <span className="text-caption text-muted">{t('changelogMergedHint', lang)}</span>
               </span>
             </SelectItem>
             <SelectItem value="releases">
               <span className="flex flex-col">
                 <span>{t('changelogReleases', lang)}</span>
-                <span className="text-[0.6875rem] text-muted">{t('changelogReleasesHint', lang)}</span>
+                <span className="text-caption text-muted">{t('changelogReleasesHint', lang)}</span>
               </span>
             </SelectItem>
           </SelectContent>
@@ -82,8 +82,8 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[0.8125rem] font-medium text-ink">{t('changelogTranslate', lang)}</div>
-          <p className="mt-0.5 text-[0.78125rem] leading-snug text-ink-2">
+          <div className="text-body font-medium text-ink">{t('changelogTranslate', lang)}</div>
+          <p className="mt-0.5 text-body-sm leading-snug text-ink-2">
             {t('changelogTranslateHint', lang)}
           </p>
         </div>

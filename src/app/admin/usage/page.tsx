@@ -69,7 +69,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
               <Link
                 key={w.days}
                 href={`/admin/usage?w=${w.days}`}
-                className={`rounded px-2.5 py-1 text-[0.78125rem] font-medium ${
+                className={`rounded px-2.5 py-1 text-body-sm font-medium ${
                   w.days === days ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
                 }`}
               >
@@ -93,32 +93,32 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
             {credits && (
               <div>
-                <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
+                <div className="text-caption uppercase tracking-wide text-muted">
                   {t('admin.openRouterBalance', lang)}
                 </div>
-                <div className="mt-1 text-[1.25rem] font-bold text-ink">{money(credits.remaining)}</div>
+                <div className="mt-1 text-heading font-bold text-ink">{money(credits.remaining)}</div>
               </div>
             )}
             {avgPerGen != null && (
               <div>
-                <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
+                <div className="text-caption uppercase tracking-wide text-muted">
                   {t('admin.avgGeneration', lang)}
                 </div>
-                <div className="mt-1 text-[1.25rem] font-bold text-ink">{money(avgPerGen)}</div>
+                <div className="mt-1 text-heading font-bold text-ink">{money(avgPerGen)}</div>
               </div>
             )}
             {runwayGens != null && (
               <div>
-                <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
+                <div className="text-caption uppercase tracking-wide text-muted">
                   {t('admin.balanceAffords', lang)}
                 </div>
-                <div className="mt-1 text-[1.25rem] font-bold text-(--accent)">
+                <div className="mt-1 text-heading font-bold text-accent">
                   ≈ {num(runwayGens)} {t('admin.generations', lang)}
                 </div>
               </div>
             )}
           </div>
-          {avgPerGen != null && <p className="mt-3 text-[0.78125rem] text-muted">{footnote}</p>}
+          {avgPerGen != null && <p className="mt-3 text-body-sm text-muted">{footnote}</p>}
         </div>
       )}
 
@@ -126,8 +126,8 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
       {health.length > 0 && (
         <div className="rounded-lg border border-border bg-surface">
           <div className="border-b border-border px-4 py-2.5">
-            <span className="text-[0.8125rem] font-semibold text-ink">{t('admin.modelReliability', lang)}</span>
-            <span className="ml-2 text-[0.78125rem] text-muted">
+            <span className="text-body font-semibold text-ink">{t('admin.modelReliability', lang)}</span>
+            <span className="ml-2 text-body-sm text-muted">
               {t('admin.quarantinedModelsAutoRotated', lang)}
             </span>
           </div>

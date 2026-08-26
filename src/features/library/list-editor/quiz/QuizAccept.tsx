@@ -18,7 +18,7 @@ export function QuizAccept({ quiz, set, lang, caseBox, nth }: QuizKindProps) {
       <div className="flex flex-col gap-1.5">
         {accept.map((a, ai) => (
           <div key={ai} className="flex items-center gap-2">
-            <span className="w-4 text-right text-[0.6875rem] text-muted">✓</span>
+            <span className="w-4 text-right text-caption text-muted">✓</span>
             <LineField value={a} onChange={(v) => set({ accept: accept.map((x, xi) => (xi === ai ? v : x)) })} lang={lang} label={nth('quiz.acceptedN', ai + 1)} />
             <RemoveBtn onClick={() => set({ accept: accept.filter((_, xi) => xi !== ai) })} disabled={accept.length <= 1} label={t('quiz.removeAnswer', lang)} />
           </div>

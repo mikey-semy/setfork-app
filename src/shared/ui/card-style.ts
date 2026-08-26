@@ -35,7 +35,7 @@ const TONE: Record<CardTone, string> = {
   surface: 'border-border bg-surface',
   // Вложенный блок внутри карточки/панели: на тон глубже, радиус меньше.
   inset: 'border-border bg-surface-2',
-  accent: 'border-(--accent)/40 bg-(--accent-soft)',
+  accent: 'border-accent/40 bg-accent-soft',
   ok: 'border-ok/50 bg-ok/10',
   warn: 'border-warn/50 bg-warn/10',
   danger: 'border-danger/40 bg-danger/5',

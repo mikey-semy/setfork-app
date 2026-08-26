@@ -144,7 +144,7 @@ export function RunView({
 
   return (
     <div className={PAGE_NARROW}>
-      <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-[0.8125rem] text-ink-2 hover:text-ink">
+      <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-body text-ink-2 hover:text-ink">
         <ArrowLeft size={14} /> {backHref.replace(/^\//, '')}
       </Link>
 
@@ -152,8 +152,8 @@ export function RunView({
       <div className={cardClass({ className: 'sticky top-[4rem] z-10 mb-5 bg-surface/95 backdrop-blur-sm' })}>
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="truncate text-[1rem] font-semibold text-ink">{title}</div>
-            <div className="text-[0.78125rem] text-ink-2">
+            <div className="truncate text-title font-semibold text-ink">{title}</div>
+            <div className="text-body-sm text-ink-2">
               {status === 'done' ? (
                 t('runDone', lang)
               ) : status === 'failed' ? (
@@ -241,7 +241,7 @@ export function RunView({
       {certificateHref && completed && (
         <div className="mb-5 flex items-center gap-3 rounded-lg border border-ok/40 bg-ok/10 px-4 py-3">
           <GraduationCap size={18} className="shrink-0 text-ok" />
-          <span className="min-w-0 flex-1 text-[0.8125rem] font-medium text-ink">
+          <span className="min-w-0 flex-1 text-body font-medium text-ink">
             {total > 0 && done === total && blockedCount === 0 ? t('courseAllStepsDone', lang) : t('courseCompletedEarlier', lang)}
           </span>
           <Link href={certificateHref} className={buttonClass({ className: 'border-ok/40 text-ok hover:bg-ok/15' })}>
@@ -265,7 +265,7 @@ export function RunView({
                       <DigChatOpen detail={{ templateId, stepN: s.n, stepTitle: s.digTitle }} label={t('digStep', lang)} hasSession={dugLocal.has(s.n)} />
                     </div>
                   )}
-                  <Markdown className={`text-[0.875rem] leading-relaxed text-ink-2${digEnabled ? ' pr-10' : ''}`}>{s.text}</Markdown>
+                  <Markdown className={`text-body-lg leading-relaxed text-ink-2${digEnabled ? ' pr-10' : ''}`}>{s.text}</Markdown>
                 </div>
               ) : null
             }
@@ -273,7 +273,7 @@ export function RunView({
               return s.products.length ? <ProductBlock key={s.id} title={s.productTitle} items={s.products} lang={lang} /> : null
             }
             return s.caption ? (
-              <div key={s.id} className="px-1 text-[0.8125rem] italic text-muted">🖼 {s.caption}</div>
+              <div key={s.id} className="px-1 text-body italic text-muted">🖼 {s.caption}</div>
             ) : null
           }
           // Порядковый номер шага (только по шаг-блокам).
@@ -321,9 +321,9 @@ export function RunView({
                   {s.done ? <SquareCheckBig size={20} /> : <Square size={20} />}
                 </button>
                 <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-2 pt-1">
-                  {ordered && <span className="font-mono text-[0.78125rem] text-muted">{stepNo}</span>}
+                  {ordered && <span className="font-mono text-body-sm text-muted">{stepNo}</span>}
                   {/* Заголовок шага пишет человек: без переноса длинное слово уносит страницу (замер 976px при экране 390). */}
-                  <span className={`min-w-0 text-[0.875rem] font-semibold [overflow-wrap:anywhere] ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
+                  <span className={`min-w-0 text-body-lg font-semibold [overflow-wrap:anywhere] ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
                   <StepLevelBadge level={s.level} lang={lang} />
                 </div>
               </div>
@@ -332,7 +332,7 @@ export function RunView({
               <div className="mt-2 flex flex-col gap-3">
                 {s.desc && <Markdown>{s.desc}</Markdown>}
                 {s.why && (
-                  <div className="flex gap-1.5 text-[0.78125rem] text-ink-2">
+                  <div className="flex gap-1.5 text-body-sm text-ink-2">
                     <Info size={13} className="mt-0.5 shrink-0 text-muted" />
                     <span className="min-w-0 [overflow-wrap:anywhere]">
                       <span className="font-medium">{t('whyLabel', lang)}:</span> {s.why}
@@ -350,7 +350,7 @@ export function RunView({
                       const checked = s.subtasksDone.includes(idx)
                       return (
                         <li key={idx}>
-                          <button type="button" onClick={() => toggleSub(i, idx)} className="flex items-start gap-2 text-left text-[0.8125rem] text-ink-2">
+                          <button type="button" onClick={() => toggleSub(i, idx)} className="flex items-start gap-2 text-left text-body text-ink-2">
                             <span className={`mt-0.5 shrink-0 ${checked ? 'text-ok' : 'text-muted'}`}>{checked ? <Check size={14} /> : <Square size={14} />}</span>
                             <span className={`min-w-0 [overflow-wrap:anywhere] ${checked ? 'line-through opacity-70' : ''}`}>{sub}</span>
                           </button>
@@ -364,11 +364,11 @@ export function RunView({
                   <div className="flex flex-wrap gap-2">
                     {s.refs.map((r) =>
                       r.url ? (
-                        <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-accent [overflow-wrap:anywhere]">
+                        <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-caption text-accent [overflow-wrap:anywhere]">
                           {linkLabel(r.label, r.url)}
                         </SafeLink>
                       ) : (
-                        <span key={`${r.label}:`} className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-ink-2 [overflow-wrap:anywhere]">
+                        <span key={`${r.label}:`} className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-caption text-ink-2 [overflow-wrap:anywhere]">
                           {linkLabel(r.label, r.url)}
                         </span>
                       ),
@@ -408,7 +408,7 @@ export function RunView({
 
                 {/* Состояние «застрял»: причина + сообщить/снять (помощь теперь через «кирку» в углу). */}
                 {s.blocked && blockingId !== s.id && (
-                  <div className={cardClass({ tone: 'danger', pad: 'sm', className: 'text-[0.78125rem]' })}>
+                  <div className={cardClass({ tone: 'danger', pad: 'sm', className: 'text-body-sm' })}>
                     <div className="flex items-center gap-1.5 font-semibold text-danger">
                       <Ban size={13} /> {t('runBlockedLabel', lang)}
                       {s.reason ? ':' : ''}

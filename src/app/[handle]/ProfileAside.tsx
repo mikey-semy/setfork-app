@@ -26,21 +26,21 @@ export function ProfileAside({ handle, lang, user, viewer, isOwner, bigAvatar, c
       <div className="mt-4">
         {/* Имя и ник задаёт человек: слово без пробелов иначе вылезает за колонку
             профиля и тянет за собой всю страницу на мобиле. */}
-        {user.name && <div className="text-[1.375rem] font-bold leading-tight text-ink [overflow-wrap:anywhere]">{user.name}</div>}
-        <div className="text-[1.125rem] text-ink-2 [overflow-wrap:anywhere]">{user.handle}</div>
+        {user.name && <div className="text-stat font-bold leading-tight text-ink [overflow-wrap:anywhere]">{user.name}</div>}
+        <div className="text-page text-ink-2 [overflow-wrap:anywhere]">{user.handle}</div>
         {/* Профессия — должность под ником (у служебных участников буквальная). */}
-        {user.profession && <div className="mt-0.5 text-[0.875rem] text-ink-2 [overflow-wrap:anywhere]">{user.profession}</div>}
+        {user.profession && <div className="mt-0.5 text-body-lg text-ink-2 [overflow-wrap:anywhere]">{user.profession}</div>}
         {/* ADR-0004: нечеловечность обязана быть видна — иначе профиль вводит в
             заблуждение. Пометка ДАННЫЕ (account_type), а не догадка по нику. */}
         {user.accountType === 'agent' && (
-          <div className="mt-2 inline-flex items-center rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-semibold text-ink-2">
+          <div className="mt-2 inline-flex items-center rounded-full border border-border bg-surface-2 px-2 py-0.5 text-caption font-semibold text-ink-2">
             {t('list.serviceAccount', lang)}
           </div>
         )}
       </div>
       {/* Био — 280 символов свободного текста, туда часто вставляют ссылку: без
           переноса одна такая строка уносила страницу на 2200px (экран 390). */}
-      {user.bio && <p className="mt-3 text-[0.875rem] leading-snug text-ink [overflow-wrap:anywhere]">{user.bio}</p>}
+      {user.bio && <p className="mt-3 text-body-lg leading-snug text-ink [overflow-wrap:anywhere]">{user.bio}</p>}
 
       <div className="mt-4">
         {isOwner ? (
@@ -59,7 +59,7 @@ export function ProfileAside({ handle, lang, user, viewer, isOwner, bigAvatar, c
         )}
       </div>
 
-      <div className="mt-3 flex gap-4 text-[0.8125rem]">
+      <div className="mt-3 flex gap-4 text-body">
         <Link href={`/${handle}?tab=followers`} className="text-ink-2 hover:text-accent">
           <b className="text-ink">{followCounts.followers}</b> {t('followersLabel', lang)}
         </Link>
@@ -68,11 +68,11 @@ export function ProfileAside({ handle, lang, user, viewer, isOwner, bigAvatar, c
         </Link>
       </div>
 
-      <div className="mt-3 font-mono text-[0.78125rem] text-muted">
+      <div className="mt-3 font-mono text-body-sm text-muted">
         {t('joined', lang)} {monthYear(user.createdAt, lang)}
       </div>
       {(user.location || user.website || user.socials.length > 0) && (
-        <div className="mt-4 flex flex-col gap-2 text-[0.8125rem]">
+        <div className="mt-4 flex flex-col gap-2 text-body">
           {user.location && (
             <div className="flex min-w-0 items-center gap-2 text-ink-2 [overflow-wrap:anywhere]">
               <MapPin size={15} className="shrink-0 text-muted" /> {user.location}

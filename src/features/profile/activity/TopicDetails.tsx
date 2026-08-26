@@ -85,12 +85,12 @@ function ListRow({
           {/* Ссылка ведёт к ВЛАДЕЛЬЦУ списка: задачу и правку человек мог оставить
               в чужом, и адрес по нику профиля упирался бы в 404 или чужой список
               с тем же slug (slug уникален только внутри владельца). */}
-          <Link href={`/${item.ownerHandle}/${item.slug}`} className="min-w-0 flex-1 truncate text-[0.8125rem] text-accent hover:underline">
+          <Link href={`/${item.ownerHandle}/${item.slug}`} className="min-w-0 flex-1 truncate text-body text-accent hover:underline">
             {title}
           </Link>
           {/* Счётчики держат колонку: без фиксированной ширины они гуляют и полоски
               перестают читаться как один ряд. */}
-          <span className="shrink-0 text-right font-mono text-[0.6875rem] tabular-nums text-muted">
+          <span className="shrink-0 text-right font-mono text-caption tabular-nums text-muted">
             {deep ? fmtNumber(item.count, lang) : dayMonthYear(item.at, lang)}
           </span>
           {deep && <Meter value={share} tone="ok" className="w-10 shrink-0 sm:w-16" />}
@@ -121,12 +121,12 @@ function ListEvents({
     <Body details={details} lang={lang} className="ml-7">
       <ul className="mt-1 flex flex-col gap-1 border-l border-border pl-3">
         {(details.page?.items ?? []).map((e) => (
-          <li key={`${e.ref}:${e.at}`} className="flex items-baseline justify-between gap-3 text-[0.78125rem]">
+          <li key={`${e.ref}:${e.at}`} className="flex items-baseline justify-between gap-3 text-body-sm">
             <span className="min-w-0 truncate text-ink-2">
               <span className="font-mono text-muted">{kind === 'versions' ? `v${e.ref}` : `#${e.ref}`}</span>
               {e.text ? ` ${e.text}` : ''}
             </span>
-            <span className="shrink-0 text-[0.6875rem] text-muted">{dayMonthYear(e.at, lang)}</span>
+            <span className="shrink-0 text-caption text-muted">{dayMonthYear(e.at, lang)}</span>
           </li>
         ))}
       </ul>
@@ -150,7 +150,7 @@ function Body<T extends TopicList | ListEvent>({
     <div className={`sf-rise-in sf-slow ${className}`}>
       {details.failed ? (
         <div className="flex flex-wrap items-center gap-3 py-1">
-          <p className="text-[0.78125rem] text-danger">{t('profile.activity.loadFailed', lang)}</p>
+          <p className="text-body-sm text-danger">{t('profile.activity.loadFailed', lang)}</p>
           <Button size="xs" onClick={details.retry}>
             {t('tryAgain', lang)}
           </Button>
@@ -161,7 +161,7 @@ function Body<T extends TopicList | ListEvent>({
           <Skeleton className="h-3 w-1/2" />
         </div>
       ) : details.page.items.length === 0 ? (
-        <p className="py-1 text-[0.78125rem] text-muted">{t('profile.activity.emptyDetails', lang)}</p>
+        <p className="py-1 text-body-sm text-muted">{t('profile.activity.emptyDetails', lang)}</p>
       ) : (
         <>
           {children}
@@ -176,7 +176,7 @@ function Body<T extends TopicList | ListEvent>({
 function Tail<T>({ page, lang }: { page: DetailsPage<T>; lang: Lang }) {
   if (page.total <= page.items.length) return null
   return (
-    <p className="mt-1.5 text-[0.6875rem] text-muted">
+    <p className="mt-1.5 text-caption text-muted">
       {fill('profile.activity.showingFirst', lang, { n: fmtNumber(page.items.length, lang), total: fmtNumber(page.total, lang) })}
     </p>
   )

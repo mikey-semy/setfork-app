@@ -71,7 +71,7 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
               onBlur={() => setHovered((h) => (h === k ? null : h))}
               tabIndex={open ? 0 : -1}
               className={`absolute rounded-full shadow-md transition-[transform,opacity,color,background-color,border-color] duration-200 motion-reduce:transition-none ${
-                lifted ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border bg-surface text-ink'
+                lifted ? 'border-accent bg-accent-soft text-accent' : 'border-border bg-surface text-ink'
               }`}
               style={{
                 transform: open ? `translate(${Math.cos(rad) * r}px, ${-Math.sin(rad) * r}px) scale(${lifted ? 1.18 : 1})` : 'translate(0,0) scale(0.3)',

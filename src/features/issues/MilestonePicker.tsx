@@ -39,7 +39,7 @@ export function MilestonePicker({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-[0.78125rem] font-semibold uppercase tracking-[0.04em] text-muted">{L('Веха', 'Milestone')}</span>
+        <span className="text-body-sm font-semibold uppercase tracking-[0.04em] text-muted">{L('Веха', 'Milestone')}</span>
         {canEdit && (
           <AnchoredMenu
             align="right"
@@ -58,7 +58,7 @@ export function MilestonePicker({
                   onClick={() => { set(''); close() }}
                   label={<span className="text-muted">{L('без вехи', 'no milestone')}</span>}
                 />
-                {options.length === 0 && <div className="px-2 py-3 text-[0.78125rem] text-muted">{L('вех нет', 'no milestones')}</div>}
+                {options.length === 0 && <div className="px-2 py-3 text-body-sm text-muted">{L('вех нет', 'no milestones')}</div>}
                 {options.map((m) => (
                   <PickerRow
                     key={m.id}
@@ -75,7 +75,7 @@ export function MilestonePicker({
       </div>
 
       {current ? (
-        <span className="inline-flex w-fit min-w-0 max-w-full items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-[0.78125rem]">
+        <span className="inline-flex w-fit min-w-0 max-w-full items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-body-sm">
           <MilestoneIcon size={13} className="shrink-0 text-accent" />
           {/* Название вехи — до 120 символов от человека: без переноса чип уносил
               сайдбар задачи за край (замер: 906px при экране 390). */}
@@ -87,7 +87,7 @@ export function MilestonePicker({
           )}
         </span>
       ) : (
-        <span className="text-[0.8125rem] text-muted">{L('без вехи', 'no milestone')}</span>
+        <span className="text-body text-muted">{L('без вехи', 'no milestone')}</span>
       )}
     </div>
   )

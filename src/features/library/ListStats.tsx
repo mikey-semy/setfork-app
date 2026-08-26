@@ -61,8 +61,8 @@ export function ListStats({
     <div
       className={
         layout === 'row'
-          ? 'flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.78125rem] text-ink-2'
-          : 'flex flex-col gap-2 text-[0.8125rem] text-ink-2'
+          ? 'flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-ink-2'
+          : 'flex flex-col gap-2 text-body text-ink-2'
       }
     >
       {/* Версия — первой: она из всей сводки самое «что это сейчас», а не счётчик.

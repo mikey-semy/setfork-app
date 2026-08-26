@@ -64,7 +64,7 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
   return (
     <div className="flex flex-col gap-3">
       {list.length === 0 ? (
-        <p className="text-[0.8125rem] text-ink-2">
+        <p className="text-body text-ink-2">
           {ru ? 'Passkey — вход по Touch/Face ID или аппаратному ключу, без пароля.' : 'A passkey lets you sign in with Touch/Face ID or a hardware key — no password.'}
         </p>
       ) : (
@@ -73,8 +73,8 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
             <div key={p.id} className="flex items-center gap-3 rounded-md border border-border bg-surface-2 px-3 py-2.5">
               <Fingerprint size={18} className="shrink-0 text-accent" />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[0.8125rem] font-medium text-ink">{p.name}</div>
-                <div className="font-mono text-[0.6875rem] text-muted">
+                <div className="truncate text-body font-medium text-ink">{p.name}</div>
+                <div className="font-mono text-caption text-muted">
                   {ru ? 'добавлен' : 'added'} {fmt(p.createdAt)}
                   {p.lastUsedAt ? ` · ${ru ? 'вход' : 'used'} ${fmt(p.lastUsedAt)}` : ''}
                 </div>
@@ -96,7 +96,7 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
         >
           {busy ? <Spinner size="md" /> : <Plus size={14} />} {ru ? 'Добавить passkey' : 'Add a passkey'}
         </button>
-        {err && <span className="text-[0.78125rem] text-danger">{err}</span>}
+        {err && <span className="text-body-sm text-danger">{err}</span>}
       </div>
     </div>
   )

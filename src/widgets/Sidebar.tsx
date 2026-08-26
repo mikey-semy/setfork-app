@@ -49,7 +49,7 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
             onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.8125rem] font-medium',
+              'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-body font-medium',
               active ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink',
             )}
           >
@@ -126,7 +126,7 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
           <div className="sf-overlay-in fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />
           <aside className="animate-slide-in-left fixed left-0 top-0 z-50 flex h-full w-[17.5rem] max-w-[85vw] flex-col border-r border-border bg-surface p-3 shadow-xl lg:hidden">
             <div className="mb-3 flex items-center justify-between px-1">
-              <span className="font-logo text-[1.125rem] leading-none text-ink">SF</span>
+              <span className="font-logo text-page leading-none text-ink">SF</span>
               <button
                 type="button"
                 aria-label={t('menu', lang)}

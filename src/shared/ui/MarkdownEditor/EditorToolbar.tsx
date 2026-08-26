@@ -37,7 +37,7 @@ export function EditorToolbar({
             key={k}
             type="button"
             onClick={() => onTab(k)}
-            className={`px-2.5 py-1 text-[0.78125rem] font-semibold ${tab === k ? 'bg-surface text-ink' : 'bg-surface-2 text-muted hover:text-ink'}`}
+            className={`px-2.5 py-1 text-body-sm font-semibold ${tab === k ? 'bg-surface text-ink' : 'bg-surface-2 text-muted hover:text-ink'}`}
           >
             {k === 'write' ? t('editor.write', lang) : t('editor.preview', lang)}
           </button>

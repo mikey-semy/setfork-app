@@ -125,7 +125,7 @@ export function AiProviderModels({
       />
 
       {pending && (
-        <p className="flex items-center gap-1.5 text-[0.78125rem] text-muted">
+        <p className="flex items-center gap-1.5 text-body-sm text-muted">
           <Spinner size="sm" /> {labels.loading}
         </p>
       )}
@@ -144,7 +144,7 @@ export function AiProviderModels({
       {!pending && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {!error && hasKey[prov] && (
-            <span className="min-w-0 flex-1 text-[0.78125rem] text-muted">
+            <span className="min-w-0 flex-1 text-body-sm text-muted">
               {t('admin.catalogCounts', lang).replace('{chat}', String(chat.length)).replace('{emb}', String(embedding.length))}
             </span>
           )}
@@ -246,7 +246,7 @@ export function AiProviderModels({
         />
       </Field>
 
-      <p className="text-[0.78125rem] text-muted">
+      <p className="text-body-sm text-muted">
         {pricesKnown
           ? t('admin.pricesPer1m', lang).replace('{s}', sign)
           : t('admin.thisProviderDoesNot', lang)}
@@ -255,7 +255,7 @@ export function AiProviderModels({
       {/* Порог живёт у провайдера, поэтому и подпись, и валюта — от ВЫБРАННОГО, а не сохранённого. */}
       {(prov === 'openrouter' || prov === 'yandex') && (
         <div className={cardClass({ tone: 'inset', pad: 'sm', className: 'space-y-3' })}>
-          <div className="text-[0.8125rem] font-medium text-ink">
+          <div className="text-body font-medium text-ink">
             {prov === 'openrouter' ? t('admin.openRouterCostControl', lang) : t('admin.yandexCostControl', lang)}
           </div>
           {prov === 'openrouter' && <CreditsWidget lang={lang} />}

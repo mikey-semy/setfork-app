@@ -35,7 +35,7 @@ export function UsageModelsTable({ rows, lang }: { rows: UsageModelRow[]; lang: 
       header: t('common.model', lang),
       render: (r) => (
         <Tooltip label={r.model}>
-          <span className="block min-w-0 truncate font-mono text-[0.78125rem] text-ink">{r.name}</span>
+          <span className="block min-w-0 truncate font-mono text-body-sm text-ink">{r.name}</span>
         </Tooltip>
       ),
     }),
@@ -50,7 +50,7 @@ export function UsageModelsTable({ rows, lang }: { rows: UsageModelRow[]; lang: 
         const r = row.original
         return (
           <span
-            className={`block text-right font-mono tabular-nums text-[0.8125rem] font-semibold ${r.okRate >= 0.95 ? 'text-ok' : r.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}
+            className={`block text-right font-mono tabular-nums text-body font-semibold ${r.okRate >= 0.95 ? 'text-ok' : r.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}
           >
             {(r.okRate * 100).toFixed(1)}%
           </span>
@@ -67,7 +67,7 @@ export function UsageModelsTable({ rows, lang }: { rows: UsageModelRow[]; lang: 
           {r.quarantined ? (
             <Badge variant="danger">{t('admin.quarantine', lang)}</Badge>
           ) : (
-            <span className="text-[0.6875rem] text-muted">{t('admin.inRotation', lang)}</span>
+            <span className="text-caption text-muted">{t('admin.inRotation', lang)}</span>
           )}
         </span>
       ),

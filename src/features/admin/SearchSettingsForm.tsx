@@ -33,7 +33,7 @@ export function SearchSettingsForm({ current, lang }: { current: SearchSettings;
               <SelectItem key={o.value} value={o.value}>
                 <span className="flex flex-col">
                   <span>{o.label}</span>
-                  <span className="text-[0.6875rem] text-muted">{o.hint}</span>
+                  <span className="text-caption text-muted">{o.hint}</span>
                 </span>
               </SelectItem>
             ))}

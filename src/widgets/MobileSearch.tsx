@@ -53,7 +53,7 @@ export function MobileSearch({
                     if (e.key === 'Escape') setOpen(false)
                   }}
                   placeholder={ru ? 'Поиск…' : 'Search…'}
-                  className="min-w-0 flex-1 bg-transparent py-1.5 text-[1rem] text-ink outline-hidden placeholder:text-muted"
+                  className="min-w-0 flex-1 bg-transparent py-1.5 text-title text-ink outline-hidden placeholder:text-muted"
                 />
                 <button type="button" aria-label="close" onClick={() => setOpen(false)} className={buttonClass({ variant: 'ghost' })}>
                   <X size={16} />
@@ -80,7 +80,7 @@ export function MobileSearch({
                   className={buttonClass({ variant: 'ghost', className: 'w-full text-left hover:bg-surface-2 disabled:opacity-45' })}
                 >
                   <Search size={14} className="shrink-0 text-muted" />
-                  {ru ? 'Искать везде' : 'Search everywhere'} <kbd className="ml-auto rounded-md border border-border px-1 text-[0.6875rem] text-muted">↵</kbd>
+                  {ru ? 'Искать везде' : 'Search everywhere'} <kbd className="ml-auto rounded-md border border-border px-1 text-caption text-muted">↵</kbd>
                 </button>
               </div>
             </div>

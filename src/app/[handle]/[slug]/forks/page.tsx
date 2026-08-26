@@ -47,7 +47,7 @@ export default async function ForksPage({ params }: { params: Promise<{ handle: 
           <ForkBranches nodes={tree.roots} lang={lang} className="mt-5" />
           {/* Усечение видно человеку: раньше дерево молча обрывалось, и неполная
               родословная выглядела полной (forks/004). */}
-          {truncated && <p className="mt-4 text-[0.75rem] text-muted">{t('list.forkTreeTruncated', lang)}</p>}
+          {truncated && <p className="mt-4 text-caption-lg text-muted">{t('list.forkTreeTruncated', lang)}</p>}
         </>
       )}
     </div>
@@ -76,7 +76,7 @@ function ForkRow({ node, lang }: { node: ForkNode; lang: Lang }) {
   // Свежесть посчитана моделью: в рендере часы читать нельзя (react-hooks/purity).
   const accent = node.fresh ? 'text-accent' : 'text-muted'
   return (
-    <div className="flex min-h-11 min-w-0 items-center gap-2 text-[0.8125rem]">
+    <div className="flex min-h-11 min-w-0 items-center gap-2 text-body">
       {/* Иерархия форка (не дубль иконки заголовка «Дерево форков»). */}
       <span className={`shrink-0 ${accent}`} aria-hidden>
         <CornerDownRight size={13} />
@@ -86,13 +86,13 @@ function ForkRow({ node, lang }: { node: ForkNode; lang: Lang }) {
       </Link>
       {/* Второстепенное на узком экране прячем: ник и звёзды не стоят того, чтобы из-за
           них обрезалось название списка. */}
-      <span className="hidden shrink-0 text-[0.6875rem] text-muted sm:inline">{node.handle}</span>
+      <span className="hidden shrink-0 text-caption text-muted sm:inline">{node.handle}</span>
       {node.starsCount > 0 && (
-        <span className="hidden shrink-0 items-center gap-0.5 text-[0.6875rem] text-muted sm:inline-flex">
+        <span className="hidden shrink-0 items-center gap-0.5 text-caption text-muted sm:inline-flex">
           <Star size={10} /> {node.starsCount}
         </span>
       )}
-      <span className={`ml-auto shrink-0 text-[0.6875rem] ${node.fresh ? 'font-medium text-accent' : 'text-muted'}`}>
+      <span className={`ml-auto shrink-0 text-caption ${node.fresh ? 'font-medium text-accent' : 'text-muted'}`}>
         {timeAgo(node.updatedAt, lang)}
       </span>
     </div>

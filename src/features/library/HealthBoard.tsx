@@ -21,8 +21,8 @@ export function HealthBoard({ items, lang, ownerHandle }: { items: ListHealth[];
   return (
     <div className={cardClass({ className: 'mb-5' })}>
       <div className="mb-2 flex items-baseline gap-2">
-        <span className="text-[0.78125rem] font-semibold uppercase tracking-wide text-muted">{t('library.listHealth', lang)}</span>
-        <span className="text-[0.6875rem] text-muted">
+        <span className="text-body-sm font-semibold uppercase tracking-wide text-muted">{t('library.listHealth', lang)}</span>
+        <span className="text-caption text-muted">
           {attention.length === 0
             ? t('library.allCalm', lang)
             : t('library.needALookN', lang).replace('{n}', String(attention.length))}
@@ -41,12 +41,12 @@ export function HealthBoard({ items, lang, ownerHandle }: { items: ListHealth[];
           const base = `/${ownerHandle}/${it.slug}`
           const href = it.status === 'red' ? (it.openSuggestions ? `${base}/suggestions` : `${base}/issues`) : base
           return (
-            <li key={it.id} className="flex items-baseline gap-2 text-[0.8125rem]">
+            <li key={it.id} className="flex items-baseline gap-2 text-body">
               <span className={`mt-0.5 size-2 shrink-0 self-center rounded-full ${DOT[it.status]}`} aria-hidden />
               <Link href={href} className="min-w-0 flex-1 truncate font-medium text-ink hover:text-accent">
                 {title}
               </Link>
-              {notes.length > 0 && <span className="shrink-0 text-[0.6875rem] text-muted">{notes.join(' · ')}</span>}
+              {notes.length > 0 && <span className="shrink-0 text-caption text-muted">{notes.join(' · ')}</span>}
             </li>
           )
         })}

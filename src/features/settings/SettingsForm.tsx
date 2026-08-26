@@ -60,7 +60,7 @@ export function SettingsForm({
 
       {/* Форма аватара в профиле — круг (по умолчанию) или квадрат. */}
       <label className="flex items-center justify-between gap-3">
-        <span className="text-[0.8125rem] text-ink-2">{t('avatarSquareLabel', lang)}</span>
+        <span className="text-body text-ink-2">{t('avatarSquareLabel', lang)}</span>
         <Switch name="avatarSquare" checked={square} onCheckedChange={setSquare} />
       </label>
 
@@ -128,7 +128,7 @@ export function SettingsForm({
           <button
             type="button"
             onClick={addRow}
-            className="inline-flex w-fit items-center gap-1.5 text-[0.8125rem] font-medium text-accent hover:underline"
+            className="inline-flex w-fit items-center gap-1.5 text-body font-medium text-accent hover:underline"
           >
             <Plus size={14} /> {t('addSocial', lang)}
           </button>
@@ -138,15 +138,15 @@ export function SettingsForm({
       {/* Приватность профиля */}
       <div className="flex items-start justify-between gap-4 border-t border-border pt-4">
         <div className="min-w-0">
-          <div className="text-[0.8125rem] font-medium text-ink">{t('profilePrivateLabel', lang)}</div>
-          <p className="mt-0.5 max-w-[32.5rem] text-[0.78125rem] text-ink-2">{t('profilePrivateHint', lang)}</p>
+          <div className="text-body font-medium text-ink">{t('profilePrivateLabel', lang)}</div>
+          <p className="mt-0.5 max-w-[32.5rem] text-body-sm text-ink-2">{t('profilePrivateHint', lang)}</p>
         </div>
         <Switch name="profilePrivate" checked={priv} onCheckedChange={setPriv} />
       </div>
 
       <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-        {state?.ok && <span className="text-[0.8125rem] text-ok">{t('profileSaved', lang)}</span>}
-        {state?.error && <span className="text-[0.8125rem] text-danger">{state.error}</span>}
+        {state?.ok && <span className="text-body text-ok">{t('profileSaved', lang)}</span>}
+        {state?.error && <span className="text-body text-danger">{state.error}</span>}
         <Button type="submit" variant="primary" size="lg" disabled={pending} className="disabled:opacity-60">
           {t('saveChanges', lang)}
         </Button>

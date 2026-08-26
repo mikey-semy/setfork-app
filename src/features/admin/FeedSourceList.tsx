@@ -45,7 +45,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           материал из неё никому не достанется. */}
       <form action={addFeedSource} className={cardClass({ className: 'flex flex-col gap-2 sm:flex-row sm:items-end' })}>
         <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{t('admin.feedAddress', lang)}</span>
+          <span className="text-caption uppercase tracking-wide text-muted">{t('admin.feedAddress', lang)}</span>
           <Input
             name="url"
             required
@@ -54,7 +54,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           />
         </label>
         <label className="flex min-w-0 flex-col gap-1 sm:w-[12.5rem]">
-          <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{t('admin.topic', lang)}</span>
+          <span className="text-caption uppercase tracking-wide text-muted">{t('admin.topic', lang)}</span>
           <Input
             name="tags"
             required
@@ -62,7 +62,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           />
         </label>
         <label className="flex flex-col gap-1 sm:w-[6rem]">
-          <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{t('admin.hours', lang)}</span>
+          <span className="text-caption uppercase tracking-wide text-muted">{t('admin.hours', lang)}</span>
           <Input
             name="everyHours"
             type="number"
@@ -94,7 +94,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
                     href={r.url}
                     target="_blank"
                     rel="noopener noreferrer nofollow"
-                    className="min-w-0 truncate text-[0.8125rem] text-ink hover:text-accent"
+                    className="min-w-0 truncate text-body text-ink hover:text-accent"
                     title={r.url}
                   >
                     {r.title || r.url.replace(/^https?:\/\//, '')}
@@ -102,7 +102,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
                 </div>
                 {r.lastError && (
                   <Tooltip label={r.lastError}>
-                    <div className="mt-0.5 truncate text-[0.6875rem] text-warn">{r.lastError}</div>
+                    <div className="mt-0.5 truncate text-caption text-warn">{r.lastError}</div>
                   </Tooltip>
                 )}
               </div>
@@ -139,7 +139,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             cell: ({ row }) => (
               // Числа не приглушаем и у выключенных (как «Раз в»: ячейки numberColumn
               // рендерит фабрика) — правило единое: тускнеет описательное, не метрики.
-              <span className="block text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">
+              <span className="block text-right font-mono tabular-nums text-body-sm text-ink-2">
                 {row.original.items} / <span className={row.original.fresh ? 'text-ok' : ''}>{row.original.fresh}</span>
               </span>
             ),
@@ -150,7 +150,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             size: 148,
             render: (r) => (
               <div className="flex items-center justify-end gap-0.5">
-                <span className={cn('mr-1 hidden text-[0.6875rem] text-muted sm:inline', !r.enabled && 'opacity-60')}>
+                <span className={cn('mr-1 hidden text-caption text-muted sm:inline', !r.enabled && 'opacity-60')}>
                   {r.lastPulledAt ? timeAgo(r.lastPulledAt, lang) : '—'}
                 </span>
                 {/* Служебные действия — иконками в правом углу строки: на мобиле три подписи не

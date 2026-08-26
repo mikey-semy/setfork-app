@@ -44,7 +44,7 @@ export function PinsPicker({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-[0.78125rem] text-ink-2 hover:text-accent"
+        className="inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-accent"
       >
         <Pencil size={11} /> {ru ? 'Настроить' : 'Customize your pins'}
       </button>
@@ -56,7 +56,7 @@ export function PinsPicker({
           title={
             <span>
               {ru ? 'Закреплённые списки' : 'Pinned lists'}{' '}
-              <span className="font-mono text-[0.6875rem] text-muted">
+              <span className="font-mono text-caption text-muted">
                 {sel.size}/{MAX_PINS}
               </span>
             </span>

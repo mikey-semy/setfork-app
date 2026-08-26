@@ -43,11 +43,11 @@ export function ColorSwatch({
         'inline-flex size-5 shrink-0 items-center justify-center rounded-full border',
         TOUCH_MIN_BOX,
         color ? 'border-black/10' : 'border-black/10 bg-surface-2',
-        selected && 'ring-2 ring-(--accent) ring-offset-1',
+        selected && 'ring-2 ring-accent ring-offset-1',
         className,
       )}
     >
-      {!color && <span className="text-[0.6875rem] leading-none text-muted">×</span>}
+      {!color && <span className="text-caption leading-none text-muted">×</span>}
     </button>
   )
 }

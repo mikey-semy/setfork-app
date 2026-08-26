@@ -78,7 +78,7 @@ export default async function SuggestionThreadPage({
               компании копились непринятыми: посмотреть результат было негде. */}
           {tab === 'result' && (
             <>
-              <div className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.07em] text-muted">
+              <div className="mb-1.5 text-caption font-semibold uppercase tracking-[0.07em] text-muted">
                 {t('resultTab', lang)} · {t('pr.becomesV', lang).replace('{v}', String(meta.currentVersion + 1))}
               </div>
               <SuggestionResult items={items} lang={lang} ordered={meta.ordered} />

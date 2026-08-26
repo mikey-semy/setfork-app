@@ -149,7 +149,7 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
           {newCatalog === null ? (
             <>
               {/* Счётчик — единственный текст полосы; на телефоне он и есть подпись к действиям. */}
-              <span className="shrink-0 text-[0.8125rem] font-semibold text-ink">
+              <span className="shrink-0 text-body font-semibold text-ink">
                 {count}
                 <span className="ml-1 hidden font-normal text-ink-2 sm:inline">{t('bulk.selectedSuffix', lang)}</span>
               </span>

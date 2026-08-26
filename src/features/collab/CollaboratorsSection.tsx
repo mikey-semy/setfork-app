@@ -38,13 +38,13 @@ export function CollaboratorsSection({
       </form>
 
       {collaborators.length === 0 ? (
-        <p className="text-[0.8125rem] text-muted">{t('noCollaborators', lang)}</p>
+        <p className="text-body text-muted">{t('noCollaborators', lang)}</p>
       ) : (
         <div className="flex flex-col gap-1.5">
           {collaborators.map((c) => (
             <div key={c.userId} className="flex items-center gap-2.5 rounded-md border border-border px-3 py-2">
               <UserLine handle={c.handle} avatarUrl={c.avatarUrl} size="md" className="min-w-0" />
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-ink-2">{c.role}</span>
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-caption text-ink-2">{c.role}</span>
               <form action={removeCollaborator.bind(null, templateId, c.userId)} className="ml-auto">
                 <Tooltip label={t('removeLabel', lang)}>
                   <button

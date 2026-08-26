@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 export function FilterMenu({ label, items }: { label: string; items: { label: string; href: string; active?: boolean }[] }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium text-ink-2 outline-hidden hover:bg-surface-2 hover:text-ink">
+      <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-body font-medium text-ink-2 outline-hidden hover:bg-surface-2 hover:text-ink">
         {label} <ChevronDown size={14} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[11.25rem]">

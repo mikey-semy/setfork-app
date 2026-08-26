@@ -21,7 +21,7 @@ export function TemplateSection({ templateId, isTemplate, lang }: { templateId: 
           <div className="flex items-center gap-2 font-semibold text-ink">
             <LayoutTemplate size={15} className="text-muted" /> {ru ? 'Список-шаблон' : 'Template list'}
           </div>
-          <p className="mt-1 text-[0.78125rem] leading-snug text-ink-2">
+          <p className="mt-1 text-body-sm leading-snug text-ink-2">
             {ru
               ? 'На странице появится кнопка «Использовать шаблон»: любой создаст свой список из текущей версии — без fork-связи с этим.'
               : 'Shows a “Use this template” button: anyone can start their own list from the current version — with no fork relation to this one.'}

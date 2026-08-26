@@ -14,7 +14,7 @@ import { Spinner } from '@/shared/ui/Spinner'
 // Чистая — на модульном уровне, а не в теле компонента (react-doctor:
 // пересборка на каждый рендер ломает мемоизацию детей).
 const pill = (active: boolean) =>
-  `rounded-md px-2.5 py-1 text-[0.78125rem] font-medium ${active ? 'bg-primary text-primary-fg' : 'border border-border text-ink-2 hover:text-ink'}`
+  `rounded-md px-2.5 py-1 text-body-sm font-medium ${active ? 'bg-primary text-primary-fg' : 'border border-border text-ink-2 hover:text-ink'}`
 
 function Copyable({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState(false)
@@ -72,12 +72,12 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
     <div className="space-y-4">
       {/* Эндпоинт */}
       <div className={cardClass({ tone: 'inset', pad: 'sm' })}>
-        <div className="mb-1 text-[0.78125rem] font-medium text-ink">{ru ? 'MCP-эндпоинт' : 'MCP endpoint'}</div>
+        <div className="mb-1 text-body-sm font-medium text-ink">{ru ? 'MCP-эндпоинт' : 'MCP endpoint'}</div>
         <div className="flex flex-wrap items-center gap-2">
-          <code className="rounded-md bg-surface px-2 py-1 font-mono text-[0.78125rem] text-accent">{mcpUrl}</code>
+          <code className="rounded-md bg-surface px-2 py-1 font-mono text-body-sm text-accent">{mcpUrl}</code>
           <Copyable text={mcpUrl} label={ru ? 'Копировать' : 'Copy'} />
         </div>
-        <p className="mt-1.5 text-[0.6875rem] text-ink-2">
+        <p className="mt-1.5 text-caption text-ink-2">
           {ru
             ? 'Подключи в клиенте как удалённый MCP-сервер, авторизация — Bearer-токеном ниже.'
             : 'Add it to your client as a remote MCP server; authenticate with a Bearer token below.'}
@@ -87,11 +87,11 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
       {/* Показ только что созданного токена */}
       {created && (
         <div className={cardClass({ tone: 'warn', pad: 'sm' })}>
-          <div className="mb-1 flex items-center gap-1.5 text-[0.78125rem] font-semibold text-warn">
+          <div className="mb-1 flex items-center gap-1.5 text-body-sm font-semibold text-warn">
             <TriangleAlert size={14} /> {ru ? 'Скопируй сейчас — больше не покажем' : 'Copy it now — shown only once'}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="max-w-full overflow-x-auto rounded-md bg-surface-2 px-2 py-1 font-mono text-[0.78125rem] text-ink">{created}</code>
+            <code className="max-w-full overflow-x-auto rounded-md bg-surface-2 px-2 py-1 font-mono text-body-sm text-ink">{created}</code>
             <Copyable text={created} label={ru ? 'Копировать токен' : 'Copy token'} />
           </div>
         </div>
@@ -115,7 +115,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
           {pending ? <Spinner size="md" /> : <Plus size={14} />} {ru ? 'Создать токен' : 'Create token'}
         </Button>
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.78125rem]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-body-sm">
         <div className="flex items-center gap-1.5">
           <span className="text-muted">{ru ? 'Доступ:' : 'Access:'}</span>
           <button type="button" onClick={() => setScope('write')} className={pill(scope === 'write')}>
@@ -134,11 +134,11 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
           ))}
         </div>
       </div>
-      {err && <p className="text-[0.78125rem] text-danger">{err}</p>}
+      {err && <p className="text-body-sm text-danger">{err}</p>}
 
       {/* Список */}
       {tokens.length === 0 ? (
-        <p className="text-[0.8125rem] text-muted">{ru ? 'Токенов пока нет.' : 'No tokens yet.'}</p>
+        <p className="text-body text-muted">{ru ? 'Токенов пока нет.' : 'No tokens yet.'}</p>
       ) : (
         <div className="divide-y divide-border rounded-md border border-border">
           {tokens.map((tk) => {
@@ -148,15 +148,15 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
               <KeyRound size={15} className="shrink-0 text-muted" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="truncate text-[0.8125rem] font-medium text-ink">{tk.name}</span>
-                  <span className="rounded-full border border-border px-1.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
+                  <span className="truncate text-body font-medium text-ink">{tk.name}</span>
+                  <span className="rounded-full border border-border px-1.5 py-0.5 text-caption font-semibold uppercase tracking-wide text-muted">
                     {tk.scope === 'read' ? (ru ? 'чтение' : 'read') : (ru ? 'запись' : 'write')}
                   </span>
                   {expired && (
-                    <span className="rounded-full bg-danger/10 px-1.5 py-0.5 text-[0.6875rem] font-semibold uppercase text-danger">{ru ? 'истёк' : 'expired'}</span>
+                    <span className="rounded-full bg-danger/10 px-1.5 py-0.5 text-caption font-semibold uppercase text-danger">{ru ? 'истёк' : 'expired'}</span>
                   )}
                 </div>
-                <div className="font-mono text-[0.6875rem] text-muted">
+                <div className="font-mono text-caption text-muted">
                   {tk.prefix} · {ru ? 'исп.' : 'used'} {fmtDate(tk.lastUsedAt)} ·{' '}
                   {tk.expiresAt ? `${ru ? 'истекает' : 'expires'} ${fmtDate(tk.expiresAt)}` : ru ? 'бессрочный' : 'no expiry'}
                 </div>

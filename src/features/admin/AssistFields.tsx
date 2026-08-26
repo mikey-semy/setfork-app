@@ -21,14 +21,14 @@ export function AssistFields({ v, lang }: { v: AssistValues; lang: Lang }) {
   return (
     <div className={cardClass({ tone: 'inset', pad: 'sm', className: 'space-y-4' })}>
       <div>
-        <div className="text-[0.8125rem] font-medium text-ink">{t('admin.stepAssistHelpWhen', lang)}</div>
-        <p className="mt-0.5 text-[0.78125rem] text-muted">
+        <div className="text-body font-medium text-ink">{t('admin.stepAssistHelpWhen', lang)}</div>
+        <p className="mt-0.5 text-body-sm text-muted">
           {t('admin.aHelpMeButton', lang)}
         </p>
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <div className="text-[0.8125rem] text-ink">{t('admin.enableStepAssist', lang)}</div>
+        <div className="text-body text-ink">{t('admin.enableStepAssist', lang)}</div>
         <Switch name="assistEnabled" checked={enabled} onCheckedChange={setEnabled} />
       </div>
 

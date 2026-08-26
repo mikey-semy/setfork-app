@@ -48,9 +48,9 @@ export function PageHeader({
               hideTitle
                 // На печати заголовок ВИДИМ: шапка приложения помечена print:hidden,
                 // и без этого распечатанный лист остался бы без названия страницы.
-                ? 'sr-only print:not-sr-only print:mb-2 print:text-[1.125rem] print:font-bold print:text-ink'
+                ? 'sr-only print:not-sr-only print:mb-2 print:text-page print:font-bold print:text-ink'
                 : 'min-w-0 truncate font-bold text-ink',
-              !hideTitle && (size === 'page' ? 'text-[1.125rem]' : 'text-[1rem]'),
+              !hideTitle && (size === 'page' ? 'text-page' : 'text-title'),
             )}
           >
             {title}
@@ -61,7 +61,7 @@ export function PageHeader({
           <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:justify-end">{actions}</div>
         )}
       </div>
-      {subtitle && <p className="mt-1 text-[0.8125rem] text-ink-2">{subtitle}</p>}
+      {subtitle && <p className="mt-1 text-body text-ink-2">{subtitle}</p>}
     </header>
   )
 }

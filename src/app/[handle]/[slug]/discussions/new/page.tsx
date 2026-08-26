@@ -45,12 +45,12 @@ export default async function NewDiscussionPage({
           <input type="hidden" name="slug" value={slug} />
 
           <div>
-            <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink-2">{ru ? 'Категория' : 'Category'}</div>
+            <div className="mb-1.5 text-body-sm font-semibold text-ink-2">{ru ? 'Категория' : 'Category'}</div>
             <div className="flex flex-wrap gap-2">
               {DISCUSSION_CATEGORIES.map((c, i) => (
                 <label
                   key={c.key}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-[0.8125rem] text-ink has-checked:border-accent has-checked:bg-(--accent-soft)"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-body text-ink has-checked:border-accent has-checked:bg-accent-soft"
                 >
                   <input type="radio" name="category" value={c.key} defaultChecked={i === 0} className="sr-only" />
                   {c.icon} {ru ? c.ru : c.en}
@@ -64,7 +64,7 @@ export default async function NewDiscussionPage({
             required
             maxLength={200}
             autoFocus
-            className={`px-3 py-2 text-[0.875rem] ${e === 'empty' ? 'border-danger' : ''}`}
+            className={`px-3 py-2 text-body-lg ${e === 'empty' ? 'border-danger' : ''}`}
             placeholder={ru ? 'Заголовок' : 'Title'}
           />
           <MarkdownEditor name="body" rows={8} placeholder={ru ? 'О чём хотите поговорить?' : 'What do you want to discuss?'} maxLength={20000} lang={lang} refScope={{ owner, slug }} />

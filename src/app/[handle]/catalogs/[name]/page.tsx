@@ -37,7 +37,7 @@ export default async function CatalogPage({
 
   return (
     <div className={PAGE}>
-      <div className="mb-1 text-[0.8125rem] text-ink-2">
+      <div className="mb-1 text-body text-ink-2">
         <Link href={`/${handle}`} className="hover:text-accent">
           {handle}
         </Link>{' '}

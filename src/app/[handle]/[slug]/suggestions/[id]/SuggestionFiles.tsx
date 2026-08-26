@@ -36,7 +36,7 @@ export function SuggestionFiles({
   const open = sug.status === 'open'
   return (
     <>
-      <div className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.07em] text-muted">
+      <div className="mb-1.5 text-caption font-semibold uppercase tracking-[0.07em] text-muted">
         {t('proposedChanges', lang)} · {t('pr.baseToSuggestion', lang).replace('{v}', String(sug.baseVersion))}
       </div>
       {/* Ряд действий над диффом: слева прогресс ревью, справа правка и
@@ -45,7 +45,7 @@ export function SuggestionFiles({
         {/* Прогресс — только своему ревьюеру и только когда есть что отмечать.
             На мобиле остаются цифры, слово прячется: оно предсказуемо. */}
         {viewedMarks && open && markable > 0 && (
-          <span className="mr-auto inline-flex items-center gap-1.5 text-[0.78125rem] text-ink-2">
+          <span className="mr-auto inline-flex items-center gap-1.5 text-body-sm text-ink-2">
             <Eye size={14} className={viewedCount === markable ? 'text-ok' : 'text-muted'} />
             <span className="font-mono">
               {viewedCount}/{markable}

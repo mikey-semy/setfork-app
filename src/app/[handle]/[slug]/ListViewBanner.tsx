@@ -56,7 +56,7 @@ export function ListViewBanner({
           плашка, а не ветковая: у коммита нет ahead/behind, и предлагать
           «открыть pull request» с исторического снимка бессмысленно. */}
       {refCommit && snapshot && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-body-sm text-ink print:hidden">
           <GitCommitHorizontal size={13} className="shrink-0 text-muted" />
           <span className="min-w-0">
             {t('viewingAtCommit', lang)} <b className="font-mono">{refCommit.slice(0, 7)}</b>
@@ -69,7 +69,7 @@ export function ListViewBanner({
 
       {/* Просмотр «на ветке» (A1 read-only): черновик без версий. */}
       {refBranch && branchInfo && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-body-sm text-ink print:hidden">
           <GitCommitHorizontal size={13} className="shrink-0 text-warn" />
           <span>
             {t('list.branch', lang)} <b className="font-mono">{branchLabel(refBranch, lang)}</b> · +{branchInfo.ahead}/-{branchInfo.behind}{' '}
@@ -95,7 +95,7 @@ export function ListViewBanner({
 
       {/* Просмотр прошлой версии (?v=N): снимок только для чтения + возврат. */}
       {histVer && histNum && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-accent/50 bg-accent/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-accent/50 bg-accent/10 px-3 py-2 text-body-sm text-ink print:hidden">
           <Tag size={13} className="shrink-0 text-accent" />
           <span className="min-w-0 flex-1 truncate">
             {t('list.version', lang)} <b>v{histNum}</b>
@@ -124,7 +124,7 @@ export function ListViewBanner({
 
       {/* Результат поиска внутри списка (?find=). */}
       {find && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-(--accent)/50 bg-(--accent-soft) px-3 py-2 text-[0.78125rem] text-ink print:hidden">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-accent/50 bg-accent-soft px-3 py-2 text-body-sm text-ink print:hidden">
           <Info size={13} className="shrink-0 text-accent" />
           <span>
             <b>{steps.length}</b> / {allSteps.length} {t('list.stepsMatch', lang)} <span className="font-mono">“{findRaw}”</span>

@@ -36,15 +36,15 @@ export function MediaSettingsForm({ lang, v }: { lang: Lang; v: MediaFormValues 
 
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[0.875rem] font-medium text-ink">{ru ? 'Отдавать через imgproxy' : 'Serve via imgproxy'}</div>
-          <p className="text-[0.78125rem] text-muted">
+          <div className="text-body-lg font-medium text-ink">{ru ? 'Отдавать через imgproxy' : 'Serve via imgproxy'}</div>
+          <p className="text-body-sm text-muted">
             {ru ? 'Выкл — картинки берутся напрямую (без трансформаций).' : 'Off — images are used directly (no transforms).'}
           </p>
         </div>
         <Switch name="useImgproxy" defaultChecked={v.useImgproxy} />
       </div>
 
-      <div className="text-[0.78125rem] font-semibold text-ink">{ru ? 'S3-хранилище' : 'S3 storage'}</div>
+      <div className="text-body-sm font-semibold text-ink">{ru ? 'S3-хранилище' : 'S3 storage'}</div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Endpoint">
           <Input name="s3Endpoint" defaultValue={v.s3Endpoint} placeholder="https://s3.ru-3.storage.selcloud.ru" className="font-mono" />
@@ -66,7 +66,7 @@ export function MediaSettingsForm({ lang, v }: { lang: Lang; v: MediaFormValues 
         </Field>
       </div>
 
-      <div className="text-[0.78125rem] font-semibold text-ink">imgproxy</div>
+      <div className="text-body-sm font-semibold text-ink">imgproxy</div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label={ru ? 'Публичный URL (браузер)' : 'Public URL (browser)'} className="sm:col-span-2">
           <Input name="imgproxyUrl" defaultValue={v.imgproxyUrl} placeholder="https://img.example.com" className="font-mono" />

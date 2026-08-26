@@ -72,11 +72,11 @@ export function Feed({
   return (
     <section className="min-w-0">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-[1rem] font-semibold text-ink">{ru ? 'Лента' : 'Feed'}</h2>
+        <h2 className="text-title font-semibold text-ink">{ru ? 'Лента' : 'Feed'}</h2>
         <FeedFilter lang={lang} onChange={setPrefs} />
       </div>
       {emptyHint && (
-        <p className="mb-3 text-[0.78125rem] text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           {ru
             ? 'Лента собирается из подписок: подпишись на людей и списки в '
             : 'Your feed is built from people and lists you follow. Find them on '}
@@ -99,7 +99,7 @@ export function Feed({
                   <Avatar handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size={34} />
                 </Link>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem]">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body">
                     <Icon size={13} className="shrink-0 text-muted" />
                     <Link href={`/${e.actorHandle}`} className="text-ink-2 hover:text-accent">
                       {e.actorHandle}
@@ -117,10 +117,10 @@ export function Feed({
                   </div>
                   {/* заголовок списка теперь в самой строке события выше (человеческое имя, не slug) */}
                   {e.type === 'issue' && e.itemTitle && (
-                    <div className="mt-1 truncate text-[0.78125rem] text-muted">“{e.itemTitle}”</div>
+                    <div className="mt-1 truncate text-body-sm text-muted">“{e.itemTitle}”</div>
                   )}
                 </div>
-                <span className="shrink-0 font-mono text-[0.6875rem] text-muted">
+                <span className="shrink-0 font-mono text-caption text-muted">
                   {new Intl.DateTimeFormat(ru ? 'ru' : 'en', { month: 'short', day: 'numeric' }).format(new Date(e.createdAt))}
                 </span>
               </div>
@@ -131,7 +131,7 @@ export function Feed({
 
       {prefs.events.recommended && recommended.length > 0 && (
         <div className={cardClass({ className: 'mt-4' })}>
-          <div className="mb-2 flex items-center gap-1.5 text-[0.78125rem] font-semibold text-ink">
+          <div className="mb-2 flex items-center gap-1.5 text-body-sm font-semibold text-ink">
             <Star size={13} className="text-muted" /> {ru ? 'Рекомендации для тебя' : 'Recommended for you'}
           </div>
           <div className="flex flex-col">
@@ -142,12 +142,12 @@ export function Feed({
                 className={buttonClass({ variant: 'ghost', className: 'group hover:bg-surface-2' })}
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-[0.8125rem] font-semibold text-ink group-hover:text-accent">
+                  <span className="block truncate text-body font-semibold text-ink group-hover:text-accent">
                     {tr(r.title, lang)}
                   </span>
-                  <span className="block truncate text-[0.78125rem] text-muted">{r.ownerHandle}</span>
+                  <span className="block truncate text-body-sm text-muted">{r.ownerHandle}</span>
                 </span>
-                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-mono text-[0.6875rem] text-muted">
+                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-mono text-caption text-muted">
                   <Star size={11} /> {r.starsCount}
                 </span>
               </Link>
@@ -175,20 +175,20 @@ function ReleaseCard({ e, lang, ru }: { e: FeedEvent; lang: Lang; ru: boolean })
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
       {/* Шапка: кто выпустил + когда */}
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 text-[0.8125rem]">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 text-body">
         <UserLine handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size="sm" />
         <span className="text-ink-2">{ru ? 'выпустил' : 'released'}</span>
         <Tag size={13} className="shrink-0 text-muted" />
-        <span className="ml-auto shrink-0 font-mono text-[0.6875rem] text-muted">{date}</span>
+        <span className="ml-auto shrink-0 font-mono text-caption text-muted">{date}</span>
       </div>
       {/* Тело: версия + заголовок + changelog */}
       <div className="px-4 py-3.5">
         {/* mb как у прежней строки со слагом: без неё заголовок прижимался к заметке. */}
         <div className="mb-2.5 flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-(--accent)/40 bg-(--accent-soft) px-2 py-0.5 font-mono text-[0.78125rem] font-semibold text-accent">
+          <span className="rounded-md border border-accent/40 bg-accent-soft px-2 py-0.5 font-mono text-body-sm font-semibold text-accent">
             v{e.version}
           </span>
-          <Link href={base} className="min-w-0 truncate text-[1rem] font-semibold text-ink hover:text-accent">
+          <Link href={base} className="min-w-0 truncate text-title font-semibold text-ink hover:text-accent">
             {tr(e.title, lang) || `${e.ownerHandle}/${e.slug}`}
           </Link>
         </div>
@@ -196,11 +196,11 @@ function ReleaseCard({ e, lang, ru }: { e: FeedEvent; lang: Lang; ru: boolean })
             не показывают человеку (как и в строках событий выше). Список назван
             заголовком в ссылке над этой врезкой, а сам адрес виден в браузере. */}
         {note ? (
-          <Markdown className="border-l-2 border-border pl-3 text-[0.8125rem] text-ink-2">{note}</Markdown>
+          <Markdown className="border-l-2 border-border pl-3 text-body text-ink-2">{note}</Markdown>
         ) : (
-          <p className="text-[0.78125rem] italic text-muted">{ru ? 'Без заметок к версии' : 'No release notes'}</p>
+          <p className="text-body-sm italic text-muted">{ru ? 'Без заметок к версии' : 'No release notes'}</p>
         )}
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[0.78125rem]">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-body-sm">
           <Link href={`${base}/versions`} className="font-medium text-accent hover:underline">
             {ru ? 'Изменения' : 'Changes'} →
           </Link>

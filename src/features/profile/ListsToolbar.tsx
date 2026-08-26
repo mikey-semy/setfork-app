@@ -88,12 +88,12 @@ export function ListsToolbar({
             <SelectItem value="all">{t('profile.catalogAll', lang)}</SelectItem>
             {unfiledCount > 0 && (
               <SelectItem value="none">
-                {t('profile.catalogNone', lang)} <span className="font-mono text-[0.6875rem] text-muted">{unfiledCount}</span>
+                {t('profile.catalogNone', lang)} <span className="font-mono text-caption text-muted">{unfiledCount}</span>
               </SelectItem>
             )}
             {catalogs.map((c) => (
               <SelectItem key={c.name} value={c.name}>
-                <span className="truncate">{c.title || c.name}</span> <span className="font-mono text-[0.6875rem] text-muted">{c.count}</span>
+                <span className="truncate">{c.title || c.name}</span> <span className="font-mono text-caption text-muted">{c.count}</span>
               </SelectItem>
             ))}
           </SelectContent>

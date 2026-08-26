@@ -46,7 +46,7 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
               отжимало ленту вниз. Заголовок остаётся для скринридеров и структуры. */}
           <PageHeader hideTitle title={t('myLists', lang)} />
           {!session ? (
-            <div className="py-16 text-center text-[0.8125rem] text-muted">
+            <div className="py-16 text-center text-body text-muted">
               {t('loginRequired', lang)}{' '}
               <Link href="/login" className="font-semibold text-accent">
                 {t('signIn', lang)}
@@ -69,7 +69,7 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
                   когда списков сотни, — тогда им место в отдельном разделе, а не здесь.
                   Код фич не удалён: вернуть их дешевле, чем написать заново. */}
               {items.length === 0 ? (
-                <div className="py-10 text-center text-[0.8125rem] text-muted">{t('library.nothingMatchesQuery', lang)}</div>
+                <div className="py-10 text-center text-body text-muted">{t('library.nothingMatchesQuery', lang)}</div>
               ) : (
                 <>
                   <FeedList items={items} lang={lang} viewerId={session.userId} />

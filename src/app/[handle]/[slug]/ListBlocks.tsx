@@ -49,7 +49,7 @@ export function ListBlocks(props: Props) {
         const prevSection = si > 0 ? tr(steps[si - 1].section, lang) : ''
         const header =
           section && section !== prevSection ? (
-            <h2 id={sectionAnchor(section)} className={`scroll-mt-24 text-[0.8125rem] font-semibold uppercase tracking-[0.06em] text-ink-2 [overflow-wrap:anywhere] ${si > 0 ? 'mt-3' : ''}`}>
+            <h2 id={sectionAnchor(section)} className={`scroll-mt-24 text-body font-semibold uppercase tracking-[0.06em] text-ink-2 [overflow-wrap:anywhere] ${si > 0 ? 'mt-3' : ''}`}>
               {section}
             </h2>
           ) : null
@@ -60,7 +60,7 @@ export function ListBlocks(props: Props) {
           if (si !== firstLockedIdx) return null
           const prevLesson = lessons[gatedFromLesson - 1]
           return (
-            <div key={s.id} className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-surface-2 px-4 py-5 text-[0.8125rem] text-ink-2">
+            <div key={s.id} className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-surface-2 px-4 py-5 text-body text-ink-2">
               <Lock size={18} className="shrink-0 text-muted" />
               <span>
                 {t('list.lockedUntilPassed', lang)} <b className="text-ink">«{prevLesson?.title}»</b>

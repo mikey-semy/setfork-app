@@ -18,7 +18,7 @@ export function BackLink({ href, label, className }: { href: string; label: stri
     <Link
       href={href}
       className={cn(
-        'inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink',
+        'inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 text-body text-ink-2 hover:text-ink',
         className,
       )}
     >

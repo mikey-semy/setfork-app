@@ -47,7 +47,7 @@ function ThinkingIndicator({ ru, slow, slowText }: { ru: boolean; slow: boolean;
   }, [slow])
   const text = slow ? slowText : THINKING_LINES[i][ru ? 1 : 0]
   return (
-    <div className="flex items-center gap-2 pl-1 text-[0.78125rem] text-muted">
+    <div className="flex items-center gap-2 pl-1 text-body-sm text-muted">
       <span className="inline-flex items-center gap-[0.1875rem]">
         {[0, 200, 400].map((d) => (
           <span key={d} className="size-[0.25rem] animate-pulse rounded-full bg-current opacity-60" style={{ animationDelay: `${d}ms` }} />
@@ -87,7 +87,7 @@ function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { mes
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 rounded-md py-0.5 text-[0.6875rem] text-muted hover:text-ink-2"
+        className="inline-flex items-center gap-1 rounded-md py-0.5 text-caption text-muted hover:text-ink-2"
       >
         <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
         {t('generation.councilLines', lang).replace('{n}', String(messages.length))}
@@ -225,8 +225,8 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             type="button"
             onClick={() => k !== listKind && start(() => setGenerationKind(generationId, k))}
             disabled={working}
-            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[0.78125rem] transition-colors disabled:opacity-40 ${
-              k === listKind ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
+            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-body-sm transition-colors disabled:opacity-40 ${
+              k === listKind ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink'
             }`}
           >
             {kindLabel(k, ru)}
@@ -241,8 +241,8 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             type="button"
             onClick={() => lv !== detailNow && start(() => setGenerationDetail(generationId, lv))}
             disabled={working}
-            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[0.78125rem] transition-colors disabled:opacity-40 ${
-              lv === detailNow ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
+            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-body-sm transition-colors disabled:opacity-40 ${
+              lv === detailNow ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink'
             }`}
           >
             {detailLabel(lv, ru)}
@@ -251,7 +251,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
       </div>
 
       {error && errText[error] && (
-        <div className="mb-3 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">{errText[error]}</div>
+        <div className="mb-3 rounded-md border border-warn/50 bg-surface px-3 py-2 text-body-sm text-warn">{errText[error]}</div>
       )}
 
       {/* Беседа. flex-1 — забирает всё свободное место, чтобы поле ввода ушло вниз окна. */}
@@ -270,7 +270,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               {said.map((m) => (
                 <div key={m.id} className="flex animate-fadein justify-end">
                   {/* Кап 640px: на широком контейнере пузырь на 85% превращался в строку во весь экран. */}
-                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[0.8125rem] leading-[1.5] text-primary-fg sm:max-w-[40rem]">
+                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-body leading-[1.5] text-primary-fg sm:max-w-[40rem]">
                     {m.kind === 'again' ? t('generation.anotherVariant', lang) : m.text}
                   </div>
                 </div>
@@ -290,7 +290,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 <div id={`cand-${cand.id}`} className="animate-fadein">
                   {/* «Что поменялось ключевое» — берём у самого кандидата: реплики может не быть
                       (старые генерации), а вариант обязан быть виден всегда. */}
-                  {cand.summary && <div className="mb-1 pl-1 text-[0.6875rem] text-muted">{cand.summary}</div>}
+                  {cand.summary && <div className="mb-1 pl-1 text-caption text-muted">{cand.summary}</div>}
                   <CandidateCard cand={cand} selected={cand.id === selId} onSelect={() => setSelId(cand.id)} lang={lang} />
                   {/* Родословная (HQ §6): под карточкой, а не внутри — карточка сама <button>,
                       вложенные интерактивы в неё класть нельзя. */}
@@ -319,11 +319,11 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 const [q, ...opts] = raw.split('|').map((s) => s.trim()).filter(Boolean)
                 return (
                   <div key={i}>
-                    <label className="mb-1 block text-[0.78125rem] text-ink-2">{q}</label>
+                    <label className="mb-1 block text-body-sm text-ink-2">{q}</label>
                     <input
                       value={answers[i] ?? ''}
                       onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))}
-                      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
+                      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-ink outline-hidden focus:border-border-strong"
                     />
                     {opts.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -332,8 +332,8 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                             key={o}
                             type="button"
                             onClick={() => setAnswers((a) => ({ ...a, [i]: o }))}
-                            className={`rounded-full border px-3 py-1 text-[0.78125rem] transition-colors ${
-                              (answers[i] ?? '') === o ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
+                            className={`rounded-full border px-3 py-1 text-body-sm transition-colors ${
+                              (answers[i] ?? '') === o ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink'
                             }`}
                           >
                             {o}
@@ -355,7 +355,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                   )
                 }
                 disabled={pending}
-                className="rounded-md bg-primary px-3.5 py-2 text-[0.8125rem] font-semibold text-primary-fg disabled:opacity-50"
+                className="rounded-md bg-primary px-3.5 py-2 text-body font-semibold text-primary-fg disabled:opacity-50"
               >
                 {t('generation.send', lang)}
               </button>
@@ -379,7 +379,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 type="button"
                 disabled={!selId}
                 onClick={() => selId && start(() => acceptCandidate(generationId, selId))}
-                className="inline-flex items-center gap-1.5 rounded-full border border-(--accent)/60 bg-(--accent-soft) px-3 py-1.5 text-[0.78125rem] font-medium text-accent hover:opacity-90 disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-full border border-accent/60 bg-accent-soft px-3 py-1.5 text-body-sm font-medium text-accent hover:opacity-90 disabled:opacity-40"
               >
                 <Check size={13} /> {t('generation.useOne', lang)}
               </button>
@@ -388,7 +388,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               <button
                 type="button"
                 onClick={() => start(() => regenerateCandidate(generationId))}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[0.78125rem] text-ink-2 hover:border-border-strong hover:text-ink"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-body-sm text-ink-2 hover:border-border-strong hover:text-ink"
               >
                 {/* Сравнивать нечего — значит это не «ещё вариант», а повтор того же запроса. */}
                 <RotateCw size={13} /> {last ? t('generation.anotherVariant', lang) : t('generation.tryAgain', lang)}
@@ -398,7 +398,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               <button
                 type="button"
                 onClick={() => setNote(capFirst(last.hint ?? ''))}
-                className="inline-flex max-w-[17.5rem] items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[0.78125rem] text-muted hover:border-border-strong hover:text-ink-2"
+                className="inline-flex max-w-[17.5rem] items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-body-sm text-muted hover:border-border-strong hover:text-ink-2"
               >
                 <span className="truncate">{capFirst(last.hint ?? '')}</span>
               </button>

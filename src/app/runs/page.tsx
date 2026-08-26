@@ -106,18 +106,18 @@ function RunCard({ r, lang, muted }: { r: UserRunRow; lang: Lang; muted?: boolea
     >
       <Link href={`/runs/${r.id}`} className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-[0.875rem] font-semibold text-ink">{tr(r.title, lang)}</span>
-          <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-[0.6875rem] text-ink-2">v{r.version}</span>
-          {r.status === 'failed' && <span className="rounded-md border border-danger/40 px-1.5 py-0.5 text-[0.6875rem] font-medium text-danger">{t('runFailed', lang)}</span>}
+          <span className="truncate text-body-lg font-semibold text-ink">{tr(r.title, lang)}</span>
+          <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-caption text-ink-2">v{r.version}</span>
+          {r.status === 'failed' && <span className="rounded-md border border-danger/40 px-1.5 py-0.5 text-caption font-medium text-danger">{t('runFailed', lang)}</span>}
         </div>
-        <div className="mt-0.5 truncate text-[0.78125rem] text-muted">
+        <div className="mt-0.5 truncate text-body-sm text-muted">
           {r.handle}/{r.slug} · {timeAgo(r.updatedAt, lang)}
         </div>
         <div className="mt-2 flex items-center gap-2">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
             <div className="h-full rounded-full bg-ok transition-all" style={{ width: `${pct}%` }} />
           </div>
-          <span className="shrink-0 font-mono text-[0.6875rem] text-ink-2">
+          <span className="shrink-0 font-mono text-caption text-ink-2">
             {r.doneCount}/{r.total}
           </span>
         </div>

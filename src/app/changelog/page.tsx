@@ -30,7 +30,7 @@ export default async function ChangelogPage() {
 
   return (
     <div className={PAGE_NARROW}>
-      <Link href="/" className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
+      <Link href="/" className="mb-4 inline-flex items-center gap-2 text-body text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {t('home', lang)}
       </Link>
       <FloatingBack href="/" label={t('home', lang)} />
@@ -46,7 +46,7 @@ export default async function ChangelogPage() {
             return (
               <div key={`${e.at.toISOString()}${text}`} className="relative">
                 <span className="absolute left-[-19px] top-[0.375rem] h-[0.5625rem] w-[0.5625rem] rounded-full border border-border-strong bg-surface-2" />
-                <div className="font-mono text-[0.6875rem] text-muted">{fmt.format(e.at)}</div>
+                <div className="font-mono text-caption text-muted">{fmt.format(e.at)}</div>
                 {/* Запись ведёт в свой источник (PR или релиз) — иначе changelog
                     это список фраз, по которым не посмотреть, что изменилось. */}
                 {e.href ? (
@@ -54,12 +54,12 @@ export default async function ChangelogPage() {
                     href={e.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-0.5 block text-[0.875rem] leading-relaxed text-ink hover:text-accent"
+                    className="mt-0.5 block text-body-lg leading-relaxed text-ink hover:text-accent"
                   >
                     {text}
                   </a>
                 ) : (
-                  <div className="mt-0.5 text-[0.875rem] leading-relaxed text-ink">{text}</div>
+                  <div className="mt-0.5 text-body-lg leading-relaxed text-ink">{text}</div>
                 )}
               </div>
             )

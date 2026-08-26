@@ -14,8 +14,8 @@ import { cardClass } from '@/shared/ui/card-style'
 const RANK_CLS = [
   'text-muted', // 0 Ученик
   'border border-border text-ink-2', // 1 Подмастерье
-  'bg-(--accent-soft) text-accent', // 2 Мастер
-  'border border-(--accent) bg-(--accent-soft) text-accent', // 3 Старший мастер
+  'bg-accent-soft text-accent', // 2 Мастер
+  'border border-accent bg-accent-soft text-accent', // 3 Старший мастер
 ]
 
 /**
@@ -38,8 +38,8 @@ export default async function GuildsPage() {
 
   return (
     <div className={PAGE}>
-      <h1 className="text-[1.375rem] font-bold text-ink">{t('guilds.theWorkshopGuilds', lang)}</h1>
-      <p className="mt-1.5 max-w-[40rem] text-[0.875rem] leading-relaxed text-ink-2">
+      <h1 className="text-stat font-bold text-ink">{t('guilds.theWorkshopGuilds', lang)}</h1>
+      <p className="mt-1.5 max-w-[40rem] text-body-lg leading-relaxed text-ink-2">
         {t('guilds.everySetforkListForged', lang)}
       </p>
 
@@ -54,14 +54,14 @@ export default async function GuildsPage() {
               <div className="flex items-center gap-3">
                 <GnomeAvatar src={avatars[e.id]} size={56} className="size-14 shrink-0" />
                 <div className="min-w-0">
-                  <div className="text-[1rem] font-semibold text-ink">{ru ? e.nameRu : e.nameEn}</div>
-                  {(ru ? e.guildRu : e.guildEn) && <div className="text-[0.78125rem] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
+                  <div className="text-title font-semibold text-ink">{ru ? e.nameRu : e.nameEn}</div>
+                  {(ru ? e.guildRu : e.guildEn) && <div className="text-body-sm font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
                   {/* Ранг — цеховой титул (RPG-прогрессия на глазах). Иконка-медаль с
                       подмастерья; ученик — приглушённый текст без иконки.
                       tabIndex: Radix Tooltip открывается по focus — тап на touch
                       фокусирует бейдж и показывает подсказку (Codex #643). */}
                   <Tooltip label={t('guilds.craftRankEarnedBy', lang)}>
-                    <span tabIndex={0} className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${RANK_CLS[rank.tier]}`}>
+                    <span tabIndex={0} className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-semibold ${RANK_CLS[rank.tier]}`}>
                       {rank.tier >= 1 && <Award size={11} />}
                       {ru ? rank.labelRu : rank.labelEn}
                     </span>
@@ -69,7 +69,7 @@ export default async function GuildsPage() {
                 </div>
                 {share !== null && (
                   <Tooltip label={t('guilds.shareCouncilsWhoseList', lang)}>
-                    <span tabIndex={0} className="ml-auto shrink-0 self-start rounded-full bg-(--accent-soft) px-2 py-0.5 text-[0.6875rem] font-semibold text-accent">
+                    <span tabIndex={0} className="ml-auto shrink-0 self-start rounded-full bg-accent-soft px-2 py-0.5 text-caption font-semibold text-accent">
                       ✓ {share}%
                     </span>
                   </Tooltip>
@@ -77,23 +77,23 @@ export default async function GuildsPage() {
               </div>
               {e.code && (
                 <div className="mt-3">
-                  <div className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('common.guildCode', lang)}</div>
+                  <div className="mb-1 text-caption font-semibold uppercase tracking-wide text-muted">{t('common.guildCode', lang)}</div>
                   {/* Людям — на их языке; агентам в промпты всегда едет EN `code` (вердикт владельца, линза 07). */}
-                  <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2">{ru ? e.codeRu || e.code : e.code}</p>
+                  <p className="whitespace-pre-wrap text-body-sm leading-[1.55] text-ink-2">{ru ? e.codeRu || e.code : e.code}</p>
                 </div>
               )}
               {e.domains.length > 0 && !e.domains.includes('*') && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {e.domains.map((d) => (
-                    <span key={d} className="rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-ink-2">
+                    <span key={d} className="rounded-full border border-border px-2 py-0.5 text-caption text-ink-2">
                       {d}
                     </span>
                   ))}
                 </div>
               )}
-              {e.domains.includes('*') && <div className="mt-3 text-[0.6875rem] text-muted">{t('guilds.anyTopic', lang)}</div>}
+              {e.domains.includes('*') && <div className="mt-3 text-caption text-muted">{t('guilds.anyTopic', lang)}</div>}
               {r && r.gens > 0 && (
-                <div className="mt-3 text-[0.6875rem] text-muted">
+                <div className="mt-3 text-caption text-muted">
                   {t('guilds.councilsJoined', lang).replace('{n}', String(r.gens))}
                 </div>
               )}

@@ -47,8 +47,8 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-[0.8125rem]">
-          <thead className="bg-surface-2 text-[0.6875rem] uppercase tracking-wide text-muted">
+        <table className="w-full text-body">
+          <thead className="bg-surface-2 text-caption uppercase tracking-wide text-muted">
             <tr>
               <th className="px-3 py-2 text-left font-semibold">{t('tags.tag', lang)}</th>
               <th className="px-3 py-2 text-right font-semibold">usage</th>
@@ -130,7 +130,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-[0.78125rem] text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         {filtered.length} / {tags.length}
       </p>
       {confirmDialog}

@@ -30,7 +30,7 @@ export function LabelPicker({ lang, initial = [], custom = [] }: { lang: Lang; i
             type="button"
             onClick={() => toggle(l.key)}
             // eslint-disable-next-line no-restricted-syntax -- чип-метка задачи: своя роль, ждёт Ф14 (пилюли)
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.78125rem] transition-colors ${on ? l.cls : off}`}
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-body-sm transition-colors ${on ? l.cls : off}`}
           >
             {on && <Check size={11} />}
             {lang === 'ru' ? l.ru : l.en}
@@ -47,7 +47,7 @@ export function LabelPicker({ lang, initial = [], custom = [] }: { lang: Lang; i
             onClick={() => toggle(key)}
             style={on ? chipColors(c.color) : undefined}
             // eslint-disable-next-line no-restricted-syntax -- чип-метка задачи: своя роль, ждёт Ф14 (пилюли)
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.78125rem] transition-colors ${on ? '' : off}`}
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-body-sm transition-colors ${on ? '' : off}`}
           >
             {on ? <Check size={11} /> : <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />}
             {c.name}

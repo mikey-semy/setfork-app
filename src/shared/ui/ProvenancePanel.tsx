@@ -53,7 +53,7 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
         <ScrollText size={11} /> {t('ui.howListWasBuilt', lang)}
       </button>
       {open && (
-        <div className="mt-1.5 space-y-1.5 border-l-2 border-border pl-3 text-[0.6875rem] leading-relaxed">
+        <div className="mt-1.5 space-y-1.5 border-l-2 border-border pl-3 text-caption leading-relaxed">
           <p className="text-muted">
             {t('ui.transparencyWorkshopWhoTook', lang)}
           </p>
@@ -65,7 +65,7 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
                 {p.experts.map((e, i) => (
                   <span key={e.id}>
                     {i > 0 && ' · '}
-                    {nameOf(e.id)} <span className="text-[0.6875rem] opacity-70">({prettyModelName(e.model)})</span>
+                    {nameOf(e.id)} <span className="text-caption opacity-70">({prettyModelName(e.model)})</span>
                   </span>
                 ))}
               </span>

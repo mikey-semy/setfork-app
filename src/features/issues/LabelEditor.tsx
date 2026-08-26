@@ -54,7 +54,7 @@ export function LabelEditor({
               type="button"
               onClick={toggleMenu}
               aria-label={L('изменить метки', 'edit labels')}
-              className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[0.6875rem] text-muted hover:text-ink"
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-caption text-muted hover:text-ink"
             >
               <Tag size={11} /> {L('метки', 'labels')}
             </button>
@@ -70,7 +70,7 @@ export function LabelEditor({
                       type="button"
                       disabled={pending}
                       onClick={() => toggle(l.key)}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[0.8125rem] text-ink-2 hover:bg-surface-2 disabled:opacity-60"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body text-ink-2 hover:bg-surface-2 disabled:opacity-60"
                     >
                       <span className={`h-3 w-3 shrink-0 rounded-full border ${l.cls}`} />
                       <span className="flex-1 truncate">{labelText(l.key, lang)}</span>
@@ -87,7 +87,7 @@ export function LabelEditor({
                       type="button"
                       disabled={pending}
                       onClick={() => toggle(key)}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[0.8125rem] text-ink-2 hover:bg-surface-2 disabled:opacity-60"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body text-ink-2 hover:bg-surface-2 disabled:opacity-60"
                     >
                       <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: c.color }} />
                       <span className="flex-1 truncate">{c.name}</span>
@@ -99,7 +99,7 @@ export function LabelEditor({
           )}
         </AnchoredMenu>
       ) : (
-        sel.length === 0 && <span className="text-[0.6875rem] text-muted">{L('нет меток', 'no labels')}</span>
+        sel.length === 0 && <span className="text-caption text-muted">{L('нет меток', 'no labels')}</span>
       )}
     </div>
   )

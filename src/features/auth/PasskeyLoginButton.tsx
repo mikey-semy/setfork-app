@@ -52,7 +52,7 @@ export function PasskeyLoginButton({ lang }: { lang: Lang }) {
       >
         {busy ? <Spinner size="md" /> : <Fingerprint size={15} />} {ru ? 'Войти по passkey' : 'Sign in with a passkey'}
       </button>
-      {err && <span className="text-center text-[0.78125rem] text-danger">{err}</span>}
+      {err && <span className="text-center text-body-sm text-danger">{err}</span>}
     </div>
   )
 }

@@ -44,7 +44,7 @@ export default async function SuggestPage({
     <div className={PAGE_NARROW}>
       <Link
         href={`/${owner}/${slug}`}
-        className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink"
+        className="mb-4 inline-flex items-center gap-2 text-body text-ink-2 hover:text-ink"
       >
         <ArrowLeft size={15} /> {tpl.owner.handle} / {tr(tpl.title, lang) || tpl.slug}
       </Link>

@@ -29,12 +29,12 @@ export function DevAgendaTable({ rows, lang }: { rows: AgendaRow[]; lang: Lang }
     nodeColumn<AgendaRow>({
       id: 'what',
       header: t('admin.whatGrow', lang),
-      render: (r) => <span className="block min-w-0 truncate text-[0.8125rem] text-ink">{r.label}</span>,
+      render: (r) => <span className="block min-w-0 truncate text-body text-ink">{r.label}</span>,
     }),
     nodeColumn<AgendaRow>({
       id: 'why',
       header: t('admin.whyNumbers', lang),
-      render: (r) => <span className="block min-w-0 truncate font-mono text-[0.6875rem] text-ink-2">{r.why}</span>,
+      render: (r) => <span className="block min-w-0 truncate font-mono text-caption text-ink-2">{r.why}</span>,
     }),
     numberColumn<AgendaRow>({ id: 'score', header: t('admin.priority', lang), size: 96, value: (r) => r.score, format: (n) => n.toFixed(2) }),
     nodeColumn<AgendaRow>({
@@ -66,7 +66,7 @@ export function DevAgendaTable({ rows, lang }: { rows: AgendaRow[]; lang: Lang }
             </>
           ) : (
             <Tooltip label={r.ownerExpertId ?? ''}>
-              <span className={`text-[0.78125rem] ${r.status === 'approved' ? 'text-ok' : 'text-muted'}`}>
+              <span className={`text-body-sm ${r.status === 'approved' ? 'text-ok' : 'text-muted'}`}>
                 {r.status === 'approved' ? t('admin.approved', lang) : t('admin.dismissed', lang)}
               </span>
             </Tooltip>

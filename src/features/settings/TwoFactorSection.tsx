@@ -98,13 +98,13 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
         {isOn ? (
           <>
             <ShieldCheck size={16} className="text-ok" />
-            <span className="text-[0.8125rem] font-semibold text-ink">{ru ? 'Двухфакторная защита включена' : 'Two-factor is enabled'}</span>
+            <span className="text-body font-semibold text-ink">{ru ? 'Двухфакторная защита включена' : 'Two-factor is enabled'}</span>
             <Badge variant="ok">TOTP</Badge>
           </>
         ) : (
           <>
             <ShieldOff size={16} className="text-muted" />
-            <span className="text-[0.8125rem] text-ink-2">
+            <span className="text-body text-ink-2">
               {ru ? 'Не включена — аккаунт защищён только паролем.' : 'Not enabled — your account is protected by password only.'}
             </span>
           </>
@@ -116,10 +116,10 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
       {/* Одноразовый показ recovery-кодов */}
       {recovery && (
         <div className={cardClass({ tone: 'warn' })}>
-          <div className="mb-1.5 text-[0.8125rem] font-semibold text-ink">
+          <div className="mb-1.5 text-body font-semibold text-ink">
             {ru ? 'Recovery-коды — сохрани сейчас, второй раз не покажем' : 'Recovery codes — save them now, they won’t be shown again'}
           </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 font-mono text-[0.8125rem] text-ink sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 font-mono text-body text-ink sm:grid-cols-5">
             {recovery.map((c) => (
               <span key={c}>{c}</span>
             ))}
@@ -148,12 +148,12 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
           {/* eslint-disable-next-line @next/next/no-img-element, no-restricted-syntax -- локальный data:URL QR; рамка КАРТИНКИ: белый фон обязателен для читаемости сканером */}
           <img src={enroll.qrDataUrl} alt="TOTP QR" width={160} height={160} className="shrink-0 rounded-md border border-border bg-white p-1" />
           <div className="min-w-0 flex-1">
-            <p className="text-[0.8125rem] text-ink-2">
+            <p className="text-body text-ink-2">
               {ru
                 ? 'Отсканируй QR в приложении-аутентификаторе (1Password, Google Authenticator, Aegis…) или введи секрет вручную:'
                 : 'Scan the QR with your authenticator app (1Password, Google Authenticator, Aegis…) or enter the secret manually:'}
             </p>
-            <code className="mt-1.5 block break-all rounded-md bg-surface px-2 py-1 font-mono text-[0.78125rem] text-ink">{enroll.secret}</code>
+            <code className="mt-1.5 block break-all rounded-md bg-surface px-2 py-1 font-mono text-body-sm text-ink">{enroll.secret}</code>
             <div className="mt-3">{codeInput(confirm, ru ? 'Код из приложения' : 'Code from the app')}</div>
           </div>
         </div>
@@ -172,7 +172,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
 
       {isOn && mode !== 'idle' && (
         <div className={cardClass({ tone: 'inset' })}>
-          <p className="mb-2 text-[0.8125rem] text-ink-2">
+          <p className="mb-2 text-body text-ink-2">
             {mode === 'disable'
               ? ru ? 'Для отключения введи код из приложения (или recovery-код):' : 'Enter a code from your app (or a recovery code) to disable:'
               : ru ? 'Для перегенерации введи код из приложения (или recovery-код). Старые коды перестанут работать.' : 'Enter a code to regenerate. Old recovery codes will stop working.'}

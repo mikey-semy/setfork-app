@@ -20,13 +20,13 @@ export function TagChip({
     <Link
       href={`/tags/${encodeURIComponent(slug)}`}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full bg-(--accent-soft) px-2 py-0.5 text-[0.6875rem] font-medium text-accent hover:underline',
+        'inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-caption font-medium text-accent hover:underline',
         className,
       )}
     >
       {curated && <span aria-hidden>✓</span>}
       {label || slug}
-      {count != null && <span className="font-mono text-[0.6875rem] opacity-70">{count}</span>}
+      {count != null && <span className="font-mono text-caption opacity-70">{count}</span>}
     </Link>
   )
 }

@@ -64,9 +64,9 @@ export function FloatingInput({
             'pointer-events-none absolute left-2.5 top-1 text-muted transition-all',
             TEXT.caption,
             // Пусто и без фокуса — метка стоит по центру поля обычным кеглем.
-            'peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-[0.8125rem]',
+            'peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-body',
             // Фокус — всегда наверх, даже если ещё ничего не введено.
-            'peer-focus:top-1 peer-focus:translate-y-0 peer-focus:text-[0.6875rem] peer-focus:text-accent',
+            'peer-focus:top-1 peer-focus:translate-y-0 peer-focus:text-caption peer-focus:text-accent',
           )}
         >
           {label}

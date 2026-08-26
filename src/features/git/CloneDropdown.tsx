@@ -45,7 +45,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
 
   // Строка-действие: тач-цель добирается на крупном указателе (Apple HIG 44px).
   const row =
-    'flex min-h-8 items-center gap-2 rounded-md px-1.5 py-1.5 text-[0.78125rem] text-ink-2 hover:bg-surface-2 hover:text-ink pointer-coarse:min-h-11'
+    'flex min-h-8 items-center gap-2 rounded-md px-1.5 py-1.5 text-body-sm text-ink-2 hover:bg-surface-2 hover:text-ink pointer-coarse:min-h-11'
 
   const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: 'clone', label: t('useTabClone', lang), icon: <GitBranch size={13} /> },
@@ -99,7 +99,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
               tabIndex={tab === tt.key ? 0 : -1}
               onClick={() => setTab(tt.key)}
               onKeyDown={(e) => onTabKeyDown(e, tt.key)}
-              className={`flex min-h-8 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-[0.78125rem] font-semibold transition-colors pointer-coarse:min-h-11 ${
+              className={`flex min-h-8 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-body-sm font-semibold transition-colors pointer-coarse:min-h-11 ${
                 tab === tt.key ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'
               }`}
             >
@@ -113,8 +113,8 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
             <div role="tabpanel" id="use-panel-clone" aria-labelledby="use-tab-clone">
               {heading(<Terminal size={12} />, t('cloneGitHeading', lang))}
               {copyField(cloneUrl, t('cloneGitHeading', lang))}
-              <p className="mt-1 text-[0.78125rem] text-ink-2">{t('cloneHttpsHint', lang)}</p>
-              <p className="mt-1 text-[0.78125rem] text-ink-2">{t('cloneAuthHint', lang)}</p>
+              <p className="mt-1 text-body-sm text-ink-2">{t('cloneHttpsHint', lang)}</p>
+              <p className="mt-1 text-body-sm text-ink-2">{t('cloneAuthHint', lang)}</p>
               <a href={`${base}/repo.bundle`} className={`${row} mt-1.5`}>
                 <GitBranch size={14} className="text-muted" /> {t('downloadBundle', lang)}
               </a>
@@ -134,8 +134,8 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
                   доступ к raw, а не чтение обёртки по словам. */}
               {heading(<Terminal size={12} />, t('runHeading', lang))}
               {copyField(runCommand, t('runHeading', lang))}
-              <p className="mt-1 text-[0.78125rem] text-ink-2">{t('runHint', lang)}</p>
-              <p className="mt-1 text-[0.78125rem] text-ink-2">{t('runShellOnlyHint', lang)}</p>
+              <p className="mt-1 text-body-sm text-ink-2">{t('runHint', lang)}</p>
+              <p className="mt-1 text-body-sm text-ink-2">{t('runShellOnlyHint', lang)}</p>
               <a href={`${base}/raw`} className={`${row} mt-1`}>
                 <FileCode size={14} className="text-muted" /> {t('viewRaw', lang)}
               </a>
@@ -161,7 +161,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
                   json'ом. MCP ниже нужен агенту, iframe — сайту. */}
               {heading(<Braces size={12} />, t('dataHeading', lang))}
               {copyField(dataUrl, t('dataHeading', lang))}
-              <p className="mt-1 text-[0.78125rem] text-ink-2">{t('dataHint', lang)}</p>
+              <p className="mt-1 text-body-sm text-ink-2">{t('dataHint', lang)}</p>
               <a href={`${base}/data.json`} className={`${row} mt-1`}>
                 <Braces size={14} className="text-muted" /> {t('openData', lang)}
               </a>
@@ -169,7 +169,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
               <div className="mt-2.5 border-t border-border pt-2">
                 {heading(<Sparkles size={12} />, t('mcpHeading', lang))}
                 {copyField(mcpUrl, t('mcpHeading', lang))}
-                <p className="mt-1 text-[0.78125rem] text-ink-2">{t('mcpHint', lang)}</p>
+                <p className="mt-1 text-body-sm text-ink-2">{t('mcpHint', lang)}</p>
                 <Link href="/settings#mcp" className={`${row} mt-1 text-accent hover:underline`}>
                   {t('getTokenLink', lang)}
                 </Link>
@@ -178,7 +178,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
               <div className="mt-2.5 border-t border-border pt-2">
                 {heading(<Code2 size={12} />, t('embedHeading', lang))}
                 {copyField(embedCode, t('embedHeading', lang))}
-                <p className="mt-1 text-[0.78125rem] text-ink-2">{t('embedHint', lang)}</p>
+                <p className="mt-1 text-body-sm text-ink-2">{t('embedHint', lang)}</p>
               </div>
             </div>
           )}

@@ -38,12 +38,12 @@ export function ContributionActivity({
 }) {
   return (
     <section className="mt-6">
-      <div className="mb-3 text-[1rem] font-semibold text-ink">{t('profile.activity.title', lang)}</div>
+      <div className="mb-3 text-title font-semibold text-ink">{t('profile.activity.title', lang)}</div>
       {/* Высота ряда одна в обоих состояниях: месяц со стрелками и день с «Весь
           месяц». Резерв на телефоне — 48px: тач-цель 44 плюс отступ до линии,
           иначе ряд вырастал на выборе дня и заголовок ленты дёргался. */}
       <div className="mb-4 flex h-7 items-center justify-between gap-2 border-b border-border pb-1 pointer-coarse:h-12">
-        <span key={day ?? month} className="sf-fade-in sf-slow min-w-0 truncate text-[0.78125rem] font-semibold uppercase tracking-wide text-muted">
+        <span key={day ?? month} className="sf-fade-in sf-slow min-w-0 truncate text-body-sm font-semibold uppercase tracking-wide text-muted">
           {day ? fullDate(parseDayKey(day) ?? day, lang) : monthYearLong(parseDayKey(`${month}-01`) ?? `${month}-01`, lang)}
         </span>
         {/* Пока лента сужена до дня, стрелки месяцев уводили бы не туда: на их
@@ -75,7 +75,7 @@ export function ContributionActivity({
         <div key={`${day ?? month}:${loading}:${failed}`} className="sf-rise-in sf-slow">
           {failed ? (
             <div className="flex flex-wrap items-center gap-3">
-              <p className="text-[0.8125rem] text-danger">{t('profile.activity.loadFailed', lang)}</p>
+              <p className="text-body text-danger">{t('profile.activity.loadFailed', lang)}</p>
               <Button size="xs" onClick={onRetry}>
                 {t('tryAgain', lang)}
               </Button>
@@ -83,7 +83,7 @@ export function ContributionActivity({
           ) : loading ? (
             <LoadingTopics />
           ) : topics.length === 0 ? (
-            <p className="text-[0.8125rem] text-muted">{t(day ? 'profile.activity.emptyDay' : 'profile.activity.emptyMonth', lang)}</p>
+            <p className="text-body text-muted">{t(day ? 'profile.activity.emptyDay' : 'profile.activity.emptyMonth', lang)}</p>
           ) : (
             /* Полоска таймлайна проходит по центру кружков (14px = половина w-7) и
                обрывается у первого и последнего, а не тянется через всю секцию. */

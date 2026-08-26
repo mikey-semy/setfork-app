@@ -45,7 +45,7 @@ export function LinkIssuePicker({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {linked.length === 0 && <p className="text-[0.78125rem] text-muted">{labels.empty}</p>}
+      {linked.length === 0 && <p className="text-body-sm text-muted">{labels.empty}</p>}
 
       {canEdit && (
         <Popover>
@@ -65,7 +65,7 @@ export function LinkIssuePicker({
               search={{ value: q, onChange: setQ, placeholder: labels.filter, clearLabel: labels.clear }}
             >
               {shown.length === 0 ? (
-                <p className="px-2 py-3 text-[0.78125rem] text-muted">{labels.empty}</p>
+                <p className="px-2 py-3 text-body-sm text-muted">{labels.empty}</p>
               ) : (
                 shown.slice(0, 30).map((i) => (
                   <PickerRow
@@ -84,7 +84,7 @@ export function LinkIssuePicker({
       {canEdit && linked.length > 0 && (
         <div className="flex flex-col gap-1">
           {linked.map((n) => (
-            <div key={n} className="flex items-center gap-1.5 text-[0.78125rem]">
+            <div key={n} className="flex items-center gap-1.5 text-body-sm">
               <span className="font-mono text-muted">#{n}</span>
               <Tooltip label={labels.remove}>
                 <button
@@ -102,7 +102,7 @@ export function LinkIssuePicker({
         </div>
       )}
 
-      <p className="text-[0.6875rem] text-muted">{labels.hint}</p>
+      <p className="text-caption text-muted">{labels.hint}</p>
     </div>
   )
 }

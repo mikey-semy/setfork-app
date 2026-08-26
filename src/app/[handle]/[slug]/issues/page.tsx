@@ -110,7 +110,7 @@ export default async function IssuesPage({
 
         {/* Табы статуса + фильтры */}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2">
-          <div className="flex items-center gap-4 text-[0.8125rem] font-semibold">
+          <div className="flex items-center gap-4 text-body font-semibold">
             <Link href={hrefWith({ status: undefined })} className={`inline-flex items-center gap-1.5 ${status === 'open' ? 'text-ink' : 'text-ink-2 hover:text-ink'}`}>
               <CircleDot size={15} /> {counts.open} {t('openLabel', lang)}
             </Link>
@@ -153,9 +153,9 @@ export default async function IssuesPage({
         {/* Управление кастомными метками — владельцу/коллаборатору (свёрнуто). */}
         {canManage && (
           <details className="mb-3 rounded-md border border-border bg-surface">
-            <summary className="flex cursor-pointer items-center gap-1.5 px-3 py-2 text-[0.8125rem] font-medium text-ink-2 hover:text-ink">
+            <summary className="flex cursor-pointer items-center gap-1.5 px-3 py-2 text-body font-medium text-ink-2 hover:text-ink">
               <Tag size={14} /> {lang === 'ru' ? 'Кастомные метки' : 'Custom labels'}
-              <span className="font-mono text-[0.6875rem] text-muted">{custom.length}</span>
+              <span className="font-mono text-caption text-muted">{custom.length}</span>
             </summary>
             <div className="border-t border-border p-3">
               <LabelsManager templateId={meta.id} initial={custom} lang={lang} />
@@ -179,17 +179,17 @@ export default async function IssuesPage({
                     {/* Заголовок пишет человек: одно длинное слово без пробелов иначе
                         распирает страницу на мобиле. Тот же приём, что в списке
                         предложений — там он уже стоял. */}
-                    <Link href={`${base}/${it.number}`} className="min-w-0 text-[0.875rem] font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]">
+                    <Link href={`${base}/${it.number}`} className="min-w-0 text-body-lg font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]">
                       {it.title}
                     </Link>
                     <LabelChips labels={it.labels} lang={lang} custom={custom} />
                     {it.milestoneTitle && (
-                      <span className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-ink-2 [overflow-wrap:anywhere]">
+                      <span className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-caption text-ink-2 [overflow-wrap:anywhere]">
                         <MilestoneIcon size={11} className="text-accent" /> {it.milestoneTitle}
                       </span>
                     )}
                   </div>
-                  <div className="mt-0.5 text-[0.78125rem] text-muted">
+                  <div className="mt-0.5 text-body-sm text-muted">
                     #{it.number} · {t('openedThis', lang)} {it.authorHandle} · {fmt.format(new Date(it.createdAt))}
                   </div>
                 </div>
@@ -205,7 +205,7 @@ export default async function IssuesPage({
                   </div>
                 )}
                 {it.commentCount > 0 && (
-                  <span className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-muted">
+                  <span className="mt-0.5 inline-flex items-center gap-1 text-body-sm text-muted">
                     <MessageSquare size={13} /> {it.commentCount}
                   </span>
                 )}

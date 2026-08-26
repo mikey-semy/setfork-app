@@ -93,8 +93,8 @@ export function AiKeyAndSwitch({
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[0.875rem] font-medium text-ink">{t('admin.draftingEnabled', lang)}</div>
-          <p className="text-[0.78125rem] text-muted">
+          <div className="text-body-lg font-medium text-ink">{t('admin.draftingEnabled', lang)}</div>
+          <p className="text-body-sm text-muted">
             {canEnable
               ? t('admin.listsCanBeDrafted', lang)
               : t('admin.enterApiKeyBelow', lang)}
@@ -114,7 +114,7 @@ export function AiKeyAndSwitch({
             onProviderChange?.(next)
           }}
         >
-          <SelectTrigger className="text-[0.8125rem]">
+          <SelectTrigger className="text-body">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -135,7 +135,7 @@ export function AiKeyAndSwitch({
         hint={t('admin.spareProviderHint', lang)}
       >
         <Select name="fallbackProvider" defaultValue={fallbackProvider || NO_FALLBACK}>
-          <SelectTrigger className="text-[0.8125rem]">
+          <SelectTrigger className="text-body">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

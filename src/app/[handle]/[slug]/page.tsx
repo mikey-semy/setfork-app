@@ -57,9 +57,9 @@ export default async function ListPage({
           <main className={`min-w-0 flex-1 ${STACK}`}>
             {/* Заголовок только для печати (в экране он в шапке) */}
             <div className="hidden print:block">
-              <h1 className="text-[1.25rem] font-bold text-ink">{tr(tpl.title, lang)}</h1>
-              {tr(tpl.desc, lang) && <p className="mt-1 text-[0.8125rem] text-ink-2">{tr(tpl.desc, lang)}</p>}
-              <p className="mt-1 font-mono text-[0.6875rem] text-muted">
+              <h1 className="text-heading font-bold text-ink">{tr(tpl.title, lang)}</h1>
+              {tr(tpl.desc, lang) && <p className="mt-1 text-body text-ink-2">{tr(tpl.desc, lang)}</p>}
+              <p className="mt-1 font-mono text-caption text-muted">
                 {owner}/{slug} · v{currentVersion?.version ?? tpl.currentVersion}
               </p>
             </div>

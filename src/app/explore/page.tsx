@@ -92,12 +92,12 @@ export default async function ExplorePage() {
                       («semantica… / semantica»). Раньше `truncate` стоял на всей строке
                       и съедал ровно название, то есть единственное, ради чего строку
                       читают: «miki/Дело о таинственном майнер…». */}
-                  <span className="flex min-w-0 flex-1 items-baseline gap-0.5 text-[0.8125rem]">
+                  <span className="flex min-w-0 flex-1 items-baseline gap-0.5 text-body">
                     <span className="max-w-[4.5rem] shrink truncate text-muted">{l.ownerHandle}</span>
                     <span className="shrink-0 text-muted">/</span>
                     <span className="min-w-0 flex-1 truncate font-medium text-ink-2">{tr(l.title, lang)}</span>
                   </span>
-                  <span className="inline-flex shrink-0 items-center gap-1 text-[0.78125rem] text-muted">
+                  <span className="inline-flex shrink-0 items-center gap-1 text-body-sm text-muted">
                     <Star size={12} /> {l.starsCount}
                   </span>
                 </Link>
@@ -116,8 +116,8 @@ export default async function ExplorePage() {
                   {/* Имя и ник — каждое своей строкой с обрезкой: длинное имя не должно
                       ни распирать колонку, ни выталкивать ник. */}
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[0.8125rem] font-medium text-ink">{p.name ?? p.handle}</span>
-                    <span className="block truncate text-[0.78125rem] text-muted">@{p.handle}</span>
+                    <span className="block truncate text-body font-medium text-ink">{p.name ?? p.handle}</span>
+                    <span className="block truncate text-body-sm text-muted">@{p.handle}</span>
                   </span>
                 </Link>
               ))}
@@ -151,7 +151,7 @@ function Widget({
 }) {
   return (
     <section className={cardClass()}>
-      <div className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-ink">
+      <div className="mb-1.5 flex items-center gap-2 text-body font-semibold text-ink">
         {icon} {title}
       </div>
       {/* Разделители строк — приглушённые, не ярче границ карточки. */}
@@ -159,7 +159,7 @@ function Widget({
       {moreHref && moreLabel && (
         <Link
           href={moreHref}
-          className="mt-1 flex min-h-11 items-center gap-1 border-t border-border/40 pt-2 text-[0.78125rem] font-medium text-accent hover:underline"
+          className="mt-1 flex min-h-11 items-center gap-1 border-t border-border/40 pt-2 text-body-sm font-medium text-accent hover:underline"
         >
           {moreLabel} <ChevronRight size={13} className="shrink-0" />
         </Link>

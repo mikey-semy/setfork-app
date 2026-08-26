@@ -43,7 +43,7 @@ export function EmailSettingsForm({ lang, v }: { lang: Lang; v: EmailFormValues 
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[0.78125rem] text-ink-2">
+      <div className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-body-sm text-ink-2">
         {ru
           ? 'Свой SMTP-сервер (без сторонних сервисов). Пусто = берётся из .env. docker compose поднимает Stalwart (Rust MTA): host=mail, port=587; разовая настройка — админка Stalwart на :8080 (пароль в логах сервиса mail). Прод: домен + DKIM/SPF/DMARC.'
           : 'Your own SMTP server (no third-party service). Empty = taken from .env. docker compose runs Stalwart (Rust MTA): host=mail, port=587; one-time setup in Stalwart admin at :8080 (password in the mail service logs). Prod: domain + DKIM/SPF/DMARC.'}
@@ -79,8 +79,8 @@ export function EmailSettingsForm({ lang, v }: { lang: Lang; v: EmailFormValues 
 
         <div className="flex items-center justify-between gap-4">
           <div>
-            <div className="text-[0.875rem] font-medium text-ink">{ru ? 'TLS (implicit, порт 465)' : 'TLS (implicit, port 465)'}</div>
-            <p className="text-[0.78125rem] text-muted">{ru ? 'Выкл для 587/STARTTLS и для MailHog.' : 'Off for 587/STARTTLS and for MailHog.'}</p>
+            <div className="text-body-lg font-medium text-ink">{ru ? 'TLS (implicit, порт 465)' : 'TLS (implicit, port 465)'}</div>
+            <p className="text-body-sm text-muted">{ru ? 'Выкл для 587/STARTTLS и для MailHog.' : 'Off for 587/STARTTLS and for MailHog.'}</p>
           </div>
           <Switch name="secure" defaultChecked={v.secure} />
         </div>
@@ -106,7 +106,7 @@ export function EmailSettingsForm({ lang, v }: { lang: Lang; v: EmailFormValues 
           {ru ? 'Тест-письмо' : 'Send test'}
         </button>
         {result && (
-          <span className={`text-[0.78125rem] ${result.ok ? 'text-ok' : 'text-danger'}`}>
+          <span className={`text-body-sm ${result.ok ? 'text-ok' : 'text-danger'}`}>
             {result.ok ? (ru ? 'Отправлено ✅' : 'Sent ✅') : result.error}
           </span>
         )}

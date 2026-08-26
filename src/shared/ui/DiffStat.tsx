@@ -41,7 +41,7 @@ export function DiffStat({
   const rest = Math.max(0, SQUARES - greens - reds - yellows)
 
   return (
-    <span className={cn('inline-flex items-center gap-2 font-mono text-[0.78125rem]', className)}>
+    <span className={cn('inline-flex items-center gap-2 font-mono text-body-sm', className)}>
       {added > 0 && <span className="text-ok">+{added}</span>}
       {removed > 0 && <span className="text-danger">−{removed}</span>}
       {changed > 0 && <span className="text-warn">~{changed}</span>}

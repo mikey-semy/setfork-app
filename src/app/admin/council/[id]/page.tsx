@@ -76,17 +76,17 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   const card = 'min-w-0 rounded-lg border border-border bg-surface p-4'
   const kpiCell = (icon: ReactNode, label: string, value: string, sub?: string) => (
     <div className={card}>
-      <div className="flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
+      <div className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-muted">
         {icon} {label}
       </div>
-      <div className="mt-1.5 text-[1.375rem] font-bold text-ink">{value}</div>
-      {sub && <div className="mt-0.5 text-[0.78125rem] text-ink-2">{sub}</div>}
+      <div className="mt-1.5 text-stat font-bold text-ink">{value}</div>
+      {sub && <div className="mt-0.5 text-body-sm text-ink-2">{sub}</div>}
     </div>
   )
 
   return (
     <div className="flex w-full min-w-0 flex-col px-5 py-6 md:px-8">
-      <Link href="/admin/council" className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
+      <Link href="/admin/council" className="mb-4 inline-flex items-center gap-2 text-body text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {t('admin.councilHall', lang)}
       </Link>
 
@@ -94,32 +94,32 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
         {/* Аватар из ростера: загруженный URL или встроенный webp; пусто → заглушка без 404. */}
         <GnomeAvatar src={avatarUrl} size={64} className="size-16 rounded-full border border-border object-cover" />
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-[1.25rem] font-bold text-ink">
+          <h1 className="flex items-center gap-2 text-heading font-bold text-ink">
             {name}
             {!e.enabled && (
-              <span className="rounded-md border border-border px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted">{t('admin.disabled', lang)}</span>
+              <span className="rounded-md border border-border px-1.5 py-0.5 text-caption font-medium text-muted">{t('admin.disabled', lang)}</span>
             )}
           </h1>
-          {(ru ? e.guildRu : e.guildEn) && <div className="mt-0.5 text-[0.8125rem] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
+          {(ru ? e.guildRu : e.guildEn) && <div className="mt-0.5 text-body font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
           {/* Аккаунт специалиста — то, что видят люди: списки, комментарии, авторство. */}
           {handle ? (
-            <Link href={`/${handle}`} className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-ink-2 hover:text-accent">
+            <Link href={`/${handle}`} className="mt-0.5 inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-accent">
               <CircleUser size={12} /> @{handle}
             </Link>
           ) : (
-            <div className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-warn">
+            <div className="mt-0.5 inline-flex items-center gap-1 text-body-sm text-warn">
               <CircleUser size={12} /> {t('admin.noAccountYetCreate', lang)}
             </div>
           )}
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {/* Настроение гнома (RPG): вытекает из принятости, окрашивает его реплики. */}
             <Tooltip label={mood.style || t('admin.notEnoughDataYet', lang)}>
-              <span tabIndex={0} className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[0.6875rem] text-ink-2">
+              <span tabIndex={0} className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-caption text-ink-2">
                 {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
               </span>
             </Tooltip>
             {e.domains.map((d) => (
-              <span key={d} className="rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-ink-2">
+              <span key={d} className="rounded-full border border-border px-2 py-0.5 text-caption text-ink-2">
                 {d}
               </span>
             ))}
@@ -160,40 +160,40 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
 
       <div className="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className={card}>
-          <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('admin.personaWorkingFrame', lang)}</div>
-          <p className="whitespace-pre-wrap text-[0.8125rem] leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{e.persona}</p>
+          <div className="mb-2 text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.personaWorkingFrame', lang)}</div>
+          <p className="whitespace-pre-wrap text-body leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{e.persona}</p>
           {e.code && (
             <>
-              <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('common.guildCode', lang)}</div>
+              <div className="mb-2 mt-4 text-caption font-semibold uppercase tracking-wide text-muted">{t('common.guildCode', lang)}</div>
               {/* Людям — на их языке; агентам всегда едет EN `code`. */}
-              <p className="whitespace-pre-wrap font-mono text-[0.78125rem] leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{(ru ? e.codeRu : '') || e.code}</p>
+              <p className="whitespace-pre-wrap font-mono text-body-sm leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{(ru ? e.codeRu : '') || e.code}</p>
             </>
           )}
           {e.memory && (
             <>
-              <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('admin.craftMemoryAutoDistilled', lang)}</div>
-              <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{e.memory}</p>
+              <div className="mb-2 mt-4 text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.craftMemoryAutoDistilled', lang)}</div>
+              <p className="whitespace-pre-wrap text-body-sm leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{e.memory}</p>
             </>
           )}
 
         </div>
         <div className={card}>
-          <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('admin.recentCouncils', lang)}</div>
+          <div className="mb-2 text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.recentCouncils', lang)}</div>
           {kpi.recent.length === 0 ? (
-            <p className="text-[0.8125rem] text-muted">{t('admin.hasNotBeenSummoned', lang)}</p>
+            <p className="text-body text-muted">{t('admin.hasNotBeenSummoned', lang)}</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {kpi.recent.map((r, i) => (
-                <li key={i} className="flex items-baseline gap-2 text-[0.8125rem]">
+                <li key={i} className="flex items-baseline gap-2 text-body">
                   <span className={`shrink-0 ${r.accepted ? 'text-ok' : 'text-muted'}`}>{r.accepted ? '✓' : '·'}</span>
                   <span className="min-w-0 flex-1 truncate text-ink-2">{r.query}</span>
-                  <span className="shrink-0 whitespace-nowrap text-[0.6875rem] text-muted">{timeAgo(r.createdAt, lang)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-caption text-muted">{timeAgo(r.createdAt, lang)}</span>
                 </li>
               ))}
             </ul>
           )}
           {kpi.lastSeenAt && (
-            <div className="mt-2 text-[0.6875rem] text-muted">
+            <div className="mt-2 text-caption text-muted">
               {t('admin.lastDraft', lang)} {timeAgo(kpi.lastSeenAt, lang)}
             </div>
           )}
@@ -204,31 +204,31 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           строкой в селекте: непонятно, что она делает, чего стоит и что будет, если оставить пусто. */}
       <div className={`${card} mb-5`}>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('admin.thinksWith', lang)}</span>
-          <Link href="/admin/models" className="ml-auto inline-flex min-h-11 items-center gap-1 text-[0.78125rem] text-ink-2 hover:text-accent">
+          <span className="text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.thinksWith', lang)}</span>
+          <Link href="/admin/models" className="ml-auto inline-flex min-h-11 items-center gap-1 text-body-sm text-ink-2 hover:text-accent">
             <Cpu size={13} /> {t('admin.allModels', lang)}
           </Link>
         </div>
         {e.model ? (
           <>
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="text-[1rem] font-semibold text-ink">{prettyModelName(e.model)}</span>
+              <span className="text-title font-semibold text-ink">{prettyModelName(e.model)}</span>
               {myMeta?.okPct != null && (
-                <span className={`tabular-nums text-[0.78125rem] ${myMeta.quarantined ? 'text-danger' : 'text-ok'}`}>
+                <span className={`tabular-nums text-body-sm ${myMeta.quarantined ? 'text-danger' : 'text-ok'}`}>
                   {myMeta.okPct}% · {myMeta.calls}
                 </span>
               )}
-              {myMeta?.ourCost && <span className="tabular-nums text-[0.78125rem] text-muted">{t('admin.perCall', lang).replace('{c}', myMeta.ourCost)}</span>}
-              {myMeta?.p95 && <span className="tabular-nums text-[0.78125rem] text-muted">p95 {myMeta.p95}</span>}
+              {myMeta?.ourCost && <span className="tabular-nums text-body-sm text-muted">{t('admin.perCall', lang).replace('{c}', myMeta.ourCost)}</span>}
+              {myMeta?.p95 && <span className="tabular-nums text-body-sm text-muted">p95 {myMeta.p95}</span>}
             </div>
-            <p className="mt-1.5 text-[0.78125rem] leading-[1.5] text-ink-2">
+            <p className="mt-1.5 text-body-sm leading-[1.5] text-ink-2">
               {t('admin.personalModelWins', lang)}
               {myMeta?.quarantined
                 ? ` ${t('admin.modelQuarantined', lang)}`
                 : ''}
             </p>
             {alsoOnModel.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[0.6875rem] text-muted">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-caption text-muted">
                 <span>{t('admin.alsoOnIt', lang)}</span>
                 {alsoOnModel.map((h) => (
                   <span key={`${h.kind}-${h.label}`} className="rounded-full border border-border bg-surface-2 px-2 py-0.5 text-ink-2">
@@ -239,7 +239,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
             )}
           </>
         ) : (
-          <p className="text-[0.78125rem] leading-[1.5] text-ink-2">
+          <p className="text-body-sm leading-[1.5] text-ink-2">
             {t('admin.noPersonalModel', lang)}
           </p>
         )}
@@ -248,7 +248,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
       {/* НАСТРОЙКИ — здесь, а не в общем зале: у списка настройки на странице списка, у
           специалиста на его странице. Одна форма на одного, а не стена из двадцати. */}
       <div className="mt-5">
-        <div className="mb-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{t('admin.settings', lang)}</div>
+        <div className="mb-2 text-body font-semibold uppercase tracking-wide text-ink-2">{t('admin.settings', lang)}</div>
         <ExpertSettings e={{ ...e, uploadedUrl: e.avatarUploaded ? avatars[e.id] : undefined }} modelOptions={modelOptions} gallery={gallery} lang={lang} />
       </div>
     </div>

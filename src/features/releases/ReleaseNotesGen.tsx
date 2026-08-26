@@ -54,7 +54,7 @@ export function ReleaseNotesGen({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[0.78125rem] font-semibold text-ink">{labels.notes}</span>
+        <span className="text-body-sm font-semibold text-ink">{labels.notes}</span>
         <button
           type="button"
           onClick={generate}
@@ -75,7 +75,7 @@ export function ReleaseNotesGen({
         lang={lang}
         refScope={{ owner, slug }}
       />
-      {hint && <p className="text-[0.78125rem] text-muted">{hint}</p>}
+      {hint && <p className="text-body-sm text-muted">{hint}</p>}
     </div>
   )
 }

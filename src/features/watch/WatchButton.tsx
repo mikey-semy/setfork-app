@@ -81,7 +81,7 @@ export function WatchButton({
               <button
                 type="button"
                 aria-label={watching ? labels.unwatch : labels.watch}
-                className={splitSegment({ className: watching ? 'bg-(--accent-soft) text-accent' : 'text-ink' })}
+                className={splitSegment({ className: watching ? 'bg-accent-soft text-accent' : 'text-ink' })}
               >
                 {/* Глаз НЕ перечёркиваем: подписка — это «смотрю», а не «запрещено».
                     Заливкой, как у звезды, его тоже не берём: залитый глаз превращается
@@ -105,21 +105,21 @@ export function WatchButton({
           </DropdownMenuTrigger>
         </SplitButton>
         <DropdownMenuContent align="end" className="w-[20.625rem] p-0">
-          <div className="border-b border-border px-3 py-2.5 text-[0.8125rem] font-semibold text-ink">{labels.title}</div>
+          <div className="border-b border-border px-3 py-2.5 text-body font-semibold text-ink">{labels.title}</div>
           {rows.map((r) => (
             <DropdownMenuItem key={r.key} onSelect={() => apply(r.key)} className="flex items-start gap-2 px-3 py-2.5">
               <span className="mt-0.5 w-4 shrink-0">{level === r.key && <Check size={14} className="text-accent" />}</span>
               <span className="min-w-0">
-                <span className="block text-[0.8125rem] font-medium text-ink">{r.title}</span>
-                <span className="block text-[0.78125rem] leading-snug text-muted">{r.desc}</span>
+                <span className="block text-body font-medium text-ink">{r.title}</span>
+                <span className="block text-body-sm leading-snug text-muted">{r.desc}</span>
               </span>
             </DropdownMenuItem>
           ))}
           <DropdownMenuItem onSelect={() => setCustomOpen(true)} className="flex items-start gap-2 border-t border-border px-3 py-2.5">
             <span className="mt-0.5 w-4 shrink-0">{level === 'custom' && <Check size={14} className="text-accent" />}</span>
             <span className="min-w-0">
-              <span className="block text-[0.8125rem] font-medium text-ink">{labels.custom}</span>
-              <span className="block text-[0.78125rem] leading-snug text-muted">{labels.customDesc}</span>
+              <span className="block text-body font-medium text-ink">{labels.custom}</span>
+              <span className="block text-body-sm leading-snug text-muted">{labels.customDesc}</span>
             </span>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -156,9 +156,9 @@ export function WatchButton({
                   type="checkbox"
                   checked={!!events[k]}
                   onChange={(e) => setEvents((prev) => ({ ...prev, [k]: e.target.checked }))}
-                  className="size-4 accent-(--accent)"
+                  className="size-4 accent-accent"
                 />
-                <span className="text-[0.8125rem] text-ink">{label}</span>
+                <span className="text-body text-ink">{label}</span>
               </label>
             )
           })}

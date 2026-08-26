@@ -69,17 +69,17 @@ export function AdvancedFacets({
   }, [tags, tagFilter, parsed.tags])
 
   const row = (active: boolean) =>
-    `flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-[0.8125rem] outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong ${
+    `flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-body outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong ${
       active ? 'bg-surface font-semibold text-ink' : 'text-ink-2 hover:bg-surface hover:text-ink'
     }`
 
   return (
     <div>
-      {showHeader && <div className="mb-4 text-[0.8125rem] font-semibold text-ink">{t('filters', lang)}</div>}
+      {showHeader && <div className="mb-4 text-body font-semibold text-ink">{t('filters', lang)}</div>}
 
       {/* Тип списка — аналог фасета «Languages» */}
       <div className="mb-4">
-        <div className="mb-1 px-2 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted">{t('filterType', lang)}</div>
+        <div className="mb-1 px-2 text-caption font-semibold uppercase tracking-wider text-muted">{t('filterType', lang)}</div>
         <div className="flex flex-col gap-0.5">
           <button type="button" onClick={() => setType(undefined)} className={row(!parsed.type)}>
             <Layers size={14} className="shrink-0 text-muted" /> {t('filterAllTypes', lang)}
@@ -101,7 +101,7 @@ export function AdvancedFacets({
           className={buttonClass({ className: 'mb-1 w-full uppercase tracking-wider outline-hidden hover:text-ink-2 focus-visible:ring-2 focus-visible:ring-border-strong' })}
         >
           {t('tags', lang)}
-          {parsed.tags.length > 0 && <span className="rounded-full bg-surface px-1.5 text-[0.6875rem] normal-case text-ink-2">{parsed.tags.length}</span>}
+          {parsed.tags.length > 0 && <span className="rounded-full bg-surface px-1.5 text-caption normal-case text-ink-2">{parsed.tags.length}</span>}
           <ChevronDown size={13} className={`ml-auto transition-transform ${tagsOpen ? 'rotate-180' : ''}`} />
         </button>
         {tagsOpen && (
@@ -111,7 +111,7 @@ export function AdvancedFacets({
             </div>
             <div className="flex max-h-[17.5rem] flex-col gap-0.5 overflow-y-auto pr-0.5">
               {shownTags.length === 0 ? (
-                <div className="px-2 py-1 text-[0.78125rem] text-muted">{t('noTagsFound', lang)}</div>
+                <div className="px-2 py-1 text-body-sm text-muted">{t('noTagsFound', lang)}</div>
               ) : (
                 shownTags.map((tg) => {
                   const on = parsed.tags.includes(tg.tag)
@@ -121,7 +121,7 @@ export function AdvancedFacets({
                       {on ? (
                         <Check size={13} className="ml-auto shrink-0 text-accent" />
                       ) : (
-                        <span className="ml-auto shrink-0 font-mono text-[0.6875rem] text-muted">{tg.count}</span>
+                        <span className="ml-auto shrink-0 font-mono text-caption text-muted">{tg.count}</span>
                       )}
                     </button>
                   )
@@ -134,15 +134,15 @@ export function AdvancedFacets({
 
       {/* Advanced: клик вставляет квалификатор в поле поиска в шапке (как «+» на GitHub) */}
       <div className="mt-5 border-t border-border pt-3">
-        <div className="mb-1 px-2 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted">{t('advancedFilters', lang)}</div>
+        <div className="mb-1 px-2 text-caption font-semibold uppercase tracking-wider text-muted">{t('advancedFilters', lang)}</div>
         <div className="flex flex-col gap-0.5">
           <button type="button" onClick={() => insertQualifier('by:')} className={advRow}>
             <Plus size={13} className="shrink-0 text-muted" /> {t('filterAuthor', lang)}
-            <code className="ml-auto font-mono text-[0.6875rem] text-muted">by:</code>
+            <code className="ml-auto font-mono text-caption text-muted">by:</code>
           </button>
           <button type="button" onClick={() => insertQualifier('stars:>')} className={advRow}>
             <Plus size={13} className="shrink-0 text-muted" /> {t('filterMinStars', lang)}
-            <code className="ml-auto font-mono text-[0.6875rem] text-muted">stars:</code>
+            <code className="ml-auto font-mono text-caption text-muted">stars:</code>
           </button>
         </div>
       </div>
@@ -151,4 +151,4 @@ export function AdvancedFacets({
 }
 
 const advRow =
-  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[0.8125rem] text-ink-2 outline-hidden hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong'
+  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body text-ink-2 outline-hidden hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong'

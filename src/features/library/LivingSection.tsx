@@ -31,7 +31,7 @@ export function LivingSection({ templateId, living, lang }: { templateId: string
           <div className="flex items-center gap-2 font-semibold text-ink">
             <Radio size={15} className="text-muted" /> {t('common.livingList', lang)}
           </div>
-          <p className="mt-1 text-[0.78125rem] leading-snug text-ink-2">
+          <p className="mt-1 text-body-sm leading-snug text-ink-2">
             {t('library.aListTopicKeeps', lang)}
           </p>
         </div>

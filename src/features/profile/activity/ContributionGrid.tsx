@@ -88,7 +88,7 @@ export function ContributionGrid({
       {/* key по дню: новая клетка = новая подсказка, и переворот вниз считается заново. */}
       {tip && <DayTip key={tip.text} anchor={tip} />}
       {/* Строка месяцев ровно h-[0.8125rem] (= spacer колонки дней), текст прижат вниз к клеткам. */}
-      <div className="flex h-[0.8125rem] items-end gap-[0.1875rem] text-[0.6875rem] leading-none text-muted">
+      <div className="flex h-[0.8125rem] items-end gap-[0.1875rem] text-caption leading-none text-muted">
         {calendar.months.map((m, i) => (
           <div key={i} className="w-[0.6875rem] whitespace-nowrap">
             {m ?? ''}

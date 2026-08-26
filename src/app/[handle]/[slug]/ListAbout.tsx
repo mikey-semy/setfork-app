@@ -23,7 +23,7 @@ export function ListAbout({ tpl, base, branches, currentVersion, watchers, lang,
       {/* Описание и теги пишет человек, длину тега никто не режет — без переноса
           один тег или «слово» в описании уносит страницу за край (мобила 390px). */}
       {desc && (
-        <p className={`text-[0.8125rem] text-ink-2 [overflow-wrap:anywhere] ${layout === 'row' ? 'leading-snug' : 'leading-relaxed'}`}>
+        <p className={`text-body text-ink-2 [overflow-wrap:anywhere] ${layout === 'row' ? 'leading-snug' : 'leading-relaxed'}`}>
           {desc}
         </p>
       )}
@@ -33,7 +33,7 @@ export function ListAbout({ tpl, base, branches, currentVersion, watchers, lang,
             <Link
               key={tag}
               href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
-              className="min-w-0 rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[0.78125rem] font-medium text-accent [overflow-wrap:anywhere] hover:underline"
+              className="min-w-0 rounded-full bg-accent-soft px-2.5 py-0.5 text-body-sm font-medium text-accent [overflow-wrap:anywhere] hover:underline"
             >
               {tag}
             </Link>

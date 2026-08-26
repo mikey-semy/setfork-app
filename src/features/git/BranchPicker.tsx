@@ -138,7 +138,7 @@ export function BranchPicker({
                         <Plus size={12} /> {t('create', lang)}
                       </Button>
                     </div>
-                    <p className="px-0.5 pt-1 text-[0.6875rem] text-muted">{err ?? (ru ? `от ${currentLabel}` : `from ${currentLabel}`)}</p>
+                    <p className="px-0.5 pt-1 text-caption text-muted">{err ?? (ru ? `от ${currentLabel}` : `from ${currentLabel}`)}</p>
                   </>
                 ) : null
               }
@@ -154,9 +154,9 @@ export function BranchPicker({
                   }}
                   right={
                     b.isDefault ? (
-                      <Badge className="px-1.5 text-[0.6875rem] font-normal">{t('branchDefault', lang)}</Badge>
+                      <Badge className="px-1.5 text-caption font-normal">{t('branchDefault', lang)}</Badge>
                     ) : (
-                      <span className="font-mono text-[0.6875rem] text-muted">
+                      <span className="font-mono text-caption text-muted">
                         +{b.ahead}/-{b.behind}
                       </span>
                     )
@@ -172,7 +172,7 @@ export function BranchPicker({
                   }
                 />
               ))}
-              {shown.length === 0 && <div className="px-2 py-3 text-[0.78125rem] text-muted">{t('nothingFound', lang)}</div>}
+              {shown.length === 0 && <div className="px-2 py-3 text-body-sm text-muted">{t('nothingFound', lang)}</div>}
             </PickerPanel>
           </div>
         </>

@@ -49,7 +49,7 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
 
       {/* ЧТО ПРИШЛО. Доказательство, что поток живой; заодно видно, что уже пошло в работу. */}
       <div className="min-w-0">
-        <div className="mb-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{t('admin.latestMaterial', lang)}</div>
+        <div className="mb-2 text-body font-semibold uppercase tracking-wide text-ink-2">{t('admin.latestMaterial', lang)}</div>
         <div className="divide-y divide-border rounded-lg border border-border bg-surface">
           {items.length === 0 && <EmptyState variant="inline" hint={t('admin.nothingCollectedYet', lang)} />}
           {items.map((it) => (
@@ -58,14 +58,14 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
                 href={it.url}
                 target="_blank"
                 rel="noopener noreferrer nofollow"
-                className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[0.8125rem] text-ink hover:text-accent"
+                className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-body text-ink hover:text-accent"
                 title={it.title}
               >
                 <span className="min-w-0 truncate">{it.title}</span>
                 <ExternalLink size={11} className="shrink-0 text-muted" />
               </a>
-              <span className="hidden shrink-0 font-mono text-[0.6875rem] text-muted sm:inline">{timeAgo(it.publishedAt ?? it.createdAt, lang)}</span>
-              <span className={`shrink-0 text-[0.6875rem] ${it.usedAt ? 'text-ok' : 'text-muted'}`}>
+              <span className="hidden shrink-0 font-mono text-caption text-muted sm:inline">{timeAgo(it.publishedAt ?? it.createdAt, lang)}</span>
+              <span className={`shrink-0 text-caption ${it.usedAt ? 'text-ok' : 'text-muted'}`}>
                 {it.usedAt ? t('admin.inWork', lang) : t('admin.fresh', lang)}
               </span>
             </div>

@@ -26,7 +26,7 @@ export function Alert({
 }) {
   const { box, icon: Icon } = VARIANTS[variant]
   return (
-    <div role={variant === 'danger' ? 'alert' : 'status'} className={cn('flex items-start gap-2 rounded-md border px-3.5 py-2.5 text-[0.8125rem]', box, className)}>
+    <div role={variant === 'danger' ? 'alert' : 'status'} className={cn('flex items-start gap-2 rounded-md border px-3.5 py-2.5 text-body', box, className)}>
       <Icon size={15} className="mt-0.5 shrink-0" />
       <div className="min-w-0 [overflow-wrap:anywhere]">{children}</div>
     </div>

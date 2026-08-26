@@ -54,7 +54,7 @@ export function ListAside(props: Props) {
           <ul className="flex flex-col gap-1.5">
             {backlinks.map((b) => (
               <li key={`${b.handle}/${b.slug}`}>
-                <Link href={`/${b.handle}/${b.slug}`} className="block truncate text-[0.8125rem] text-accent hover:underline">
+                <Link href={`/${b.handle}/${b.slug}`} className="block truncate text-body text-accent hover:underline">
                   {tr(b.title as LocaleText, lang) || `${b.handle}/${b.slug}`}
                 </Link>
               </li>
@@ -80,14 +80,14 @@ export function ListAside(props: Props) {
                 Сеткой аватаров было не разобрать, кто есть кто. */}
             <SectionLabel className="mb-2 flex items-center gap-1.5">
               {t('contributors', lang)}
-              <span className="rounded-full bg-surface-2 px-1.5 text-[0.6875rem] font-semibold text-ink-2">{contributors.length}</span>
+              <span className="rounded-full bg-surface-2 px-1.5 text-caption font-semibold text-ink-2">{contributors.length}</span>
             </SectionLabel>
             <div className="flex flex-col gap-1">
               {contributors.slice(0, CONTRIBUTORS_SHOWN).map((c) => (
                 <UserLine key={c.handle} handle={c.handle} name={c.name ?? undefined} avatarUrl={c.avatarUrl} size="md" className="min-w-0 py-0.5" />
               ))}
               {contributors.length > CONTRIBUTORS_SHOWN && (
-                <Link href={`${base}/leaderboard`} className="mt-0.5 text-[0.78125rem] font-semibold text-accent hover:underline">
+                <Link href={`${base}/leaderboard`} className="mt-0.5 text-body-sm font-semibold text-accent hover:underline">
                   {`+${contributors.length - CONTRIBUTORS_SHOWN}`}
                 </Link>
               )}
@@ -98,7 +98,7 @@ export function ListAside(props: Props) {
         {/* Жалоба — последней строкой карточки: на узком экране от неё остаются
             только контрибьюторы, и начинать блок кнопкой «пожаловаться» странно. */}
         {!isOwner && (
-          <div className="border-t border-border pt-4 text-[0.8125rem] text-ink-2">
+          <div className="border-t border-border pt-4 text-body text-ink-2">
             <ReportButton templateId={tpl.id} lang={lang} />
           </div>
         )}

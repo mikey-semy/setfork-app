@@ -33,8 +33,8 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
           <UserLine handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size="xs" className="min-w-0" />
           {item.visibility === 'private' && <Lock size={11} className="shrink-0 text-muted" />}
         </div>
-        <Link href={base} className="truncate text-[1rem] font-semibold text-ink group-hover:text-accent">{tr(item.title, lang)}</Link>
-        <p className="line-clamp-2 min-h-[2.125rem] text-[0.78125rem] leading-snug text-ink-2">{tr(item.desc, lang)}</p>
+        <Link href={base} className="truncate text-title font-semibold text-ink group-hover:text-accent">{tr(item.title, lang)}</Link>
+        <p className="line-clamp-2 min-h-[2.125rem] text-body-sm leading-snug text-ink-2">{tr(item.desc, lang)}</p>
         {item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {item.tags.slice(0, 3).map((tag) => (
@@ -43,7 +43,7 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
           </div>
         )}
         <div className="mt-auto flex items-center justify-between border-t border-border pt-2.5">
-          <span className="inline-flex items-center gap-1 text-[0.6875rem] text-muted">
+          <span className="inline-flex items-center gap-1 text-caption text-muted">
             <GitFork size={12} /> {fmt(item.forksCount)}
           </span>
           <form action={star}>

@@ -38,7 +38,7 @@ export function TopNavCrumb({
 
   if (!crumb.slug) {
     return (
-      <nav className="ml-2 flex min-w-0 items-center gap-1 text-[0.875rem]" aria-label="breadcrumb">
+      <nav className="ml-2 flex min-w-0 items-center gap-1 text-body-lg" aria-label="breadcrumb">
         <Link href={`/${crumb.handle}`} className="truncate font-semibold text-ink hover:text-accent">
           {crumb.handle}
         </Link>
@@ -51,7 +51,7 @@ export function TopNavCrumb({
   const visLabel = visBadge ? t(visBadge.labelKey, lang) : ''
 
   return (
-    <nav className="ml-2 flex min-w-0 items-center gap-1 text-[0.875rem]" aria-label="breadcrumb">
+    <nav className="ml-2 flex min-w-0 items-center gap-1 text-body-lg" aria-label="breadcrumb">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <IconButton size="sm" variant="ghost" label={crumb.handle} className={`sm:hidden ${focusRing}`}>

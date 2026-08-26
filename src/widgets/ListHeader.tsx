@@ -92,7 +92,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             <Link href={`/${meta.ownerHandle}`} aria-label={meta.ownerHandle} className="hidden shrink-0 sm:block">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
             </Link>
-            <h1 className="min-w-0 text-[1.125rem] font-bold text-ink [overflow-wrap:anywhere] sm:truncate">{tr(meta.title, lang)}</h1>
+            <h1 className="min-w-0 text-page font-bold text-ink [overflow-wrap:anywhere] sm:truncate">{tr(meta.title, lang)}</h1>
             {/* Версию у заголовка НЕ показываем: она живёт в сайдбаре Releases (как у GitHub —
                 номер версии/релиза только в блоке Releases, а не рядом с именем). Убран дубль. */}
             {/* Ограниченные состояния остаются рядом с названием (архив строже заморозки). */}
@@ -101,7 +101,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                 <Archive size={11} /> {t('badgeArchived', lang)}
               </Badge>
             ) : meta.frozenAt != null ? (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-ink-2">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-caption text-ink-2">
                 <Snowflake size={11} /> {t('badgeFrozen', lang)}
               </span>
             ) : null}

@@ -9,7 +9,7 @@ export function StepLevelBadge({ level, lang }: { level: StepLevel; lang: Lang }
   const recommended = level === 'recommended'
   return (
     <span
-      className={`rounded border px-1.5 py-0.5 text-[0.6875rem] font-medium ${
+      className={`rounded border px-1.5 py-0.5 text-caption font-medium ${
         recommended ? 'border-warn text-warn' : 'border-border text-muted'
       }`}
     >
@@ -32,7 +32,7 @@ export function StepDangerBadge({ step, lang }: { step: { danger?: boolean | nul
   // висит в title и в aria-label, а не только в тексте.
   return (
     <span
-      className="inline-flex items-center gap-1 rounded border border-danger px-1.5 py-0.5 text-[0.6875rem] font-medium text-danger"
+      className="inline-flex items-center gap-1 rounded border border-danger px-1.5 py-0.5 text-caption font-medium text-danger"
       title={t('dangerBadgeTitle', lang)}
       aria-label={t('dangerBadge', lang)}
     >

@@ -53,14 +53,14 @@ export function PushSettingsForm({ lang, v }: { lang: Lang; v: PushFormValues })
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[0.78125rem] text-ink-2">
+      <div className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-body-sm text-ink-2">
         {ru
           ? 'Свои VAPID-ключи (без сторонних сервисов). Сгенерируйте пару — приватный хранится в БД, публичный отдаётся браузеру при подписке. Пусто = берётся из env (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY).'
           : 'Your own VAPID keys (no third-party service). Generate a pair — the private key stays in the DB, the public one is given to the browser on subscribe. Empty = taken from env.'}
       </div>
 
       <Field label={ru ? 'Публичный ключ' : 'Public key'}>
-        <Input readOnly value={pub} placeholder={ru ? 'не задан' : 'not set'} className="font-mono text-[0.78125rem]" />
+        <Input readOnly value={pub} placeholder={ru ? 'не задан' : 'not set'} className="font-mono text-body-sm" />
       </Field>
 
       <div className="flex items-center gap-2">
@@ -73,7 +73,7 @@ export function PushSettingsForm({ lang, v }: { lang: Lang; v: PushFormValues })
           {busy ? <Spinner size="md" /> : <KeyRound size={14} />}
           {pub ? (ru ? 'Перегенерировать ключи' : 'Regenerate keys') : ru ? 'Сгенерировать ключи' : 'Generate keys'}
         </button>
-        {msg && <span className="text-[0.78125rem] text-ink-2">{msg}</span>}
+        {msg && <span className="text-body-sm text-ink-2">{msg}</span>}
       </div>
 
       <form action={setPushSubject} className="flex flex-col gap-2 border-t border-border pt-4">

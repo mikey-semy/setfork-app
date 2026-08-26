@@ -28,31 +28,31 @@ export async function ChangelogCard({ lang, limit = 4 }: { lang: Lang; limit?: n
 
   return (
     <div className={cardClass()}>
-      <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{t('changelogLatest', lang)}</div>
+      <div className="mb-2 text-body-sm font-semibold text-ink">{t('changelogLatest', lang)}</div>
       <div className="relative flex flex-col gap-3 pl-3 before:absolute before:bottom-1 before:left-[0.1875rem] before:top-1 before:w-px before:bg-border">
         {entries.map((e) => {
           const text = entryText(e, lang)
           return (
             <div key={`${e.at.toISOString()}${text}`} className="relative">
               <span className="absolute left-[-12.5px] top-[0.3125rem] h-[0.4375rem] w-[0.4375rem] rounded-full border border-border bg-surface-2" />
-              <div className="text-[0.6875rem] text-muted">{fmt.format(e.at)}</div>
+              <div className="text-caption text-muted">{fmt.format(e.at)}</div>
               {e.href ? (
                 <a
                   href={e.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-[0.78125rem] leading-snug text-ink-2 hover:text-accent"
+                  className="block text-body-sm leading-snug text-ink-2 hover:text-accent"
                 >
                   {text}
                 </a>
               ) : (
-                <div className="text-[0.78125rem] leading-snug text-ink-2">{text}</div>
+                <div className="text-body-sm leading-snug text-ink-2">{text}</div>
               )}
             </div>
           )
         })}
       </div>
-      <Link href="/changelog" className="mt-2.5 block text-[0.78125rem] text-accent hover:underline">
+      <Link href="/changelog" className="mt-2.5 block text-body-sm text-accent hover:underline">
         {t('changelogAll', lang)}
       </Link>
     </div>

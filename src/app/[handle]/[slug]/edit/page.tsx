@@ -93,7 +93,7 @@ export default async function EditPage({
           title={
             <>
               {t('edit', lang)} · v{tpl.currentVersion}
-              {draft ? <span className="ml-2 text-[0.78125rem] font-normal text-muted">{t('draftEdits', lang)}</span> : null}
+              {draft ? <span className="ml-2 text-body-sm font-normal text-muted">{t('draftEdits', lang)}</span> : null}
             </>
           }
         />
@@ -162,7 +162,7 @@ export default async function EditPage({
           </ListSettingsSheet>
         </div>
 
-        <label className="mb-2 block text-[0.78125rem] font-semibold text-ink-2">{t('listItems', lang)}</label>
+        <label className="mb-2 block text-body-sm font-semibold text-ink-2">{t('listItems', lang)}</label>
         <ListEditor
           name="items"
           initialItems={initial}
@@ -188,7 +188,7 @@ export default async function EditPage({
             </SubmitButton>
           )}
         </div>
-        <p className="mt-2 text-[0.78125rem] text-muted">{t('draftKeepsVersion', lang)}</p>
+        <p className="mt-2 text-body-sm text-muted">{t('draftKeepsVersion', lang)}</p>
       </form>
 
       {draft && (

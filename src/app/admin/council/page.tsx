@@ -83,12 +83,12 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
       {settings.councilEnabled ? null : (
-        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
+        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-body-sm text-warn">
           {t('admin.theCouncilOffThese', lang)}
         </p>
       )}
       {sp.hire === 'failed' && (
-        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
+        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-body-sm text-warn">
           {t('admin.hiringFailedModelDid', lang)}
         </p>
       )}
@@ -96,7 +96,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
           гнома ВЫКЛЮЧЕННЫМ (LLM-черновик по признанному профстандарту) — включаешь после ревью. */}
       {signals.length > 0 && (
         <div className={cardClass({ tone: 'accent', className: 'mb-4' })}>
-          <div className="mb-2 text-[0.78125rem] font-semibold text-accent">
+          <div className="mb-2 text-body-sm font-semibold text-accent">
             {t('admin.hiringSignalGeneralistKeeps', lang)}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -105,15 +105,15 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
                 <input type="hidden" name="tag" value={s.tag} />
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[0.78125rem] text-ink hover:border-border-strong"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-body-sm text-ink hover:border-border-strong"
                 >
                   {t('admin.hireMasterFor', lang).replace('{tag}', s.tag)}
-                  <span className="font-mono text-[0.6875rem] text-muted">×{s.n}</span>
+                  <span className="font-mono text-caption text-muted">×{s.n}</span>
                 </button>
               </form>
             ))}
           </div>
-          <p className="mt-2 text-[0.6875rem] text-ink-2">
+          <p className="mt-2 text-caption text-ink-2">
             {t('admin.theNewMasterCreated', lang)}
           </p>
         </div>
@@ -124,10 +124,10 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
       {noAccounts > 0 && (
         <div className={cardClass({ className: 'mb-4 flex flex-wrap items-center justify-between gap-3' })}>
           <div className="min-w-0">
-            <div className="text-[0.78125rem] font-semibold text-ink">
+            <div className="text-body-sm font-semibold text-ink">
               {t('admin.accountsMissing', lang)}
             </div>
-            <p className="mt-0.5 text-[0.6875rem] text-ink-2">
+            <p className="mt-0.5 text-caption text-ink-2">
               {t('admin.noAccountsAttribution', lang).replace('{a}', String(noAccounts)).replace('{b}', String(roster.length))}
             </p>
           </div>
@@ -144,10 +144,10 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
       {unnamed > 0 && (
         <div className={cardClass({ className: 'mb-4 flex flex-wrap items-center justify-between gap-3' })}>
           <div className="min-w-0">
-            <div className="text-[0.78125rem] font-semibold text-ink">
+            <div className="text-body-sm font-semibold text-ink">
               {t('admin.namesMissing', lang)}
             </div>
-            <p className="mt-0.5 text-[0.6875rem] text-ink-2">
+            <p className="mt-0.5 text-caption text-ink-2">
               {t('admin.namesMissingWhy', lang).replace('{a}', String(unnamed)).replace('{b}', String(roster.length))}
             </p>
           </div>
@@ -159,7 +159,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
         </div>
       )}
       {sp.selfgen && (
-        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
+        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-body-sm text-warn">
           {t('admin.selfgenNoDraft', lang).replace('{e}', sp.selfgen)}
         </p>
       )}

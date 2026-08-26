@@ -29,8 +29,8 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
         return (
           <span
             key={q.id}
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.78125rem] ${
-              isActive ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-body-sm ${
+              isActive ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink'
             }`}
           >
             <Link href={isActive ? '/my-lists' : `/my-lists?sq=${q.id}`}>{q.name}</Link>

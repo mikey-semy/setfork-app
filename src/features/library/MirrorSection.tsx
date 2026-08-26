@@ -66,7 +66,7 @@ export function MirrorSection({
         {/* Статус последнего пуша: иконка + время; текст ошибки — полностью,
             это главный канал диагностики (никакой молчаливой деградации). */}
         {configured && (
-          <div className="flex min-w-0 items-start gap-2 text-[0.8125rem]">
+          <div className="flex min-w-0 items-start gap-2 text-body">
             {error ? (
               <AlertCircle size={16} className="mt-0.5 shrink-0 text-danger" />
             ) : (

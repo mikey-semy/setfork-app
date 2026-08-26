@@ -14,7 +14,7 @@ export type BadgeVariant = 'outline' | 'ok' | 'accent' | 'soft' | 'danger' | 'wa
 const VARIANTS: Record<BadgeVariant, string> = {
   outline: 'border border-border text-muted',
   ok: 'bg-ok/15 text-ok',
-  accent: 'bg-(--accent-soft) text-accent',
+  accent: 'bg-accent-soft text-accent',
   soft: 'bg-surface-2 text-ink-2',
   // Рецепт «рамка /40 + фон /10» — самый читаемый из трёх бытовавших инлайн-версий.
   danger: 'border border-danger/40 bg-danger/10 text-danger',
@@ -28,7 +28,7 @@ export function Badge({
 }: React.HTMLAttributes<HTMLSpanElement> & { variant?: BadgeVariant }) {
   return (
     <span
-      className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold', VARIANTS[variant], className)}
+      className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-semibold', VARIANTS[variant], className)}
       {...props}
     />
   )

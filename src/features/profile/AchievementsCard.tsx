@@ -32,7 +32,7 @@ export function AchievementsCard({ input, lang, config }: { input: AchievementIn
 
   return (
     <div className={cardClass({ className: 'mt-6' })}>
-      <div className="mb-3 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-ink">
+      <div className="mb-3 flex items-center gap-1.5 text-body font-semibold text-ink">
         <Award size={14} className="text-muted" /> {t('ach.title', lang)}
         <Badge variant="soft" className="ml-1">
           {items.length}

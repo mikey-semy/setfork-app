@@ -420,7 +420,7 @@ function Row({
       onMouseEnter={onMouseEnter}
       // eslint-disable-next-line no-restricted-syntax -- строка выпадающего списка: 44px — высота ПУНКТА, не кнопки
       className={`relative flex min-h-11 w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-left ${TEXT.body} text-ink ${
-        highlighted ? 'bg-(--accent-soft) text-accent' : ''
+        highlighted ? 'bg-accent-soft text-accent' : ''
       }`}
     >
       {selected && (

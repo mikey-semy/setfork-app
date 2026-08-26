@@ -18,10 +18,10 @@ export default async function TwoFaLoginPage() {
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-[23.75rem]">
-        <div className="mb-1 flex items-center gap-2 text-[1.125rem] font-bold text-ink">
+        <div className="mb-1 flex items-center gap-2 text-page font-bold text-ink">
           <ShieldCheck size={18} className="text-accent" /> {ru ? 'Подтверждение входа' : 'Two-factor authentication'}
         </div>
-        <p className="mb-5 text-[0.8125rem] text-ink-2">
+        <p className="mb-5 text-body text-ink-2">
           {ru
             ? 'Введи код из приложения-аутентификатора или один из recovery-кодов.'
             : 'Enter the code from your authenticator app, or one of your recovery codes.'}

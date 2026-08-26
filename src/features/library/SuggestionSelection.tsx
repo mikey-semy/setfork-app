@@ -86,8 +86,8 @@ export function SuggestionSelection({
   return (
     <SelCtx.Provider value={{ sel, toggle, label: labels.selected }}>
       {sel.length > 0 && (
-        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-(--accent-soft) px-3 py-2">
-          <span className="text-[0.8125rem] font-semibold text-ink">
+        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent-soft px-3 py-2">
+          <span className="text-body font-semibold text-ink">
             {labels.selected}: {sel.length}
           </span>
           {/* Действия — вправо; на мобиле строка действий занимает всю ширину,
@@ -123,7 +123,7 @@ export function SuggestionSelection({
       )}
 
       {ids.length > 0 && (
-        <label className="mb-2 inline-flex h-11 cursor-pointer items-center gap-2 px-1 text-[0.78125rem] text-ink-2">
+        <label className="mb-2 inline-flex h-11 cursor-pointer items-center gap-2 px-1 text-body-sm text-ink-2">
           <Checkbox
             checked={sel.length === ids.length}
             onChange={() => setSel((s) => (s.length === ids.length ? [] : ids))}

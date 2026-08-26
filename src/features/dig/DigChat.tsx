@@ -147,7 +147,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   // Собеседника выбирают под заголовком: «авто по теме» или конкретный гном ростера.
   const gnomePicker = (
     <DropdownMenu>
-      <DropdownMenuTrigger className="inline-flex items-center gap-1 text-[0.6875rem] text-muted hover:text-ink-2">
+      <DropdownMenuTrigger className="inline-flex items-center gap-1 text-caption text-muted hover:text-ink-2">
         {gnome === 'auto' ? t('dig.autoByTopic', lang) : `${current?.name ?? gnome}${current?.guild ? ` · ${current.guild}` : ''}`}
         <ChevronDown size={11} />
       </DropdownMenuTrigger>
@@ -156,7 +156,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
         {gnomes.map((g) => (
           <DropdownMenuItem key={g.id} onSelect={() => setGnome(g.id)}>
             {g.name}
-            {g.guild && <span className="ml-1.5 text-[0.6875rem] text-muted">{g.guild}</span>}
+            {g.guild && <span className="ml-1.5 text-caption text-muted">{g.guild}</span>}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

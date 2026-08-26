@@ -73,7 +73,7 @@ export default async function ProfilePage({
       {/* Вернулись сюда, упершись в потолок списков: объясняем, а не молчим. */}
       {quotaHit && isOwner && (
         <div className={`${PAGE} mt-4`}>
-          <div className="rounded-md border border-warn/50 bg-surface px-3 py-2.5 text-[0.8125rem] text-warn">{t('profile.listQuotaHit', lang)}</div>
+          <div className="rounded-md border border-warn/50 bg-surface px-3 py-2.5 text-body text-warn">{t('profile.listQuotaHit', lang)}</div>
         </div>
       )}
 

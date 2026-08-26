@@ -34,7 +34,7 @@ export function TrendScope({ active, range, lang }: { active: 'lists' | 'people'
   // глубже и мелкий радиус, ровно как inset-карточка. Отдельного рецепта не
   // заводим, иначе он и станет следующим «почти таким же».
   return (
-    <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'inline-flex text-[0.8125rem]' })}>
+    <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'inline-flex text-body' })}>
       <Link href={range === 'week' ? '/trending' : `/trending?range=${range}`} className={seg(active === 'lists')}>
         {t('scopeLists', lang)}
       </Link>
@@ -47,7 +47,7 @@ export function TrendScope({ active, range, lang }: { active: 'lists' | 'people'
 
 export function TrendRanges({ active, lang }: { active: TrendRange; lang: Lang }) {
   return (
-    <div className="inline-flex flex-wrap gap-1 text-[0.78125rem]">
+    <div className="inline-flex flex-wrap gap-1 text-body-sm">
       {RANGES.map((r) => (
         <Link
           key={r}

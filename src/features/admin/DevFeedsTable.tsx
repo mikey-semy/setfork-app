@@ -31,7 +31,7 @@ export function DevFeedsTable({ rows, lang }: { rows: FeedRow[]; lang: Lang }) {
       id: 'feed',
       header: t('admin.feed', lang),
       render: (r) => (
-        <Link href={r.href} className="block min-w-0 truncate text-[0.8125rem] text-ink hover:text-accent" title={r.title}>
+        <Link href={r.href} className="block min-w-0 truncate text-body text-ink hover:text-accent" title={r.title}>
           {r.title}
         </Link>
       ),
@@ -46,7 +46,7 @@ export function DevFeedsTable({ rows, lang }: { rows: FeedRow[]; lang: Lang }) {
       cell: ({ row }) => {
         const r = row.original
         return (
-          <span className={`block text-right font-mono tabular-nums text-[0.78125rem] ${r.freshestAgeDays == null ? 'text-muted' : r.freshestAgeDays > 7 ? 'text-warn' : 'text-ok'}`}>
+          <span className={`block text-right font-mono tabular-nums text-body-sm ${r.freshestAgeDays == null ? 'text-muted' : r.freshestAgeDays > 7 ? 'text-warn' : 'text-ok'}`}>
             {r.freshestAgeDays == null ? '—' : t('admin.daysShort', lang).replace('{n}', String(r.freshestAgeDays))}
           </span>
         )
@@ -64,7 +64,7 @@ export function DevFeedsTable({ rows, lang }: { rows: FeedRow[]; lang: Lang }) {
       // Правки людей выделены: это единственная цифра здесь, которую нельзя получить,
       // потратив свои же деньги.
       cell: ({ row }) => (
-        <span className={`block text-right font-mono tabular-nums text-[0.78125rem] ${row.original.humanEdits > 0 ? 'text-ok' : 'text-muted'}`}>
+        <span className={`block text-right font-mono tabular-nums text-body-sm ${row.original.humanEdits > 0 ? 'text-ok' : 'text-muted'}`}>
           {num(row.original.humanEdits)}
         </span>
       ),

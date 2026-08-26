@@ -33,8 +33,8 @@ function ToggleRow({ name, title, hint, defaultChecked }: { name: string; title:
   return (
     <div className="flex items-center justify-between gap-4">
       <div>
-        <div className="text-[0.875rem] font-medium text-ink">{title}</div>
-        <p className="text-[0.78125rem] text-muted">{hint}</p>
+        <div className="text-body-lg font-medium text-ink">{title}</div>
+        <p className="text-body-sm text-muted">{hint}</p>
       </div>
       <Switch name={name} defaultChecked={defaultChecked} />
     </div>
@@ -59,15 +59,15 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
     <form action={setMonetizationSettings} className="flex flex-col gap-5">
       <input type="hidden" name="affiliateRules" value={serialized} />
 
-      <div className="text-[0.78125rem] font-semibold text-ink">{t('monTrafficTitle', lang)}</div>
+      <div className="text-body-sm font-semibold text-ink">{t('monTrafficTitle', lang)}</div>
       <ToggleRow name="viewTracking" title={t('monViewsTitle', lang)} hint={t('monViewsHint', lang)} defaultChecked={v.viewTracking} />
       <ToggleRow name="linkTracking" title={t('monClicksTitle', lang)} hint={t('monClicksHint', lang)} defaultChecked={v.linkTracking} />
 
-      <div className="border-t border-border pt-4 text-[0.78125rem] font-semibold text-ink">{t('monAffiliateTitle', lang)}</div>
+      <div className="border-t border-border pt-4 text-body-sm font-semibold text-ink">{t('monAffiliateTitle', lang)}</div>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[0.875rem] font-medium text-ink">{t('monAffiliateApply', lang)}</div>
-          <p className="text-[0.78125rem] text-muted">{t('monAffiliateApplyHint', lang)}</p>
+          <div className="text-body-lg font-medium text-ink">{t('monAffiliateApply', lang)}</div>
+          <p className="text-body-sm text-muted">{t('monAffiliateApplyHint', lang)}</p>
         </div>
         {/* Uncontrolled (defaultChecked): у контролируемого Radix-Switch скрытый
             checkbox рассинхронизируется после RSC-refresh и молча теряет 'on'
@@ -129,7 +129,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
                   помеченных рекламой ссылок, поэтому показываем при заданном erid. */}
               {r.erid?.trim() && (
                 <div className="flex flex-wrap items-center gap-2 pl-3">
-                  <span className="text-[0.6875rem] text-muted">↳</span>
+                  <span className="text-caption text-muted">↳</span>
                   <Input
                     value={r.advertiser ?? ''}
                     onChange={(e) => patch(r.rowId, { advertiser: e.target.value })}
@@ -164,13 +164,13 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         <Textarea name="disclosureText" defaultValue={v.disclosureText} rows={2} />
       </Field>
 
-      <div className="border-t border-border pt-4 text-[0.78125rem] font-semibold text-ink">{t('monAdMarkingTitle', lang)}</div>
+      <div className="border-t border-border pt-4 text-body-sm font-semibold text-ink">{t('monAdMarkingTitle', lang)}</div>
       <ToggleRow name="adMarkingEnabled" title={t('monAdMarkingApply', lang)} hint={t('monAdMarkingHint', lang)} defaultChecked={v.adMarkingEnabled} />
       <Field label={t('monAdMarkingText', lang)} hint={t('monAdMarkingTextHint', lang)}>
         <Input name="adMarkingText" defaultValue={v.adMarkingText} placeholder="Реклама" />
       </Field>
 
-      <div className="border-t border-border pt-4 text-[0.78125rem] font-semibold text-ink">{t('monSupportTitle', lang)}</div>
+      <div className="border-t border-border pt-4 text-body-sm font-semibold text-ink">{t('monSupportTitle', lang)}</div>
       <Field label={t('monDonateLabel', lang)} hint={t('monDonateHint', lang)}>
         <Input name="donateUrl" defaultValue={v.donateUrl} placeholder="https://…" className="font-mono" />
       </Field>

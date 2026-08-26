@@ -43,10 +43,10 @@ export default async function LoginPage({
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[23.75rem] text-center shadow-card' })}>
-        <div className="font-logo mb-1 text-[2.375rem] leading-none text-ink">
+        <div className="font-logo mb-1 text-logo leading-none text-ink">
           SF
         </div>
-        <div className="mb-6 text-[0.875rem] text-ink-2">
+        <div className="mb-6 text-body-lg text-ink-2">
           {t("loginRequired", lang)}
         </div>
 
@@ -58,7 +58,7 @@ export default async function LoginPage({
           </Alert>
         )}
         <LoginForm lang={lang} />
-        <div className="mt-4 text-[0.78125rem] text-ink-2">
+        <div className="mt-4 text-body-sm text-ink-2">
           {t("noAccount", lang)}{" "}
           <Link
             href="/register"
@@ -68,7 +68,7 @@ export default async function LoginPage({
           </Link>
         </div>
 
-        <div className="my-5 flex items-center gap-3 text-[0.6875rem] uppercase tracking-wider text-muted">
+        <div className="my-5 flex items-center gap-3 text-caption uppercase tracking-wider text-muted">
           <span className="h-px flex-1 bg-border" /> {t("orSep", lang)}{" "}
           <span className="h-px flex-1 bg-border" />
         </div>
@@ -138,7 +138,7 @@ export default async function LoginPage({
         )}
 
         {sp.e && (
-          <div className="mt-4 text-[0.78125rem] text-danger">
+          <div className="mt-4 text-body-sm text-danger">
             {sp.e === "oauth_off" || sp.e === "no_github"
               ? lang === "ru"
                 ? "Этот способ входа не настроен — выберите другой."
@@ -153,7 +153,7 @@ export default async function LoginPage({
 
         <Link
           href="/"
-          className="mt-6 inline-block text-[0.78125rem] text-ink-2 hover:text-ink"
+          className="mt-6 inline-block text-body-sm text-ink-2 hover:text-ink"
         >
           ← SetFork
         </Link>

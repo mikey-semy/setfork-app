@@ -51,21 +51,21 @@ type DemoRow = { name: string; role: string; score: number }
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <section className={cardClass({ pad: 'lg' })}>
-      <h2 className="mb-1 text-[0.875rem] font-bold text-ink">{title}</h2>
-      {hint && <p className="mb-4 text-[0.78125rem] text-muted">{hint}</p>}
+      <h2 className="mb-1 text-body-lg font-bold text-ink">{title}</h2>
+      {hint && <p className="mb-4 text-body-sm text-muted">{hint}</p>}
       <div className="flex flex-col gap-4">{children}</div>
     </section>
   )
 }
 
 function SizeTag({ children }: { children: React.ReactNode }) {
-  return <div className="w-14 shrink-0 font-mono text-[0.6875rem] text-muted">{children}</div>
+  return <div className="w-14 shrink-0 font-mono text-caption text-muted">{children}</div>
 }
 
 /** Живое демо классов появления: перезапуск перемонтированием по ключу. */
 function MotionDemo({ lang }: { lang: Lang }) {
   const [run, setRun] = useState(0)
-  const box = 'rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.8125rem] text-ink'
+  const box = 'rounded-md border border-border bg-surface-2 px-3 py-2 text-body text-ink'
   return (
     <div className="flex flex-col gap-3">
       <div key={run} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -130,7 +130,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         ))}
         <div className="flex flex-wrap gap-4 border-t border-border pt-3">
           {SIZES.map((s) => (
-            <div key={s} className="flex items-center gap-2 font-mono text-[0.6875rem] text-muted">
+            <div key={s} className="flex items-center gap-2 font-mono text-caption text-muted">
               <span>{s}</span>
               <span>{CONTROL_H[s]}</span>
               <span>{CONTROL_TEXT[s]}</span>
@@ -203,13 +203,13 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section title={t('admin.choiceControls', lang)}>
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex cursor-pointer items-center gap-2 text-[0.8125rem] text-ink">
+          <label className="flex cursor-pointer items-center gap-2 text-body text-ink">
             <Checkbox defaultChecked className="size-4" /> Checkbox
           </label>
-          <label className="flex cursor-pointer items-center gap-2 text-[0.8125rem] text-ink">
+          <label className="flex cursor-pointer items-center gap-2 text-body text-ink">
             <Switch checked={checked} onCheckedChange={setChecked} /> Switch
           </label>
-          <div className="flex items-center gap-2 text-[0.8125rem] text-ink">
+          <div className="flex items-center gap-2 text-body text-ink">
             ColorSwatch
             {SWATCHES.map((c) => (
               <ColorSwatch key={c ?? 'none'} color={c} selected={swatch === c} label={c ?? 'default'} onSelect={() => setSwatch(c)} />
@@ -288,7 +288,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
             >
               {t('common.delete', lang)}
             </Button>
-            {confirmed && <span className="text-[0.78125rem] text-muted">{confirmed}</span>}
+            {confirmed && <span className="text-body-sm text-muted">{confirmed}</span>}
           </ActionRow>
         </DangerZone>
         {confirmDialog}
@@ -333,13 +333,13 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         <div className="flex flex-col gap-2">
           {(Object.entries(TEXT) as [keyof typeof TEXT, string][]).map(([role, cls]) => (
             <div key={role} className="flex items-baseline gap-3">
-              <span className="w-20 shrink-0 font-mono text-[0.6875rem] text-muted">{role}</span>
+              <span className="w-20 shrink-0 font-mono text-caption text-muted">{role}</span>
               <span className={cls}>{t('admin.sampleTextRole', lang)}</span>
-              <span className="font-mono text-[0.6875rem] text-muted">{cls}</span>
+              <span className="font-mono text-caption text-muted">{cls}</span>
             </div>
           ))}
         </div>
-        <div className="flex flex-wrap gap-3 border-t border-border pt-3 font-mono text-[0.6875rem] text-muted">
+        <div className="flex flex-wrap gap-3 border-t border-border pt-3 font-mono text-caption text-muted">
           {Object.entries(LAYER).map(([name, z]) => (
             <span key={name}>
               {name}={z}

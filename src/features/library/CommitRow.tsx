@@ -119,12 +119,12 @@ export function CommitRow({
         <span className="min-w-0 flex-1">
           {/* Строка 1 — сообщение + версия-тег. */}
           <span className="flex items-center gap-2">
-            <span className="min-w-0 flex-1 truncate text-[0.875rem] font-semibold text-ink">{msg}</span>
-            <span className="shrink-0 rounded-md border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[0.6875rem] text-accent">v{version}</span>
-            {isCurrent && <span className="shrink-0 rounded-full bg-ok/15 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-ok">{labels.current}</span>}
+            <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-ink">{msg}</span>
+            <span className="shrink-0 rounded-md border border-accent/50 bg-accent-soft px-1.5 font-mono text-caption text-accent">v{version}</span>
+            {isCurrent && <span className="shrink-0 rounded-full bg-ok/15 px-1.5 py-0.5 text-caption font-semibold text-ok">{labels.current}</span>}
           </span>
           {/* Строка 2 — кто и когда. */}
-          <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.78125rem] text-muted">
+          <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-muted">
             {author ? (
               <span className="inline-flex items-center gap-1.5">
                 <Avatar handle={author.handle} avatarUrl={author.avatarUrl} size={18} />
@@ -144,22 +144,22 @@ export function CommitRow({
       {open && (
         <div className="border-t border-border px-4 py-3 pl-11">
           {loading ? (
-            <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
+            <div className="flex items-center gap-2 text-body-sm text-muted">
               <Spinner size="sm" /> {labels.loading}
             </div>
           ) : failed ? (
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-[0.78125rem] text-danger">{labels.loadFailed}</span>
+              <span className="text-body-sm text-danger">{labels.loadFailed}</span>
               <Button size="xs" onClick={() => void load()}>
                 {labels.retry}
               </Button>
             </div>
           ) : !diff || diff.entries.length === 0 ? (
-            <div className="text-[0.78125rem] text-muted">{labels.noChanges}</div>
+            <div className="text-body-sm text-muted">{labels.noChanges}</div>
           ) : (
             <>
               <DiffStat counts={diff.counts} squares className="mb-2" />
-              <ul className="flex flex-col gap-1 text-[0.8125rem]">
+              <ul className="flex flex-col gap-1 text-body">
                 {diff.entries.map((e, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <span className={`shrink-0 font-mono ${STATUS[e.status].cls}`}>{STATUS[e.status].sign}</span>
@@ -171,7 +171,7 @@ export function CommitRow({
                 {version > 1 && (
                   <Link
                     href={`${base}/compare?from=${version - 1}&to=${version}`}
-                    className="inline-flex items-center gap-1 py-1 text-[0.78125rem] text-accent hover:underline"
+                    className="inline-flex items-center gap-1 py-1 text-body-sm text-accent hover:underline"
                   >
                     <GitCompare size={12} /> {labels.fullCompare}
                   </Link>
@@ -179,7 +179,7 @@ export function CommitRow({
                 {/* Просмотр самой версии целиком — не только «что изменилось». */}
                 <Link
                   href={isCurrent ? base : `${base}?v=${version}`}
-                  className="inline-flex items-center gap-1 py-1 text-[0.78125rem] text-accent hover:underline"
+                  className="inline-flex items-center gap-1 py-1 text-body-sm text-accent hover:underline"
                 >
                   <Eye size={12} /> {labels.viewVersion}
                 </Link>

@@ -79,7 +79,7 @@ export function ActionsMenu({
       </Tooltip>
 
       {open && candidates.length === 0 && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[16.25rem] rounded-md border border-border bg-surface px-3 py-2.5 text-[0.78125rem] leading-relaxed text-muted shadow-card">
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[16.25rem] rounded-md border border-border bg-surface px-3 py-2.5 text-body-sm leading-relaxed text-muted shadow-card">
           {t('generation.variantActionsWillAppear', lang)}
         </div>
       )}
@@ -93,12 +93,12 @@ export function ActionsMenu({
               setOpen(false)
               onAccept()
             }}
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[0.8125rem] font-semibold text-ink hover:bg-surface-2 disabled:opacity-40"
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-body font-semibold text-ink hover:bg-surface-2 disabled:opacity-40"
           >
             <Check size={14} className="shrink-0 text-accent" />
             <span className="min-w-0">
               {t('generation.useOne', lang)}
-              {selected && <span className="block truncate text-[0.6875rem] font-normal text-muted">{selected.title}</span>}
+              {selected && <span className="block truncate text-caption font-normal text-muted">{selected.title}</span>}
             </span>
           </button>
           <button
@@ -108,17 +108,17 @@ export function ActionsMenu({
               setOpen(false)
               onRegen()
             }}
-            className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-[0.8125rem] text-ink-2 hover:bg-surface-2 hover:text-ink disabled:opacity-40"
+            className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-body text-ink-2 hover:bg-surface-2 hover:text-ink disabled:opacity-40"
           >
             <RotateCw size={14} className="shrink-0" />
             {t('generation.anotherVariant', lang)}{' '}
-            <span className="ml-auto text-[0.6875rem] tabular-nums text-muted">
+            <span className="ml-auto text-caption tabular-nums text-muted">
               {candidates.length}/{MAX_VARIANTS}
             </span>
           </button>
           {candidates.length > 1 && (
             <div className="border-t border-border">
-              <div className="px-3 pb-1 pt-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
+              <div className="px-3 pb-1 pt-2 text-caption font-semibold uppercase tracking-wide text-muted">
                 {t('generation.variants', lang)}
               </div>
               {candidates.map((c) => (
@@ -128,10 +128,10 @@ export function ActionsMenu({
                   onClick={() => jump(c)}
                   className={`flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-surface-2 ${c.id === selId ? 'bg-surface-2' : ''}`}
                 >
-                  <span className="mt-px shrink-0 text-[0.6875rem] tabular-nums text-muted">{c.idx}</span>
+                  <span className="mt-px shrink-0 text-caption tabular-nums text-muted">{c.idx}</span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[0.78125rem] text-ink">{c.title}</span>
-                    {c.summary && <span className="mt-0.5 block truncate text-[0.6875rem] text-muted">{c.summary}</span>}
+                    <span className="block truncate text-body-sm text-ink">{c.title}</span>
+                    {c.summary && <span className="mt-0.5 block truncate text-caption text-muted">{c.summary}</span>}
                   </span>
                 </button>
               ))}

@@ -71,9 +71,9 @@ export function SuggestionTitle({
 
   return (
     <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
-      <h1 className="min-w-0 text-[1.25rem] font-bold leading-tight text-ink [overflow-wrap:anywhere]">{note}</h1>
+      <h1 className="min-w-0 text-heading font-bold leading-tight text-ink [overflow-wrap:anywhere]">{note}</h1>
       {number != null && (
-        <Link href={path} className="text-[1.25rem] font-normal text-muted hover:text-accent">
+        <Link href={path} className="text-heading font-normal text-muted hover:text-accent">
           #{number}
         </Link>
       )}

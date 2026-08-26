@@ -70,7 +70,7 @@ export default async function NewReleasePage({
         <form action={createRelease.bind(null, meta.id)} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
-              <span className="text-[0.78125rem] font-semibold text-ink">{ru ? 'Версия' : 'Version'}</span>
+              <span className="text-body-sm font-semibold text-ink">{ru ? 'Версия' : 'Version'}</span>
               <VersionSelect
                 versions={versions.map((v) => v.version)}
                 current={meta.currentVersion}
@@ -78,13 +78,13 @@ export default async function NewReleasePage({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[0.78125rem] font-semibold text-ink">{ru ? 'Тег' : 'Tag'}</span>
+              <span className="text-body-sm font-semibold text-ink">{ru ? 'Тег' : 'Tag'}</span>
               {/* Без дефолта v<N>: это имена автотегов версий (#590), релизу нужен свой. */}
               <Input name="tag" required placeholder={`v${meta.currentVersion}.0`} maxLength={40} className="font-mono" />
             </label>
           </div>
           <label className="flex flex-col gap-1.5">
-            <span className="text-[0.78125rem] font-semibold text-ink">{ru ? 'Заголовок' : 'Title'}</span>
+            <span className="text-body-sm font-semibold text-ink">{ru ? 'Заголовок' : 'Title'}</span>
             <Input name="title" maxLength={200} placeholder={ru ? 'Что вошло в релиз' : 'What’s in this release'} />
           </label>
           <ReleaseNotesGen
@@ -99,8 +99,8 @@ export default async function NewReleasePage({
               placeholder: t('releaseNotesPh', lang),
             }}
           />
-          <label className="flex cursor-pointer items-center gap-2.5 text-[0.8125rem]">
-            <input type="checkbox" name="prerelease" className="size-4 accent-(--accent)" />
+          <label className="flex cursor-pointer items-center gap-2.5 text-body">
+            <input type="checkbox" name="prerelease" className="size-4 accent-accent" />
             <span className="font-medium text-ink">{t('preRelease', lang)}</span>
             <span className="text-muted">— {t('preReleaseHint', lang)}</span>
           </label>
@@ -108,7 +108,7 @@ export default async function NewReleasePage({
             <SubmitButton>
               {ru ? 'Опубликовать релиз' : 'Publish release'}
             </SubmitButton>
-            <Link href={`/${owner}/${slug}/releases`} className="text-[0.8125rem] text-ink-2 hover:text-ink">
+            <Link href={`/${owner}/${slug}/releases`} className="text-body text-ink-2 hover:text-ink">
               {ru ? 'Отмена' : 'Cancel'}
             </Link>
           </div>
