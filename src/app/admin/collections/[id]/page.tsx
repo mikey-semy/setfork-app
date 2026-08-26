@@ -30,6 +30,9 @@ export default async function EditCollectionPage({ params, searchParams }: { par
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('adminCollection', lang)}</h1>
       <div className="flex items-center justify-between">
         <Link href="/admin/collections" className="text-body text-ink-2 hover:text-ink">← {ru ? 'Все подборки' : 'All collections'}</Link>
         <Link href={`/collections/${c.slug}`} className="inline-flex items-center gap-1.5 text-body text-accent hover:underline">

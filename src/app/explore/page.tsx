@@ -57,6 +57,9 @@ export default async function ExplorePage() {
 
   return (
     <div className="w-full">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('explore', lang)}</h1>
       <ExploreNav active="explore" lang={lang} />
       <div className={PAGE}>
 

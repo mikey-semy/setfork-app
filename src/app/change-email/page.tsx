@@ -41,6 +41,9 @@ export default async function ChangeEmailPage({ searchParams }: { searchParams: 
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('changeEmailTitle', lang)}</h1>
       <div className={cardClass({ pad: 'lg', className: 'w-full max-w-note text-center' })}>
         <div className="mb-2 flex justify-center">{M.icon}</div>
         <div className="text-title font-bold text-ink">{M.title}</div>

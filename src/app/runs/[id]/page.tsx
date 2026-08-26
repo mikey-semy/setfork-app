@@ -71,20 +71,25 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   }))
 
   return (
-    <RunView
-      runId={data.run.id}
-      status={data.run.status}
-      ordered={data.template.ordered}
-      title={tr(data.template.title, lang)}
-      backHref={`/${data.template.handle}/${data.template.slug}`}
-      steps={steps}
-      lang={lang}
-      certificateHref={`/${data.template.handle}/${data.template.slug}/certificate`}
-      courseCompleted={!!completion}
-      templateId={data.run.templateId}
-      digEnabled={digEnabled}
-      digGnomes={digGnomes}
-      digSteps={[...digStepsSet]}
-    />
+    <>
+      {/* Заголовок страницы для диктора: содержимое рисует компонент, видимого h1 нет. */}
+      <h1 className="sr-only">{tr(data.template.title, lang)}</h1>
+      <RunView
+        runId={data.run.id}
+        status={data.run.status}
+        ordered={data.template.ordered}
+        title={tr(data.template.title, lang)}
+        backHref={`/${data.template.handle}/${data.template.slug}`}
+        steps={steps}
+        lang={lang}
+        certificateHref={`/${data.template.handle}/${data.template.slug}/certificate`}
+        courseCompleted={!!completion}
+        templateId={data.run.templateId}
+        digEnabled={digEnabled}
+        digGnomes={digGnomes}
+        digSteps={[...digStepsSet]}
+      />
+    </>
+
   )
 }

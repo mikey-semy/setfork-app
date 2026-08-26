@@ -82,6 +82,9 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('councilHall', lang)}</h1>
       {settings.councilEnabled ? null : (
         <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-body-sm text-warn">
           {t('admin.theCouncilOffThese', lang)}

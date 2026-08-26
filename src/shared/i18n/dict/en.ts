@@ -1012,6 +1012,7 @@ export const en = {
   productAdd: 'Add product',
   productRemove: 'Remove product',
   productCaptionPh: 'Collection title (optional)',
+  skipToContent: 'Skip to content',
   notifications: 'Notifications',
   noNotifications: 'No notifications yet.',
   seeAll: 'See all',

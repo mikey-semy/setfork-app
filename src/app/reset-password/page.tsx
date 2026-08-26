@@ -37,6 +37,9 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('newPasswordTitle', lang)}</h1>
       <div className="w-full max-w-form">
         <div className="mb-1 flex items-center gap-2 text-page font-bold text-ink">
           <KeyRound size={18} className="text-accent" /> {ru ? 'Новый пароль' : 'Set a new password'}

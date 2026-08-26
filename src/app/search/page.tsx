@@ -120,6 +120,9 @@ export default async function SearchPage({
 
   return (
     <div className="flex w-full flex-1 items-stretch">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('searchTitle', lang)}</h1>
       <aside className="hidden w-panel shrink-0 border-r border-border bg-surface-2 px-3 py-5 lg:block">
         <ScopeSwitcher active={scope} counts={counts} q={sp.q} sort={sp.sort} lang={lang} basePath={BASE} />
         {/* List-специфичные фасеты — только для scope=lists */}

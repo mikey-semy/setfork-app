@@ -35,6 +35,9 @@ export default async function TrendingListsPage({
 
   return (
     <div className="w-full">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('trending', lang)}</h1>
       <ExploreNav active="trending" lang={lang} />
       <div className={PAGE}>
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">

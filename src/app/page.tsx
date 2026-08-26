@@ -49,7 +49,9 @@ export default async function HomePage() {
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="flex w-full max-w-prose flex-col items-center gap-6 text-center">
-        <div className="font-logo text-logo-lg leading-none tracking-tight text-ink sm:text-logo-xl">SetFork</div>
+        {/* Логотип И ЕСТЬ заголовок страницы: отдельного h1 у лендинга не было, а
+            диктору нужен один. Кегль и начертание не меняются — меняется только тег. */}
+        <h1 className="font-logo text-logo-lg leading-none tracking-tight text-ink sm:text-logo-xl">SetFork</h1>
 
         <HeroSearch placeholder={placeholder} clearLabel={t('clear', lang)} />
 

@@ -51,6 +51,9 @@ export default async function ProfilePage({
 
   return (
     <div className="w-full">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{handle}</h1>
       {/* Табы профиля — full-width под шапкой; единый TabNav из shared/ui. */}
       <TabNav scope="profile" overflow={{ moreLabel: t('moreTabs', lang) }}>
         {isPeopleTab ? (

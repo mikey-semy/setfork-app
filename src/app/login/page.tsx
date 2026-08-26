@@ -42,6 +42,9 @@ export default async function LoginPage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t("signIn", lang)}</h1>
       <div className={cardClass({ pad: 'lg', className: 'w-full max-w-form text-center shadow-card' })}>
         <div className="font-logo mb-1 text-logo leading-none text-ink">
           SF

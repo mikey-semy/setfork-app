@@ -1004,6 +1004,7 @@ export const ru: Record<DictKey, string> = {
   productAdd: 'Добавить товар',
   productRemove: 'Удалить товар',
   productCaptionPh: 'Заголовок подборки (необязательно)',
+  skipToContent: 'Перейти к содержимому',
   notifications: 'Уведомления',
   noNotifications: 'Пока нет уведомлений.',
   seeAll: 'Все уведомления',

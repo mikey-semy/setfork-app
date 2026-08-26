@@ -371,6 +371,11 @@ export default async function AdminPage() {
   // Дублировать название и объяснять внутреннее устройство ради занятого экрана незачем;
   // то же правило, что и в настройках списка: секции сами себя называют, навигация — в меню.
   return (
-    <AdminShell sections={sections} lang={lang} groups={[...adminNavGroups(lang), adminSettingsGroup(lang, sections.map((x) => x.id))]} />
+    <>
+      {/* Заголовок страницы для диктора: у этой страницы всё содержимое рисует компонент,
+          видимого h1 нет, а без него человек не поймёт, куда попал. */}
+      <h1 className="sr-only">{t('adminTitle', lang)}</h1>
+      <AdminShell sections={sections} lang={lang} groups={[...adminNavGroups(lang), adminSettingsGroup(lang, sections.map((x) => x.id))]} />
+    </>
   )
 }

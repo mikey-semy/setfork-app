@@ -13,6 +13,9 @@ export default async function ForgotPasswordPage() {
   const ru = lang === 'ru'
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('resetPasswordTitle', lang)}</h1>
       <div className="w-full max-w-form">
         <div className="mb-1 flex items-center gap-2 text-page font-bold text-ink">
           <KeyRound size={18} className="text-accent" /> {ru ? 'Сброс пароля' : 'Reset your password'}
