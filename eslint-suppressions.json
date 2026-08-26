@@ -1,9 +1,4 @@
 {
-  "src/app/[handle]/[slug]/ListAbout.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/app/[handle]/[slug]/compare/page.tsx": {
     "no-restricted-syntax": {
       "count": 1
@@ -69,7 +64,7 @@
   },
   "src/app/admin/page.tsx": {
     "no-restricted-syntax": {
-      "count": 8
+      "count": 7
     }
   },
   "src/app/change-email/page.tsx": {
@@ -114,9 +109,6 @@
   },
   "src/app/search/page.tsx": {
     "jsx-a11y/no-autofocus": {
-      "count": 1
-    },
-    "no-restricted-syntax": {
       "count": 1
     }
   },

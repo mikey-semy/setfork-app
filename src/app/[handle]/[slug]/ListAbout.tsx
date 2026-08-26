@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { tr, type Lang } from '@/shared/i18n'
 import { ListStats } from '@/features/library/ListStats'
 import type { ListPageData } from './load'
+import { TagChip } from '@/shared/ui/TagChip'
 
 type Props = Pick<ListPageData, 'tpl' | 'base' | 'branches' | 'currentVersion' | 'watchers'> & {
   lang: Lang
@@ -30,13 +31,12 @@ export function ListAbout({ tpl, base, branches, currentVersion, watchers, lang,
       {tpl.tags.length > 0 && (
         <div className={`flex flex-wrap gap-1.5 ${layout === 'row' ? 'mt-2' : ''}`}>
           {tpl.tags.map((tag) => (
-            <Link
+            <TagChip
               key={tag}
+              slug={tag}
               href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
-              className="min-w-0 rounded-full bg-accent-soft px-2.5 py-0.5 text-body-sm font-medium text-accent [overflow-wrap:anywhere] hover:underline"
-            >
-              {tag}
-            </Link>
+              className="min-w-0 [overflow-wrap:anywhere]"
+            />
           ))}
         </div>
       )}

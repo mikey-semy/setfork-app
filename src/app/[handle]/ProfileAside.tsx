@@ -9,6 +9,7 @@ import { displayUrl } from '@/shared/lib/link-label'
 import { monthYear } from '@/shared/lib/date'
 import type { ProfilePageData } from './load'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Badge } from '@/shared/ui/badge'
 
 type Props = Pick<
   ProfilePageData,
@@ -33,9 +34,9 @@ export function ProfileAside({ handle, lang, user, viewer, isOwner, bigAvatar, c
         {/* ADR-0004: нечеловечность обязана быть видна — иначе профиль вводит в
             заблуждение. Пометка ДАННЫЕ (account_type), а не догадка по нику. */}
         {user.accountType === 'agent' && (
-          <div className="mt-2 inline-flex items-center rounded-full border border-border bg-surface-2 px-2 py-0.5 text-caption font-semibold text-ink-2">
+          <Badge variant="chip" className="mt-2">
             {t('list.serviceAccount', lang)}
-          </div>
+          </Badge>
         )}
       </div>
       {/* Био — 280 символов свободного текста, туда часто вставляют ссылку: без

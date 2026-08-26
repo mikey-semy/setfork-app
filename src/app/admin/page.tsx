@@ -42,6 +42,8 @@ import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
+import { buttonClass } from '@/shared/ui/button-style'
+import { UserLine } from '@/shared/ui/UserLine'
 
 // OpenRouter возвращает отрицательную цену (-1/токен) у авто-роутеров — она «плавающая».
 // Общая с серверным экшеном смены провайдера (model-options): две копии этой логики
@@ -183,10 +185,16 @@ export default async function AdminPage() {
             <p className="text-body text-muted">{ru ? 'Никого онлайн.' : 'No one online.'}</p>
           ) : (
             <div className="flex flex-wrap gap-3">
+              {/* Пилюля «кто сейчас на сайте»: форма — общий рецепт кнопки, содержимое —
+                  общая строка человека. Раньше и то и другое рисовалось здесь руками, и
+                  аватар с ником расходились с такими же строками на других экранах. */}
               {online.map((u) => (
-                <Link key={u.userId} href={`/${u.handle}`} className="flex items-center gap-2 rounded-full border border-border bg-surface-2 py-1 pl-1 pr-3 hover:border-border-strong">
-                  <Avatar handle={u.handle} avatarUrl={u.avatarUrl} size={24} />
-                  <span className="text-body text-ink">{u.handle}</span>
+                <Link
+                  key={u.userId}
+                  href={`/${u.handle}`}
+                  className={buttonClass({ variant: 'outline', className: 'rounded-full pl-1' })}
+                >
+                  <UserLine handle={u.handle} avatarUrl={u.avatarUrl} size="sm" />
                 </Link>
               ))}
             </div>

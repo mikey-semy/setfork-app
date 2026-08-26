@@ -166,17 +166,19 @@ export default async function AdminModelsPage() {
                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
                   <span className={`min-w-0 ${TEXT.body} font-medium text-ink [overflow-wrap:anywhere]`}>{prettyModelName(id)}</span>
                   {opt?.family && (
-                    <span className={`shrink-0 rounded-full border border-border bg-surface-2 px-1.5 py-px ${TEXT.caption} text-muted`}>{opt.family}</span>
+                    <Badge variant="chip" className="shrink-0 px-1.5 py-px text-muted">
+                      {opt.family}
+                    </Badge>
                   )}
                   {m.quarantined && (
-                    <span className={`shrink-0 rounded-full border border-danger px-1.5 py-px ${TEXT.caption} text-danger`}>
+                    <Badge variant="danger" className="shrink-0 px-1.5 py-px">
                       {t('models.quarantined', lang)}
-                    </span>
+                    </Badge>
                   )}
                   {!opt && (
-                    <span className={`shrink-0 rounded-full border border-border px-1.5 py-px ${TEXT.caption} text-warn`}>
+                    <Badge variant="warn" className="shrink-0 px-1.5 py-px">
                       {t('models.notInCatalogShort', lang)}
-                    </span>
+                    </Badge>
                   )}
                 </div>
                 <div className={`mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 ${TEXT.caption} text-muted`}>

@@ -22,6 +22,7 @@ import { IssueResults } from '@/features/issues/IssueResults'
 import { parseSearchQuery } from '@/features/library/search-query'
 import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
+import { TagChip } from '@/shared/ui/TagChip'
 
 const BASE = '/search'
 const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostStarred' }[] = [
@@ -286,13 +287,7 @@ export default async function SearchPage({
               <div className="mb-2 text-body-sm font-semibold text-ink">{t('popularTags', lang)}</div>
               <div className="flex flex-wrap gap-1.5">
                 {tags.slice(0, 12).map((tg) => (
-                  <Link
-                    key={tg.tag}
-                    href={`/search?q=${encodeURIComponent(`tag:${tg.tag}`)}`}
-                    className="rounded-full border border-border bg-surface px-2 py-0.5 text-caption text-ink-2 hover:text-ink"
-                  >
-                    {tg.tag}
-                  </Link>
+                  <TagChip key={tg.tag} slug={tg.tag} href={`/search?q=${encodeURIComponent(`tag:${tg.tag}`)}`} />
                 ))}
               </div>
             </div>

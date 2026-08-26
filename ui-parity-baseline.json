@@ -64,13 +64,7 @@
  "многострочное поле": {},
  "нативная подсказка": {},
  "отступ числом": {},
- "пилюля": {
-  "src/app/[handle]/[slug]/ListAbout.tsx": 1,
-  "src/app/[handle]/ProfileAside.tsx": 1,
-  "src/app/admin/models/page.tsx": 3,
-  "src/app/admin/page.tsx": 1,
-  "src/app/search/page.tsx": 1
- },
+ "пилюля": {},
  "поле": {},
  "поле без имени": {},
  "радиус числом": {},
