@@ -1,13 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { ListChecks, Search, X } from 'lucide-react'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { IconButton } from '@/shared/ui/IconButton'
-import { cardClass } from '@/shared/ui/card-style'
-import { buttonClass } from '@/shared/ui/button-style'
+import { OverlayPanel } from '@/shared/ui/OverlayPanel'
+import { MenuItem } from '@/shared/ui/MenuItem'
 
 /** Мобильный поиск: оверлей НА МЕСТЕ (не редирект на /search — оттуда не вернуться).
  *  На странице списка первая опция — «искать в этом списке» (?find= фильтрует шаги,
@@ -38,55 +37,41 @@ export function MobileSearch({
       <IconButton variant="ghost" label={ru ? 'Поиск' : 'Search'} onClick={() => setOpen(true)} className={className}>
         <Search size={17} />
       </IconButton>
-      {open &&
-        createPortal(
-          <div className="fixed inset-0 z-50 bg-black/40 p-3 pt-14" onClick={() => setOpen(false)}>
-            <div onClick={(e) => e.stopPropagation()} className={cardClass({ pad: 'sm', className: 'mx-auto max-w-hero shadow-card' })}>
-              <div className="flex items-center gap-2">
-                <Search size={15} className="shrink-0 text-muted" />
-                <input
-                  autoFocus
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && q.trim()) go(`/search?q=${encodeURIComponent(q.trim())}`)
-                    if (e.key === 'Escape') setOpen(false)
-                  }}
-                  placeholder={ru ? 'Поиск…' : 'Search…'}
-                  className="min-w-0 flex-1 bg-transparent py-1.5 text-title text-ink outline-hidden placeholder:text-muted"
-                />
-                <button type="button" aria-label="close" onClick={() => setOpen(false)} className={buttonClass({ variant: 'ghost' })}>
-                  <X size={16} />
-                </button>
-              </div>
-              <div className="mt-1 border-t border-border pt-1">
-                {inList && (
-                  <button
-                    type="button"
-                    disabled={!q.trim()}
-                    onClick={() => go(`${inList}?find=${encodeURIComponent(q.trim())}`)}
-                    className={buttonClass({ variant: 'ghost', className: 'w-full text-left hover:bg-surface-2 disabled:opacity-45' })}
-                  >
-                    <ListChecks size={14} className="shrink-0 text-muted" />
-                    <span className="min-w-0 truncate">
-                      {ru ? 'Искать в' : 'Search in'} <b>{crumb!.handle}/{crumb!.slug}</b>
-                    </span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  disabled={!q.trim()}
-                  onClick={() => go(`/search?q=${encodeURIComponent(q.trim())}`)}
-                  className={buttonClass({ variant: 'ghost', className: 'w-full text-left hover:bg-surface-2 disabled:opacity-45' })}
-                >
-                  <Search size={14} className="shrink-0 text-muted" />
-                  {ru ? 'Искать везде' : 'Search everywhere'} <kbd className="ml-auto rounded-md border border-border px-1 text-caption text-muted">↵</kbd>
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {/* Окно поиска — общая модальная панель, а не свой портал: от неё приходит и
+          объявление окна диктору (role=dialog, имя из заголовка), и увод фокуса внутрь,
+          и возврат фокуса на кнопку при закрытии. Своя копия всего этого не имела. */}
+      <OverlayPanel open={open} onClose={() => setOpen(false)} align="top" width={0} bare title={t('searchTitle', lang)} closeLabel={t('close', lang)} className="w-full max-w-hero">
+        <div className="p-3">
+          <div className="flex items-center gap-2">
+            <Search size={15} className="shrink-0 text-muted" />
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && q.trim()) go(`/search?q=${encodeURIComponent(q.trim())}`)
+              }}
+              placeholder={ru ? 'Поиск…' : 'Search…'}
+              className="min-w-0 flex-1 bg-transparent py-1.5 text-title text-ink outline-hidden placeholder:text-muted"
+            />
+          </div>
+          <div className="mt-1 border-t border-border pt-1">
+            {inList && (
+              <MenuItem disabled={!q.trim()} onClick={() => go(`${inList}?find=${encodeURIComponent(q.trim())}`)}>
+                <ListChecks size={14} className="shrink-0 text-muted" />
+                <span className="min-w-0 truncate">
+                  {ru ? 'Искать в' : 'Search in'} <b>{crumb!.handle}/{crumb!.slug}</b>
+                </span>
+              </MenuItem>
+            )}
+            <MenuItem disabled={!q.trim()} onClick={() => go(`/search?q=${encodeURIComponent(q.trim())}`)}>
+              <Search size={14} className="shrink-0 text-muted" />
+              {ru ? 'Искать везде' : 'Search everywhere'}
+              <kbd className="ml-auto rounded-md border border-border px-1 text-caption text-muted">↵</kbd>
+            </MenuItem>
+          </div>
+        </div>
+      </OverlayPanel>
     </>
   )
 }

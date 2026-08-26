@@ -3,6 +3,7 @@ import { Award, GraduationCap, Trophy } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /** Прогресс прохождения тестов списка для текущего зрителя (сервер-компонент).
  *  Показываем, когда есть quiz-блоки ИЛИ курс уже пройден (completed).
@@ -26,6 +27,8 @@ export function CourseProgress({
 }) {
   if (total <= 0 && !completed) return null
   const ru = lang === 'ru'
+  // Одна подпись на подсказку и на имя для диктора.
+  const boardLabel = ru ? 'Лидерборд' : 'Leaderboard'
   const pct = total > 0 ? Math.round((passed / total) * 100) : 100
   // «Курс пройден» — ТОЛЬКО по записи прохождения. Решённые тесты сами по себе
   // прохождением не являются: на версии с шагами это половина условия
@@ -56,10 +59,10 @@ export function CourseProgress({
         )}
       </div>
       {leaderboardHref && (
-        <Tooltip label={ru ? 'Лидерборд' : 'Leaderboard'}>
-          <Link href={leaderboardHref} className={buttonClass()}>
+        <Tooltip label={boardLabel}>
+          <IconButton href={leaderboardHref} variant="outline" label={boardLabel}>
             <Trophy size={14} />
-          </Link>
+          </IconButton>
         </Tooltip>
       )}
       {done && certificateHref && (

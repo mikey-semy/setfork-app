@@ -13,6 +13,7 @@ import { removeAchievementImage, setAchievementEnabled, uploadAchievementImage }
 import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /** Админ-панель достижений: вкл/выкл + своя картинка (drag-and-drop) на каждое. */
 export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; lang: Lang }) {
@@ -127,13 +128,14 @@ function AchRow({
 
       {d.imageUrl && (
         <Tooltip label={t('ach.resetImage', lang)}>
-          <button
-            type="button"
+          <IconButton
+            variant="danger"
+            label={t('ach.resetImage', lang)}
             onClick={() => onClear(k)}
-            className={buttonClass({ variant: 'danger', className: 'hover:bg-surface hover:text-danger' })}
+            className="hover:bg-surface hover:text-danger"
           >
             <X size={15} />
-          </button>
+          </IconButton>
         </Tooltip>
       )}
       {pending && <Spinner size="md" className="text-muted" />}

@@ -34,7 +34,11 @@ export function UserLine({
   const s = SIZES[size]
   return (
     <span className={cn('inline-flex min-w-0 items-center gap-2', s.text, className)}>
-      <Link href={`/${handle}`} className="shrink-0">
+      {/* Аватар — ВТОРАЯ ссылка на тот же адрес, что и имя рядом. Читалке она не нужна
+          (диктор объявил бы «ссылка» без имени, а потом ту же ссылку с именем), и в обход
+          с клавиатуры тоже: имя рядом ведёт туда же. Прячем от обоих — приём для
+          дублирующей декоративной ссылки. */}
+      <Link href={`/${handle}`} className="shrink-0" aria-hidden tabIndex={-1}>
         <Avatar handle={handle} avatarUrl={avatarUrl} size={s.avatar} />
       </Link>
       {/* Имя не прячет уникальный handle (Codex по #615), и truncate режет

@@ -21,6 +21,10 @@ export function VideoEmbed({ url, caption }: { url: string; caption?: string }) 
           />
         </div>
       ) : kind === 'file' ? (
+        // Субтитры взять неоткуда: это файл по ссылке автора списка, дорожки к нему мы не
+        // храним и не генерируем. Правило требует <track> всегда — здесь это требование
+        // невыполнимо, а не проигнорировано.
+        // eslint-disable-next-line jsx-a11y/media-has-caption -- внешний файл, дорожки субтитров нет
         <video src={src} controls className="max-h-130 w-full rounded-lg border border-border" />
       ) : (
         // Нераспознанный провайдер печатает сам URL — он длинный и без пробелов.

@@ -11,6 +11,7 @@ import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Badge } from '@/shared/ui/badge'
+import { IconButton } from '@/shared/ui/IconButton'
 
 // Чистая — на модульном уровне, а не в теле компонента (react-doctor:
 // пересборка на каждый рендер ломает мемоизацию детей).
@@ -38,6 +39,8 @@ function Copyable({ text, label }: { text: string; label: string }) {
 
 export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[]; lang: Lang; mcpUrl: string }) {
   const ru = lang === 'ru'
+  // Одна подпись на подсказку и на имя для диктора: расписанная дважды, она разъедется.
+  const revokeLabel = ru ? 'Отозвать' : 'Revoke'
   const [name, setName] = useState('')
   const [scope, setScope] = useState<'read' | 'write'>('write')
   const [expiryDays, setExpiryDays] = useState<number>(90)
@@ -163,10 +166,10 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
                 </div>
               </div>
               <form action={revokeApiToken.bind(null, tk.id)}>
-                <Tooltip label={ru ? 'Отозвать' : 'Revoke'}>
-                  <button type="submit" className={buttonClass({ variant: 'danger', className: 'hover:text-danger' })}>
+                <Tooltip label={revokeLabel}>
+                  <IconButton type="submit" variant="danger" label={revokeLabel} className="hover:text-danger">
                     <Trash2 size={15} />
-                  </button>
+                  </IconButton>
                 </Tooltip>
               </form>
             </div>

@@ -20,6 +20,8 @@ import { ChatComposer } from '@/shared/ui/ChatComposer'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
 import { t } from '@/shared/i18n'
 import { PAGE } from '@/shared/ui/control'
+import { Field } from '@/shared/ui/Field'
+import { Input } from '@/shared/ui/input'
 
 /** Первая буква — заглавная: hint приходит от модели строчными, а это готовое сообщение. */
 const capFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -314,12 +316,15 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 const [q, ...opts] = raw.split('|').map((s) => s.trim()).filter(Boolean)
                 return (
                   <div key={i}>
-                    <label className="mb-1 block text-body-sm text-ink-2">{q}</label>
-                    <input
-                      value={answers[i] ?? ''}
-                      onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))}
-                      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-ink outline-hidden focus:border-border-strong"
-                    />
+                    {/* Подпись стояла ОТДЕЛЬНЫМ <label> рядом с полем — без связки: глазами
+                        видно, диктору нечего сказать. Field оборачивает контрол в label сам. */}
+                    <Field label={q}>
+                      <Input
+                        value={answers[i] ?? ''}
+                        onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))}
+                        className="w-full"
+                      />
+                    </Field>
                     {opts.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
                         {opts.map((o) => (

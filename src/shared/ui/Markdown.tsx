@@ -38,6 +38,9 @@ export function Markdown({ children, className, refBase }: { children: string; c
       <ReactMarkdown
         remarkPlugins={refBase ? [remarkGfm, remarkIssueRefs(refBase)] : [remarkGfm]}
         components={{
+          // Содержимое ссылки приходит из разметки в `p.children`; правило видит только
+          // раскрытие пропов и считает ссылку пустой.
+          // eslint-disable-next-line jsx-a11y/anchor-has-content -- текст ссылки приходит из markdown
           a: (p) => <a {...p} target="_blank" rel="noreferrer" className="text-accent hover:underline" />,
           // 0.9em ОТНОСИТЕЛЬНЫЙ: моноширинный код внутри абзаца обязан быть чуть мельче
           // ТОГО ТЕКСТА, в котором стоит, а он бывает любой ступени. Ступень лестницы

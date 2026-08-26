@@ -10,7 +10,7 @@
 // Число «вхождений» — это МЕСТА, а не файлы: одна страница может переоткрыть роль
 // пять раз. Правило чтения отчёта: сначала роли без примитива (его надо завести),
 // потом роли с примитивом (свип), и только потом одиночки.
-import { classesOf, attr, hasAttr, isHost, readFileSync, rel, SRC, tags, walkFiles } from './lib/ui-scan.mjs'
+import { classesOf, attr, hasAttr, innerOf, isHost, readFileSync, rel, SRC, tags, walkFiles } from './lib/ui-scan.mjs'
 
 /** Дом общих модулей: внутри него рисовать роль руками — это и есть его работа. */
 const HOME = /^src\/shared\/ui\//
@@ -134,13 +134,74 @@ const VALUES = [
   { key: 'тень числом', token: '--shadow-* из @theme (shadow-card)', re: /shadow-\[[^\]]+\]/g },
 ]
 
+/**
+ * ТРЕТЬЯ СЕМЬЯ: интерфейс, который не доходит до человека без зрения.
+ *
+ * Роль и значение — про то, откуда взят вид. Эта — про то, СКАЗАНО ли вслух то, что
+ * видно глазами. Проверки нарочно узкие и проверяемые: «у кнопки со значком нет
+ * имени» — это факт, а не мнение. Всё, что решается стандартными правилами
+ * (`jsx-a11y`), живёт в линте; здесь то, чего эти правила не видят.
+ *
+ * Главный пример как раз такой: ссылка со значком внутри для `jsx-a11y` НЕ пустая —
+ * содержимое есть. Но `<svg>` без имени диктор не читает, и человек слышит
+ * «ссылка» без единого слова о том, куда она ведёт.
+ */
+const NAMED_BY = ['aria-label', 'aria-labelledby', 'title', 'label']
+const named = (a) => NAMED_BY.some((x) => hasAttr(a, x))
+/** Внутри осталось что-то, кроме значков и комментариев? Тогда имя даёт текст. */
+const hasText = (inner) =>
+  inner
+    .replace(/<[A-Z][\w.]*(?:[^<>{}]|\{[^{}]*\})*?\/>/gs, '')
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+    .replace(/<svg[\s\S]*?<\/svg>/g, '')
+    .trim().length > 0
+
+const A11Y = [
+  {
+    key: 'значок без имени',
+    fix: 'IconButton с label (или aria-label на своём элементе)',
+    hint: 'кнопка/ссылка, внутри которой только значок: диктор объявит её без единого слова',
+    check: ({ tag, attrs, inner }) =>
+      ['button', 'a', 'Link'].includes(tag) &&
+      inner !== null &&
+      !named(attrs) &&
+      !/(?:^|\s)aria-hidden(?![\w-])/.test(attrs) &&
+      !/\{\.\.\./.test(attrs) &&
+      !/\{children\}/.test(inner) &&
+      !hasText(inner),
+  },
+  {
+    key: 'поле без имени',
+    fix: 'Field (label) или aria-label',
+    hint: 'текстовое поле без подписи, без id для label и без placeholder',
+    // `before` — кусок текста перед тегом: поле, ОБЁРНУТОЕ в Field или label, имя уже
+    // получило (Field кладёт контрол внутрь label, клик по подписи фокусирует поле).
+    check: ({ tag, attrs, before }) =>
+      tag === 'input' &&
+      !['hidden', 'checkbox', 'radio', 'file', 'submit'].includes(attr(attrs, 'type') ?? '') &&
+      !named(attrs) &&
+      !hasAttr(attrs, 'placeholder') &&
+      !hasAttr(attrs, 'id') &&
+      !hasAttr(attrs, 'name') &&
+      !/<(?:Field|label)\b(?![\s\S]*<\/(?:Field|label)>)/.test(before) &&
+      !/\{\.\.\./.test(attrs),
+  },
+  {
+    key: 'картинка без alt',
+    fix: 'alt с текстом — если значимая; alt="" — если украшение',
+    hint: 'без alt диктор читает имя файла',
+    check: ({ tag, attrs }) => tag === 'img' && !hasAttr(attrs, 'alt') && !/\{\.\.\./.test(attrs),
+  },
+]
+
 const only = process.argv.slice(2).find((a) => !a.startsWith('--'))
 const LIST = process.argv.includes('--list')
 const JSON_OUT = process.argv.includes('--json')
 const roles = ROLES.filter((r) => !only || r.key.includes(only))
 
 const values = VALUES.filter((v) => !only || v.key.includes(only))
-const hits = new Map([...roles, ...values].map((r) => [r.key, []]))
+const a11y = A11Y.filter((v) => !only || v.key.includes(only))
+const hits = new Map([...roles, ...values, ...a11y].map((r) => [r.key, []]))
 
 // Значения считаем и в .ts тоже: рецепты классов живут в константах (control.ts,
 // button-style.ts, HERO_INPUT), и там разнобой прячется охотнее, чем в разметке.
@@ -164,8 +225,18 @@ for (const file of walkFiles(SRC, ['.tsx', '.ts'])) {
     }
   }
 
-  if (HOME.test(path) || !path.endsWith('.tsx')) continue
-  for (const el of tags(src)) {
+  if (!path.endsWith('.tsx')) continue
+  // Разбираем ТОТ ЖЕ текст без комментариев: в док-блоках примитивов живут примеры
+  // разметки («<input type="date">», «<button …>»), и без этого счётчик считал бы
+  // документацию за нарушение — на первом же прогоне так и вышло.
+  for (const el of tags(code)) {
+    // Доступность считается ВЕЗДЕ, включая shared/ui: у примитива безымянная кнопка —
+    // это не «работа примитива», а та же немая кнопка, только размноженная.
+    for (const rule of a11y) {
+      if (rule.check({ ...el, inner: rule.key === 'значок без имени' ? innerOf(code, el) : '', before: code.slice(Math.max(0, el.index - 400), el.index) }))
+        hits.get(rule.key).push({ path, line: el.line, tag: el.tag })
+    }
+    if (HOME.test(path)) continue
     const cls = classesOf(el.attrs)
     for (const role of roles) {
       if (role.match({ ...el, cls })) hits.get(role.key).push({ path, line: el.line, tag: el.tag })
@@ -177,7 +248,7 @@ if (JSON_OUT) {
   // Ключи сортируем: слепок читают глазами в дифференциале, и порядок обхода каталогов
   // не должен перетасовывать файл при каждом пересъёме.
   const out = {}
-  for (const role of [...roles, ...values].sort((a, b) => a.key.localeCompare(b.key, 'ru'))) {
+  for (const role of [...roles, ...values, ...a11y].sort((a, b) => a.key.localeCompare(b.key, 'ru'))) {
     const byFile = {}
     for (const h of hits.get(role.key)) byFile[h.path] = (byFile[h.path] ?? 0) + 1
     out[role.key] = Object.fromEntries(Object.entries(byFile).sort(([a], [b]) => a.localeCompare(b)))
@@ -206,4 +277,5 @@ const table = (title, defs, label) => {
 
 const a = table('РОЛЬ ПЕРЕОТКРЫТА РУКАМИ (вне src/shared/ui)\n', roles, 'primitive')
 const b = table('\nЗНАЧЕНИЕ НАПИСАНО ЧИСЛОМ МИМО ТОКЕНА\n', values, 'token')
-console.log(`\nвсего мест: ${a + b} (ролей ${a}, значений ${b})`)
+const c = table('\nНЕ ДОХОДИТ ДО ЧЕЛОВЕКА БЕЗ ЗРЕНИЯ\n', a11y, 'fix')
+console.log(`\nвсего мест: ${a + b + c} (ролей ${a}, значений ${b}, доступности ${c})`)

@@ -100,6 +100,9 @@ export function ListEditor({
   const stepNumberAt = (i: number) => (ordered ? list.items.slice(0, i).filter((x) => x.type === 'step').length + 1 : null)
 
   return (
+    // Это не контрол, а КОНТЕЙНЕР с горячими клавишами редактора: он ловит нажатия,
+    // всплывшие от полей внутри, и сам ни фокуса, ни роли не требует.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- контейнер горячих клавиш
     <div ref={editorRef} className="flex flex-col gap-3" onKeyDown={onKeyDown}>
       <input type="hidden" name={name} value={JSON.stringify(list.items)} />
 

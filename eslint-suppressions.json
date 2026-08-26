@@ -15,6 +15,9 @@
     }
   },
   "src/app/[handle]/[slug]/discussions/new/page.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    },
     "no-restricted-syntax": {
       "count": 5
     }
@@ -115,6 +118,9 @@
     }
   },
   "src/app/search/page.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    },
     "no-restricted-syntax": {
       "count": 1
     }
@@ -180,11 +186,22 @@
     }
   },
   "src/features/auth/PasswordResetForms.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 2
+    },
     "no-restricted-syntax": {
       "count": 6
     }
   },
+  "src/features/auth/TelegramLoginWatcher.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
   "src/features/auth/TwoFaLoginForm.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    },
     "no-restricted-syntax": {
       "count": 4
     }
@@ -239,9 +256,14 @@
       "count": 1
     }
   },
+  "src/features/generation/GenerateForm.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
   "src/features/generation/GenerationChat.tsx": {
     "no-restricted-syntax": {
-      "count": 4
+      "count": 3
     }
   },
   "src/features/generation/actions.ts": {
@@ -284,6 +306,11 @@
       "count": 1
     }
   },
+  "src/features/issues/NewIssueForm.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
   "src/features/issues/actions.ts": {
     "boundaries/dependencies": {
       "count": 5
@@ -309,8 +336,18 @@
       "count": 5
     }
   },
+  "src/features/library/HeroSearch.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
   "src/features/library/ListSettingsDanger.tsx": {
     "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/library/QualifierSearch.tsx": {
+    "jsx-a11y/no-autofocus": {
       "count": 1
     }
   },
@@ -364,6 +401,11 @@
       "count": 3
     }
   },
+  "src/features/library/bulk/BulkBar.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
   "src/features/library/cover-actions.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -379,6 +421,16 @@
       "count": 1
     }
   },
+  "src/features/library/list-editor/LinkDialog.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
+  "src/features/library/list-editor/ProductDialog.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
   "src/features/library/queries/list.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -387,6 +439,11 @@
   "src/features/mcp/ApiTokensSection.tsx": {
     "no-restricted-syntax": {
       "count": 20
+    }
+  },
+  "src/features/milestones/MilestoneForm.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
     }
   },
   "src/features/milestones/actions.ts": {
@@ -457,6 +514,11 @@
       "count": 1
     }
   },
+  "src/features/runs/RunView.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
   "src/features/runs/actions.ts": {
     "boundaries/dependencies": {
       "count": 2
@@ -506,6 +568,11 @@
       "count": 2
     }
   },
+  "src/features/tags/AdminTagsTable.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
   "src/features/transfer/actions.ts": {
     "boundaries/dependencies": {
       "count": 2
@@ -529,6 +596,21 @@
   "src/shared/ui/DatePicker.tsx": {
     "no-restricted-syntax": {
       "count": 2
+    }
+  },
+  "src/shared/ui/MarkdownEditor/index.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
+  "src/shared/ui/PickerPanel.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    }
+  },
+  "src/shared/ui/SearchField.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
     }
   },
   "src/shared/ui/TagChip.tsx": {
@@ -557,6 +639,9 @@
     }
   },
   "src/widgets/MobileSearch.tsx": {
+    "jsx-a11y/no-autofocus": {
+      "count": 1
+    },
     "no-restricted-syntax": {
       "count": 4
     }

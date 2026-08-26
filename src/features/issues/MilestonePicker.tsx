@@ -6,6 +6,7 @@ import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { setIssueMilestone } from '@/features/milestones/actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
+import { IconButton } from '@/shared/ui/IconButton'
 
 type Opt = { id: string; title: string; closed: boolean }
 
@@ -46,9 +47,9 @@ export function MilestonePicker({
             align="right"
             width={240}
             button={(toggle) => (
-              <button type="button" onClick={toggle} className={buttonClass({ variant: 'ghost', className: 'hover:bg-surface-2' })}>
+              <IconButton variant="ghost" onClick={toggle} label={L('Выбрать веху', 'Pick milestone')} className="hover:bg-surface-2">
                 <ChevronDown size={14} />
-              </button>
+              </IconButton>
             )}
           >
             {(close) => (

@@ -12,6 +12,7 @@ import type { TagRow } from './queries'
 import { deleteTag, mergeTags, refreshTagUsage, renameTag, setTagCurated } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 
 // Админ-реестр тегов: курирование, переименование, слияние, удаление, пересчёт usage.
 // Экшены (requireAdmin) — в ./actions; revalidatePath('/admin/tags') + router.refresh().
@@ -72,24 +73,26 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
                         placeholder={edit.mode === 'rename' ? t('tags.newSlug', lang) : t('tags.mergeInto', lang)}
                         className="max-w-field-lg"
                       />
-                      <button
-                        type="button"
+                      <IconButton
+                        size="md"
+                        variant="primary"
+                        label={t('apply', lang)}
                         onClick={() => run(() => (edit.mode === 'rename' ? renameTag(tg.slug, val) : mergeTags(tg.slug, val)))}
                         disabled={pending || !val.trim()}
-                        className="grid size-7 place-items-center rounded-md bg-primary text-primary-fg disabled:opacity-50"
                       >
                         <Check size={14} />
-                      </button>
-                      <button
-                        type="button"
+                      </IconButton>
+                      <IconButton
+                        size="md"
+                        variant="outline"
+                        label={t('cancel', lang)}
                         onClick={() => {
                           setEdit(null)
                           setVal('')
                         }}
-                        className="grid size-7 place-items-center rounded-md border border-border text-ink-2"
                       >
                         <X size={14} />
-                      </button>
+                      </IconButton>
                     </div>
                   )}
                 </td>
@@ -138,16 +141,20 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
   )
 }
 
+/** Кнопка-значок строки таблицы. Была локальной копией IconButton — и, как всякая копия,
+ *  отстала: подпись жила только в тултипе, то есть у диктора кнопка молчала. */
 function IconBtn({ children, title, onClick, active, danger }: { children: React.ReactNode; title: string; onClick: () => void; active?: boolean; danger?: boolean }) {
   return (
     <Tooltip label={title}>
-      <button
-        type="button"
+      <IconButton
+        size="sm"
+        variant="outline"
+        label={title}
         onClick={onClick}
-        className={`grid size-7 place-items-center rounded-md border border-border hover:border-border-strong ${active ? 'text-accent' : danger ? 'text-ink-2 hover:text-danger' : 'text-ink-2 hover:text-ink'}`}
+        className={active ? 'text-accent' : danger ? 'text-ink-2 hover:text-danger' : 'text-ink-2 hover:text-ink'}
       >
         {children}
-      </button>
+      </IconButton>
     </Tooltip>
   )
 }

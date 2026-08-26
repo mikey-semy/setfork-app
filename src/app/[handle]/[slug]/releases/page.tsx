@@ -22,6 +22,7 @@ import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
 import { Pagination } from '@/shared/ui/Pagination'
 import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
+import { IconButton } from '@/shared/ui/IconButton'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -66,10 +67,9 @@ export default async function ReleasesPage({
           actions={
             <>
               <Tooltip label="Atom feed">
-                {/* eslint-disable-next-line no-restricted-syntax -- иконочная ссылка на atom-ленту — роль кнопки, не карточки */}
-                <a href={`${base}/releases.atom`} className="rounded-md border border-border p-1.5 text-muted hover:text-ink">
+                <IconButton href={`${base}/releases.atom`} size="sm" variant="outline" label="Atom feed">
                   <Rss size={14} />
-                </a>
+                </IconButton>
               </Tooltip>
               {canManage && (
                 <Tooltip label={newReleaseLabel}>

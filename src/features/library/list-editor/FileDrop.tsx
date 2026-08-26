@@ -33,6 +33,14 @@ export function FileDrop({ kind, uploading, onFile, lang }: { kind: DropKind; up
       role="button"
       tabIndex={0}
       onClick={() => ref.current?.click()}
+      // Зона объявлена кнопкой и получает фокус — значит обязана работать с клавиатуры:
+      // Enter и Пробел активируют нативную кнопку, и подделка должна вести себя так же.
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          ref.current?.click()
+        }
+      }}
       onDragOver={(e) => {
         e.preventDefault()
         setOver(true)

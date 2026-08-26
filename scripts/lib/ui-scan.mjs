@@ -88,6 +88,33 @@ export const attr = (attrs, name) => {
 
 export const hasAttr = (attrs, name) => new RegExp(`(?:^|\\s)${name}=`).test(attrs)
 
+/**
+ * Содержимое элемента до ПАРНОГО закрывающего тега (или `null`, если тег
+ * самозакрывающийся либо пара не нашлась). Считает вложенность одноимённых тегов —
+ * без этого первый же `<span>` внутри `<span>` обрывал бы разбор на чужом конце.
+ */
+export function innerOf(src, el) {
+  const open = `<${el.tag}`
+  const close = `</${el.tag}>`
+  const start = el.index + open.length + el.attrs.length + 1
+  if (src.slice(el.index, start).endsWith('/>')) return null
+  let depth = 1
+  let i = start
+  while (i < src.length && depth > 0) {
+    const o = src.indexOf(open, i)
+    const c = src.indexOf(close, i)
+    if (c < 0) return null
+    if (o >= 0 && o < c) {
+      depth++
+      i = o + open.length
+    } else {
+      depth--
+      i = c + close.length
+    }
+  }
+  return depth === 0 ? src.slice(start, i - close.length) : null
+}
+
 /** Хостовый элемент DOM (`div`), а не компонент (`Button`). */
 export const isHost = (tag) => /^[a-z]/.test(tag)
 

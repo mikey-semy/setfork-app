@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Trophy, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { buttonClass } from '@/shared/ui/button-style'
+import { OverlayPanel } from '@/shared/ui/OverlayPanel'
+import { IconButton } from '@/shared/ui/IconButton'
 
 // Одна ачивка для отображения: только заработанные и только с картинкой (картинка —
 // обязательный атрибут; без неё ачивка не показывается вовсе — гейт в AchievementsCard).
@@ -24,12 +25,6 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
   const ru = lang === 'ru'
   const [open, setOpen] = useState<AchTileData | null>(null)
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(null)
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open])
 
   return (
     <>
@@ -54,28 +49,23 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
         ))}
       </div>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4"
-          onClick={() => setOpen(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={open.label}
-        >
-          <div
-            className="w-full max-w-panel-xl overflow-hidden rounded-xl border border-border bg-surface shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {/* Окно достижения — общая модальная панель: своя копия объявляла себя окном, но
+          не уводила фокус внутрь и не возвращала его на плитку при закрытии, а Esc ловила
+          собственным слушателем. Теперь всё это приходит от примитива. */}
+      <OverlayPanel open={open !== null} onClose={() => setOpen(null)} width={0} bare className="w-full max-w-panel-xl overflow-hidden">
+        {open && (
+          <div>
             {/* Шапка с большой картинкой на акцентном фоне. */}
             <div className="relative flex items-center justify-center bg-linear-to-b from-accent-soft to-surface py-6">
-              <button
-                type="button"
+              <IconButton
+                size="sm"
+                variant="ghost"
                 onClick={() => setOpen(null)}
-                aria-label={ru ? 'Закрыть' : 'Close'}
-                className={buttonClass({ variant: 'ghost', size: 'sm', className: 'absolute right-2 top-2 size-7 rounded-full bg-black/40 p-0 text-white hover:bg-black/60' })}
+                label={ru ? 'Закрыть' : 'Close'}
+                className="absolute right-2 top-2 rounded-full bg-black/40 text-white hover:bg-black/60"
               >
                 <X size={15} />
-              </button>
+              </IconButton>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={open.imageUrl} alt="" className="h-24 w-24 rounded-full border-2 border-surface object-cover shadow-lg" />
             </div>
@@ -112,8 +102,8 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </OverlayPanel>
     </>
   )
 }

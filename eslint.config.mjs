@@ -1,5 +1,6 @@
 import next from 'eslint-config-next'
 import boundaries from 'eslint-plugin-boundaries'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
 
 // Flat-config для ESLint 9 / Next 16 (eslint-config-next — готовый flat-массив).
 // Экспериментальные react-compiler-правила Next 16 приглушены до warn: они агрессивно
@@ -152,6 +153,8 @@ const SPINNER_RULE = {
     'Ожидание рисует Spinner из @/shared/ui/Spinner: размер приходит от контрола рядом (size), а не подбирается на глаз, и читалка узнаёт про работу там, где кружок стоит один (label). Своя анимация вращения — точечный disable с причиной.',
 }
 
+const a11yRecommended = jsxA11y.flatConfigs.recommended.rules
+
 export default [
   { ignores: ['.next/**', 'node_modules/**', 'src/shared/gen/**', 'drizzle/**', 'public/**', '.claude/**'] },
   ...next,
@@ -253,6 +256,59 @@ export default [
           ],
         },
       ],
+    },
+  },
+  // ── Доступность: стандартный набор jsx-a11y ───────────────────────────────
+  // До 26.08.2026 в проекте работал только тот огрызок правил, который включает
+  // eslint-config-next (alt-text и aria-*). Всё остальное — подпись без связи с полем,
+  // клик на неинтерактивном элементе, пустая ссылка — не проверялось ничем, при том
+  // что линза 07 (интерфейс) один раз это уже вычищала руками: без узды оно вернулось.
+  //
+  // Плагин уже стоит (транзитивно из next), поэтому регистрировать его нельзя — только
+  // включить правила.
+  //
+  // `label-has-for` выключен намеренно: правило ПОМЕЧЕНО УСТАРЕВШИМ самими авторами и
+  // требует htmlFor даже там, где подпись оборачивает контрол — а именно так работает
+  // наш `Field` (клик по подписи фокусирует поле без возни с id). Его смысл целиком
+  // покрывает `label-has-associated-control`, который включён.
+  {
+    files: ['src/**/*.tsx'],
+    rules: {
+      ...Object.fromEntries(Object.keys(a11yRecommended).map((k) => [k, 'error'])),
+      'jsx-a11y/label-has-for': 'off',
+      // `onError`/`onLoad` на картинке — НЕ взаимодействие человека, а событие загрузки:
+      // у Avatar и SmartImage это запасной вид при битой ссылке. По умолчанию правила
+      // считают их наравне с кликом и требуют роль — сужаем до мыши и клавиатуры.
+      'jsx-a11y/no-noninteractive-element-interactions': ['error', { handlers: ['onClick', 'onMouseDown', 'onMouseUp', 'onKeyPress', 'onKeyDown', 'onKeyUp'] }],
+      'jsx-a11y/no-static-element-interactions': ['error', { handlers: ['onClick', 'onMouseDown', 'onMouseUp', 'onKeyPress', 'onKeyDown', 'onKeyUp'] }],
+      // Наши контролы — компоненты, а не голые input/select: без этого списка правило
+      // не видит контрол внутри подписи и ругается на ЖИВУЮ связку.
+      'jsx-a11y/label-has-associated-control': [
+        'error',
+        {
+          controlComponents: ['Input', 'Textarea', 'Select', 'SelectTrigger', 'Checkbox', 'Switch', 'SearchField', 'TagInput', 'FloatingInput', 'ColorSwatch', 'Chip', 'DatePicker'],
+        },
+      ],
+      // Контрол без подписи — ровно то, из-за чего кнопка со значком молчит у диктора.
+      // В обоих готовых наборах плагина правило выключено (считается шумным), поэтому
+      // включаем сами — но С ЕГО ЖЕ настройками: без них оно требует подпись и у строк
+      // таблицы, и у полей ввода, где её даёт label (44 срабатывания против 2).
+      'jsx-a11y/control-has-associated-label': [
+        'error',
+        {
+          ...a11yRecommended['jsx-a11y/control-has-associated-label'][1],
+          // Ячейка таблицы — не контрол: подписи требует заголовок столбца, а не каждая
+          // клетка. В родном списке исключений есть `tr`, а `td`/`th` забыты, и правило
+          // требовало подпись у клеток скелетона загрузки.
+          ignoreElements: [...a11yRecommended['jsx-a11y/control-has-associated-label'][1].ignoreElements, 'td', 'th'],
+        },
+      ],
+      // ⚠️ `no-autofocus` оставлен ошибкой, но существующие места ЗАМОРОЖЕНЫ в
+      // eslint-suppressions.json. Причина: правило не отличает автофокус в окне, открытом
+      // человеком (там фокус и обязан быть внутри — WAI-ARIA APG), от автофокуса при
+      // загрузке страницы (там он уводит диктора с начала страницы). Все нынешние —
+      // первого рода либо страницы одного действия (код 2FA, генерация); НОВЫЙ автофокус
+      // потребует решения, а не привычки.
     },
   },
   // ── Узда карточки — ВНЕ shared/ui ─────────────────────────────────────────

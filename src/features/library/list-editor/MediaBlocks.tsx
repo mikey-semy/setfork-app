@@ -110,6 +110,9 @@ export function FileBlockBody({ item, onPatch, uploading, onFile, lang }: BodyPr
 export function TextBlockBody({ value, onChange, onRetype, lang }: { value: string; onChange: (v: string) => void; onRetype: (type: BlockType) => void; lang: Lang }) {
   const menu = useSlashMenu({ value, lang, onPick: onRetype })
   return (
+    // Обёртка ловит клавиши для slash-меню, всплывшие от поля ввода внутри; своей роли
+    // у неё нет.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- обёртка slash-меню
     <div className="relative" onKeyDown={menu.onKeyDown}>
       <BubbleTextEditor
         value={value}
