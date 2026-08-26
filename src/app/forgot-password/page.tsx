@@ -13,7 +13,7 @@ export default async function ForgotPasswordPage() {
   const ru = lang === 'ru'
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-[23.75rem]">
+      <div className="w-full max-w-form">
         <div className="mb-1 flex items-center gap-2 text-page font-bold text-ink">
           <KeyRound size={18} className="text-accent" /> {ru ? 'Сброс пароля' : 'Reset your password'}
         </div>

@@ -36,9 +36,10 @@ import { cardClass } from '@/shared/ui/card-style'
 // ряду, и любое расхождение по высоте/кеглю бросается в глаза до того, как
 // расползётся по страницам. Новый примитив/размер/вариант — сначала сюда.
 
-// Порядок сверху вниз — от крупного к плотному: lg (одиночная кнопка формы во всю
-// ширину), md (ряды действий и формы, дефолт), sm (панели), xs (плотные тулбары).
-const SIZES: ControlSize[] = ['lg', 'md', 'sm', 'xs']
+// Порядок сверху вниз — от крупного к плотному: xl (герой страницы — поиск главной,
+// ввод генерации), lg (одиночная кнопка формы во всю ширину), md (ряды действий и
+// формы, дефолт), sm (панели), xs (плотные тулбары).
+const SIZES: ControlSize[] = ['xl', 'lg', 'md', 'sm', 'xs']
 const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'outline', 'ghost', 'danger', 'dangerSolid']
 const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft', 'danger', 'warn']
 const ALERT_VARIANTS: AlertVariant[] = ['danger', 'warn', 'ok', 'info']
@@ -352,7 +353,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         title={t('admin.sideNavigation', lang)}
         hint={t('admin.oneSidenavSettingsAdmin', lang)}
       >
-        <div className="max-w-[16.25rem]">
+        <div className="max-w-panel">
           <SideNav
             mobileLabel={t('admin.sections', lang)}
             groups={[

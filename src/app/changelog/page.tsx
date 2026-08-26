@@ -45,7 +45,7 @@ export default async function ChangelogPage() {
             const text = entryText(e, lang)
             return (
               <div key={`${e.at.toISOString()}${text}`} className="relative">
-                <span className="absolute left-[-19px] top-[0.375rem] h-[0.5625rem] w-[0.5625rem] rounded-full border border-border-strong bg-surface-2" />
+                <span className="absolute left-[-19px] top-[0.375rem] h-2.5 w-2.5 rounded-full border border-border-strong bg-surface-2" />
                 <div className="font-mono text-caption text-muted">{fmt.format(e.at)}</div>
                 {/* Запись ведёт в свой источник (PR или релиз) — иначе changelog
                     это список фраз, по которым не посмотреть, что изменилось. */}

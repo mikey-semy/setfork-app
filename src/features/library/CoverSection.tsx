@@ -80,7 +80,7 @@ export function CoverSection({
             setOver(false)
             upload(e.dataTransfer.files?.[0])
           }}
-          className={`relative block h-[9.375rem] w-full overflow-hidden rounded-lg border-2 ${over ? 'border-accent' : 'border-dashed border-border'}`}
+          className={`relative block h-37.5 w-full overflow-hidden rounded-lg border-2 ${over ? 'border-accent' : 'border-dashed border-border'}`}
         >
           {cover ? (
             // eslint-disable-next-line @next/next/no-img-element

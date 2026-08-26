@@ -33,6 +33,7 @@ const SIZES: Record<ButtonSize, string> = {
   sm: 'px-2.5 gap-1.5',
   md: 'px-3.5 gap-1.5',
   lg: 'px-4 gap-2',
+  xl: 'px-4 gap-2',
 }
 
 /**

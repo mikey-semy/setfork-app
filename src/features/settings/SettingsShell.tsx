@@ -60,7 +60,7 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
   return (
     <div className={`${PAGE} flex flex-col gap-4 md:flex-row md:gap-8`}>
       {/* top = высота шапки (57) + верхний паддинг рамки (py-6 = 24) → без «прыжка» к шапке при скролле. */}
-      <aside className="shrink-0 md:sticky md:top-[5.0625rem] md:h-fit md:w-[13.75rem]">
+      <aside className="shrink-0 md:sticky md:top-[5.0625rem] md:h-fit md:w-menu">
         <SideNav
           mobileLabel={t('settings', lang)}
           search={{ value: q, onChange: setQ, placeholder: t('settingsSearchPh', lang), clearLabel: t('clear', lang) }}

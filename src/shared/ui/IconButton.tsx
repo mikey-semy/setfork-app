@@ -21,6 +21,7 @@ const BOX: Record<ControlSize, string> = {
   sm: 'size-7',
   md: 'size-8',
   lg: 'size-10',
+  xl: 'size-11',
 }
 
 export function IconButton({

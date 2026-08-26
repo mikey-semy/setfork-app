@@ -122,7 +122,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
       >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="" className={`h-[4.5rem] w-[4.5rem] shrink-0 object-cover ${shapeCls}`} />
+          <img src={preview} alt="" className={`h-18 w-18 shrink-0 object-cover ${shapeCls}`} />
         ) : (
           <Avatar handle={handle} avatarUrl={removed ? null : avatarUrl} size={72} rounded={shapeCls} />
         )}

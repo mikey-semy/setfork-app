@@ -270,7 +270,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               {said.map((m) => (
                 <div key={m.id} className="flex animate-fadein justify-end">
                   {/* Кап 640px: на широком контейнере пузырь на 85% превращался в строку во весь экран. */}
-                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-body leading-[1.5] text-primary-fg sm:max-w-[40rem]">
+                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-body leading-[1.5] text-primary-fg sm:max-w-prose">
                     {m.kind === 'again' ? t('generation.anotherVariant', lang) : m.text}
                   </div>
                 </div>
@@ -312,7 +312,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             <CouncilBubble who="reporter" name={t('common.reporter', lang)}>
               {t('generation.aCoupleDetailsList', lang)}
             </CouncilBubble>
-            <div className="mt-2 space-y-3 pl-[3.25rem]">
+            <div className="mt-2 space-y-3 pl-13">
               {/* Вопрос может нести быстрые варианты после «|»: «Какой стек? | Node.js | Docker».
                   Чип — ответ в один клик (кладёт значение в поле: можно уточнить руками). */}
               {(clarifyQuestions ?? []).map((raw, i) => {
@@ -398,7 +398,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               <button
                 type="button"
                 onClick={() => setNote(capFirst(last.hint ?? ''))}
-                className="inline-flex max-w-[17.5rem] items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-body-sm text-muted hover:border-border-strong hover:text-ink-2"
+                className="inline-flex max-w-panel items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-body-sm text-muted hover:border-border-strong hover:text-ink-2"
               >
                 <span className="truncate">{capFirst(last.hint ?? '')}</span>
               </button>

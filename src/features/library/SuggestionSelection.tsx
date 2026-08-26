@@ -158,7 +158,7 @@ function BulkMenu({
           {label}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[11.25rem]">
+      <DropdownMenuContent align="end" className="min-w-field-lg">
         <DropdownMenuLabel>{label}</DropdownMenuLabel>
         {items.map((it) => (
           <DropdownMenuItem key={it.key} onClick={() => onPick(it.key)} className="cursor-pointer">

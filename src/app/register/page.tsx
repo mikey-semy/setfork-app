@@ -18,7 +18,7 @@ export default async function RegisterPage() {
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[23.75rem] text-center shadow-card' })}>
+      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-form text-center shadow-card' })}>
         <div className="font-logo mb-1 text-logo leading-none text-ink">SF</div>
         <div className="mb-6 text-body-lg font-semibold text-ink">{t('registerTitle', lang)}</div>
 

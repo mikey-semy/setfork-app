@@ -39,7 +39,7 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
 
       <Field label={t('changelogRepo', lang)}>
         {/* Плейсхолдер — ПРИМЕР значения, а не инструкция. */}
-        <Input name="repo" defaultValue={current.repo} placeholder="mikey-semy/setfork-frontend" className="w-[20rem] max-w-full" />
+        <Input name="repo" defaultValue={current.repo} placeholder="mikey-semy/setfork-frontend" className="w-panel-lg max-w-full" />
       </Field>
 
       <Field label={t('changelogToken', lang)} hint={t('changelogTokenHint', lang)}>
@@ -50,13 +50,13 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
           type="password"
           autoComplete="off"
           placeholder={current.hasToken ? '••••••••' : 'github_pat_…'}
-          className="w-[20rem] max-w-full font-mono"
+          className="w-panel-lg max-w-full font-mono"
         />
       </Field>
 
       <Field label={t('changelogWhat', lang)}>
         <Select value={source} onValueChange={(v) => setSource(v as ChangelogSource)}>
-          <SelectTrigger className="w-[20rem] max-w-full">
+          <SelectTrigger className="w-panel-lg max-w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -77,7 +77,7 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
       </Field>
 
       <Field label={t('changelogEvery', lang)}>
-        <Input name="everyHours" type="number" min={1} max={168} defaultValue={current.everyHours} className="w-[7.5rem]" />
+        <Input name="everyHours" type="number" min={1} max={168} defaultValue={current.everyHours} className="w-30" />
       </Field>
 
       <div className="flex items-start justify-between gap-4">

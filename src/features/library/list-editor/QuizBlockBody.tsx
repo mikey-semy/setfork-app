@@ -51,7 +51,7 @@ export function QuizBlockBody({ quiz, onChange, lang }: { quiz: EditorQuiz; onCh
           на экране 390 они распирали страницу горизонтальной прокруткой (замер
           07.08.2026). Список из семи и по сути не сегмент. */}
       <Select value={quiz.kind} onValueChange={(v) => set({ kind: v as QuizKind })}>
-        <SelectTrigger className="w-full self-start sm:w-[12rem]" aria-label={t('quiz.kind', lang)}>
+        <SelectTrigger className="w-full self-start sm:w-field-lg" aria-label={t('quiz.kind', lang)}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

@@ -109,7 +109,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
             }
           }}
           placeholder="Claude Desktop"
-          className={buttonClass({ className: 'min-w-[13.75rem] flex-1 bg-surface-2 outline-hidden focus:border-border-strong' })}
+          className={buttonClass({ className: 'min-w-menu flex-1 bg-surface-2 outline-hidden focus:border-border-strong' })}
         />
         <Button variant="primary" size="md" onClick={create} disabled={pending || !name.trim()}>
           {pending ? <Spinner size="md" /> : <Plus size={14} />} {ru ? 'Создать токен' : 'Create token'}

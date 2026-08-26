@@ -22,7 +22,7 @@ export function AutoBanner({
   accent,
   label,
   className = '',
-  height = 'h-[7.5rem]',
+  height = 'h-30',
 }: {
   seed: string
   accent?: string | null

@@ -14,9 +14,9 @@ export function CollectionCard({ c, lang }: { c: CC; lang: Lang }) {
     >
       {c.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={c.coverUrl} alt="" className="h-[8.125rem] w-full object-cover" />
+        <img src={c.coverUrl} alt="" className="h-32.5 w-full object-cover" />
       ) : (
-        <AutoBanner seed={c.id} accent={c.accent} label={title} height="h-[8.125rem]" />
+        <AutoBanner seed={c.id} accent={c.accent} label={title} height="h-32.5" />
       )}
       <div className="p-3.5">
         <div className="truncate text-title font-semibold text-ink group-hover:text-accent">{title}</div>

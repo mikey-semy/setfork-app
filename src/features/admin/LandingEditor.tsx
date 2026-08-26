@@ -218,9 +218,9 @@ function HeroImage({ initial, onRef, lang }: { initial?: string; onRef: (ref: st
       >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="" className="h-[4rem] w-[6.875rem] shrink-0 rounded-md border border-border object-cover" />
+          <img src={preview} alt="" className="h-16 w-27.5 shrink-0 rounded-md border border-border object-cover" />
         ) : (
-          <div className="grid h-[4rem] w-[6.875rem] shrink-0 place-items-center rounded-md bg-surface-2 text-muted">
+          <div className="grid h-16 w-27.5 shrink-0 place-items-center rounded-md bg-surface-2 text-muted">
             <ImageUp size={20} />
           </div>
         )}

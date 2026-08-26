@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { buttonClass } from '@/shared/ui/button-style'
 import { HeroSearch } from '@/features/library/HeroSearch'
 import { sampleListTitles } from '@/features/library/sample-titles'
 import { Dashboard } from '@/widgets/Dashboard'
@@ -47,17 +48,17 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="flex w-full max-w-[40rem] flex-col items-center gap-6 text-center">
+      <div className="flex w-full max-w-prose flex-col items-center gap-6 text-center">
         <div className="font-logo text-logo-lg leading-none tracking-tight text-ink sm:text-logo-xl">SetFork</div>
 
         <HeroSearch placeholder={placeholder} clearLabel={t('clear', lang)} />
 
-        <div className="flex max-w-[40rem] flex-wrap justify-center gap-2.5">
+        <div className="flex max-w-prose flex-wrap justify-center gap-2.5">
           {chips.map((c) => (
             <Link
               key={c}
               href={`/search?q=${encodeURIComponent(c)}`}
-              className="rounded-full border border-border bg-surface-2 px-3.5 py-[0.4375rem] text-body text-ink-2 hover:text-ink"
+              className={buttonClass({ variant: 'outline', className: 'rounded-full' })}
             >
               {c}
             </Link>

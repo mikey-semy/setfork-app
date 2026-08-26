@@ -96,7 +96,7 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
             {ru ? 'Новый адрес почты' : 'New email address'}
           </label>
           <div className="flex flex-wrap items-center gap-2">
-            <Input id="new-email" name="email" type="email" required placeholder="you@example.com" className="max-w-[17.5rem]" />
+            <Input id="new-email" name="email" type="email" required placeholder="you@example.com" className="max-w-panel" />
             <Button type="submit" disabled={changing}>
               {ru ? 'Отправить подтверждение' : 'Send confirmation'}
             </Button>

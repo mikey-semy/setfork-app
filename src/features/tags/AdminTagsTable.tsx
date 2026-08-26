@@ -35,7 +35,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
   return (
     <div>
       <div className="mb-4 flex items-center gap-2">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('tags.filterTags', lang)} className="max-w-[17.5rem]" />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('tags.filterTags', lang)} className="max-w-panel" />
         <button
           type="button"
           onClick={() => run(() => refreshTagUsage())}
@@ -70,7 +70,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
                         value={val}
                         onChange={(e) => setVal(e.target.value)}
                         placeholder={edit.mode === 'rename' ? t('tags.newSlug', lang) : t('tags.mergeInto', lang)}
-                        className="max-w-[12.5rem]"
+                        className="max-w-field-lg"
                       />
                       <button
                         type="button"

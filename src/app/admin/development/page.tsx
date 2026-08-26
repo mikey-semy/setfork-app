@@ -146,7 +146,7 @@ export default async function AdminDevelopmentPage() {
           </p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full min-w-[26.25rem] text-body-sm">
+            <table className="w-full min-w-note text-body-sm">
               <tbody>
                 {today.events.map((e, i) => (
                   <tr key={i} className="border-b border-border last:border-0">
@@ -175,7 +175,7 @@ export default async function AdminDevelopmentPage() {
           <p className="text-body-sm text-muted">{t('admin.noDataYet', lang)}</p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full min-w-[32.5rem] text-body-sm">
+            <table className="w-full min-w-column text-body-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted">
                   <th className="px-3 py-2 font-medium">{t('admin.specialist', lang)}</th>
@@ -373,7 +373,7 @@ export default async function AdminDevelopmentPage() {
                 {t('admin.acceptanceCountsEveryDrafter', lang)}
               </span>
             </div>
-            <div className="grid min-w-[32.5rem] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-caption uppercase tracking-wide text-muted">
+            <div className="grid min-w-column grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-caption uppercase tracking-wide text-muted">
               <span>{t('admin.specialist', lang)}</span>
               <span className="text-right">{t('admin.rank', lang)}</span>
               <span className="text-right">{t('admin.councils', lang)}</span>
@@ -384,7 +384,7 @@ export default async function AdminDevelopmentPage() {
               <Link
                 key={g.id}
                 href={`/admin/council/${g.id}`}
-                className="grid min-w-[32.5rem] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] items-center gap-4 border-b border-border px-4 py-3 hover:bg-surface-2"
+                className="grid min-w-column grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] items-center gap-4 border-b border-border px-4 py-3 hover:bg-surface-2"
               >
                 <span className="truncate text-body font-medium text-ink">{lang === 'ru' ? g.nameRu : g.nameEn}</span>
                 <span className="text-right text-body-sm text-muted">{lang === 'ru' ? g.rankRu : g.rankEn}</span>

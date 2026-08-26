@@ -84,7 +84,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
         placeholder={placeholder}
         autoComplete="one-time-code"
         inputMode="numeric"
-        className="w-[11.25rem] font-mono tracking-widest"
+        className="w-field-lg font-mono tracking-widest"
       />
       <Button variant="primary" size="sm" disabled={pending || !code.trim()} onClick={onSubmit}>
         {ru ? 'Подтвердить' : 'Confirm'}

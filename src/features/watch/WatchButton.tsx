@@ -104,7 +104,7 @@ export function WatchButton({
             </button>
           </DropdownMenuTrigger>
         </SplitButton>
-        <DropdownMenuContent align="end" className="w-[20.625rem] p-0">
+        <DropdownMenuContent align="end" className="w-panel-xl p-0">
           <div className="border-b border-border px-3 py-2.5 text-body font-semibold text-ink">{labels.title}</div>
           {rows.map((r) => (
             <DropdownMenuItem key={r.key} onSelect={() => apply(r.key)} className="flex items-start gap-2 px-3 py-2.5">

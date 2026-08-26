@@ -44,7 +44,7 @@ export function CommitFilters({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Select value={author || 'all'} onValueChange={(v) => go({ author: v })}>
-        <SelectTrigger aria-label={labels.byAuthor} className="w-auto min-w-[8rem] gap-1.5">
+        <SelectTrigger aria-label={labels.byAuthor} className="w-auto min-w-field-sm gap-1.5">
           <span className="inline-flex min-w-0 items-center gap-1.5">
             <Users size={14} className="shrink-0 text-muted" />
             <SelectValue />
@@ -61,7 +61,7 @@ export function CommitFilters({
       </Select>
 
       <Select value={since || 'all'} onValueChange={(v) => go({ since: v })}>
-        <SelectTrigger aria-label={labels.byDate} className="w-auto min-w-[8rem] gap-1.5">
+        <SelectTrigger aria-label={labels.byDate} className="w-auto min-w-field-sm gap-1.5">
           <span className="inline-flex min-w-0 items-center gap-1.5">
             <CalendarDays size={14} className="shrink-0 text-muted" />
             <SelectValue />

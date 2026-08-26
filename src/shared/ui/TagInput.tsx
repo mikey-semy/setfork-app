@@ -139,7 +139,7 @@ export function TagInput({
               }
             }}
             placeholder={tags.length === 0 ? 'docker' : ''}
-            className="min-w-[5.625rem] flex-1 bg-transparent px-1 py-0.5 text-body-lg text-ink outline-hidden placeholder:text-muted"
+            className="min-w-22.5 flex-1 bg-transparent px-1 py-0.5 text-body-lg text-ink outline-hidden placeholder:text-muted"
           />
         )}
       </div>

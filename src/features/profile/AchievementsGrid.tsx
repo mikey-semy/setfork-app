@@ -63,7 +63,7 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
           aria-label={open.label}
         >
           <div
-            className="w-full max-w-[22.5rem] overflow-hidden rounded-xl border border-border bg-surface shadow-2xl"
+            className="w-full max-w-panel-xl overflow-hidden rounded-xl border border-border bg-surface shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Шапка с большой картинкой на акцентном фоне. */}

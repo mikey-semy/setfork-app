@@ -34,7 +34,7 @@ export async function ChangelogCard({ lang, limit = 4 }: { lang: Lang; limit?: n
           const text = entryText(e, lang)
           return (
             <div key={`${e.at.toISOString()}${text}`} className="relative">
-              <span className="absolute left-[-12.5px] top-[0.3125rem] h-[0.4375rem] w-[0.4375rem] rounded-full border border-border bg-surface-2" />
+              <span className="absolute left-[-12.5px] top-[0.3125rem] h-2 w-2 rounded-full border border-border bg-surface-2" />
               <div className="text-caption text-muted">{fmt.format(e.at)}</div>
               {e.href ? (
                 <a

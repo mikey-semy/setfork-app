@@ -75,7 +75,7 @@ export default async function ExplorePage() {
               ))}
             </div>
           </div>
-          <aside className="w-full shrink-0 space-y-6 lg:w-[18.75rem]">
+          <aside className="w-full shrink-0 space-y-6 lg:w-panel-lg">
             <Widget
               title={t('trending', lang)}
               icon={<Star size={14} className="text-accent" />}
@@ -93,7 +93,7 @@ export default async function ExplorePage() {
                       и съедал ровно название, то есть единственное, ради чего строку
                       читают: «miki/Дело о таинственном майнер…». */}
                   <span className="flex min-w-0 flex-1 items-baseline gap-0.5 text-body">
-                    <span className="max-w-[4.5rem] shrink truncate text-muted">{l.ownerHandle}</span>
+                    <span className="max-w-18 shrink truncate text-muted">{l.ownerHandle}</span>
                     <span className="shrink-0 text-muted">/</span>
                     <span className="min-w-0 flex-1 truncate font-medium text-ink-2">{tr(l.title, lang)}</span>
                   </span>

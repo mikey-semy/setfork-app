@@ -80,7 +80,7 @@ export function NotifyPrefsForm({
           </div>
           <input type="hidden" name="notifyLang" value={nl} />
           <Select value={nl} onValueChange={(v) => setNl(isLang(v) ? v : DEFAULT_LANG)}>
-            <SelectTrigger className="w-[9.375rem]">
+            <SelectTrigger className="w-field">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

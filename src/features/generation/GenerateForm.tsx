@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef, useState, useTransition } from 'react'
 import { ArrowUp } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
+import { buttonClass } from '@/shared/ui/button-style'
 import { DEFAULT_DETAIL, DETAIL_LEVELS, detailLabel, type DetailLevel } from '@/shared/ai/detail-level'
 import { kindLabel, LIST_KINDS, type ListKind } from '@/shared/ai/list-kind'
 import { startGeneration } from './actions'
@@ -20,8 +21,9 @@ import { Spinner } from '@/shared/ui/Spinner'
  * во flex, а перелёт в низ — плавным transform без магических величин.
  */
 
-// eslint-disable-next-line no-restricted-syntax -- герой-ввод главной: 15px — прямая пара к SearchField lg, сознательно вне лестницы ролей
-const HERO_INPUT = 'max-h-40 min-h-[2.75rem] w-full resize-none bg-transparent px-1.5 py-2 text-lead leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70'
+// Герой-ввод главной: ступень `xl` шкалы (44px) и роль кегля `text-lead` — те же, что
+// у поиска-героя рядом. До 26.08.2026 обе величины стояли здесь числами.
+const HERO_INPUT = 'max-h-40 min-h-11 w-full resize-none bg-transparent px-1.5 py-2 text-lead leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70'
 
 export function GenerateForm({
   lang,
@@ -102,7 +104,7 @@ export function GenerateForm({
       {/* Уведомления (нет ключа / ошибки) и лоадер — absolute сверху: не влияют на центровку поля. */}
       {notice && !launching && (
         <div className="pointer-events-none absolute inset-x-4 top-4 z-10 sm:inset-x-6">
-          <div className={cn('mx-auto max-w-[37.5rem] rounded-md border bg-surface px-3 py-2.5 text-body', noticeTone[notice.tone])}>
+          <div className={cn('mx-auto max-w-hero rounded-md border bg-surface px-3 py-2.5 text-body', noticeTone[notice.tone])}>
             {notice.text}
           </div>
         </div>
@@ -110,7 +112,7 @@ export function GenerateForm({
       {launching && (
         <div className="animate-fadein absolute inset-x-4 top-4 z-10 sm:inset-x-6">
           {/* Спокойный статус вместо мем-заставки: показываем сам запрос и что идёт работа. */}
-          <div className="mx-auto flex max-w-[37.5rem] items-center gap-2.5 rounded-lg border border-border bg-surface px-4 py-3">
+          <div className="mx-auto flex max-w-hero items-center gap-2.5 rounded-lg border border-border bg-surface px-4 py-3">
             <Spinner size="md" className="text-accent" />
             <span className="min-w-0 truncate text-body text-ink-2">
               {t('generation.buildingYourList', lang)}: <span className="text-ink">{q.trim()}</span>
@@ -120,13 +122,13 @@ export function GenerateForm({
       )}
 
       {/* Поле — перелетающий элемент (boxRef). По центру в покое, внизу после старта. */}
-      <div ref={boxRef} className="mx-auto w-full max-w-[37.5rem] will-change-transform">
+      <div ref={boxRef} className="mx-auto w-full max-w-hero will-change-transform">
         <form
           onSubmit={(e) => {
             e.preventDefault()
             launch(q)
           }}
-          className="flex items-end gap-2 rounded-[1.125rem] border border-border bg-surface px-3 py-2.5 shadow-[0_18px_50px_-24px_rgba(0,0,0,.34)] transition-colors focus-within:border-border-strong"
+          className="flex items-end gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 shadow-hero transition-colors focus-within:border-border-strong"
         >
           <textarea
             name="q"
@@ -162,7 +164,7 @@ export function GenerateForm({
               type="button"
               onClick={() => setKind('')}
               className={cn(
-                'rounded-full border px-2.5 py-[0.1875rem] transition-colors',
+                'rounded-full border px-2.5 py-0.75 transition-colors',
                 kind === '' ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink',
               )}
             >
@@ -174,7 +176,7 @@ export function GenerateForm({
                 type="button"
                 onClick={() => setKind(k)}
                 className={cn(
-                  'rounded-full border px-2.5 py-[0.1875rem] transition-colors',
+                  'rounded-full border px-2.5 py-0.75 transition-colors',
                   kind === k ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink',
                 )}
               >
@@ -194,7 +196,7 @@ export function GenerateForm({
                 type="button"
                 onClick={() => setDetail(lv)}
                 className={cn(
-                  'rounded-full border px-2.5 py-[0.1875rem] transition-colors',
+                  'rounded-full border px-2.5 py-0.75 transition-colors',
                   detail === lv ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink',
                 )}
               >
@@ -223,7 +225,7 @@ export function GenerateForm({
                 type="button"
                 onClick={() => launch(s)}
                 disabled={!aiOn}
-                className="rounded-full border border-border bg-surface-2 px-3.5 py-[0.4375rem] text-body text-ink-2 transition-colors hover:text-ink disabled:opacity-50"
+                className={buttonClass({ variant: 'outline', className: 'rounded-full' })}
               >
                 {s}
               </button>

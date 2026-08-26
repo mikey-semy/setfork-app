@@ -76,7 +76,7 @@ export function PollHistoryChart({ events, options, lang }: { events: PollHistor
         {options.map((o, i) => (
           <li key={o.id} className="inline-flex items-center gap-1.5 text-ink-2">
             <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: PALETTE[i % PALETTE.length] }} />
-            <span className="max-w-[10rem] truncate">{o.text || `#${i + 1}`}</span>
+            <span className="max-w-field truncate">{o.text || `#${i + 1}`}</span>
             <span className="font-mono text-muted">{cum[o.id] ?? 0}</span>
           </li>
         ))}

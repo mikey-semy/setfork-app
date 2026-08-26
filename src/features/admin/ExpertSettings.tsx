@@ -110,8 +110,8 @@ function AvatarPicker({
         </button>
       </Tooltip>
       {open && (
-        <div className={cardClass({ pad: 'xs', className: 'absolute left-0 top-full z-20 mt-2 w-[14.5rem] shadow-card' })}>
-          <div className="grid max-h-[8.5rem] grid-cols-6 gap-1 overflow-y-auto">
+        <div className={cardClass({ pad: 'xs', className: 'absolute left-0 top-full z-20 mt-2 w-menu shadow-card' })}>
+          <div className="grid max-h-34 grid-cols-6 gap-1 overflow-y-auto">
             {gallery.map((g) => (
               <button
                 key={g}

@@ -159,7 +159,7 @@ export function ShareButton({
         </button>
       </DropdownMenuTrigger>
       </Tooltip>
-      <DropdownMenuContent align="end" className="w-[15rem] p-3">
+      <DropdownMenuContent align="end" className="w-menu p-3">
         <ShareMenuItems path={path} title={title} ru={ru} label={label} copiedLabel={copiedLabel} copyLinkLabel={copyLinkLabel} shareViaLabel={shareViaLabel} qrHint={qrHint} />
       </DropdownMenuContent>
     </DropdownMenu>

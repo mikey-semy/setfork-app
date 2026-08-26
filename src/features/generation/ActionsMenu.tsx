@@ -79,13 +79,13 @@ export function ActionsMenu({
       </Tooltip>
 
       {open && candidates.length === 0 && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[16.25rem] rounded-md border border-border bg-surface px-3 py-2.5 text-body-sm leading-relaxed text-muted shadow-card">
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-panel rounded-md border border-border bg-surface px-3 py-2.5 text-body-sm leading-relaxed text-muted shadow-card">
           {t('generation.variantActionsWillAppear', lang)}
         </div>
       )}
 
       {open && candidates.length > 0 && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[18.75rem] overflow-hidden rounded-md border border-border bg-surface shadow-card">
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-panel-lg overflow-hidden rounded-md border border-border bg-surface shadow-card">
           <button
             type="button"
             disabled={!canAccept}

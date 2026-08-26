@@ -39,7 +39,7 @@ export function CodeCard({ code, name, lang }: { code: string; name?: string; la
           // Отступ под бейдж и кнопку нужен только первой строке: 44px тач-цель +
           // бейдж + зазор. Остальные строки во всю ширину — иначе узкий экран теряет
           // сотню пикселей на каждой строке кода.
-          <div key={i} className={`flex gap-2 px-2.5 ${i === 0 ? 'pr-[6.5rem]' : ''}`}>
+          <div key={i} className={`flex gap-2 px-2.5 ${i === 0 ? 'pr-26' : ''}`}>
             <span className="w-5 shrink-0 select-none text-right text-caption leading-[1.7] text-muted">{i + 1}</span>
             <span className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">
               {tokens.length === 0 ? ' ' : tokens.map((t, j) => (t.cls ? <span key={j} className={t.cls}>{t.text}</span> : <span key={j}>{t.text}</span>))}

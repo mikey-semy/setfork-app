@@ -50,16 +50,16 @@ export function DiffStat({
         // aria-hidden: числа рядом уже сказали всё, полоска — только визуальная опора.
         <span aria-hidden className="inline-flex items-center gap-[2px]">
           {Array.from({ length: greens }, (_, i) => (
-            <span key={`a${i}`} className="size-[0.5rem] rounded-[1px] bg-ok" />
+            <span key={`a${i}`} className="size-[0.5rem] rounded-xs bg-ok" />
           ))}
           {Array.from({ length: reds }, (_, i) => (
-            <span key={`r${i}`} className="size-[0.5rem] rounded-[1px] bg-danger" />
+            <span key={`r${i}`} className="size-[0.5rem] rounded-xs bg-danger" />
           ))}
           {Array.from({ length: yellows }, (_, i) => (
-            <span key={`c${i}`} className="size-[0.5rem] rounded-[1px] bg-warn" />
+            <span key={`c${i}`} className="size-[0.5rem] rounded-xs bg-warn" />
           ))}
           {Array.from({ length: rest }, (_, i) => (
-            <span key={`e${i}`} className="size-[0.5rem] rounded-[1px] bg-border" />
+            <span key={`e${i}`} className="size-[0.5rem] rounded-xs bg-border" />
           ))}
         </span>
       )}

@@ -65,7 +65,7 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
     const caption = typeof step.content?.caption === 'string' ? step.content.caption : ''
     return (
       <figure className="break-inside-avoid">
-        <SmartImage src={url} alt={caption || t('screenshot', lang)} className="max-h-[32.5rem] w-auto rounded-lg border border-border" />
+        <SmartImage src={url} alt={caption || t('screenshot', lang)} className="max-h-130 w-auto rounded-lg border border-border" />
         {caption && <figcaption className="mt-1.5 text-body-sm text-muted">{caption}</figcaption>}
       </figure>
     )

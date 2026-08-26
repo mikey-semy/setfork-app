@@ -105,7 +105,7 @@ export function AppearanceSettings({
     void saveAppearance({ scale: v })
   }
 
-  if (!mounted) return <div className="h-[15rem]" /> // резерв места до гидрации
+  if (!mounted) return <div className="h-60" /> // резерв места до гидрации
 
   return (
     <div className="flex flex-col gap-5">

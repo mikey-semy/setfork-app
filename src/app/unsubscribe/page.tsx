@@ -22,7 +22,7 @@ export default async function UnsubscribePage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[26.25rem] text-center' })}>
+      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-note text-center' })}>
         {state === 'confirm' ? (
           <>
             <div className="text-title font-bold text-ink">{t('unsubscribe.confirm', lang)}</div>

@@ -15,7 +15,7 @@ export function FilterMenu({ label, items }: { label: string; items: { label: st
       <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-body font-medium text-ink-2 outline-hidden hover:bg-surface-2 hover:text-ink">
         {label} <ChevronDown size={14} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[11.25rem]">
+      <DropdownMenuContent align="end" className="min-w-field-lg">
         <DropdownMenuLabel>{label}</DropdownMenuLabel>
         {items.map((it) => (
           <DropdownMenuItem key={it.href} asChild>

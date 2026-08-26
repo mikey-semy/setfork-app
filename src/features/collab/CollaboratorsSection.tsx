@@ -30,7 +30,7 @@ export function CollaboratorsSection({
         <input
           name="handle"
           placeholder={t('addCollaboratorPh', lang)}
-          className={buttonClass({ className: 'w-[13.75rem] bg-surface-2 outline-hidden focus:border-border-strong' })}
+          className={buttonClass({ className: 'w-menu bg-surface-2 outline-hidden focus:border-border-strong' })}
         />
         <Button type="submit" variant="primary" size="md">
           {t('addCollaborator', lang)}

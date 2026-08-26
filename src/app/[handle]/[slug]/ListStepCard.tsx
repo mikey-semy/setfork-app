@@ -99,7 +99,7 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
             <SmartImage
               src={stepImages[step.id]}
               alt={t('screenshot', lang)}
-              className="mt-3 max-h-[26.25rem] w-auto rounded-lg border border-border"
+              className="mt-3 max-h-105 w-auto rounded-lg border border-border"
             />
           )}
           {step.command && (

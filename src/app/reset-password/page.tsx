@@ -19,7 +19,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
   if (!valid) {
     return (
       <div className="flex flex-1 items-center justify-center px-4 py-16">
-        <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[26.25rem] text-center' })}>
+        <div className={cardClass({ pad: 'lg', className: 'w-full max-w-note text-center' })}>
           <div className="mb-2 flex justify-center">
             <XCircle size={22} className="text-danger" />
           </div>
@@ -37,7 +37,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-[23.75rem]">
+      <div className="w-full max-w-form">
         <div className="mb-1 flex items-center gap-2 text-page font-bold text-ink">
           <KeyRound size={18} className="text-accent" /> {ru ? 'Новый пароль' : 'Set a new password'}
         </div>

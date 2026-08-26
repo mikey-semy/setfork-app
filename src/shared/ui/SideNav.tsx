@@ -75,7 +75,7 @@ export function SideNav({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex min-h-[2.75rem] w-full items-center justify-between gap-2 px-3 text-left text-body font-semibold text-ink md:hidden"
+        className="flex min-h-11 w-full items-center justify-between gap-2 px-3 text-left text-body font-semibold text-ink md:hidden"
       >
         {mobileLabel}
         <ChevronDown size={16} className={cn('text-muted transition-transform', open && 'rotate-180')} />

@@ -71,7 +71,6 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
               <div className="mt-8 flex items-center justify-center gap-8 text-body-sm text-ink-2">
                 <div className="flex flex-col">
                   <span className="font-mono text-caption uppercase tracking-[0.14em] text-muted">{t('certDate', lang)}</span>
-                  {/* eslint-disable-next-line no-restricted-syntax -- код локали для формата даты, не UI-строка */}
                   <span className="mt-0.5 font-medium text-ink">{completion.completedAt.toLocaleDateString(ru ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
                 <div className="flex flex-col">

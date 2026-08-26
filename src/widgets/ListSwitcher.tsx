@@ -137,7 +137,7 @@ export function ListSwitcher({
         </PopoverTrigger>
       </Tooltip>
       {/* Ширину режем по экрану: на 360px поповер не должен вылезать за край. */}
-      <PopoverContent align="start" className="w-[18.75rem] max-w-[calc(100vw-16px)] overflow-hidden p-0">
+      <PopoverContent align="start" className="w-panel-lg max-w-[calc(100vw-16px)] overflow-hidden p-0">
         <PickerPanel
           title={label}
           onClose={() => setOpen(false)}

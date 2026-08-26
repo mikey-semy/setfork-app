@@ -52,7 +52,7 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
             <Plus size={13} /> {t('library.query', lang)}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-[17.5rem]">
+        <PopoverContent align="start" className="w-panel">
           <form action={createSavedQuery} className="space-y-2.5">
             <Field label={t('library.name', lang)}>
               <Input name="name" required maxLength={60} placeholder={t('library.booksIStarted', lang)} />

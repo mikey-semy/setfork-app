@@ -49,7 +49,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         {/* Горизонтальный ряд (подпись слева от поля) — Field сюда не ложится, класс подписи инлайном. */}
         <div className="flex items-center gap-4">
           <label className="text-body-sm font-semibold text-ink-2">{ru ? 'Акцент (hex)' : 'Accent (hex)'}</label>
-          <Input name="accent" defaultValue={c.accent ?? ''} placeholder="#2159d6" className="max-w-[8.75rem] font-mono" />
+          <Input name="accent" defaultValue={c.accent ?? ''} placeholder="#2159d6" className="max-w-field font-mono" />
           <label className="ml-auto inline-flex items-center gap-2 text-body text-ink">
             <input type="checkbox" name="published" defaultChecked={c.published} /> {ru ? 'Опубликовано' : 'Published'}
           </label>
@@ -61,7 +61,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
 
       {/* Обложка */}
       <SettingsSection title={ru ? 'Обложка' : 'Cover'}>
-        <div className="mb-3 h-[8.125rem] w-full overflow-hidden rounded-lg border border-border">
+        <div className="mb-3 h-32.5 w-full overflow-hidden rounded-lg border border-border">
           {c.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={c.coverUrl} alt="" className="h-full w-full object-cover" />

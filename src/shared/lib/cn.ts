@@ -31,7 +31,7 @@ const FONT_SIZE_STEPS = [
 
 /** Свои тени из темы — та же двусмысленность: `shadow-card` иначе считается ЦВЕТОМ
  *  тени, и `cn('shadow-card', 'shadow-none')` оставляет обе. */
-const SHADOW_STEPS = ['card']
+const SHADOW_STEPS = ['card', 'hero']
 
 const twMerge = extendTailwindMerge({
   extend: {

@@ -73,7 +73,7 @@ function Calendar({ selected, onPick, ru }: { selected: Date | null; onPick: (d:
   const shift = (delta: number) => setView(new Date(y, m + delta, 1))
 
   return (
-    <div className="w-[15.5rem] p-2.5">
+    <div className="w-panel p-2.5">
       <div className="mb-2 flex items-center justify-between">
         <button type="button" onClick={() => shift(-1)} className={buttonClass({ variant: 'ghost' })} aria-label="prev">
           <ChevronLeft size={16} />

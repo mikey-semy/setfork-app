@@ -94,7 +94,7 @@ export function EmailSettingsForm({ lang, v }: { lang: Lang; v: EmailFormValues 
           value={testTo}
           onChange={(e) => setTestTo(e.target.value)}
           placeholder={ru ? 'адрес для теста (пусто — на ваш email)' : 'test recipient (blank = your email)'}
-          className="max-w-[17.5rem] flex-1"
+          className="max-w-panel flex-1"
         />
         <button
           type="button"

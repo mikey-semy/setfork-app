@@ -82,7 +82,7 @@ export function ForkForm({
       </div>
 
       {/* Индикатор доступности (как «EcoPlay is available ✓» на GitHub). */}
-      <div className="-mt-1.5 min-h-[1rem] text-body-sm">
+      <div className="-mt-1.5 min-h-4 text-body-sm">
         {checking ? (
           <span className="inline-flex items-center gap-1 text-muted">
             <Spinner size="xs" />

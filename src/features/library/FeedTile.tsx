@@ -23,9 +23,9 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
       <Link href={base} className="block">
         {item.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.coverImage} alt="" className="h-[6rem] w-full object-cover" />
+          <img src={item.coverImage} alt="" className="h-24 w-full object-cover" />
         ) : (
-          <AutoBanner seed={item.id} accent={item.accent} label={tr(item.title, lang)} height="h-[6rem]" />
+          <AutoBanner seed={item.id} accent={item.accent} label={tr(item.title, lang)} height="h-24" />
         )}
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-3.5">
@@ -34,7 +34,7 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
           {item.visibility === 'private' && <Lock size={11} className="shrink-0 text-muted" />}
         </div>
         <Link href={base} className="truncate text-title font-semibold text-ink group-hover:text-accent">{tr(item.title, lang)}</Link>
-        <p className="line-clamp-2 min-h-[2.125rem] text-body-sm leading-snug text-ink-2">{tr(item.desc, lang)}</p>
+        <p className="line-clamp-2 min-h-8.5 text-body-sm leading-snug text-ink-2">{tr(item.desc, lang)}</p>
         {item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {item.tags.slice(0, 3).map((tag) => (

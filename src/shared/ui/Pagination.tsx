@@ -285,7 +285,7 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
   // Ширина ЗАРЕЗЕРВИРОВАНА: ряд отцентрован, и подпись, меняясь в ширине, разъезжала бы
   // обе стрелки наружу — ровно в тот момент, когда палец уже занесён над одной из них.
   const position = (
-    <span className="min-w-[4.5rem] px-1 text-center font-mono text-caption-lg text-muted">
+    <span className="min-w-18 px-1 text-center font-mono text-caption-lg text-muted">
       {totalPages !== undefined ? `${page} / ${last}` : page}
     </span>
   )

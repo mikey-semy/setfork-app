@@ -104,7 +104,7 @@ export function ChatDock({
         closeLabel={t('close', lang)}
       />
 
-      <div ref={scrollRef} className={`min-h-[7.5rem] flex-1 space-y-3 overflow-y-auto ${PANEL_PAD}`}>
+      <div ref={scrollRef} className={`min-h-30 flex-1 space-y-3 overflow-y-auto ${PANEL_PAD}`}>
         {messages.length === 0 && <p className="text-body-sm leading-relaxed text-muted">{emptyHint}</p>}
         {messages.map((m, i) =>
           m.role === 'user' ? (

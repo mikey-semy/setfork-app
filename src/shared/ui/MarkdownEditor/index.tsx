@@ -165,7 +165,7 @@ export function MarkdownEditor({
       </div>
 
       {tab === 'preview' && (
-        <div className="min-h-[5rem] px-3 py-2.5">
+        <div className="min-h-20 px-3 py-2.5">
           {value.trim() ? <Markdown>{value}</Markdown> : <p className="text-body italic text-muted">{t('editor.nothingToPreview', lang)}</p>}
         </div>
       )}

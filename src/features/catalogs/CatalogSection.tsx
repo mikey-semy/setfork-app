@@ -37,7 +37,7 @@ export function CatalogSection({
           onValueChange={(v) => start(() => setListCatalog(templateId, v === 'none' ? '' : v))}
           disabled={pending}
         >
-          <SelectTrigger className="mb-3 w-full max-w-[20rem]">
+          <SelectTrigger className="mb-3 w-full max-w-panel-lg">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -55,7 +55,7 @@ export function CatalogSection({
         <input
           name="name"
           placeholder={t('newCatalogPh', lang)}
-          className={buttonClass({ className: 'w-[15rem] bg-surface-2 outline-hidden focus:border-border-strong' })}
+          className={buttonClass({ className: 'w-menu bg-surface-2 outline-hidden focus:border-border-strong' })}
         />
         <button type="submit" className={buttonClass()}>
           {t('createCatalogBtn', lang)}

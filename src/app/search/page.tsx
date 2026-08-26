@@ -120,7 +120,7 @@ export default async function SearchPage({
 
   return (
     <div className="flex w-full flex-1 items-stretch">
-      <aside className="hidden w-[16.25rem] shrink-0 border-r border-border bg-surface-2 px-3 py-5 lg:block">
+      <aside className="hidden w-panel shrink-0 border-r border-border bg-surface-2 px-3 py-5 lg:block">
         <ScopeSwitcher active={scope} counts={counts} q={sp.q} sort={sp.sort} lang={lang} basePath={BASE} />
         {/* List-специфичные фасеты — только для scope=lists */}
         {scope === 'lists' && <AdvancedFacets initialQ={sp.q ?? ''} tags={tags} lang={lang} basePath={BASE} />}
@@ -270,7 +270,7 @@ export default async function SearchPage({
         </div>
 
         {/* Правый рейл — панели (не растягиваем результаты во всю ширину) */}
-        <aside className="hidden w-[18.75rem] shrink-0 flex-col gap-4 pt-1 xl:flex">
+        <aside className="hidden w-panel-lg shrink-0 flex-col gap-4 pt-1 xl:flex">
           <div className={cardClass({ tone: 'inset', pad: 'sm' })}>
             <div className="mb-1.5 text-body-sm font-semibold text-ink">{t('proTip', lang)}</div>
             <p className="text-body-sm leading-relaxed text-muted">{t('proTipBody', lang)}</p>

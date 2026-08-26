@@ -17,7 +17,7 @@ export function QuizBlanks({ quiz, set, lang, caseBox, nth }: QuizKindProps) {
   return (
     <>
       <textarea
-        className={buttonClass({ className: 'min-h-[3.25rem] w-full resize-y leading-relaxed outline-hidden focus:border-border-strong' })}
+        className={buttonClass({ className: 'min-h-13 w-full resize-y leading-relaxed outline-hidden focus:border-border-strong' })}
         aria-label={t('quiz.blankText', lang)}
         placeholder={t('quiz.blankTextPh', lang)}
         value={quiz.template}

@@ -41,7 +41,7 @@ export function MobileSearch({
       {open &&
         createPortal(
           <div className="fixed inset-0 z-50 bg-black/40 p-3 pt-14" onClick={() => setOpen(false)}>
-            <div onClick={(e) => e.stopPropagation()} className={cardClass({ pad: 'sm', className: 'mx-auto max-w-[35rem] shadow-card' })}>
+            <div onClick={(e) => e.stopPropagation()} className={cardClass({ pad: 'sm', className: 'mx-auto max-w-hero shadow-card' })}>
               <div className="flex items-center gap-2">
                 <Search size={15} className="shrink-0 text-muted" />
                 <input

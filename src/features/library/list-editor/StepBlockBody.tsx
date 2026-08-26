@@ -159,7 +159,7 @@ export function StepBlockBody({
       {item.imagePreview ? (
         <div className="relative w-fit">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.imagePreview} alt="" className="max-h-[10rem] rounded-md border border-border" />
+          <img src={item.imagePreview} alt="" className="max-h-40 rounded-md border border-border" />
           <IconButton
             size="sm"
             onClick={() => onPatch({ imageKey: '', imagePreview: '' })}

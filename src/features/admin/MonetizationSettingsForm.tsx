@@ -90,21 +90,21 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
                   value={r.match}
                   onChange={(e) => patch(r.rowId, { match: e.target.value })}
                   placeholder="amazon.com"
-                  className="min-w-[8.75rem] flex-1 font-mono"
+                  className="min-w-field flex-1 font-mono"
                   aria-label={t('monRuleDomain', lang)}
                 />
                 <Input
                   value={r.param}
                   onChange={(e) => patch(r.rowId, { param: e.target.value })}
                   placeholder="tag"
-                  className="max-w-[7.5rem] font-mono"
+                  className="max-w-30 font-mono"
                   aria-label={t('monRuleParam', lang)}
                 />
                 <Input
                   value={r.value}
                   onChange={(e) => patch(r.rowId, { value: e.target.value })}
                   placeholder="setfork-20"
-                  className="max-w-[10rem] font-mono"
+                  className="max-w-field font-mono"
                   aria-label={t('monRuleValue', lang)}
                 />
                 {/* erid (РФ-маркировка) — опционально; задан → ссылки этого домена
@@ -113,7 +113,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
                   value={r.erid ?? ''}
                   onChange={(e) => patch(r.rowId, { erid: e.target.value })}
                   placeholder="erid"
-                  className="max-w-[9.375rem] font-mono"
+                  className="max-w-field font-mono"
                   aria-label={t('monRuleErid', lang)}
                 />
                 <button
@@ -134,7 +134,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
                     value={r.advertiser ?? ''}
                     onChange={(e) => patch(r.rowId, { advertiser: e.target.value })}
                     placeholder={t('monRuleAdvertiser', lang)}
-                    className="min-w-[11.25rem] flex-1"
+                    className="min-w-field-lg flex-1"
                     aria-label={t('monRuleAdvertiser', lang)}
                   />
                   <Input
@@ -142,7 +142,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
                     onChange={(e) => patch(r.rowId, { advertiserInn: e.target.value })}
                     placeholder={t('monRuleInn', lang)}
                     inputMode="numeric"
-                    className="max-w-[10rem] font-mono"
+                    className="max-w-field font-mono"
                     aria-label={t('monRuleInn', lang)}
                   />
                 </div>

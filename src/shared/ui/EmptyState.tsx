@@ -41,7 +41,7 @@ export function EmptyState({
     >
       {icon && <div className="text-muted">{icon}</div>}
       {title && <div className="text-body-lg font-semibold text-ink">{title}</div>}
-      {hint && <p className="max-w-[23.75rem] text-body text-ink-2">{hint}</p>}
+      {hint && <p className="max-w-form text-body text-ink-2">{hint}</p>}
       {children}
       {action && (
         <Link

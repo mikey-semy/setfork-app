@@ -54,7 +54,7 @@ function Underline({ bar }: { bar: { left: number; width: number } | null }) {
   return (
     <span
       aria-hidden
-      className="absolute bottom-0 h-[2px] rounded-full bg-accent transition-all dur-base ease-out"
+      className="absolute bottom-0 h-0.5 rounded-full bg-accent transition-all dur-base ease-out"
       style={{ left: bar.left, width: bar.width }}
     />
   )

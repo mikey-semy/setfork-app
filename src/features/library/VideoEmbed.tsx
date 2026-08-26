@@ -21,7 +21,7 @@ export function VideoEmbed({ url, caption }: { url: string; caption?: string }) 
           />
         </div>
       ) : kind === 'file' ? (
-        <video src={src} controls className="max-h-[32.5rem] w-full rounded-lg border border-border" />
+        <video src={src} controls className="max-h-130 w-full rounded-lg border border-border" />
       ) : (
         // Нераспознанный провайдер печатает сам URL — он длинный и без пробелов.
         <a href={safeHref(src) || undefined} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1.5 text-body text-accent hover:underline [overflow-wrap:anywhere]">

@@ -28,7 +28,7 @@ export function SmartImage({
         style={style}
         role="img"
         aria-label={alt || 'image unavailable'}
-        className={`flex min-h-[5rem] items-center justify-center bg-surface-2 text-muted ${className ?? ''}`}
+        className={`flex min-h-20 items-center justify-center bg-surface-2 text-muted ${className ?? ''}`}
       >
         <ImageOff size={18} aria-hidden />
       </div>

@@ -127,7 +127,7 @@ export function BubbleToolbar({
         </Popover>
         {moreOpen && (
           // Сетка с переносом: меню тоже не должно быть шире экрана.
-          <div className="absolute right-0 top-full z-40 mt-1 flex w-max max-w-[11.75rem] flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-1 shadow-lg">
+          <div className="absolute right-0 top-full z-40 mt-1 flex w-max max-w-field-lg flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-1 shadow-lg">
             {hidden.map((tool) => (
               <Tooltip key={tool.t} label={tool.t}>
                 <IconButton

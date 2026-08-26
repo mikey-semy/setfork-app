@@ -79,7 +79,7 @@ export function TopNav({
                 lang={lang}
                 initial=""
                 size="md"
-                containerClassName="w-[13.75rem] xl:w-[18.75rem]"
+                containerClassName="w-menu xl:w-panel-lg"
                 hint={<kbd className="hidden rounded-md border border-border px-1.5 text-caption font-medium leading-[1.125rem] text-muted lg:inline">/</kbd>}
               />
             </div>

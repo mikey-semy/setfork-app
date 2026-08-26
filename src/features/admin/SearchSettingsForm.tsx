@@ -25,7 +25,7 @@ export function SearchSettingsForm({ current, lang }: { current: SearchSettings;
       <input type="hidden" name="mode" value={mode} />
       <Field label={ru ? 'Режим' : 'Mode'}>
         <Select value={mode} onValueChange={(v) => setMode(v as SearchMode)}>
-          <SelectTrigger className="w-[17.5rem]">
+          <SelectTrigger className="w-panel">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

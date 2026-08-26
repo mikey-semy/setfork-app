@@ -93,7 +93,7 @@ export default function CodeEditorInner({
           searchKeymap: false,
           drawSelection: true,
         }}
-        className={`${maxHeightClass} min-h-[2.625rem] overflow-auto rounded-md border border-border bg-surface-2 text-ink focus-within:border-border-strong`}
+        className={`${maxHeightClass} min-h-10.5 overflow-auto rounded-md border border-border bg-surface-2 text-ink focus-within:border-border-strong`}
       />
     </div>
   )

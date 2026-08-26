@@ -115,7 +115,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
   return (
     // Та же читаемая ширина, что у карточек-секций /admin (const card на странице):
     // без кэпа панель растягивалась на весь экран и выбивалась из колонны секций.
-    <div className={cardClass({ className: 'w-full max-w-[53.75rem]' })}>
+    <div className={cardClass({ className: 'w-full max-w-wide' })}>
       <div className="mb-1 font-semibold text-ink">{t('admin.searchIndexEmbeddings', lang)}</div>
       <p className="mb-3 text-body text-ink-2">
         {t('admin.rebuildVectorIndexLists', lang)}
@@ -163,7 +163,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
                 setSwitching(false)
               }}
             >
-              <SelectTrigger id="reindex-target" className="h-auto w-auto min-w-[11.875rem] px-2 py-1 text-body-sm">
+              <SelectTrigger id="reindex-target" className="h-auto w-auto min-w-field-lg px-2 py-1 text-body-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -236,7 +236,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
             return (
               <span
                 key={i}
-                className={`aspect-square w-full rounded-[2px] transition-colors ${
+                className={`aspect-square w-full rounded-xs transition-colors ${
                   filled ? 'animate-cell-pop bg-ok' : errored ? 'bg-danger' : 'bg-border'
                 }`}
               />

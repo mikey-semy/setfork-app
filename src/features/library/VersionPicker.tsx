@@ -31,7 +31,7 @@ export function VersionPicker({
 
   const picker = (value: number, onPick: (v: number) => void) => (
     <Select value={String(value)} onValueChange={(v) => onPick(Number(v))}>
-      <SelectTrigger className="w-[5.75rem] font-mono">
+      <SelectTrigger className="w-23 font-mono">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

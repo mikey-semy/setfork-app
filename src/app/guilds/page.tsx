@@ -39,7 +39,7 @@ export default async function GuildsPage() {
   return (
     <div className={PAGE}>
       <h1 className="text-stat font-bold text-ink">{t('guilds.theWorkshopGuilds', lang)}</h1>
-      <p className="mt-1.5 max-w-[40rem] text-body-lg leading-relaxed text-ink-2">
+      <p className="mt-1.5 max-w-prose text-body-lg leading-relaxed text-ink-2">
         {t('guilds.everySetforkListForged', lang)}
       </p>
 

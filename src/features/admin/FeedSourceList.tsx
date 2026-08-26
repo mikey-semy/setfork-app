@@ -53,7 +53,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             placeholder="https://example.com/feed.xml"
           />
         </label>
-        <label className="flex min-w-0 flex-col gap-1 sm:w-[12.5rem]">
+        <label className="flex min-w-0 flex-col gap-1 sm:w-field-lg">
           <span className="text-caption uppercase tracking-wide text-muted">{t('admin.topic', lang)}</span>
           <Input
             name="tags"
@@ -61,7 +61,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             placeholder="devops, ci"
           />
         </label>
-        <label className="flex flex-col gap-1 sm:w-[6rem]">
+        <label className="flex flex-col gap-1 sm:w-24">
           <span className="text-caption uppercase tracking-wide text-muted">{t('admin.hours', lang)}</span>
           <Input
             name="everyHours"

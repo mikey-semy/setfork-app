@@ -64,7 +64,7 @@ export function TopNavCrumb({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <Link href={`/${crumb.handle}`} className="hidden max-w-[10rem] shrink-0 truncate font-medium text-ink hover:text-accent sm:block">
+      <Link href={`/${crumb.handle}`} className="hidden max-w-field shrink-0 truncate font-medium text-ink hover:text-accent sm:block">
         {crumb.handle}
       </Link>
       <span className="shrink-0 text-muted">/</span>

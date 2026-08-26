@@ -36,7 +36,7 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[26.25rem] text-center' })}>
+      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-note text-center' })}>
         <div className="mb-2 flex justify-center">{M.icon}</div>
         <div className="text-title font-bold text-ink">{M.title}</div>
         <p className="mt-1 text-body text-ink-2">{M.sub}</p>

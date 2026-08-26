@@ -83,7 +83,7 @@ export function FailureNote({
   }
 
   return (
-    <div className="pl-[3.25rem]">
+    <div className="pl-13">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

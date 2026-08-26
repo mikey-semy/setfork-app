@@ -119,13 +119,15 @@ const ROLES = [
  * Исключаются вычисления (`calc`, `%`, `vh/vw`, `ch`, `em`, `--var`): это не значение
  * из шкалы, а выражение — токеном оно не станет.
  */
-const COMPUTED = /calc\(|%|\d(?:vh|vw|ch)\]|(?:^|[^r])em\]|var\(|\(--|\bfr\]|auto\]|100dvh|min\(|max\(|clamp\(/
+const COMPUTED = /calc\(|%|\d(?:vh|vw|ch|dvh|dvw|svh|lvh)\]|(?:^|[^r])em\]|var\(|env\(|\(--|\bfr\]|auto\]|min\(|max\(|clamp\(/
 const VALUES = [
   { key: 'кегль числом', token: 'ступень --text-* из @theme', re: /text-\[[^\]]+\]/g },
   { key: 'цвет сырой переменной', token: 'утилита цвета из @theme (bg-accent-soft)', raw: true, re: /(?:bg|text|border|ring|fill|stroke|from|to|via|accent|outline|divide)-\(--[a-z0-9-]+\)/g },
   { key: 'длительность числом', token: 'dur-fast / dur-base / dur-slow', re: /(?:duration|delay)-\[[^\]]+\]|(?<![\w-])duration-\d+/g },
-  { key: 'ширина числом', token: 'роль ширины (панель/меню/диалог) — шкалы пока НЕТ', re: /(?:max-|min-)?w-\[[^\]]+\]/g },
-  { key: 'высота числом', token: 'шкала контролов CONTROL_H / роль высоты', re: /(?:max-|min-)?h-\[[^\]]+\]/g },
+  // ⚠️ Лукбихайнд обязателен: без него `shadow-[0_18px…]` попадает в ширины —
+  // «shado·w-[» читается как `w-[`. Первая версия счётчика ровно так и ошиблась.
+  { key: 'ширина числом', token: 'роль ширины из @theme (w-panel, max-w-page)', re: /(?<![\w-])(?:max-|min-)?w-\[[^\]]+\]/g },
+  { key: 'высота числом', token: 'шкала контролов CONTROL_H / сетка 4px', re: /(?<![\w-])(?:max-|min-)?h-\[[^\]]+\]/g },
   { key: 'радиус числом', token: '--radius-* из @theme (rounded-md/lg/xl)', re: /rounded(?:-[trbl]{1,2})?-\[[^\]]+\]/g },
   { key: 'отступ числом', token: 'шаг сетки 4px (p-1 … p-8)', re: /(?<![\w-])[pm][xytblr]?-\[[^\]]+\]/g },
   { key: 'слой числом', token: 'словарь z-слоёв LAYER из control.ts', re: /(?<![\w-])z-\[[^\]]+\]/g },

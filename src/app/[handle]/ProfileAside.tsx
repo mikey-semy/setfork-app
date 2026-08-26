@@ -21,7 +21,7 @@ type Props = Pick<
  */
 export function ProfileAside({ handle, lang, user, viewer, isOwner, bigAvatar, counts, followCounts, following, received, contributions, achDisplay }: Props) {
   return (
-    <aside className="shrink-0 md:w-[17.5rem]">
+    <aside className="shrink-0 md:w-panel">
       <Avatar handle={user.handle} avatarUrl={bigAvatar} size={180} rounded={user.avatarShape === 'square' ? 'rounded-2xl' : 'rounded-full'} />
       <div className="mt-4">
         {/* Имя и ник задаёт человек: слово без пробелов иначе вылезает за колонку

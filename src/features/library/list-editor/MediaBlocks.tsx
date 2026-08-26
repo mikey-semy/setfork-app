@@ -48,7 +48,7 @@ export function ImageBlockBody({ item, onPatch, uploading, onFile, lang }: BodyP
   return (
     <div className="flex flex-col gap-2">
       {item.imagePreview ? (
-        <ImagePreview src={item.imagePreview} maxH="max-h-[20rem]" onRemove={() => onPatch({ imageKey: '', imagePreview: '' })} lang={lang} />
+        <ImagePreview src={item.imagePreview} maxH="max-h-80" onRemove={() => onPatch({ imageKey: '', imagePreview: '' })} lang={lang} />
       ) : (
         <FileDrop kind="image" uploading={uploading} onFile={onFile} lang={lang} />
       )}

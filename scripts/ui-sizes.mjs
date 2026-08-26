@@ -50,24 +50,20 @@ const tally = (key) => {
   return [...map].sort((a, b) => b[1] - a[1])
 }
 
-const overrides = rows.filter((r) => r.primitive)
-// min-h-11 на текстовой ссылке/кнопке — это ТАЧ-ЦЕЛЬ по правилу, а не своя высота.
-const touchOnly = rows.filter((r) => !r.primitive && r.min && r.px === 44)
-// h-0/h-1 — скрытый file-input и ползунок: к шкале контролов отношения не имеют.
-const notControls = rows.filter((r) => !r.primitive && r.px <= 8)
-// Внутри shared/ui высота объявляется руками ПО ДОЛГУ СЛУЖБЫ: это дом примитивов,
-// откуда её берут все остальные. Отделено 26.08.2026, когда честный разбор тегов
-// впервые показал эти строки (ChatComposer, FloatingBack, ScrollToTop) — считать их
-// нарушением значит требовать, чтобы примитив брал высоту у самого себя.
-const inPrimitivesHome = rows.filter((r) => !r.primitive && r.file.startsWith('src/shared/ui/'))
-
-/** Названные исключения: роль, под которую примитива НЕТ, и заводить его пока не на чем.
+/** Названные исключения. Ключ — `файл:тег`, а не файл: исключение обязано быть узким,
+ *  иначе один законный случай прикрывает собой всё, что в файле появится потом.
  *  Список короткий намеренно — исключение без причины и без условия снятия превращает
  *  счётчик в украшение. Причина пишется здесь, а не в коде места: тогда её видно всем,
  *  кто читает замер, а не только тому, кто открыл файл. */
 const NAMED = new Map([
   [
-    'src/features/git/CloneDropdown.tsx',
+    'src/features/settings/SettingsForm.tsx:Textarea',
+    'границы РОСТА поля с resize-y (min-h/max-h), а не высота контрола: сколько поле ' +
+      'занимает в покое и докуда человек может его растянуть. Ступень шкалы задаёт первое ' +
+      'и молчит про второе.',
+  ],
+  [
+    'src/features/git/CloneDropdown.tsx:button',
     'сегментированный переключатель вкладок внутри поповера. TabNav — это НАВИГАЦИЯ ' +
       'ссылками (переезжающая полоска, маршруты), переключение состояния он не делает, ' +
       'а примитива под сегменты в проекте нет. Высота при этом на шкале: min-h-8 плюс ' +
@@ -75,7 +71,26 @@ const NAMED = new Map([
       '26.08.2026) — примитив заводим, когда появится второе.',
   ],
 ])
-const named = rows.filter((r) => !r.primitive && NAMED.has(r.file))
+
+const overrides = rows.filter((r) => r.primitive && !NAMED.has(`${r.file}:${r.tag}`))
+// min-h-11 на текстовой ссылке/кнопке — это ТАЧ-ЦЕЛЬ по правилу, а не своя высота.
+const touchOnly = rows.filter((r) => !r.primitive && r.min && r.px === 44)
+// К шкале контролов отношения не имеют две вещи, и обе — не «контрол в ряду»:
+//  • h-0/h-1 — скрытый file-input и ползунок;
+//  • всё, что ВЫШЕ ступеней шкалы (24…44px) настолько, что в ряд с кнопкой не встаёт:
+//    клетка теплокарты 12px, поле обложки 148px. Их высоту задаёт содержимое или
+//    сетка, а не роль контрола. Границы 20 и 48 — это ступени шкалы плюс-минус один
+//    шаг: внутри них высота обязана быть ступенью, снаружи — не про шкалу вовсе.
+//    ⚠️ Цена этого послабления: рукописная кнопка ростом 60px счётчику незаметна.
+//    Такую ловит вторая семья `ui-parity` («кнопка нарисована руками»), а не эта.
+const notControls = rows.filter((r) => !r.primitive && (r.px <= 8 || r.px < 20 || r.px > 48))
+// Внутри shared/ui высота объявляется руками ПО ДОЛГУ СЛУЖБЫ: это дом примитивов,
+// откуда её берут все остальные. Отделено 26.08.2026, когда честный разбор тегов
+// впервые показал эти строки (ChatComposer, FloatingBack, ScrollToTop) — считать их
+// нарушением значит требовать, чтобы примитив брал высоту у самого себя.
+const inPrimitivesHome = rows.filter((r) => !r.primitive && r.file.startsWith('src/shared/ui/'))
+
+const named = rows.filter((r) => NAMED.has(`${r.file}:${r.tag}`))
 const legit = new Set([...touchOnly, ...notControls, ...inPrimitivesHome, ...named])
 const handRolled = rows.filter((r) => !r.primitive && !legit.has(r))
 
@@ -87,7 +102,7 @@ console.log(
   `  законных: ${legit.size} (тач-цель ${touchOnly.length}, не контролы ${notControls.length}, ` +
     `дом примитивов ${inPrimitivesHome.length}, названные исключения ${named.length})`,
 )
-for (const file of new Set(named.map((r) => r.file))) console.log(`    · ${file} — ${NAMED.get(file)}`)
+for (const k of new Set(named.map((r) => `${r.file}:${r.tag}`))) console.log(`    · ${k} — ${NAMED.get(k)}`)
 console.log('\nпо высоте:')
 for (const [k, v] of tally((r) => `${r.px}px${r.min ? ' (min)' : ''}`)) console.log(`  ${String(v).padStart(3)}  ${k}`)
 

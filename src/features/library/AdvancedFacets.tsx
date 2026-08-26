@@ -109,7 +109,7 @@ export function AdvancedFacets({
             <div className="mb-1.5 px-1">
               <SearchField size="xs" value={tagFilter} onValueChange={setTagFilter} placeholder={t('filterTags', lang)} />
             </div>
-            <div className="flex max-h-[17.5rem] flex-col gap-0.5 overflow-y-auto pr-0.5">
+            <div className="flex max-h-70 flex-col gap-0.5 overflow-y-auto pr-0.5">
               {shownTags.length === 0 ? (
                 <div className="px-2 py-1 text-body-sm text-muted">{t('noTagsFound', lang)}</div>
               ) : (

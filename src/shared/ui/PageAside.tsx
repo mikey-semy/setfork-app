@@ -15,7 +15,7 @@ import { SectionLabel } from './SectionLabel'
  */
 export function PageAside({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <aside className={cn('flex shrink-0 flex-col gap-4 print:hidden lg:w-[18.75rem]', className)}>{children}</aside>
+    <aside className={cn('flex shrink-0 flex-col gap-4 print:hidden lg:w-panel-lg', className)}>{children}</aside>
   )
 }
 

@@ -61,7 +61,7 @@ export function ListsToolbar({
           e.preventDefault()
           navigate({ q: query.trim() })
         }}
-        className="min-w-[11.25rem] flex-1"
+        className="min-w-field-lg flex-1"
       >
         <SearchField
           value={query}
@@ -81,7 +81,7 @@ export function ListsToolbar({
           фильтр на профиле новичка занимал бы место и ничего не объяснял. */}
       {tab === 'lists' && isOwner && (catalogs.length > 0 || unfiledCount > 0) && (
         <Select value={catalog ?? 'all'} onValueChange={(v) => navigate({ catalog: v === 'all' ? '' : v })}>
-          <SelectTrigger className="w-auto min-w-[6.5rem] gap-1.5" aria-label={t('profile.catalogFilter', lang)}>
+          <SelectTrigger className="w-auto min-w-26 gap-1.5" aria-label={t('profile.catalogFilter', lang)}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -102,7 +102,7 @@ export function ListsToolbar({
 
       {tab === 'lists' && (
         <Select value={type} onValueChange={(v) => navigate({ type: v === 'all' ? '' : v })}>
-          <SelectTrigger className="w-auto min-w-[6.5rem] gap-1.5">
+          <SelectTrigger className="w-auto min-w-26 gap-1.5">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -115,7 +115,7 @@ export function ListsToolbar({
       )}
 
       <Select value={sort} onValueChange={(v) => navigate({ sort: v === 'recent' ? '' : v })}>
-        <SelectTrigger className="w-auto min-w-[6.5rem] gap-1.5">
+        <SelectTrigger className="w-auto min-w-26 gap-1.5">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

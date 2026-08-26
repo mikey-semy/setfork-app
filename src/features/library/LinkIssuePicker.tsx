@@ -56,7 +56,7 @@ export function LinkIssuePicker({
               {pending ? <Spinner size="md" /> : <Plus size={14} />} {labels.add}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[16.25rem] overflow-hidden p-0">
+          <PopoverContent align="start" className="w-panel overflow-hidden p-0">
             {/* Заголовок = тексту кнопки-триггера; крестика нет намеренно: Popover
                 (Radix) сам закрывается по Esc/клику мимо, а первым фокусируемым
                 элементом остаётся поле поиска — как было с Input. */}

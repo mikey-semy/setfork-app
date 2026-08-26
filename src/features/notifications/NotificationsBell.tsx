@@ -33,7 +33,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
         <IconButton variant="ghost" label={t('notifications', lang)} className="relative">
           <Bell size={17} />
           {count > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 grid h-[0.9375rem] min-w-[0.9375rem] place-items-center rounded-full bg-danger px-1 text-caption font-bold text-white">
+            <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 text-caption font-bold text-white">
               {count > 9 ? '9+' : count}
             </span>
           )}
@@ -46,7 +46,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
           нельзя. Тот же приём уже применён у CloneDropdown — значит грабли не новые. */}
       <DropdownMenuContent
         align="end"
-        className="flex max-h-(--radix-dropdown-menu-content-available-height) w-[21.25rem] flex-col p-0"
+        className="flex max-h-(--radix-dropdown-menu-content-available-height) w-panel-xl flex-col p-0"
       >
         <PanelHead title={t('notifications', lang)} />
 

@@ -26,7 +26,7 @@ export function SettingsSection({
   className?: string
 }) {
   return (
-    <section id={id} className={cn('w-full max-w-[53.75rem] rounded-lg border border-border bg-surface p-5', className)}>
+    <section id={id} className={cn('w-full max-w-wide rounded-lg border border-border bg-surface p-5', className)}>
       <div className={cn('font-semibold text-ink', hint ? 'mb-1' : 'mb-4')}>{title}</div>
       {hint && <p className="mb-4 text-body text-ink-2">{hint}</p>}
       {children}

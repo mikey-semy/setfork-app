@@ -103,7 +103,7 @@ export function Tooltip({
           side={side}
           sideOffset={6}
           collisionPadding={8}
-          className="animate-sf-pop z-60 max-w-[15rem] rounded-md border border-border bg-surface px-2 py-1 text-caption leading-snug text-ink shadow-card"
+          className="animate-sf-pop z-60 max-w-menu rounded-md border border-border bg-surface px-2 py-1 text-caption leading-snug text-ink shadow-card"
         >
           {label}
           <TooltipPrimitive.Arrow className="fill-surface" width={10} height={5} />
