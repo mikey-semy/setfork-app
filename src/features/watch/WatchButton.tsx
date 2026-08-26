@@ -10,6 +10,7 @@ import { splitSegment } from '@/shared/ui/split-segment'
 import type { WatchEvents, WatchLevel, WatchState } from '@/core'
 import { setWatch } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Checkbox } from '@/shared/ui/checkbox'
 
 export interface WatchLabels {
   watch: string
@@ -152,11 +153,10 @@ export function WatchButton({
             const label = k === 'versions' ? labels.evVersions : k === 'issues' ? labels.evIssues : labels.evSuggestions
             return (
               <label key={k} className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-2 hover:bg-surface-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={!!events[k]}
                   onChange={(e) => setEvents((prev) => ({ ...prev, [k]: e.target.checked }))}
-                  className="size-4 accent-accent"
+                  className="size-4"
                 />
                 <span className="text-body text-ink">{label}</span>
               </label>

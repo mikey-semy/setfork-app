@@ -10,6 +10,7 @@ import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { REPORT_BODY_MAX, type ReportReason } from './validate'
 import { submitReport, type ReportResult } from './actions'
+import { Radio } from '@/shared/ui/checkbox'
 
 const REASONS = [
   { value: 'illegal', label: 'rpReasonIllegal' },
@@ -63,15 +64,12 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
             <div className="flex flex-col gap-1.5">
               {REASONS.map((r) => (
                 <label key={r.value} className="inline-flex items-center gap-2 text-body text-ink">
-                  <input
-                    type="radio"
+                  <Radio
                     name="reason"
                     value={r.value}
                     required
                     checked={reason === r.value}
-                    onChange={() => setReason(r.value)}
-                    className="accent-current"
-                  />
+                    onChange={() => setReason(r.value)} />
                   {t(r.label, lang)}
                 </label>
               ))}
@@ -111,7 +109,7 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
               tabIndex={-1}
               autoComplete="off"
               aria-hidden="true" className="absolute -left-[624.9375rem] w-0 opacity-0" />
-            <input type="hidden" name="templateId" value={templateId} />
+            <Radio type="hidden" name="templateId" value={templateId} />
 
             {state?.error && <div className="text-body-sm text-danger">{state.error}</div>}
           </form>

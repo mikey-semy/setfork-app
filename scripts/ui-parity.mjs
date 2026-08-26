@@ -57,11 +57,16 @@ const ROLES = [
     hint: 'нативный <input> текстового типа мимо примитива (долг Ф16 трека ui-system)',
     match: ({ tag, attrs }) => tag === 'input' && TEXTUAL.has(attr(attrs, 'type') ?? ''),
   },
-  {
+    {
     key: 'флажок',
-    primitive: 'Checkbox / Switch',
-    hint: 'нативный checkbox/radio: своя рамка, свой фокус, своя тач-цель',
-    match: ({ tag, attrs }) => tag === 'input' && ['checkbox', 'radio'].includes(attr(attrs, 'type') ?? ''),
+    primitive: 'Checkbox / Radio / Switch',
+    hint: 'нативный checkbox/radio: свой цвет, свой фокус, своя тач-цель',
+    // ⚠️ Спрятанный `sr-only` нативный input под своей карточкой-подписью — это НЕ
+    // самопал, а признанный приём: семантика и клавиатура остаются нативными, вид
+    // рисует label (`has-checked:` в его классах). Заменять его примитивом нечем и
+    // незачем — счётчик, считающий такое нарушением, гонит людей портить рабочее.
+    match: ({ tag, attrs, cls }) =>
+      tag === 'input' && ['checkbox', 'radio'].includes(attr(attrs, 'type') ?? '') && !cls.includes('sr-only'),
   },
   {
     key: 'многострочное поле',

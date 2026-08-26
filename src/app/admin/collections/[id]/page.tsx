@@ -14,6 +14,7 @@ import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
+import { Checkbox } from '@/shared/ui/checkbox'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,7 +44,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
 
       {/* Метаданные */}
       <form action={updateCollection} className={cardClass({ pad: 'lg', className: 'flex flex-col gap-4' })}>
-        <input type="hidden" name="id" value={c.id} />
+        <Checkbox type="hidden" name="id" value={c.id} />
         <Field label={ru ? 'Название' : 'Title'}>
           <Input name="title" required defaultValue={tr(c.title, lang)} maxLength={120} />
         </Field>
@@ -55,7 +56,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
           <label className="text-body-sm font-semibold text-ink-2">{ru ? 'Акцент (hex)' : 'Accent (hex)'}</label>
           <Input name="accent" defaultValue={c.accent ?? ''} placeholder="#2159d6" className="max-w-field font-mono" />
           <label className="ml-auto inline-flex items-center gap-2 text-body text-ink">
-            <input type="checkbox" name="published" defaultChecked={c.published} /> {ru ? 'Опубликовано' : 'Published'}
+            <Checkbox name="published" defaultChecked={c.published} /> {ru ? 'Опубликовано' : 'Published'}
           </label>
         </div>
         <div className={buttonClass({ variant: 'ghost', className: 'justify-end' })}>
@@ -74,7 +75,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
           )}
         </div>
         <form action={setCollectionCover} className="flex items-center gap-2">
-          <input type="hidden" name="id" value={c.id} />
+          <Checkbox type="hidden" name="id" value={c.id} />
           <input type="file" name="file" accept="image/*" required className={buttonClass({ variant: 'ghost' })} />
           <button type="submit" className={buttonClass()}>
             <ImagePlus size={14} /> {ru ? 'Загрузить' : 'Upload'}
@@ -90,7 +91,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         {e === 'notfound' && <Alert variant="warn" className="mb-3">{ru ? 'Не найдено по этой ссылке.' : 'Nothing found for that reference.'}</Alert>}
 
         <form action={addCollectionItem} className="mb-3 flex flex-wrap items-center gap-2">
-          <input type="hidden" name="collectionId" value={c.id} />
+          <Checkbox type="hidden" name="collectionId" value={c.id} />
           <div className="inline-flex overflow-hidden rounded-md border border-border">
             <label className="cursor-pointer px-3 py-2 text-body text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
               <input type="radio" name="kind" value="list" defaultChecked className="sr-only" /> {ru ? 'Список' : 'List'}

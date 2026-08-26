@@ -16,6 +16,7 @@ import { createRelease } from '@/features/releases/actions'
 import { VersionSelect } from '@/features/releases/VersionSelect'
 import { ReleaseNotesGen } from '@/features/releases/ReleaseNotesGen'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { Checkbox } from '@/shared/ui/checkbox'
 
 const ERR: Record<string, TKey> = {
   badtag: 'release.errBadtag',
@@ -100,7 +101,7 @@ export default async function NewReleasePage({
             }}
           />
           <label className="flex cursor-pointer items-center gap-2.5 text-body">
-            <input type="checkbox" name="prerelease" className="size-4 accent-accent" />
+            <Checkbox name="prerelease" />
             <span className="font-medium text-ink">{t('preRelease', lang)}</span>
             <span className="text-muted">— {t('preReleaseHint', lang)}</span>
           </label>
