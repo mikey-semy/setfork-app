@@ -8,6 +8,7 @@ import { setFeedbackStatus } from './actions'
 import type { FeedbackFilter, FeedbackItem } from './queries'
 import { cardClass } from '@/shared/ui/card-style'
 import { Badge } from '@/shared/ui/badge'
+import { buttonClass } from '@/shared/ui/button-style'
 
 const CAT_LABEL = {
   bug: 'fbCatBug',
@@ -26,8 +27,6 @@ function StatusBadge({ status, lang }: { status: FeedbackItem['status']; lang: L
 function Row({ item, lang }: { item: FeedbackItem; lang: Lang }) {
   const [pending, start] = useTransition()
   const setStatus = (status: FeedbackItem['status']) => start(async () => setFeedbackStatus(item.id, status))
-  const btn =
-    'rounded-md border border-border bg-surface px-2.5 py-1 text-body-sm font-semibold text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50'
 
   return (
     <div className={cardClass()}>
@@ -50,17 +49,17 @@ function Row({ item, lang }: { item: FeedbackItem; lang: Lang }) {
       {item.pageUrl && <p className="mt-2 break-all text-caption text-muted">{item.pageUrl}</p>}
       <div className="mt-3 flex gap-2">
         {item.status !== 'seen' && (
-          <button type="button" disabled={pending} onClick={() => setStatus('seen')} className={btn}>
+          <button type="button" disabled={pending} onClick={() => setStatus('seen')} className={buttonClass({ variant: 'outline', size: 'sm' })}>
             {t('fbStatusSeen', lang)}
           </button>
         )}
         {item.status !== 'done' && (
-          <button type="button" disabled={pending} onClick={() => setStatus('done')} className={btn}>
+          <button type="button" disabled={pending} onClick={() => setStatus('done')} className={buttonClass({ variant: 'outline', size: 'sm' })}>
             {t('fbStatusDone', lang)}
           </button>
         )}
         {item.status !== 'new' && (
-          <button type="button" disabled={pending} onClick={() => setStatus('new')} className={btn}>
+          <button type="button" disabled={pending} onClick={() => setStatus('new')} className={buttonClass({ variant: 'outline', size: 'sm' })}>
             {t('fbStatusNew', lang)}
           </button>
         )}

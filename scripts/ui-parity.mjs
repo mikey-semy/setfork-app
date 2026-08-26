@@ -37,15 +37,19 @@ const ROLES = [
     key: 'кнопка',
     primitive: 'Button / IconButton / SubmitButton / buttonClass',
     hint: 'рукописный <button> с оформлением: свой фон, рамка, скругление или отступы',
-    match: ({ tag, cls }) =>
-      tag === 'button' && cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
+    // ⚠️ `className={buttonClass(…)}` — это ОБЩИЙ РЕЦЕПТ, а не самопал: вид, высота,
+    // фокус и тач-цель приходят оттуда же, откуда у Button. Так пишут кнопку отправки
+    // серверной формы, и считать её нарушением — врать замером. Первая версия счётчика
+    // именно это и делала: 62 законных места лежали в «невидимках» и раздували число.
+    match: ({ tag, cls, attrs }) =>
+      tag === 'button' && !/buttonClass\(/.test(attrs) && cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
   },
   {
     key: 'кнопка-невидимка',
     primitive: 'IconButton (или сознательный disable с причиной)',
-    hint: 'рукописный <button> без оформления — часто законно (пункт меню, обёртка), но и он мимо тач-цели',
-    match: ({ tag, cls }) =>
-      tag === 'button' && !cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
+    hint: 'голый <button> без вида и без общего рецепта — часто законно (обёртка, карточка), но мимо тач-цели и фокуса',
+    match: ({ tag, cls, attrs }) =>
+      tag === 'button' && !/buttonClass\(/.test(attrs) && !cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
   },
   {
     key: 'поле',

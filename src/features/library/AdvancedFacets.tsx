@@ -8,6 +8,7 @@ import { SearchField } from '@/shared/ui/SearchField'
 import { buildSearchQuery, parseSearchQuery, type ParsedQuery } from './search-query'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
+import { MenuItem } from '@/shared/ui/MenuItem'
 
 /**
  * Боковые фасеты в стиле GitHub: клик-переключатели (Type/Verified/Tags) дописывают
@@ -69,10 +70,6 @@ export function AdvancedFacets({
     return [...selected, ...rest]
   }, [tags, tagFilter, parsed.tags])
 
-  const row = (active: boolean) =>
-    `flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-body outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong ${
-      active ? 'bg-surface font-semibold text-ink' : 'text-ink-2 hover:bg-surface hover:text-ink'
-    }`
 
   return (
     <div>
@@ -82,15 +79,15 @@ export function AdvancedFacets({
       <div className="mb-4">
         <div className="mb-1 px-2 text-caption font-semibold uppercase tracking-wider text-muted">{t('filterType', lang)}</div>
         <div className="flex flex-col gap-0.5">
-          <button type="button" onClick={() => setType(undefined)} className={row(!parsed.type)}>
+          <MenuItem onClick={() => setType(undefined)} active={!parsed.type}>
             <Layers size={14} className="shrink-0 text-muted" /> {t('filterAllTypes', lang)}
-          </button>
-          <button type="button" onClick={() => setType('ordered')} className={row(parsed.type === 'ordered')}>
+          </MenuItem>
+          <MenuItem onClick={() => setType('ordered')} active={parsed.type === 'ordered'}>
             <ListOrdered size={14} className="shrink-0 text-muted" /> {t('orderedLabel', lang)}
-          </button>
-          <button type="button" onClick={() => setType('unordered')} className={row(parsed.type === 'unordered')}>
+          </MenuItem>
+          <MenuItem onClick={() => setType('unordered')} active={parsed.type === 'unordered'}>
             <List size={14} className="shrink-0 text-muted" /> {t('unorderedLabel', lang)}
-          </button>
+          </MenuItem>
         </div>
       </div>
 
@@ -117,14 +114,14 @@ export function AdvancedFacets({
                 shownTags.map((tg) => {
                   const on = parsed.tags.includes(tg.tag)
                   return (
-                    <button key={tg.tag} type="button" onClick={() => toggleTag(tg.tag)} className={row(on)}>
+                    <MenuItem key={tg.tag} onClick={() => toggleTag(tg.tag)} active={on}>
                       <span className="truncate">{tg.tag}</span>
                       {on ? (
                         <Check size={13} className="ml-auto shrink-0 text-accent" />
                       ) : (
                         <span className="ml-auto shrink-0 font-mono text-caption text-muted">{tg.count}</span>
                       )}
-                    </button>
+                    </MenuItem>
                   )
                 })
               )}
@@ -137,19 +134,17 @@ export function AdvancedFacets({
       <div className="mt-5 border-t border-border pt-3">
         <div className="mb-1 px-2 text-caption font-semibold uppercase tracking-wider text-muted">{t('advancedFilters', lang)}</div>
         <div className="flex flex-col gap-0.5">
-          <button type="button" onClick={() => insertQualifier('by:')} className={advRow}>
+          <MenuItem onClick={() => insertQualifier('by:')}>
             <Plus size={13} className="shrink-0 text-muted" /> {t('filterAuthor', lang)}
             <code className="ml-auto font-mono text-caption text-muted">by:</code>
-          </button>
-          <button type="button" onClick={() => insertQualifier('stars:>')} className={advRow}>
+          </MenuItem>
+          <MenuItem onClick={() => insertQualifier('stars:>')}>
             <Plus size={13} className="shrink-0 text-muted" /> {t('filterMinStars', lang)}
             <code className="ml-auto font-mono text-caption text-muted">stars:</code>
-          </button>
+          </MenuItem>
         </div>
       </div>
     </div>
   )
 }
 
-const advRow =
-  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body text-ink-2 outline-hidden hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong'

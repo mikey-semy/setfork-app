@@ -13,12 +13,10 @@ import { Spinner } from '@/shared/ui/Spinner'
 import { Badge } from '@/shared/ui/badge'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Input } from '@/shared/ui/input'
+import { Chip } from '@/shared/ui/Chip'
 
 // Чистая — на модульном уровне, а не в теле компонента (react-doctor:
 // пересборка на каждый рендер ломает мемоизацию детей).
-const pill = (active: boolean) =>
-  `rounded-md px-2.5 py-1 text-body-sm font-medium ${active ? 'bg-primary text-primary-fg' : 'border border-border text-ink-2 hover:text-ink'}`
-
 function Copyable({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState(false)
   return (
@@ -120,19 +118,19 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-body-sm">
         <div className="flex items-center gap-1.5">
           <span className="text-muted">{ru ? 'Доступ:' : 'Access:'}</span>
-          <button type="button" onClick={() => setScope('write')} className={pill(scope === 'write')}>
+          <Chip onClick={() => setScope('write')} selected={scope === 'write'}>
             {ru ? 'чтение+запись' : 'read + write'}
-          </button>
-          <button type="button" onClick={() => setScope('read')} className={pill(scope === 'read')}>
+          </Chip>
+          <Chip onClick={() => setScope('read')} selected={scope === 'read'}>
             {ru ? 'только чтение' : 'read-only'}
-          </button>
+          </Chip>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-muted">{ru ? 'Истекает:' : 'Expires:'}</span>
           {EXPIRY.map((e) => (
-            <button key={e.d} type="button" onClick={() => setExpiryDays(e.d)} className={pill(expiryDays === e.d)}>
+            <Chip key={e.d} onClick={() => setExpiryDays(e.d)} selected={expiryDays === e.d}>
               {ru ? e.ru : e.en}
-            </button>
+            </Chip>
           ))}
         </div>
       </div>

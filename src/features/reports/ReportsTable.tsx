@@ -8,6 +8,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { setReportStatus } from './actions'
 import type { ReportFilter, ReportItem } from './queries'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 const REASON_LABEL = {
   illegal: 'rpReasonIllegal',
@@ -33,8 +34,6 @@ function StatusBadge({ status, lang }: { status: ReportItem['status']; lang: Lan
 function Row({ item, lang }: { item: ReportItem; lang: Lang }) {
   const [pending, start] = useTransition()
   const setStatus = (status: ReportItem['status']) => start(async () => setReportStatus(item.id, status))
-  const btn =
-    'rounded-md border border-border bg-surface px-2.5 py-1 text-body-sm font-semibold text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50'
   const listPath = item.ownerHandle ? `/${item.ownerHandle}/${item.listSlug}` : null
 
   return (
@@ -66,12 +65,12 @@ function Row({ item, lang }: { item: ReportItem; lang: Lang }) {
         {(['reviewed', 'actioned', 'dismissed'] as const)
           .filter((s) => s !== item.status)
           .map((s) => (
-            <button key={s} type="button" disabled={pending} onClick={() => setStatus(s)} className={btn}>
+            <button key={s} type="button" disabled={pending} onClick={() => setStatus(s)} className={buttonClass({ variant: 'outline', size: 'sm' })}>
               {t(STATUS_LABEL[s], lang)}
             </button>
           ))}
         {item.status !== 'new' && (
-          <button type="button" disabled={pending} onClick={() => setStatus('new')} className={btn}>
+          <button type="button" disabled={pending} onClick={() => setStatus('new')} className={buttonClass({ variant: 'outline', size: 'sm' })}>
             {t('rpStatusNew', lang)}
           </button>
         )}
