@@ -117,7 +117,7 @@ export function FormSaveBar({ lang }: { lang: Lang }) {
           // садится НАД полосой, а не поверх «Сохранить» (см. ScrollToTop).
           data-sticky-input
           style={gap ? { bottom: gap } : undefined}
-          className="sf-rise-in fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
+          className="animate-sf-rise fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
         >
           <div className={`${PAGE_X} flex items-center justify-between gap-3 py-2.5`}>
             {/* На телефоне текста нет: там важнее две крупные кнопки, а не пояснение. */}

@@ -42,7 +42,7 @@ export function NewIssueForm({ owner, slug, lang, custom = [] }: { owner: string
           autoFocus
           maxLength={200}
         />
-        <div className={`grid overflow-hidden transition-all duration-200 ${error ? 'mt-1.5 grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className={`grid overflow-hidden transition-all dur-base ${error ? 'mt-1.5 grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
           <p className="min-h-0 overflow-hidden text-body-sm text-danger">{t('titleRequired', lang)}</p>
         </div>
       </div>

@@ -52,12 +52,12 @@ export function DayTip({ anchor }: { anchor: TipAnchor }) {
   if (!host) return null
 
   // Появление — ТОЛЬКО прозрачностью: transform у подсказки занят центрированием
-  // и переворотом, а .sf-pop-in анимирует именно его — подсказка прыгала бы вбок.
+  // и переворотом, а .animate-sf-pop анимирует именно его — подсказка прыгала бы вбок.
   return createPortal(
     <div
       ref={ref}
       aria-hidden
-      className={`sf-fade-in pointer-events-none fixed z-50 whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-caption leading-snug text-ink shadow-card ${place ? '' : 'opacity-0'}`}
+      className={`animate-sf-fade pointer-events-none fixed z-50 whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-caption leading-snug text-ink shadow-card ${place ? '' : 'opacity-0'}`}
       style={{
         left: place?.left ?? anchor.x,
         top: place?.top ?? anchor.top - GAP,

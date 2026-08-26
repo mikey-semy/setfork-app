@@ -69,9 +69,9 @@ function MotionDemo({ lang }: { lang: Lang }) {
   return (
     <div className="flex flex-col gap-3">
       <div key={run} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className={cn2('sf-overlay-in', box)}>sf-overlay-in</div>
-        <div className={cn2('sf-pop-in', box)}>sf-pop-in</div>
-        <div className={cn2('sf-rise-in', box)}>sf-rise-in</div>
+        <div className={cn2('animate-sf-fade', box)}>animate-sf-fade</div>
+        <div className={cn2('animate-sf-pop', box)}>animate-sf-pop</div>
+        <div className={cn2('animate-sf-rise', box)}>animate-sf-rise</div>
       </div>
       <div>
         <Button size="sm" variant="ghost" onClick={() => setRun((v) => v + 1)}>

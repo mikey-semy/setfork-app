@@ -147,7 +147,7 @@ function Body<T extends TopicList | ListEvent>({
   className?: string
 }) {
   return (
-    <div className={`sf-rise-in sf-slow ${className}`}>
+    <div className={`animate-sf-rise sf-slow ${className}`}>
       {details.failed ? (
         <div className="flex flex-wrap items-center gap-3 py-1">
           <p className="text-body-sm text-danger">{t('profile.activity.loadFailed', lang)}</p>

@@ -1968,7 +1968,7 @@ export const en = {
   'admin.theResultAlwaysDraft': 'The result is always a DRAFT — a machine-written list is never published without a human. Auto mode also respects the daily AI spend ceiling.',
   'admin.thisProviderDoesNot': 'This provider does not expose prices via API — check the provider console.',
   'admin.threeIndependentChecksCan': 'Three independent checks — can it be followed, are specifics invented, is it a usable starting point. The quorum is counted in code and fails closed: a check that says “unsure” or does not answer keeps the list a draft. Costs 3 calls per list checked; “Off” spends nothing.',
-  'admin.tokensFast120Base': 'Tokens: fast 120 / base 180 / slow 280ms, one ease-out. Three entrance classes: sf-overlay-in (backdrops), sf-pop-in (popovers/dropdowns/panels), sf-rise-in (bottom bars). prefers-reduced-motion kills all animation globally.',
+  'admin.tokensFast120Base': 'Tokens: fast 120 / base 180 / slow 280ms, one ease-out. Three entrance classes: animate-sf-fade (backdrops), animate-sf-pop (popovers/dropdowns/panels), animate-sf-rise (bottom bars). prefers-reduced-motion kills all animation globally.',
   'admin.trafficGoesThroughSelectel': 'Traffic goes through Selectel (RU), prices in ₽. Foreign models are still called at their APIs — pick RU-hosted models for strict compliance.',
   'admin.variantsSizesButtonText': 'Variants × sizes; button text is 1–2 short words, icon + aria-label on mobile.',
   'admin.whenBalanceDropsBelow': 'When the balance drops below this, generation switches to the fallback model. 0 = off.',

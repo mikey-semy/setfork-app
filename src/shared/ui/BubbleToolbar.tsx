@@ -78,7 +78,7 @@ export function BubbleToolbar({
   return (
     <div
       ref={barRef}
-      className="absolute z-30 flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5 shadow-lg transition-[top,left] duration-150 ease-out motion-reduce:transition-none"
+      className="absolute z-30 flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5 shadow-lg transition-[top,left] dur-fast ease-out motion-reduce:transition-none"
       style={{ top: Math.max(0, top), left: caret.left }}
       // Нажатие на панель не должно уводить фокус из поля — иначе выделение пропадёт.
       onMouseDown={(e) => e.preventDefault()}

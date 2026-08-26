@@ -327,38 +327,68 @@ textarea::placeholder {
   opacity: 0.55;
 }
 
-/* ── Моушен-система (Ф8 трека ui-system) ─────────────────────────────────
+/* ── Моушен-система (Ф8 трека ui-system; в тему Tailwind — 26.08.2026) ────
       Токены длительностей/изингов — ЕДИНСТВЕННЫЙ источник; свои ms в фичах
-      не пишем. Три класса появления:
-        .sf-overlay-in — бекдропы (fade);
-        .sf-pop-in     — поповеры/дропдауны/панели (fade + подъём + лёгкий scale);
-        .sf-rise-in    — нижние панели/бары (fade + подъём).
+      не пишем. Появление живёт УТИЛИТАМИ фреймворка, а не рукописными классами:
+        .animate-sf-fade — бекдропы и смена содержимого на месте;
+        .animate-sf-pop  — поповеры/дропдауны/панели (fade + подъём + лёгкий scale);
+        .animate-sf-rise — нижние панели/бары (fade + подъём).
+      До переезда это были свои классы `.sf-pop-in` — то есть слово `animate-`
+      в разметке ничего не значило, а половина мест писала длительность числом
+      (`duration-200` при токене 180). Теперь всё в одном пространстве имён.
+
+      `.sf-overlay-in` и `.sf-fade-in` были ОДНИМ И ТЕМ ЖЕ правилом под двумя
+      именами (обе — `sf-fade`); слились в одно.
+
       prefers-reduced-motion гасит ВСЁ глобально (блок ниже). ── */
 :root {
   --dur-fast: 120ms;
   --dur-base: 180ms;
   --dur-slow: 280ms;
+}
+
+@theme {
+  /* Изинг проекта ЗАМЕЩАЕТ дефолтный `ease-out` Tailwind: кривая у нас одна на всё,
+     и утилита `ease-out` обязана давать именно её — иначе рядом живут две разные
+     «плавности», одна из которых пришла из коробки незаметно. */
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+  --animate-sf-fade: sf-fade var(--dur-base) var(--ease-out);
+  --animate-sf-pop: sf-pop var(--dur-base) var(--ease-out);
+  --animate-sf-rise: sf-rise var(--dur-base) var(--ease-out);
+
+  @keyframes sf-fade {
+    from { opacity: 0; }
+  }
+  @keyframes sf-pop {
+    from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  }
+  @keyframes sf-rise {
+    from { opacity: 0; transform: translateY(8px); }
+  }
 }
-@keyframes sf-fade {
-  from { opacity: 0; }
-}
-@keyframes sf-pop {
-  from { opacity: 0; transform: translateY(4px) scale(0.98); }
-}
-@keyframes sf-rise {
-  from { opacity: 0; transform: translateY(8px); }
-}
-.sf-overlay-in { animation: sf-fade var(--dur-base) var(--ease-out); }
-/* Смена текста/контента НА МЕСТЕ (заголовок ленты активности, счётчики): без него
-   подмена читается как рывок, а подъём тут лишний — блок никуда не приезжает. */
-.sf-fade-in { animation: sf-fade var(--dur-base) var(--ease-out); }
-.sf-pop-in { animation: sf-pop var(--dur-base) var(--ease-out); }
-.sf-rise-in { animation: sf-rise var(--dur-base) var(--ease-out); }
+
 /* Модификатор скорости: крупному блоку (лента активности, раскрытый уровень)
    базовых 180 мс мало — движение большой площади читается рывком. Ставится
    ПОСЛЕ класса появления, иначе не переопределит длительность. */
-.sf-slow { animation-duration: var(--dur-slow); }
+@utility sf-slow {
+  animation-duration: var(--dur-slow);
+}
+
+/* Длительность ПЕРЕХОДА из токенов. У Tailwind нет пространства имён темы под
+   `duration-*`, поэтому это свои утилиты — но именно утилиты: они получают
+   варианты (`md:`, `hover:`) и видны в разметке как часть системы, а не как
+   число. До них в коде стояли `duration-200` и `duration-150` — соседние с
+   токенами 180 и 120, то есть разнобой ровно там, где токены и заведены. */
+@utility dur-fast {
+  transition-duration: var(--dur-fast);
+}
+@utility dur-base {
+  transition-duration: var(--dur-base);
+}
+@utility dur-slow {
+  transition-duration: var(--dur-slow);
+}
 
 /* ── ОЖИДАНИЕ, КОТОРОЕ НЕ МИГАЕТ ─────────────────────────────────────────
    Индикатор загрузки, показанный на 100 мс, — это не сообщение, а мигание: глаз
@@ -399,61 +429,66 @@ textarea::placeholder {
 }
 
 /* Клетка сетки индексации «лопается» при заполнении. */
-@keyframes cell-pop {
-  0% {
-    transform: scale(0.3);
+@theme {
+  --animate-cell-pop: cell-pop var(--dur-slow) var(--ease-out);
+
+  @keyframes cell-pop {
+    0% {
+      transform: scale(0.3);
+    }
+    55% {
+      transform: scale(1.18);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
-  55% {
-    transform: scale(1.18);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-.animate-cell-pop {
-  animation: cell-pop var(--dur-slow) var(--ease-out);
 }
 
 /* Одноразовая точка-подсказка у меню публикации: при первом открытии она
    расширяется короткой вспышкой и исчезает, будто лопнула. */
-@keyframes sf-hint-burst {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgb(var(--warn-rgb) / 0.55);
+@theme {
+  --animate-sf-hint-burst: sf-hint-burst var(--dur-slow) var(--ease-out) forwards;
+
+  @keyframes sf-hint-burst {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgb(var(--warn-rgb) / 0.55);
+    }
+    45% {
+      opacity: 1;
+      transform: scale(1.45);
+      box-shadow: 0 0 0 3px rgb(var(--warn-rgb) / 0.3);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(2.4);
+      box-shadow: 0 0 0 7px rgb(var(--warn-rgb) / 0);
+    }
   }
-  45% {
-    opacity: 1;
-    transform: scale(1.45);
-    box-shadow: 0 0 0 3px rgb(var(--warn-rgb) / 0.3);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(2.4);
-    box-shadow: 0 0 0 7px rgb(var(--warn-rgb) / 0);
-  }
-}
-.sf-hint-burst {
-  animation: sf-hint-burst var(--dur-slow) var(--ease-out) forwards;
 }
 
 /* Плавное появление сменяемой фразы в лоадере генерации. */
-@keyframes fadein {
-  from {
-    opacity: 0;
-    transform: translateY(3px);
+@theme {
+  /* лоадер генерации: намеренно медленнее базовых токенов */
+  --animate-fadein: fadein 500ms var(--ease-out);
+
+  @keyframes fadein {
+    from {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-fadein {
-  animation: fadein 500ms var(--ease-out); /* лоадер генерации: намеренно медленнее базовых токенов */
 }
 
-/* Логотип SetFork — шрифт с прямыми углами (см. layout, --font-logo). */
-.font-logo {
+/* Логотип SetFork — шрифт с прямыми углами (см. layout, --font-logo). Утилитой,
+   а не голым классом: получает варианты и стоит в одном ряду с font-sans/font-mono. */
+@utility font-logo {
   font-family: var(--font-logo), var(--font-sans);
   letter-spacing: 0.02em;
 }
@@ -461,16 +496,17 @@ textarea::placeholder {
 /* Плавное появление бокового меню: затемнение фона (общий .sf-overlay-in) +
    выезд панели слева. Дубль fade-in удалён — бекдроп берёт sf-fade;
    reduced-motion — глобальным блоком моушен-системы выше. */
-@keyframes slide-in-left {
-  from {
-    transform: translateX(-100%);
+@theme {
+  --animate-slide-in-left: slide-in-left var(--dur-slow) var(--ease-out);
+
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
   }
-  to {
-    transform: translateX(0);
-  }
-}
-.animate-slide-in-left {
-  animation: slide-in-left var(--dur-slow) var(--ease-out);
 }
 
 /* Emoji-mart: подгоняем фон/текст/инпут под наши токены (иначе фон отличается),

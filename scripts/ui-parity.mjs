@@ -109,17 +109,60 @@ const ROLES = [
   },
 ]
 
+/**
+ * ВТОРАЯ СЕМЬЯ: значение написано числом там, где для него есть токен темы.
+ *
+ * Роль выше — про компонент («кнопку нарисовали руками»), эта — про значение
+ * («кегль/цвет/длительность написали числом мимо @theme»). Вопрос один и тот же:
+ * взято ли из общего места. Поэтому и счётчик один, и храповик один.
+ *
+ * Исключаются вычисления (`calc`, `%`, `vh/vw`, `ch`, `em`, `--var`): это не значение
+ * из шкалы, а выражение — токеном оно не станет.
+ */
+const COMPUTED = /calc\(|%|\d(?:vh|vw|ch)\]|(?:^|[^r])em\]|var\(|\(--|\bfr\]|auto\]|100dvh|min\(|max\(|clamp\(/
+const VALUES = [
+  { key: 'кегль числом', token: 'ступень --text-* из @theme', re: /text-\[[^\]]+\]/g },
+  { key: 'цвет сырой переменной', token: 'утилита цвета из @theme (bg-accent-soft)', raw: true, re: /(?:bg|text|border|ring|fill|stroke|from|to|via|accent|outline|divide)-\(--[a-z0-9-]+\)/g },
+  { key: 'длительность числом', token: 'dur-fast / dur-base / dur-slow', re: /(?:duration|delay)-\[[^\]]+\]|(?<![\w-])duration-\d+/g },
+  { key: 'ширина числом', token: 'роль ширины (панель/меню/диалог) — шкалы пока НЕТ', re: /(?:max-|min-)?w-\[[^\]]+\]/g },
+  { key: 'высота числом', token: 'шкала контролов CONTROL_H / роль высоты', re: /(?:max-|min-)?h-\[[^\]]+\]/g },
+  { key: 'радиус числом', token: '--radius-* из @theme (rounded-md/lg/xl)', re: /rounded(?:-[trbl]{1,2})?-\[[^\]]+\]/g },
+  { key: 'отступ числом', token: 'шаг сетки 4px (p-1 … p-8)', re: /(?<![\w-])[pm][xytblr]?-\[[^\]]+\]/g },
+  { key: 'слой числом', token: 'словарь z-слоёв LAYER из control.ts', re: /(?<![\w-])z-\[[^\]]+\]/g },
+  { key: 'тень числом', token: '--shadow-* из @theme (shadow-card)', re: /shadow-\[[^\]]+\]/g },
+]
+
 const only = process.argv.slice(2).find((a) => !a.startsWith('--'))
 const LIST = process.argv.includes('--list')
 const JSON_OUT = process.argv.includes('--json')
 const roles = ROLES.filter((r) => !only || r.key.includes(only))
 
-const hits = new Map(roles.map((r) => [r.key, []]))
+const values = VALUES.filter((v) => !only || v.key.includes(only))
+const hits = new Map([...roles, ...values].map((r) => [r.key, []]))
 
-for (const file of walkFiles(SRC, ['.tsx'])) {
+// Значения считаем и в .ts тоже: рецепты классов живут в константах (control.ts,
+// button-style.ts, HERO_INPUT), и там разнобой прячется охотнее, чем в разметке.
+for (const file of walkFiles(SRC, ['.tsx', '.ts'])) {
   const path = rel(file)
-  if (HOME.test(path)) continue
   const src = readFileSync(file, 'utf8')
+
+  // Строки-комментарии выбрасываем: в них живут ПРИМЕРЫ значений («ловим text-[..px]»),
+  // и без этого счётчик считал бы собственную документацию за нарушение. Убираем только
+  // целиком-комментарные строки — вырезать хвостовые опасно, в коде есть «https://».
+  const code = src
+    .split('\n')
+    .map((l) => (/^\s*(\/\/|\*|\/\*)/.test(l) ? '' : l))
+    .join('\n')
+
+  for (const v of values) {
+    v.re.lastIndex = 0
+    for (const m of code.matchAll(v.re)) {
+      if (!v.raw && COMPUTED.test(m[0])) continue
+      hits.get(v.key).push({ path, line: src.slice(0, m.index).split('\n').length, tag: m[0] })
+    }
+  }
+
+  if (HOME.test(path) || !path.endsWith('.tsx')) continue
   for (const el of tags(src)) {
     const cls = classesOf(el.attrs)
     for (const role of roles) {
@@ -132,7 +175,7 @@ if (JSON_OUT) {
   // Ключи сортируем: слепок читают глазами в дифференциале, и порядок обхода каталогов
   // не должен перетасовывать файл при каждом пересъёме.
   const out = {}
-  for (const role of [...roles].sort((a, b) => a.key.localeCompare(b.key, 'ru'))) {
+  for (const role of [...roles, ...values].sort((a, b) => a.key.localeCompare(b.key, 'ru'))) {
     const byFile = {}
     for (const h of hits.get(role.key)) byFile[h.path] = (byFile[h.path] ?? 0) + 1
     out[role.key] = Object.fromEntries(Object.entries(byFile).sort(([a], [b]) => a.localeCompare(b)))
@@ -141,20 +184,24 @@ if (JSON_OUT) {
   process.exit(0)
 }
 
-console.log('РОЛЬ ПЕРЕОТКРЫТА РУКАМИ (вне src/shared/ui)\n')
-const rows = roles
-  .map((r) => ({ role: r, list: hits.get(r.key) }))
-  .sort((a, b) => b.list.length - a.list.length)
-for (const { role, list } of rows) {
-  const files = new Set(list.map((h) => h.path)).size
-  console.log(`${String(list.length).padStart(4)} мест в ${String(files).padStart(3)} файлах  ${role.key}`)
-  console.log(`                            → ${role.primitive}`)
-  if (list.length) {
-    const top = [...list.reduce((m, h) => m.set(h.path, (m.get(h.path) ?? 0) + 1), new Map())]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-    console.log(`                            ${top.map(([f, n]) => `${f} ×${n}`).join(' · ')}`)
+const table = (title, defs, label) => {
+  console.log(title)
+  const rows = defs.map((r) => ({ role: r, list: hits.get(r.key) })).sort((a, b) => b.list.length - a.list.length)
+  for (const { role, list } of rows) {
+    const files = new Set(list.map((h) => h.path)).size
+    console.log(`${String(list.length).padStart(4)} мест в ${String(files).padStart(3)} файлах  ${role.key}`)
+    console.log(`                            → ${role[label]}`)
+    if (list.length) {
+      const top = [...list.reduce((m, h) => m.set(h.path, (m.get(h.path) ?? 0) + 1), new Map())]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+      console.log(`                            ${top.map(([f, n]) => `${f} ×${n}`).join(' · ')}`)
+    }
+    if (LIST) for (const h of list) console.log(`      ${h.path}:${h.line} ${h.tag}`)
   }
-  if (LIST) for (const h of list) console.log(`      ${h.path}:${h.line} <${h.tag}>`)
+  return rows.reduce((a, r) => a + r.list.length, 0)
 }
-console.log(`\nвсего мест: ${rows.reduce((a, r) => a + r.list.length, 0)}`)
+
+const a = table('РОЛЬ ПЕРЕОТКРЫТА РУКАМИ (вне src/shared/ui)\n', roles, 'primitive')
+const b = table('\nЗНАЧЕНИЕ НАПИСАНО ЧИСЛОМ МИМО ТОКЕНА\n', values, 'token')
+console.log(`\nвсего мест: ${a + b} (ролей ${a}, значений ${b})`)

@@ -70,7 +70,7 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
               onFocus={() => setHovered(k)}
               onBlur={() => setHovered((h) => (h === k ? null : h))}
               tabIndex={open ? 0 : -1}
-              className={`absolute rounded-full shadow-md transition-[transform,opacity,color,background-color,border-color] duration-200 motion-reduce:transition-none ${
+              className={`absolute rounded-full shadow-md transition-[transform,opacity,color,background-color,border-color] dur-base motion-reduce:transition-none ${
                 lifted ? 'border-accent bg-accent-soft text-accent' : 'border-border bg-surface text-ink'
               }`}
               style={{
@@ -96,7 +96,7 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
               label={`${t('editor.repeat', lang)}: ${blockLabel(repeatType, lang)}`}
               onClick={() => pick(repeatType)}
               tabIndex={open ? 0 : -1}
-              className="absolute rounded-full shadow-md transition-all duration-200 motion-reduce:transition-none"
+              className="absolute rounded-full shadow-md transition-all dur-base motion-reduce:transition-none"
               style={{
                 transform: open ? `translate(0, ${RADIUS + 6}px) scale(1)` : 'translate(0,0) scale(0.3)',
                 opacity: open ? 1 : 0,

@@ -57,7 +57,7 @@ export function OverlayPanel({
 
   return createPortal(
     <div
-      className={`sf-overlay-in fixed inset-0 z-50 flex justify-center bg-black/30 p-4 ${align === 'center' ? 'items-center' : 'items-start pt-20'}`}
+      className={`animate-sf-fade fixed inset-0 z-50 flex justify-center bg-black/30 p-4 ${align === 'center' ? 'items-center' : 'items-start pt-20'}`}
       onClick={onClose}
     >
       <div
@@ -66,7 +66,7 @@ export function OverlayPanel({
         // Окно никогда не вырастает выше экрана: высоту ограничивает подложка
         // (max-h-full — это её content-box, уже без полей и верхнего отступа),
         // длинное содержимое прокручивается в теле, а шапка и футер стоят на месте.
-        className={`sf-pop-in flex max-h-full max-w-full flex-col rounded-lg border border-border bg-surface shadow-card ${className}`}
+        className={`animate-sf-pop flex max-h-full max-w-full flex-col rounded-lg border border-border bg-surface shadow-card ${className}`}
       >
         {title !== undefined && <PanelHead title={title} onClose={onClose} closeLabel={closeLabel} />}
         {/* Тело всегда с полями панели: раньше отступ задавал КАЖДЫЙ вызывающий,

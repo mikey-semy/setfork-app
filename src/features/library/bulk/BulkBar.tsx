@@ -143,7 +143,7 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
         // НАД полосой, а не поверх её кнопок (см. ScrollToTop).
         data-sticky-input
         style={gap ? { bottom: gap } : undefined}
-        className="sf-rise-in fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
+        className="animate-sf-rise fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
       >
         <div className={`${PAGE_X} flex items-center gap-2 py-2.5`}>
           {newCatalog === null ? (

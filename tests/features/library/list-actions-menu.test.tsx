@@ -34,7 +34,7 @@ describe('одноразовая подсказка публикации', () =>
 
     await user.click(trigger)
 
-    expect(dot).toHaveClass('sf-hint-burst')
+    expect(dot).toHaveClass('animate-sf-hint-burst')
     expect(window.localStorage.getItem('sf:publish-hint:draft-1')).toBe('1')
 
     await waitFor(() => expect(document.querySelector('[data-publish-hint]')).not.toBeInTheDocument())

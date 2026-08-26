@@ -156,7 +156,7 @@ export function ListActionsMenu({
               <span
                 data-publish-hint
                 aria-hidden
-                className={`absolute right-0.5 top-0.5 size-1.5 rounded-full bg-warn ${hintPhase === 'popping' ? 'sf-hint-burst' : ''}`}
+                className={`absolute right-0.5 top-0.5 size-1.5 rounded-full bg-warn ${hintPhase === 'popping' ? 'animate-sf-hint-burst' : ''}`}
               />
             )}
           </button>
