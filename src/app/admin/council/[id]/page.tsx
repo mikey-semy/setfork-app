@@ -15,6 +15,7 @@ import { ExpertSettings } from '@/features/admin/ExpertSettings'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Badge } from '@/shared/ui/badge'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * СТРАНИЦА СПЕЦИАЛИСТА (админу): его развитие И его настройки — в одном месте.
@@ -74,9 +75,8 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
 
   // min-w-0: у элемента грида ширина по умолчанию не меньше его min-content, и
   // карточка с длинным текстом распирала бы колонку даже при grid-cols-1.
-  const card = 'min-w-0 rounded-lg border border-border bg-surface p-4'
   const kpiCell = (icon: ReactNode, label: string, value: string, sub?: string) => (
-    <div className={card}>
+    <div className={cardClass({ className: 'min-w-0' })}>
       <div className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-muted">
         {icon} {label}
       </div>
@@ -160,7 +160,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className={card}>
+        <div className={cardClass({ className: 'min-w-0' })}>
           <div className="mb-2 text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.personaWorkingFrame', lang)}</div>
           <p className="whitespace-pre-wrap text-body leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{e.persona}</p>
           {e.code && (
@@ -178,7 +178,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           )}
 
         </div>
-        <div className={card}>
+        <div className={cardClass({ className: 'min-w-0' })}>
           <div className="mb-2 text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.recentCouncils', lang)}</div>
           {kpi.recent.length === 0 ? (
             <p className="text-body text-muted">{t('admin.hasNotBeenSummoned', lang)}</p>
@@ -203,7 +203,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
 
       {/* ЧЕМ ДУМАЕТ — рядом с формой, где эту модель и меняют. Без блока «модель» была просто
           строкой в селекте: непонятно, что она делает, чего стоит и что будет, если оставить пусто. */}
-      <div className={`${card} mb-5`}>
+      <div className={cardClass({ className: 'min-w-0 mb-5' })}>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.thinksWith', lang)}</span>
           <Link href="/admin/models" className="ml-auto inline-flex min-h-11 items-center gap-1 text-body-sm text-ink-2 hover:text-accent">

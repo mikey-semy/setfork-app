@@ -37,9 +37,7 @@
   "src/features/admin/ExpertSettings.tsx": 2,
   "src/features/admin/LandingEditor.tsx": 2,
   "src/features/dig/DigChat.tsx": 1,
-  "src/features/generation/GenerateForm.tsx": 3,
   "src/features/generation/GenerationChat.tsx": 1,
-  "src/features/git/CloneDropdown.tsx": 1,
   "src/features/issues/AssigneePicker.tsx": 1,
   "src/features/issues/LabelsManager.tsx": 1,
   "src/features/issues/MilestonePicker.tsx": 1,
@@ -76,6 +74,12 @@
  "поле": {},
  "поле без имени": {},
  "радиус числом": {},
+ "рецепт в константе файла": {
+  "src/app/[handle]/[slug]/ListStepCard.tsx": 1,
+  "src/features/admin/UiKitGallery.tsx": 1,
+  "src/features/library/DiffViews.tsx": 1,
+  "src/features/settings/AppearanceSettings.tsx": 1
+ },
  "слой поверх": {
   "src/features/git/BranchPicker.tsx": 1,
   "src/widgets/Sidebar.tsx": 1

@@ -94,6 +94,20 @@ const ROLES = [
     match: ({ cls }) => every(cls, /^rounded-full$/, /^p[xy]?-/),
   },
   {
+    key: 'рецепт в константе файла',
+    primitive: 'примитив или общий рецепт (cardClass, buttonClass, MenuItem, Chip)',
+    hint: 'константа вида `card`/`btn`/`row`/`pill` со ВСЕМ видом сразу: общая ровно на один файл',
+    // Корень K39* карты кластеров. Ловится не по имени, а по составу: строка, в которой
+    // сошлись скругление, отступ, рамка-или-фон и кегль, — это рецепт целой поверхности,
+    // и он обязан жить в примитиве. Считается по СТРОКЕ-ЛИТЕРАЛУ у объявления, поэтому
+    // видит и `const card = '…'`, и стрелку `const row = (on) => `…``.
+    //
+    // ⚠️ Такая константа ещё и прячет место от eslint-узд: они смотрят className, а тут
+    // className — это вызов. Поэтому проверка здесь, а не там.
+    match: () => false,
+    recipe: true,
+  },
+  {
     key: 'вкладки',
     primitive: 'TabNav',
     hint: 'свой ряд вкладок: свой индикатор, своя клавиатура',
@@ -222,6 +236,17 @@ for (const file of walkFiles(SRC, ['.tsx', '.ts'])) {
     .split('\n')
     .map((l) => (/^\s*(\/\/|\*|\/\*)/.test(l) ? '' : l))
     .join('\n')
+
+  // Рецепт в константе файла: ищем по составу классов у объявления.
+  for (const rule of roles.filter((r) => r.recipe)) {
+    const re = /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*(?:\([^)]*\)\s*=>\s*)?[`'"]([^`'"]{20,})[`'"]/g
+    for (const m of code.matchAll(re)) {
+      const cls = m[2]
+      const parts = [/rounded/, /(^|\s)(px-|py-|p-\d)/, /(^|\s)(border|bg-)/, /text-/].filter((x) => x.test(cls))
+      if (parts.length >= 3 && !HOME.test(path))
+        hits.get(rule.key).push({ path, line: code.slice(0, m.index).split('\n').length, tag: m[1] })
+    }
+  }
 
   for (const v of values) {
     v.re.lastIndex = 0

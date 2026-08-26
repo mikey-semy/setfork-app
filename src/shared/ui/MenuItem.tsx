@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import * as React from 'react'
 import { cn } from '@/shared/lib/cn'
 import { TEXT, TOUCH_MIN_H } from './control'
@@ -22,25 +23,33 @@ import { TEXT, TOUCH_MIN_H } from './control'
  */
 export function MenuItem({
   active = false,
+  href,
   className,
   ...props
-}: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'> & { active?: boolean }) {
+}: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'> & {
+  active?: boolean
+  /** Задан — это НАВИГАЦИЯ: строка меню рисуется ссылкой тем же видом (открывается в
+   *  новой вкладке, копируется, читается диктором как переход), а не кнопкой с
+   *  router.push. Тот же приём, что у `IconButton`: одна роль — один вид, независимо
+   *  от того, ведёт строка куда-то или делает что-то здесь. */
+  href?: string
+}) {
+  const shape = cn(
+    // eslint-disable-next-line no-restricted-syntax -- строка меню, высота от содержимого
+    'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-ink-2 transition-colors hover:bg-surface-2 disabled:pointer-events-none disabled:opacity-50',
+    TEXT.body,
+    TOUCH_MIN_H,
+    active && 'bg-surface-2 text-ink',
+    className,
+  )
+  if (href) {
+    return <Link href={href} className={shape} {...(props as React.AnchorHTMLAttributes<HTMLAnchorElement>)} />
+  }
   return (
     // Высоту строки МЕНЮ задаёт содержимое (бывает две строки текста), а не ступень
     // шкалы; из шкалы здесь тач-цель. Ровно тот случай, который узда называет
     // исключением: «строка меню — точечный disable с причиной». Девять таких
     // отключений по фичам сведены в одно — здесь.
-    <button
-      type="button"
-      className={cn(
-        // eslint-disable-next-line no-restricted-syntax -- строка меню, высота от содержимого
-        'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-ink-2 transition-colors hover:bg-surface-2 disabled:pointer-events-none disabled:opacity-50',
-        TEXT.body,
-        TOUCH_MIN_H,
-        active && 'bg-surface-2 text-ink',
-        className,
-      )}
-      {...props}
-    />
+    <button type="button" className={shape} {...props} />
   )
 }

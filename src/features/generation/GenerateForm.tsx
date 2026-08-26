@@ -12,6 +12,7 @@ import { startGeneration } from './actions'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Textarea } from '@/shared/ui/textarea'
 import { IconButton } from '@/shared/ui/IconButton'
+import { Chip } from '@/shared/ui/Chip'
 
 /**
  * Старт генерации как у поисковика: большое поле по центру + «живые» варианты-подсказки.
@@ -166,28 +167,13 @@ export function GenerateForm({
             целую генерацию при промахе. На узком экране пилюли переносятся, не прячутся. */}
         {!launching && (
           <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-body-sm">
-            <button
-              type="button"
-              onClick={() => setKind('')}
-              className={cn(
-                'rounded-full border px-2.5 py-0.75 transition-colors',
-                kind === '' ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink',
-              )}
-            >
+            <Chip onClick={() => setKind('')} selected={kind === ''}>
               {t('generation.auto', lang)}
-            </button>
+            </Chip>
             {LIST_KINDS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setKind(k)}
-                className={cn(
-                  'rounded-full border px-2.5 py-0.75 transition-colors',
-                  kind === k ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink',
-                )}
-              >
+              <Chip key={k} onClick={() => setKind(k)} selected={kind === k}>
                 {kindLabel(k, lang === 'ru')}
-              </button>
+              </Chip>
             ))}
           </div>
         )}
@@ -197,17 +183,9 @@ export function GenerateForm({
         {!launching && (
           <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-body-sm">
             {DETAIL_LEVELS.map((lv) => (
-              <button
-                key={lv}
-                type="button"
-                onClick={() => setDetail(lv)}
-                className={cn(
-                  'rounded-full border px-2.5 py-0.75 transition-colors',
-                  detail === lv ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink',
-                )}
-              >
+              <Chip key={lv} onClick={() => setDetail(lv)} selected={detail === lv}>
                 {detailLabel(lv, lang === 'ru')}
-              </button>
+              </Chip>
             ))}
           </div>
         )}
