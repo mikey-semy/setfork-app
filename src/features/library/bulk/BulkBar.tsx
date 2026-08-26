@@ -152,8 +152,11 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
                 {count}
                 <span className="ml-1 hidden font-normal text-ink-2 sm:inline">{t('bulk.selectedSuffix', lang)}</span>
               </span>
+              {/* Ступень ряда, а не своя: рядом стоят действия `md`, и `sm` читалась волной
+                  разных высот (правило Ф18 трека ui-system). Второстепенность показывает
+                  вариант ghost, а не рост. */}
               {count < allIds.length && (
-                <Button variant="ghost" size="sm" onClick={() => sel.set(allIds)} disabled={pending} className="shrink-0">
+                <Button variant="ghost" size="md" onClick={() => sel.set(allIds)} disabled={pending} className="shrink-0">
                   {/* На телефоне то же действие двумя словами: длинному тексту в кнопке там не место. */}
                   <span className="sm:hidden">{fill('bulk.selectAllShort', lang, { n: allIds.length })}</span>
                   <span className="max-sm:hidden">{fill('bulk.selectAll', lang, { n: allIds.length })}</span>

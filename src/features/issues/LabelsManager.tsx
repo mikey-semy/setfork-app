@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Loader2, Plus, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
+import { ColorSwatch } from '@/shared/ui/ColorSwatch'
 import { chipColors, type CustomLabel } from '@/shared/lib/labels'
 import { createLabel, deleteLabel } from './label-actions'
 import { buttonClass } from '@/shared/ui/button-style'
@@ -63,14 +64,7 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <div className="flex flex-wrap items-center gap-1">
           {PRESET.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setColor(c)}
-              aria-label={c}
-              style={{ backgroundColor: c }}
-              className={`h-5 w-5 rounded-full border ${color === c ? 'ring-2 ring-offset-1 ring-(--accent)' : 'border-black/10'}`}
-            />
+            <ColorSwatch key={c} color={c} selected={color === c} label={c} onSelect={() => setColor(c)} />
           ))}
         </div>
         <input

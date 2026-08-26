@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { TOUCH_BOX } from '@/shared/ui/control'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 import { BLOCK_TYPES, type BlockType } from '../blocks'
@@ -60,16 +61,16 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
         const Icon = BLOCK_ICON[type]
         return (
           <Tooltip key={type} label={blockLabel(type, lang)}>
-            <button
-              type="button"
-              aria-label={blockLabel(type, lang)}
+            <IconButton
+              size="lg"
+              label={blockLabel(type, lang)}
               onClick={() => pick(type)}
               onMouseEnter={() => setHovered(k)}
               onMouseLeave={() => setHovered((h) => (h === k ? null : h))}
               onFocus={() => setHovered(k)}
               onBlur={() => setHovered((h) => (h === k ? null : h))}
               tabIndex={open ? 0 : -1}
-              className={`absolute grid h-10 w-10 place-items-center rounded-full border shadow-md transition-[transform,opacity,color,background-color,border-color] duration-200 motion-reduce:transition-none ${
+              className={`absolute rounded-full shadow-md transition-[transform,opacity,color,background-color,border-color] duration-200 motion-reduce:transition-none ${
                 lifted ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border bg-surface text-ink'
               }`}
               style={{
@@ -80,7 +81,7 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
               }}
             >
               <Icon size={16} />
-            </button>
+            </IconButton>
           </Tooltip>
         )
       })}
@@ -89,12 +90,13 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
         const Icon = BLOCK_ICON[repeatType]
         return (
           <Tooltip label={`${t('editor.sameAsPrevious', lang)}: ${blockLabel(repeatType, lang)}`}>
-            <button
-              type="button"
-              aria-label={`${t('editor.repeat', lang)}: ${blockLabel(repeatType, lang)}`}
+            <IconButton
+              size="lg"
+              variant="primary"
+              label={`${t('editor.repeat', lang)}: ${blockLabel(repeatType, lang)}`}
               onClick={() => pick(repeatType)}
               tabIndex={open ? 0 : -1}
-              className="absolute grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-fg shadow-md transition-all duration-200 hover:opacity-90 motion-reduce:transition-none"
+              className="absolute rounded-full shadow-md transition-all duration-200 motion-reduce:transition-none"
               style={{
                 transform: open ? `translate(0, ${RADIUS + 6}px) scale(1)` : 'translate(0,0) scale(0.3)',
                 opacity: open ? 1 : 0,
@@ -103,7 +105,7 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
               }}
             >
               <Icon size={15} />
-            </button>
+            </IconButton>
           </Tooltip>
         )
       })()}

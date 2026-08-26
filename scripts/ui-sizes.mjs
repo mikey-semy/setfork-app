@@ -4,12 +4,8 @@
 //
 // Запуск: node scripts/ui-sizes.mjs [--list]
 // Отчёт по результатам: setfork-hq/research/2026-08-13-ui-sizes.md
-import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, relative } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { classesOf, readFileSync, rel, SRC, tags, walkFiles } from './lib/ui-scan.mjs'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const SRC = join(ROOT, 'src')
 const LIST = process.argv.includes('--list')
 
 /** Примитивы шкалы: высоту задают сами, пропом size. Класс h-* на них — нарушение. */
@@ -22,30 +18,19 @@ const INTERACTIVE = new Set(['button', 'input', 'select', 'textarea', 'a', 'Link
 
 const TAILWIND_PX = { 5: 20, 6: 24, 7: 28, 8: 32, 9: 36, 10: 40, 11: 44, 12: 48, 13: 52, 14: 56 }
 
-const files = []
-;(function walk(dir) {
-  for (const entry of readdirSync(dir)) {
-    const p = join(dir, entry)
-    if (statSync(p).isDirectory()) walk(p)
-    else if (p.endsWith('.tsx')) files.push(p)
-  }
-})(SRC)
+const files = walkFiles(SRC, ['.tsx'])
 
 const rows = []
 for (const file of files) {
   const src = readFileSync(file, 'utf8')
-  const tags = /<([A-Za-z][\w.]*)((?:[^<>{}]|\{[^{}]*\})*?)\/?>/gs
-  let m
-  while ((m = tags.exec(src))) {
-    const [, tag, attrs] = m
+  for (const el of tags(src)) {
+    const { tag, attrs } = el
     if (!INTERACTIVE.has(tag) && !PRIMITIVES.has(tag)) continue
-    const cls = [...attrs.matchAll(/class(?:Name)?=(?:"([^"]*)"|\{`([^`]*)`\}|\{'([^']*)'\})/g)]
-      .map((c) => c[1] ?? c[2] ?? c[3])
-      .join(' ')
+    const cls = classesOf(attrs)
     for (const [, variant, min, n] of cls.matchAll(/(?:^|\s|:)((?:max-sm:|sm:|md:|lg:|pointer-coarse:)?)(min-)?h-(\d+)\b/g)) {
       rows.push({
-        file: relative(ROOT, file).replace(/\\/g, '/'),
-        line: src.slice(0, m.index).split('\n').length,
+        file: rel(file),
+        line: el.line,
         tag,
         primitive: PRIMITIVES.has(tag),
         variant: variant || 'base',
@@ -70,18 +55,44 @@ const overrides = rows.filter((r) => r.primitive)
 const touchOnly = rows.filter((r) => !r.primitive && r.min && r.px === 44)
 // h-0/h-1 — скрытый file-input и ползунок: к шкале контролов отношения не имеют.
 const notControls = rows.filter((r) => !r.primitive && r.px <= 8)
-const handRolled = rows.filter((r) => !r.primitive && !touchOnly.includes(r) && !notControls.includes(r))
+// Внутри shared/ui высота объявляется руками ПО ДОЛГУ СЛУЖБЫ: это дом примитивов,
+// откуда её берут все остальные. Отделено 26.08.2026, когда честный разбор тегов
+// впервые показал эти строки (ChatComposer, FloatingBack, ScrollToTop) — считать их
+// нарушением значит требовать, чтобы примитив брал высоту у самого себя.
+const inPrimitivesHome = rows.filter((r) => !r.primitive && r.file.startsWith('src/shared/ui/'))
+
+/** Названные исключения: роль, под которую примитива НЕТ, и заводить его пока не на чем.
+ *  Список короткий намеренно — исключение без причины и без условия снятия превращает
+ *  счётчик в украшение. Причина пишется здесь, а не в коде места: тогда её видно всем,
+ *  кто читает замер, а не только тому, кто открыл файл. */
+const NAMED = new Map([
+  [
+    'src/features/git/CloneDropdown.tsx',
+    'сегментированный переключатель вкладок внутри поповера. TabNav — это НАВИГАЦИЯ ' +
+      'ссылками (переезжающая полоска, маршруты), переключение состояния он не делает, ' +
+      'а примитива под сегменты в проекте нет. Высота при этом на шкале: min-h-8 плюс ' +
+      'pointer-coarse:min-h-11. Единственное такое место на весь код (замер ui-parity ' +
+      '26.08.2026) — примитив заводим, когда появится второе.',
+  ],
+])
+const named = rows.filter((r) => !r.primitive && NAMED.has(r.file))
+const legit = new Set([...touchOnly, ...notControls, ...inPrimitivesHome, ...named])
+const handRolled = rows.filter((r) => !r.primitive && !legit.has(r))
 
 console.log(`объявлений высоты на интерактивных элементах: ${rows.length}`)
 console.log(`  из них нарушений шкалы: ${overrides.length + handRolled.length}`)
 console.log(`    — высота задана поверх примитива: ${overrides.length}`)
 console.log(`    — рукописный контрол мимо примитива: ${handRolled.length}`)
-console.log(`  законных: ${touchOnly.length + notControls.length} (тач-цель ${touchOnly.length}, не контролы ${notControls.length})`)
+console.log(
+  `  законных: ${legit.size} (тач-цель ${touchOnly.length}, не контролы ${notControls.length}, ` +
+    `дом примитивов ${inPrimitivesHome.length}, названные исключения ${named.length})`,
+)
+for (const file of new Set(named.map((r) => r.file))) console.log(`    · ${file} — ${NAMED.get(file)}`)
 console.log('\nпо высоте:')
 for (const [k, v] of tally((r) => `${r.px}px${r.min ? ' (min)' : ''}`)) console.log(`  ${String(v).padStart(3)}  ${k}`)
 
 if (LIST) {
-  for (const [name, set] of [['ПОВЕРХ ПРИМИТИВА', overrides], ['РУКОПИСНЫЕ', handRolled], ['ЗАКОННЫЕ', [...touchOnly, ...notControls]]]) {
+  for (const [name, set] of [['ПОВЕРХ ПРИМИТИВА', overrides], ['РУКОПИСНЫЕ', handRolled], ['ЗАКОННЫЕ', [...legit]]]) {
     console.log(`\n${name}:`)
     for (const r of set) console.log(`  ${r.file}:${r.line} <${r.tag}> ${r.variant}:${r.min ? 'min-' : ''}${r.px}px`)
   }
@@ -102,7 +113,7 @@ for (const file of files) {
       if (!/(^|\s)grid(\s|$)/.test(c)) continue
       if (/(^|\s)grid-cols-/.test(c)) continue
       if (/(^|\s)(place-|grid-rows|grid-flow)/.test(c) || c.includes('auto-fit') || c.includes('auto-fill')) continue
-      grids.push({ file: relative(ROOT, file).replace(/\\/g, '/'), line: i + 1, cls: c.slice(0, 110) })
+      grids.push({ file: rel(file), line: i + 1, cls: c.slice(0, 110) })
     }
   })
 }
@@ -147,7 +158,7 @@ for (const file of files) {
     }
     if (found.length < 2) return
     if (new Set(found.map((f) => f.size)).size > 1) {
-      mixedRows.push({ file: relative(ROOT, file).replace(/\\/g, '/'), line: i + 1, found })
+      mixedRows.push({ file: rel(file), line: i + 1, found })
     }
   })
 }

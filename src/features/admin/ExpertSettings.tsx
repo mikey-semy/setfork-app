@@ -7,9 +7,9 @@
 // устаревшее значение не затирало свежую картинку, и т.д.).
 
 import { useState, useTransition } from 'react'
-import Link from 'next/link'
 import { BarChart3, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Input } from '@/shared/ui/input'
@@ -190,9 +190,9 @@ function ExpertCard({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOpt
           </code>
         </Tooltip>
         <Tooltip label={t('admin.personalPageKpiKnowledge', lang)}>
-          <Link href={`/admin/council/${e.id}`} aria-label={t('admin.personalPage', lang)} className="grid h-6 w-6 place-items-center rounded-md text-muted hover:text-ink">
+          <IconButton href={`/admin/council/${e.id}`} size="xs" variant="ghost" label={t('admin.personalPage', lang)}>
             <BarChart3 size={13} />
-          </Link>
+          </IconButton>
         </Tooltip>
         <div className="ml-auto flex items-center gap-1.5">
           <span className="text-[0.6875rem] text-muted">{t('admin.on2', lang)}</span>

@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
+import { ColorSwatch } from '@/shared/ui/ColorSwatch'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
@@ -97,20 +98,13 @@ export function CoverSection({
         <div className="flex items-center gap-1.5">
           <span className="mr-1 text-[0.78125rem] text-ink-2">{ru ? 'Акцент:' : 'Accent:'}</span>
           {ACCENTS.map((a) => (
-            <button
+            <ColorSwatch
               key={a || 'default'}
-              type="button"
-              onClick={() => pickAccent(a)}
-              aria-label={a || 'default'}
-              style={a ? { backgroundColor: a } : undefined}
-              // inline-flex с центрированием — иначе `×` садится на БАЗОВУЮ ЛИНИЮ текста
-              // и падает к низу кружка: у кнопки по умолчанию текст выравнен по базовой
-              // линии, а не по центру бокса. Само собой это не исправляется ни размером
-              // шрифта, ни line-height — нужен именно флекс-центр.
-              className={`inline-flex h-5 w-5 items-center justify-center rounded-full border ${a ? '' : 'bg-surface-2'} ${accent === a ? 'ring-2 ring-offset-1 ring-(--accent)' : 'border-black/10'}`}
-            >
-              {!a && <span className="text-[0.6875rem] leading-none text-muted">×</span>}
-            </button>
+              color={a || null}
+              selected={accent === a}
+              label={a || 'default'}
+              onSelect={() => pickAccent(a)}
+            />
           ))}
         </div>
         {cover && (

@@ -16,6 +16,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { useConfirm } from '@/shared/ui/use-confirm'
 import { Button, type ButtonVariant } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
+import { ColorSwatch } from '@/shared/ui/ColorSwatch'
 import { Input } from '@/shared/ui/input'
 import { SearchField } from '@/shared/ui/SearchField'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -40,6 +41,9 @@ const SIZES: ControlSize[] = ['lg', 'md', 'sm', 'xs']
 const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'outline', 'ghost', 'danger', 'dangerSolid']
 const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft', 'danger', 'warn']
 const ALERT_VARIANTS: AlertVariant[] = ['danger', 'warn', 'ok', 'info']
+// Палитра витрины — не «настоящие» акценты продукта, а достаточный набор, чтобы увидеть
+// выбранное состояние, кружок «без цвета» и размер цели.
+const SWATCHES: (string | null)[] = [null, '#2159d6', '#1a9c5b', '#d4a017', '#c2410c']
 
 type DemoRow = { name: string; role: string; score: number }
 
@@ -107,6 +111,7 @@ function RowCheck({ size, lang }: { size: ControlSize; lang: Lang }) {
 
 export function UiKitGallery({ lang }: { lang: Lang }) {
   const [checked, setChecked] = useState(true)
+  const [swatch, setSwatch] = useState<string | null>('#2159d6')
   const { confirm, confirmDialog } = useConfirm()
   const [confirmed, setConfirmed] = useState<string | null>(null)
 
@@ -200,6 +205,12 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           <label className="flex cursor-pointer items-center gap-2 text-[0.8125rem] text-ink">
             <Switch checked={checked} onCheckedChange={setChecked} /> Switch
           </label>
+          <div className="flex items-center gap-2 text-[0.8125rem] text-ink">
+            ColorSwatch
+            {SWATCHES.map((c) => (
+              <ColorSwatch key={c ?? 'none'} color={c} selected={swatch === c} label={c ?? 'default'} onSelect={() => setSwatch(c)} />
+            ))}
+          </div>
         </div>
       </Section>
 
