@@ -17,16 +17,12 @@
   "src/widgets/Sidebar.tsx": 1
  },
  "кнопка": {
-  "src/app/admin/council/page.tsx": 1,
   "src/features/admin/ExpertSettings.tsx": 1,
   "src/features/admin/LandingEditor.tsx": 1,
   "src/features/admin/ModelSelect.tsx": 2,
-  "src/features/admin/ReindexPanel.tsx": 2,
   "src/features/generation/CandidateCard.tsx": 1,
-  "src/features/generation/GenerationChat.tsx": 3,
   "src/features/git/CloneDropdown.tsx": 1,
   "src/features/git/ConflictResolver.tsx": 1,
-  "src/features/issues/LabelEditor.tsx": 1,
   "src/features/library/CommitRow.tsx": 1,
   "src/features/library/CoverSection.tsx": 1,
   "src/features/library/SavedQueryBar.tsx": 1,
@@ -73,12 +69,9 @@
  "пилюля": {
   "src/app/[handle]/[slug]/ListAbout.tsx": 1,
   "src/app/[handle]/ProfileAside.tsx": 1,
-  "src/app/admin/council/page.tsx": 1,
   "src/app/admin/models/page.tsx": 3,
   "src/app/admin/page.tsx": 1,
-  "src/app/search/page.tsx": 1,
-  "src/features/generation/GenerationChat.tsx": 1,
-  "src/features/issues/LabelEditor.tsx": 2
+  "src/app/search/page.tsx": 1
  },
  "поле": {},
  "поле без имени": {},

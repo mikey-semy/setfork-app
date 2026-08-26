@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronRight, RotateCw } from 'lucide-react'
+import { Check, RotateCw } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import type { GenMessage } from '@/shared/ai/generation-messages'
@@ -22,6 +22,8 @@ import { t } from '@/shared/i18n'
 import { PAGE } from '@/shared/ui/control'
 import { Field } from '@/shared/ui/Field'
 import { Input } from '@/shared/ui/input'
+import { buttonClass } from '@/shared/ui/button-style'
+import { DisclosureToggle } from '@/shared/ui/DisclosureToggle'
 
 /** Первая буква — заглавная: hint приходит от модели строчными, а это готовое сообщение. */
 const capFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -87,14 +89,15 @@ function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { mes
   const [open, setOpen] = useState(defaultOpen)
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 rounded-md py-0.5 text-caption text-muted hover:text-ink-2"
+      <DisclosureToggle
+        open={open}
+        onToggle={() => setOpen((v) => !v)}
+        label={t('generation.councilLines', lang).replace('{n}', String(messages.length))}
+        icon={12}
+        className="text-caption text-muted hover:text-ink-2"
       >
-        <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
         {t('generation.councilLines', lang).replace('{n}', String(messages.length))}
-      </button>
+      </DisclosureToggle>
       {open && (
         <ol className="mt-2 flex flex-col gap-3">
           {messages.map((m) => (
@@ -328,16 +331,9 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                     {opts.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
                         {opts.map((o) => (
-                          <button
-                            key={o}
-                            type="button"
-                            onClick={() => setAnswers((a) => ({ ...a, [i]: o }))}
-                            className={`rounded-full border px-3 py-1 text-body-sm transition-colors ${
-                              (answers[i] ?? '') === o ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink'
-                            }`}
-                          >
+                          <Chip key={o} onClick={() => setAnswers((a) => ({ ...a, [i]: o }))} selected={(answers[i] ?? '') === o}>
                             {o}
-                          </button>
+                          </Chip>
                         ))}
                       </div>
                     )}
@@ -355,7 +351,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                   )
                 }
                 disabled={pending}
-                className="rounded-md bg-primary px-3.5 py-2 text-body font-semibold text-primary-fg disabled:opacity-50"
+                className={buttonClass({ variant: 'primary' })}
               >
                 {t('generation.send', lang)}
               </button>

@@ -16,6 +16,7 @@ import { Button } from '@/shared/ui/button'
 import { Signature, Sparkles, UserPlus } from 'lucide-react'
 import type { Option } from '@/features/admin/ModelSelect'
 import { cardClass } from '@/shared/ui/card-style'
+import { buttonClass } from '@/shared/ui/button-style'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -106,10 +107,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
             {signals.map((s) => (
               <form key={s.tag} action={hireGnome}>
                 <input type="hidden" name="tag" value={s.tag} />
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-body-sm text-ink hover:border-border-strong"
-                >
+                <button type="submit" className={`${buttonClass({ variant: 'outline', size: 'sm' })} rounded-full`}>
                   {t('admin.hireMasterFor', lang).replace('{tag}', s.tag)}
                   <span className="font-mono text-caption text-muted">×{s.n}</span>
                 </button>

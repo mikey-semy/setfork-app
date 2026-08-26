@@ -10,6 +10,7 @@ import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Badge } from '@/shared/ui/badge'
 import { Input } from '@/shared/ui/input'
+import { buttonClass } from '@/shared/ui/button-style'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
 type SpaceInfo = Awaited<ReturnType<typeof getEmbedSpaceInfo>>
@@ -110,8 +111,6 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
     setPurging(false)
     setMsg('error' in res ? res.error : t('admin.removedOrphaned', lang).replace('{n}', String(res.removed)))
   }
-
-  const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-body font-semibold disabled:opacity-60'
 
   return (
     // Та же читаемая ширина, что у карточек-секций /admin (const card на странице):
@@ -244,11 +243,11 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-4">
-        <button type="button" onClick={purge} disabled={purging || running} className={`${btn} border border-border text-ink hover:border-border-strong`}>
+        <button type="button" onClick={purge} disabled={purging || running} className={buttonClass({ variant: 'outline' })}>
           {purging ? <Spinner size="md" /> : <Eraser size={14} />}
           {t('admin.purge', lang)}
         </button>
-        <button type="button" onClick={start} disabled={running || onCooldown || starting} className={`${btn} bg-primary text-primary-fg`}>
+        <button type="button" onClick={start} disabled={running || onCooldown || starting} className={buttonClass({ variant: 'primary' })}>
           {running || starting ? <Spinner size="md" /> : <Sparkles size={14} />}
           {running
             ? t('admin.indexing', lang)

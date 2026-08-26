@@ -8,6 +8,7 @@ import { ISSUE_LABELS, customKey, labelText, type CustomLabel } from '@/shared/l
 import { LabelChips } from '@/shared/ui/LabelChips'
 import { setIssueLabels } from './actions'
 import { MenuItem } from '@/shared/ui/MenuItem'
+import { Chip } from '@/shared/ui/Chip'
 
 // Метки issue: текущие чипы + поповер-редактор (владелец/коллаборатор), как AssigneePicker.
 export function LabelEditor({
@@ -51,14 +52,13 @@ export function LabelEditor({
           width={224}
           className="p-1"
           button={(toggleMenu) => (
-            <button
-              type="button"
+            <Chip
               onClick={toggleMenu}
               aria-label={L('изменить метки', 'edit labels')}
-              className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-caption text-muted hover:text-ink"
+              className="border-dashed text-caption text-muted"
             >
               <Tag size={11} /> {L('метки', 'labels')}
-            </button>
+            </Chip>
           )}
         >
           {() => (
