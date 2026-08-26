@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, Copy, KeyRound, Loader2, Plus, Trash2, TriangleAlert } from 'lucide-react'
+import { Check, Copy, KeyRound, Plus, Trash2, TriangleAlert } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
@@ -9,6 +9,7 @@ import type { TokenRow } from './queries'
 import { createApiToken, revokeApiToken } from './actions'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 // Чистая — на модульном уровне, а не в теле компонента (react-doctor:
 // пересборка на каждый рендер ломает мемоизацию детей).
@@ -111,7 +112,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
           className={buttonClass({ className: 'min-w-[13.75rem] flex-1 bg-surface-2 outline-hidden focus:border-border-strong' })}
         />
         <Button variant="primary" size="md" onClick={create} disabled={pending || !name.trim()}>
-          {pending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {ru ? 'Создать токен' : 'Create token'}
+          {pending ? <Spinner size="md" /> : <Plus size={14} />} {ru ? 'Создать токен' : 'Create token'}
         </Button>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.78125rem]">

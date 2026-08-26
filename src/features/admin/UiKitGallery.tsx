@@ -21,6 +21,7 @@ import { Input } from '@/shared/ui/input'
 import { SearchField } from '@/shared/ui/SearchField'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { SideNav } from '@/shared/ui/SideNav'
+import { Spinner } from '@/shared/ui/Spinner'
 import { Switch } from '@/shared/ui/switch'
 import { TagInput } from '@/shared/ui/TagInput'
 import { Textarea } from '@/shared/ui/textarea'
@@ -104,6 +105,9 @@ function RowCheck({ size, lang }: { size: ControlSize; lang: Lang }) {
           </SelectContent>
         </Select>
         <SearchField size={size} value={q} onValueChange={setQ} placeholder="search" className="w-36 flex-none" ariaLabel="search" />
+        {/* Кружок ожидания стоит В РЯДУ с контролами своей ступени: размер он берёт
+            от них (iconSizeFor), и разъехавшийся видно тут же. */}
+        <Spinner size={size} />
       </div>
     </div>
   )

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { FolderInput, Globe, Loader2, X } from 'lucide-react'
+import { FolderInput, Globe, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Input } from '@/shared/ui/input'
@@ -11,6 +11,7 @@ import { PAGE_X } from '@/shared/ui/control'
 import { useViewportBottom } from '@/shared/ui/use-viewport-bottom'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { toast } from '@/shared/ui/toast'
+import { Spinner } from '@/shared/ui/Spinner'
 import { fill, plural, t, type Lang } from '@/shared/i18n'
 import { bulkCreateCatalogAndMove, bulkPublish, bulkRestoreCatalog, bulkSetCatalog, type MoveResult, type PublishBatchResult } from './actions'
 import { useSelection } from './selection'
@@ -183,7 +184,7 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
                 </DropdownMenu>
 
                 <Button variant="primary" size="md" onClick={askPlan} disabled={!count || pending} aria-label={t('bulk.publish', lang)}>
-                  {pending ? <Loader2 size={15} className="animate-spin" /> : <Globe size={15} />}
+                  {pending ? <Spinner size="md" /> : <Globe size={15} />}
                   <span className="max-sm:hidden">{t('bulk.publish', lang)}</span>
                 </Button>
 
@@ -211,7 +212,7 @@ export function BulkBar({ lang, catalogs, allIds }: { lang: Lang; catalogs: { na
                 className="min-w-0 flex-1"
               />
               <Button type="submit" variant="primary" size="md" disabled={!newCatalog.trim() || pending} className="shrink-0">
-                {pending ? <Loader2 size={15} className="animate-spin" /> : t('create', lang)}
+                {pending ? <Spinner size="md" /> : t('create', lang)}
               </Button>
               <IconButton variant="ghost" size="md" touch="hit" onClick={() => setNewCatalog(null)} label={t('cancel', lang)}>
                 <X size={16} />

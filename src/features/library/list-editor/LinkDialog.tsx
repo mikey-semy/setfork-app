@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
 import { FloatingInput } from '@/shared/ui/FloatingInput'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Spinner } from '@/shared/ui/Spinner'
 import { t, type Lang } from '@/shared/i18n'
 import { fetchLinkTitleAction } from '../actions/ai'
 
@@ -91,7 +92,7 @@ export function LinkDialog({
           trailing={
             <Tooltip label={t('editor.linkTitleFromUrl', lang)}>
               <IconButton size="sm" variant="ghost" onClick={() => void pullTitle()} disabled={busy || !urlOk} label={t('editor.linkTitleFromUrl', lang)} className="hover:text-accent">
-                {busy ? <Loader2 size={iconSizeFor('sm')} className="animate-spin" /> : <Sparkles size={iconSizeFor('sm')} />}
+                {busy ? <Spinner size="sm" /> : <Sparkles size={iconSizeFor('sm')} />}
               </IconButton>
             </Tooltip>
           }

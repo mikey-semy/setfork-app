@@ -1,9 +1,9 @@
 'use client'
 
 import { type FormEvent, useEffect, useRef, useState } from 'react'
-import { Loader2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
+import { Spinner } from '@/shared/ui/Spinner'
 import { t, type Lang } from '@/shared/i18n'
 
 type PollResult = { url?: string; error?: string; pending?: boolean; needCode?: boolean; badCode?: boolean }
@@ -111,7 +111,7 @@ export function TelegramLoginWatcher({ lang }: { lang: Lang }) {
         />
         {badCode && <div className="text-[0.78125rem] text-danger">{t('tgLoginBadCode', lang)}</div>}
         <Button type="submit" variant="primary" size="lg" disabled={submitting || code.length < 6} className="w-full">
-          {submitting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : t('tgLoginCodeSubmit', lang)}
+          {submitting ? <Spinner size="lg" /> : t('tgLoginCodeSubmit', lang)}
         </Button>
       </form>
     )
@@ -119,7 +119,7 @@ export function TelegramLoginWatcher({ lang }: { lang: Lang }) {
 
   return (
     <div className="flex items-center justify-center gap-2 text-[0.78125rem] text-ink-2">
-      <Loader2 size={14} className="animate-spin" aria-hidden />
+      <Spinner size="md" />
       {t('tgLoginWaiting', lang)}
     </div>
   )

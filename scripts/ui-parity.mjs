@@ -29,7 +29,7 @@ const TEXTUAL = new Set(['', 'text', 'email', 'password', 'search', 'url', 'tel'
 const ROLES = [
   {
     key: 'спиннер',
-    primitive: 'НЕТ — примитив не заведён',
+    primitive: 'Spinner (свип 26.08.2026: было 60 мест в 44 файлах, стало 0; держит узда в eslint)',
     hint: 'ожидание рисуют классом animate-spin поверх своей вёрстки',
     match: ({ cls }) => cls.includes('animate-spin'),
   },

@@ -1,12 +1,13 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { generateChangeNoteAction } from './actions/ai'
 import { buttonClass } from '@/shared/ui/button-style'
 import { TOUCH_HIT } from '@/shared/ui/control'
+import { Spinner } from '@/shared/ui/Spinner'
 
 // Поле «Что изменили и почему» + кнопка генерации примечания из диффа версий
 // (как commit-message в Copilot). Читает текущие пункты из скрытого поля формы.
@@ -86,7 +87,7 @@ export function ChangeNoteField({
             aria-label={t('generateFromChanges', lang)}
             className={`${buttonClass({ variant: 'ghost', size: 'sm', className: `absolute right-1.5 top-1/2 size-7 -translate-y-1/2 p-0 ${TOUCH_HIT}` })} hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2`}
           >
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            {busy ? <Spinner size="md" /> : <Sparkles size={15} />}
           </button>
         </Tooltip>
       </div>

@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { Pencil, Loader2 } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { editSuggestionNote } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 export interface TitleLabels {
   edit: string
@@ -62,7 +63,7 @@ export function SuggestionTitle({
           {labels.cancel}
         </Button>
         <Button variant="primary" onClick={save} disabled={pending || !draft.trim()}>
-          {pending ? <Loader2 size={13} className="animate-spin" /> : labels.save}
+          {pending ? <Spinner size="sm" /> : labels.save}
         </Button>
       </div>
     )

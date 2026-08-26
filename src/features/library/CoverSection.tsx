@@ -1,11 +1,12 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
-import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
+import { ImagePlus, Trash2 } from 'lucide-react'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
 import { ColorSwatch } from '@/shared/ui/ColorSwatch'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Spinner } from '@/shared/ui/Spinner'
 import type { Lang } from '@/shared/i18n'
 import { removeListCover, setListAccent, setListCover } from './cover-actions'
 
@@ -88,7 +89,7 @@ export function CoverSection({
             <AutoBanner seed={templateId} accent={accent} label={slug} height="h-full" />
           )}
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 bg-black/0 text-white opacity-0 transition-opacity hover:bg-black/35 hover:opacity-100">
-            {busy ? <Loader2 size={18} className="animate-spin" /> : <ImagePlus size={18} />}
+            {busy ? <Spinner size="lg" /> : <ImagePlus size={18} />}
           </span>
         </button>
       </Tooltip>

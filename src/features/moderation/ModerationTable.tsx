@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { BadgeCheck, Check, EyeOff, Eye, Loader2, Sparkles } from 'lucide-react'
+import { BadgeCheck, Check, EyeOff, Eye, Sparkles } from 'lucide-react'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { Badge } from '@/shared/ui/badge'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -12,6 +12,7 @@ import { toast } from '@/shared/ui/toast'
 import type { ModFilter, ModItem } from './queries'
 import { aiModerate, setModeration, setVerified } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 function StatusBadge({ s, lang }: { s: ModItem['moderation']; lang: Lang }) {
   if (s === 'hidden') return <Badge variant="danger">{t('hiddenLabel', lang)}</Badge>
@@ -130,7 +131,7 @@ export function ModerationTable({
                     aria-label={t('aiCheck', lang)}
                     className={buttonClass({ className: 'size-8 p-0 text-ink-2 hover:text-ink' })}
                   >
-                    {busy === it.id ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                    {busy === it.id ? <Spinner size="md" /> : <Sparkles size={14} />}
                   </button>
                 </Tooltip>
                 <Tooltip label={hidden ? t('unhideAction', lang) : t('hideAction', lang)}>

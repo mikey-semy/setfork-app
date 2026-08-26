@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MoreHorizontal, Link2, Copy, Quote, Pencil, Loader2 } from 'lucide-react'
+import { MoreHorizontal, Link2, Copy, Quote, Pencil } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
+import { Spinner } from '@/shared/ui/Spinner'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,7 +88,7 @@ export function CommentActions({
             {labels.cancel}
           </Button>
           <Button variant="primary" onClick={save} disabled={pending || !draft.trim()}>
-            {pending ? <Loader2 size={13} className="animate-spin" /> : labels.save}
+            {pending ? <Spinner size="sm" /> : labels.save}
           </Button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MessageSquarePlus, Check, CircleDot, Loader2, Replace, RotateCcw, X } from 'lucide-react'
+import { MessageSquarePlus, Check, CircleDot, Replace, RotateCcw, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { Markdown } from '@/shared/ui/Markdown'
@@ -21,6 +21,7 @@ import type { BlockThread } from '@/features/comments/queries'
 import type { ThreadState } from '@/features/comments/state'
 import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 export interface DiffCommentLabels {
   add: string
@@ -239,7 +240,7 @@ export function DiffComments({
                   {labels.startReview}
                 </Button>
                 <Button variant="primary" onClick={() => submit(false)} disabled={pending || !draft.trim()}>
-                  {pending ? <Loader2 size={13} className="animate-spin" /> : labels.send}
+                  {pending ? <Spinner size="sm" /> : labels.send}
                 </Button>
               </div>
             </div>
@@ -329,7 +330,7 @@ function ThreadCard({
                           disabled={pending}
                           onClick={() => startTransition(async () => void (await applySuggestedEdit(c.id)))}
                         >
-                          {pending ? <Loader2 size={12} className="animate-spin" /> : labels.apply}
+                          {pending ? <Spinner size="xs" /> : labels.apply}
                         </Button>
                       )
                     )}
@@ -369,7 +370,7 @@ function ThreadCard({
               disabled={pending}
               onClick={() => startTransition(async () => void (await setBlockThreadResolved(owner, slug, thread.id, true)))}
             >
-              {pending ? <Loader2 size={13} className="animate-spin" /> : <Check size={14} />}
+              {pending ? <Spinner size="sm" /> : <Check size={14} />}
             </Button>
           </Tooltip>
         </div>

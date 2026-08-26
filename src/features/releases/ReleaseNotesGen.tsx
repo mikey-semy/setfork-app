@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import type { Lang } from '@/shared/i18n'
 import { generateReleaseNotes } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * Поле заметок релиза с автогенерацией: кнопка «Сгенерировать из изменений»
@@ -60,7 +61,7 @@ export function ReleaseNotesGen({
           disabled={busy}
           className={buttonClass({ className: 'disabled:opacity-50' })}
         >
-          {busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} className="text-accent" />}
+          {busy ? <Spinner size="sm" /> : <Sparkles size={13} className="text-accent" />}
           {labels.generate}
         </button>
       </div>

@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, Wrench } from 'lucide-react'
+import { Wrench } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { toggleMaintenance } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /** Тумблер «сайт на ремонте». Админ при включённом режиме ходит по сайту
  *  свободно (байпас в middleware) и выключает режим здесь же. envOverride —
@@ -38,7 +39,7 @@ export function MaintenanceSection({ initialOn, envOverride, lang }: { initialOn
             on ? 'bg-primary text-primary-fg' : 'bg-danger text-white hover:opacity-90'
           }`}
         >
-          {pending && <Loader2 size={14} className="animate-spin" />}
+          {pending && <Spinner size="md" />}
           {on ? t('maintenanceDisable', lang) : t('maintenanceEnable', lang)}
         </button>
       )}

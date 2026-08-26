@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Eye, GitCompare, Loader2 } from 'lucide-react'
+import { ChevronRight, Eye, GitCompare } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { DiffStat } from '@/shared/ui/DiffStat'
@@ -10,6 +10,7 @@ import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
 import { getCommitDiff, type CommitDiff } from './commit-diff'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Spinner } from '@/shared/ui/Spinner'
 
 const STATUS = {
   added: { sign: '+', cls: 'text-ok' },
@@ -144,7 +145,7 @@ export function CommitRow({
         <div className="border-t border-border px-4 py-3 pl-11">
           {loading ? (
             <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
-              <Loader2 size={13} className="animate-spin" /> {labels.loading}
+              <Spinner size="sm" /> {labels.loading}
             </div>
           ) : failed ? (
             <div className="flex flex-wrap items-center gap-3">

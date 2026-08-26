@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { startRegistration } from '@simplewebauthn/browser'
-import { Fingerprint, Loader2, Plus, Trash2 } from 'lucide-react'
+import { Fingerprint, Plus, Trash2 } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { beginPasskeyRegistration, deletePasskey, finishPasskeyRegistration, listPasskeys } from '@/features/auth/passkeys'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 type Row = { id: string; name: string; createdAt: Date; lastUsedAt: Date | null }
 
@@ -93,7 +94,7 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
           disabled={busy}
           className={buttonClass({ className: 'disabled:opacity-60' })}
         >
-          {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {ru ? 'Добавить passkey' : 'Add a passkey'}
+          {busy ? <Spinner size="md" /> : <Plus size={14} />} {ru ? 'Добавить passkey' : 'Add a passkey'}
         </button>
         {err && <span className="text-[0.78125rem] text-danger">{err}</span>}
       </div>

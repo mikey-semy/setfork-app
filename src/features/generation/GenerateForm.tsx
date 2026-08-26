@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { useLayoutEffect, useRef, useState, useTransition } from 'react'
-import { ArrowUp, Loader2 } from 'lucide-react'
+import { ArrowUp } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
 import { DEFAULT_DETAIL, DETAIL_LEVELS, detailLabel, type DetailLevel } from '@/shared/ai/detail-level'
 import { kindLabel, LIST_KINDS, type ListKind } from '@/shared/ai/list-kind'
 import { startGeneration } from './actions'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * Старт генерации как у поисковика: большое поле по центру + «живые» варианты-подсказки.
@@ -110,7 +111,7 @@ export function GenerateForm({
         <div className="animate-fadein absolute inset-x-4 top-4 z-10 sm:inset-x-6">
           {/* Спокойный статус вместо мем-заставки: показываем сам запрос и что идёт работа. */}
           <div className="mx-auto flex max-w-[37.5rem] items-center gap-2.5 rounded-lg border border-border bg-surface px-4 py-3">
-            <Loader2 size={15} className="shrink-0 animate-spin text-accent" />
+            <Spinner size="md" className="text-accent" />
             <span className="min-w-0 truncate text-[0.8125rem] text-ink-2">
               {t('generation.buildingYourList', lang)}: <span className="text-ink">{q.trim()}</span>
             </span>
@@ -149,7 +150,7 @@ export function GenerateForm({
             aria-label={t('generateWithAi', lang)}
             className="grid size-[2.5rem] shrink-0 place-items-center rounded-full bg-primary text-primary-fg transition-opacity disabled:opacity-40"
           >
-            {launching ? <Loader2 size={17} className="animate-spin" /> : <ArrowUp size={18} />}
+            {launching ? <Spinner size="lg" /> : <ArrowUp size={18} />}
           </button>
         </form>
 

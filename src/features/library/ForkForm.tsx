@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { Check, GitFork, Loader2 } from 'lucide-react'
+import { Check, GitFork } from 'lucide-react'
 import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
 import { forkNameStatus, forkTemplate } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 export interface ForkLabels {
   ownerLabel: string
@@ -84,7 +85,7 @@ export function ForkForm({
       <div className="-mt-1.5 min-h-[1rem] text-[0.78125rem]">
         {checking ? (
           <span className="inline-flex items-center gap-1 text-muted">
-            <Loader2 size={12} className="animate-spin" />
+            <Spinner size="xs" />
           </span>
         ) : status ? (
           status.available ? (
@@ -124,7 +125,7 @@ export function ForkForm({
           disabled={!canSubmit}
           className={buttonClass({ className: 'border-accent bg-accent text-white disabled:opacity-50' })}
         >
-          {submitting && <Loader2 size={14} className="animate-spin" />}
+          {submitting && <Spinner size="md" />}
           <GitFork size={14} /> {labels.create}
         </button>
       </div>

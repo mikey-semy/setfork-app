@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { CheckCircle2, Loader2, PlugZap, RefreshCw } from 'lucide-react'
+import { CheckCircle2, PlugZap, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
@@ -14,6 +14,7 @@ import { CUR_SIGN, type Currency } from './model-options'
 import { catalogProblem } from './catalog-problem'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * ПРОВАЙДЕР, ЕГО МОДЕЛИ И ЕГО ДЕНЬГИ — одним блоком, потому что это одна связка.
@@ -125,7 +126,7 @@ export function AiProviderModels({
 
       {pending && (
         <p className="flex items-center gap-1.5 text-[0.78125rem] text-muted">
-          <Loader2 size={13} className="animate-spin" /> {labels.loading}
+          <Spinner size="sm" /> {labels.loading}
         </p>
       )}
 
@@ -168,7 +169,7 @@ export function AiProviderModels({
             disabled={checking}
             className="shrink-0 max-sm:ml-auto"
           >
-            {checking ? <Loader2 size={13} className="animate-spin" /> : <PlugZap size={13} />}
+            {checking ? <Spinner size="sm" /> : <PlugZap size={13} />}
             {t('admin.checkConnection', lang)}
           </Button>
         </div>

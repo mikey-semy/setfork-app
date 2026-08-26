@@ -2,7 +2,7 @@
 
 import { t, type Lang } from '@/shared/i18n'
 import { useRef, useState, useTransition } from 'react'
-import { ImagePlus, Loader2, X } from 'lucide-react'
+import { ImagePlus, X } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Alert } from '@/shared/ui/Alert'
@@ -12,6 +12,7 @@ import type { AchDisplayMap } from '@/features/profile/achievement-config'
 import { removeAchievementImage, setAchievementEnabled, uploadAchievementImage } from './achievement-actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /** Админ-панель достижений: вкл/выкл + своя картинка (drag-and-drop) на каждое. */
 export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; lang: Lang }) {
@@ -135,7 +136,7 @@ function AchRow({
           </button>
         </Tooltip>
       )}
-      {pending && <Loader2 size={14} className="shrink-0 animate-spin text-muted" />}
+      {pending && <Spinner size="md" className="text-muted" />}
       <Switch checked={d.enabled} onCheckedChange={(v) => onToggle(k, v)} />
     </div>
   )

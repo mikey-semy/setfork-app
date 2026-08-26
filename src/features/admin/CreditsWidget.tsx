@@ -2,11 +2,12 @@
 
 import { type Lang } from '@/shared/i18n'
 import { useEffect, useState } from 'react'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { Meter } from '@/shared/ui/Meter'
 import { Alert } from '@/shared/ui/Alert'
 import { fetchOpenRouterCredits } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 type Credits = { total: number; used: number; remaining: number }
 
@@ -46,7 +47,7 @@ export function CreditsWidget({ lang }: { lang: Lang }) {
       disabled={loading}
       className={buttonClass({ className: 'disabled:opacity-60' })}
     >
-      {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+      {loading ? <Spinner size="xs" /> : <RefreshCw size={12} />}
       {ru ? 'Обновить' : 'Refresh'}
     </button>
   )

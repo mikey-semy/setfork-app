@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, MessageSquare, GitPullRequestClosed, Loader2, X, ShieldOff } from 'lucide-react'
+import { Check, MessageSquare, GitPullRequestClosed, X, ShieldOff } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -13,6 +13,7 @@ import { dismissSuggestionReview, submitSuggestionReview, withdrawSuggestionRevi
 import type { ReviewView, Verdict } from './review-model'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 export interface ReviewLabels {
   title: string
@@ -154,7 +155,7 @@ export function ReviewPanel({
                 <GitPullRequestClosed size={13} /> {labels.requestChanges}
               </Button>
               <Button variant="primary" disabled={pending} onClick={() => send('approve')}>
-                {pending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} {labels.approve}
+                {pending ? <Spinner size="sm" /> : <Check size={13} />} {labels.approve}
               </Button>
             </div>
           </div>
@@ -218,7 +219,7 @@ function DismissButton({
               })
             }
           >
-            {pending ? <Loader2 size={13} className="animate-spin" /> : <ShieldOff size={13} />} {labels.dismiss}
+            {pending ? <Spinner size="sm" /> : <ShieldOff size={13} />} {labels.dismiss}
           </Button>
         </div>
       </PopoverContent>

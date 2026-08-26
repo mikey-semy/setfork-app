@@ -1,12 +1,13 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Loader2, Monitor, Smartphone } from 'lucide-react'
+import { Monitor, Smartphone } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { UserSession } from './queries'
 import { revokeOtherSessions, revokeSession } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang: Lang }) {
   const [pending, start] = useTransition()
@@ -69,7 +70,7 @@ export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang
           disabled={pending}
           className={buttonClass({ variant: 'dangerSolid', className: 'mt-1 w-fit hover:bg-danger/5 disabled:opacity-60' })}
         >
-          {pending && <Loader2 size={14} className="animate-spin" />}
+          {pending && <Spinner size="md" />}
           {t('signOutOthers', lang)}
         </button>
       )}

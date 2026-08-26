@@ -2,12 +2,13 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Languages, Loader2 } from 'lucide-react'
+import { Languages } from 'lucide-react'
 import { LANG_META, t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { toast } from '@/shared/ui/toast'
 import { translateList } from './actions/ai'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 // Кнопка «Перевести» (ADR-0009): AI-перевод полей списка на язык зрителя, ДОБАВЛЯЕТ
 // языковой ключ (оригинал остаётся) → новая версия. Икон-онли (как x.com), подпись —
@@ -45,7 +46,7 @@ export function TranslateButton({ templateId, targetLang, lang, iconOnly }: { te
             : buttonClass({ className: 'size-8 shrink-0 p-0' })
         }
       >
-        {pending ? <Loader2 size={15} className="animate-spin" /> : <Languages size={15} />}
+        {pending ? <Spinner size="md" /> : <Languages size={15} />}
       </button>
     </Tooltip>
   )

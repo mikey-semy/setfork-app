@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ImageUp, Loader2, Sparkles, X } from 'lucide-react'
+import { Check, ImageUp, Sparkles, X } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -13,6 +13,7 @@ import type { LandingContent, LandingCopy } from '@/shared/settings/landing'
 import { saveLanding, suggestSlogan, uploadLandingImage } from './landing-actions'
 import { t } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 type FieldKey = keyof Omit<LandingCopy, 'stats'>
 type Field = { key: FieldKey; label: string; max: number; area?: boolean; ai?: boolean }
@@ -108,7 +109,7 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
 
       <div className="flex items-center gap-3">
         <Button type="button" variant="primary" onClick={save} disabled={pending} className="px-4 py-2 text-[0.875rem]">
-          {pending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {t('common.save', lang)}
+          {pending ? <Spinner size="md" /> : <Check size={15} />} {t('common.save', lang)}
         </Button>
         {saved && <span className="text-[0.8125rem] text-ok">{t('admin.saved', lang)}</span>}
         {err && <span className="text-[0.8125rem] text-danger">{err}</span>}
@@ -150,7 +151,7 @@ function LimitedField({
         disabled={busy}
         className="grid size-6 place-items-center rounded-md text-accent hover:bg-(--accent-soft) disabled:opacity-50"
       >
-        {busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+        {busy ? <Spinner size="sm" /> : <Sparkles size={13} />}
       </button>
     </Tooltip>
   )
@@ -225,7 +226,7 @@ function HeroImage({ initial, onRef, lang }: { initial?: string; onRef: (ref: st
         )}
         <div className="min-w-0 text-[0.8125rem]">
           <div className="flex items-center gap-1.5 font-medium text-ink">
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} className="text-ink-2" />}
+            {busy ? <Spinner size="md" /> : <ImageUp size={15} className="text-ink-2" />}
             {drag ? t('admin.dropUpload', lang) : t('admin.dragImageClick', lang)}
           </div>
           <p className="mt-1 text-[0.78125rem] text-muted">{t('admin.pNGJpgWebpReplaces', lang)}</p>

@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, Loader2, UserPlus } from 'lucide-react'
+import { Check, UserPlus } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { toggleFollow } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 export function FollowButton({ targetUserId, following, lang }: { targetUserId: string; following: boolean; lang: Lang }) {
   const [isFollowing, setIsFollowing] = useState(following)
@@ -24,7 +25,7 @@ export function FollowButton({ targetUserId, following, lang }: { targetUserId: 
         isFollowing ? 'border border-border text-ink hover:border-danger hover:text-danger' : 'bg-primary text-primary-fg'
       }`}
     >
-      {pending ? <Loader2 size={14} className="animate-spin" /> : isFollowing ? <Check size={14} /> : <UserPlus size={14} />}
+      {pending ? <Spinner size="md" /> : isFollowing ? <Check size={14} /> : <UserPlus size={14} />}
       {isFollowing ? t('following', lang) : t('follow', lang)}
     </button>
   )

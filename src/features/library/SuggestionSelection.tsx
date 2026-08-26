@@ -1,11 +1,12 @@
 'use client'
 
 import { createContext, useContext, useState, useTransition, type ReactNode } from 'react'
-import { Check, Loader2, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Spinner } from '@/shared/ui/Spinner'
 import type { Lang } from '@/shared/i18n'
 import { resolveChip, type CustomLabel } from '@/shared/lib/labels'
 import { bulkSuggestionAction } from './suggestion-meta-actions'
@@ -105,7 +106,7 @@ export function SuggestionSelection({
               onPick={(key) => run({ kind: 'milestone', milestoneId: key })}
             />
             <Button variant="ghost" disabled={pending} onClick={() => run({ kind: 'close' })}>
-              {pending ? <Loader2 size={14} className="animate-spin" /> : labels.close}
+              {pending ? <Spinner size="md" /> : labels.close}
             </Button>
             <Tooltip label={labels.clear}>
               <button

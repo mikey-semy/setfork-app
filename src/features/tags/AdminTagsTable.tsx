@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, GitMerge, Loader2, Pencil, RefreshCw, Star, Trash2, X } from 'lucide-react'
+import { Check, GitMerge, Pencil, RefreshCw, Star, Trash2, X } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Badge } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -11,6 +11,7 @@ import { t, type Lang } from '@/shared/i18n'
 import type { TagRow } from './queries'
 import { deleteTag, mergeTags, refreshTagUsage, renameTag, setTagCurated } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 // Админ-реестр тегов: курирование, переименование, слияние, удаление, пересчёт usage.
 // Экшены (requireAdmin) — в ./actions; revalidatePath('/admin/tags') + router.refresh().
@@ -41,7 +42,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
           disabled={pending}
           className={buttonClass({ className: 'ml-auto disabled:opacity-50' })}
         >
-          {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {t('tags.refreshUsage', lang)}
+          {pending ? <Spinner size="md" /> : <RefreshCw size={14} />} {t('tags.refreshUsage', lang)}
         </button>
       </div>
 

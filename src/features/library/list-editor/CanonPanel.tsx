@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Loader2 } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/button'
 import { CodeEditor } from '@/shared/ui/CodeEditor'
@@ -10,6 +10,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { parseCanonAction, renderCanonAction } from '../actions/canon'
 import type { EditorItem } from '../editor'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /** Придирка ядра к тексту. Текст выбирает ИНТЕРФЕЙС по коду: язык читателя знает
  *  он, а не ядро (та же дисциплина, что у отказов пуша). */
@@ -120,7 +121,7 @@ export function CanonPanel({
       <p className={`${TEXT.bodySm} text-muted`}>{t('canon.hint', lang)}</p>
       {text === null ? (
         <div className={cardClass({ tone: 'inset', className: 'flex items-center gap-2 text-[0.8125rem] text-muted' })}>
-          <Loader2 size={14} className="animate-spin" /> {t('canon.loading', lang)}
+          <Spinner size="md" /> {t('canon.loading', lang)}
         </div>
       ) : (
         // Целый файл, а не поле команды: окно во весь экран по высоте, прокрутка
@@ -145,7 +146,7 @@ export function CanonPanel({
 
       <div className="flex justify-end">
         <Button variant="primary" onClick={() => void apply()} disabled={busy || text === null}>
-          {busy ? <Loader2 size={14} className="animate-spin" /> : null}
+          {busy ? <Spinner size="md" /> : null}
           {t('canon.apply', lang)}
         </Button>
       </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Send } from 'lucide-react'
+import { Send } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
@@ -9,6 +9,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { setEmailSettings, sendTestEmail } from './actions'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 export interface EmailFormValues {
   host: string
@@ -101,7 +102,7 @@ export function EmailSettingsForm({ lang, v }: { lang: Lang; v: EmailFormValues 
           disabled={testing}
           className={buttonClass({ className: 'disabled:opacity-50' })}
         >
-          {testing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+          {testing ? <Spinner size="md" /> : <Send size={14} />}
           {ru ? 'Тест-письмо' : 'Send test'}
         </button>
         {result && (

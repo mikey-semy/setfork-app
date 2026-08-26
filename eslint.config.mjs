@@ -132,6 +132,17 @@ const CARD_RULE = // ── Узда карточки (Ф13, замер 13.08.20
             'Карточка (рамка + фон + внутренний отступ) рисуется ТОЛЬКО через cardClass из @/shared/ui/card-style: tone задаёт смысл блока, pad — ступень отступа. Нужен новый тон или ступень — добавь в примитив, а не рядом с ним. Роль не карточка (обводка-группировка, рамка картинки, сегментированный контрол) — точечный disable с причиной.',
         }
 
+// Узда ожидания (свип 26.08.2026): роль «идёт работа» была самой массовой из
+// переоткрытых руками — 60 мест в 44 файлах и восемь размеров кружка (12, 13, 14,
+// 15, 16, 17, 18 и один честный iconSizeFor). Примитива под неё не было вовсе,
+// поэтому каждый писал её заново — всегда одинаково и всегда по-своему.
+const SPINNER_RULE = {
+  selector:
+    "JSXAttribute[name.name='className'] :matches(Literal[value=/animate-spin/], TemplateElement[value.cooked=/animate-spin/])",
+  message:
+    'Ожидание рисует Spinner из @/shared/ui/Spinner: размер приходит от контрола рядом (size), а не подбирается на глаз, и читалка узнаёт про работу там, где кружок стоит один (label). Своя анимация вращения — точечный disable с причиной.',
+}
+
 export default [
   { ignores: ['.next/**', 'node_modules/**', 'src/shared/gen/**', 'drizzle/**', 'public/**', '.claude/**'] },
   ...next,
@@ -244,7 +255,7 @@ export default [
     files: ['src/**/*.tsx'],
     ignores: ['src/shared/ui/**'],
     rules: {
-      'no-restricted-syntax': ['error', ...RESTRICTED, CARD_RULE],
+      'no-restricted-syntax': ['error', ...RESTRICTED, CARD_RULE, SPINNER_RULE],
     },
   },
 ]

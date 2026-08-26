@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { GitMerge, Trash2, Loader2, Undo2, X } from 'lucide-react'
+import { GitMerge, Trash2, Undo2, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { Spinner } from '@/shared/ui/Spinner'
 // eslint-disable-next-line boundaries/dependencies -- удаление ветки уже реализовано в git-фиче
 import { deleteBranchAction } from '@/features/git/actions'
 import { revertSuggestionAction } from './suggestion-revert-action'
@@ -81,12 +82,12 @@ export function MergedPanel({
       {/* Действие — к правому краю (thumb-зона), единая высота ряда. */}
       {revertOf && (
         <Button variant="outline" disabled={pending} onClick={revert}>
-          {pending ? <Loader2 size={13} className="animate-spin" /> : <Undo2 size={13} />} {labels.revert}
+          {pending ? <Spinner size="sm" /> : <Undo2 size={13} />} {labels.revert}
         </Button>
       )}
       {branch && !done && (
         <Button variant="outline" disabled={pending} onClick={remove}>
-          {pending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} {labels.deleteBranch}
+          {pending ? <Spinner size="sm" /> : <Trash2 size={13} />} {labels.deleteBranch}
         </Button>
       )}
     </div>

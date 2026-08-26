@@ -7,7 +7,7 @@
 // устаревшее значение не затирало свежую картинку, и т.д.).
 
 import { useState, useTransition } from 'react'
-import { BarChart3, Check, Loader2 } from 'lucide-react'
+import { BarChart3, Check } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Switch } from '@/shared/ui/switch'
@@ -22,6 +22,7 @@ import { ModelSelect, NONE, type Option } from './ModelSelect'
 import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } from './actions'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * Менеджер ростера совета: кто такие эксперты, как их зовут, чем они думают.
@@ -103,7 +104,7 @@ function AvatarPicker({
           <GnomeAvatar src={src} size={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-(--accent)" />
           {busy && (
             <span className="absolute inset-0 grid place-items-center rounded-full bg-black/50">
-              <Loader2 size={16} className="animate-spin text-white" />
+              <Spinner size="lg" className="text-white" />
             </span>
           )}
         </button>
@@ -299,7 +300,7 @@ function ExpertCard({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOpt
               {t('admin.webAccessOnlinePricier', lang)}
             </label>
             <Button type="submit" variant="primary" disabled={pending}>
-              {pending ? <Loader2 size={13} className="animate-spin" /> : saved ? <Check size={13} /> : null}
+              {pending ? <Spinner size="sm" /> : saved ? <Check size={13} /> : null}
               {saved ? t('admin.saved', lang) : t('common.save', lang)}
             </Button>
           </div>

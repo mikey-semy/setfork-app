@@ -1,13 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Eraser, Loader2, Sparkles } from 'lucide-react'
+import { Eraser, Sparkles } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { getEmbedSpaceInfo, getReindexStatus, purgeEmbeddings, setEmbedTarget, startReindex } from './actions'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
 type SpaceInfo = Awaited<ReturnType<typeof getEmbedSpaceInfo>>
@@ -173,7 +174,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
                 ))}
               </SelectContent>
             </Select>
-            {switching && <Loader2 size={13} className="animate-spin text-muted" />}
+            {switching && <Spinner size="sm" className="text-muted" />}
           </div>
           {/* Мерность — свойство ВЫБРАННОЙ МОДЕЛИ, поэтому у пунктов её нет (раньше там
               стояло вписанное руками «· 1536» при колонке 768). Здесь — измеренный факт
@@ -246,11 +247,11 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
 
       <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-4">
         <button type="button" onClick={purge} disabled={purging || running} className={`${btn} border border-border text-ink hover:border-border-strong`}>
-          {purging ? <Loader2 size={14} className="animate-spin" /> : <Eraser size={14} />}
+          {purging ? <Spinner size="md" /> : <Eraser size={14} />}
           {t('admin.purge', lang)}
         </button>
         <button type="button" onClick={start} disabled={running || onCooldown || starting} className={`${btn} bg-primary text-primary-fg`}>
-          {running || starting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+          {running || starting ? <Spinner size="md" /> : <Sparkles size={14} />}
           {running
             ? t('admin.indexing', lang)
             : onCooldown

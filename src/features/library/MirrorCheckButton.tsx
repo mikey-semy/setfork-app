@@ -1,9 +1,10 @@
 'use client'
 import { useRef, useState } from 'react'
-import { CheckCircle2, Loader2, PlugZap } from 'lucide-react'
+import { CheckCircle2, PlugZap } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/button'
+import { Spinner } from '@/shared/ui/Spinner'
 import { mirrorCheckAccess } from './mirror-actions'
 
 /**
@@ -72,7 +73,7 @@ export function MirrorCheckButton({ templateId, lang }: { templateId: string; la
           }
         }}
       >
-        {busy ? <Loader2 size={15} className="animate-spin" /> : <PlugZap size={15} />}
+        {busy ? <Spinner size="md" /> : <PlugZap size={15} />}
         {/* На мобиле только иконка: рядом ещё две кнопки, и три подписи в ряд
             не помещаются в 360px. Название доступно через aria-label. */}
         <span className="hidden md:inline">{t('mirrorCheckAccess', lang)}</span>

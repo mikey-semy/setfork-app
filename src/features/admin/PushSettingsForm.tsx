@@ -2,13 +2,14 @@
 
 import { t, type Lang } from '@/shared/i18n'
 import { useState } from 'react'
-import { KeyRound, Loader2 } from 'lucide-react'
+import { KeyRound } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import { useConfirm } from '@/shared/ui/use-confirm'
 import { generateVapidKeys, setPushSubject } from './actions'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 export interface PushFormValues {
   publicKey: string
@@ -69,7 +70,7 @@ export function PushSettingsForm({ lang, v }: { lang: Lang; v: PushFormValues })
           disabled={busy}
           className={buttonClass({ className: 'disabled:opacity-50' })}
         >
-          {busy ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />}
+          {busy ? <Spinner size="md" /> : <KeyRound size={14} />}
           {pub ? (ru ? 'Перегенерировать ключи' : 'Regenerate keys') : ru ? 'Сгенерировать ключи' : 'Generate keys'}
         </button>
         {msg && <span className="text-[0.78125rem] text-ink-2">{msg}</span>}

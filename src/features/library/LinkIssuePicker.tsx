@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, Plus, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Spinner } from '@/shared/ui/Spinner'
 import { toggleClosingRef } from './suggestion-meta-actions'
 
 /**
@@ -52,7 +53,7 @@ export function LinkIssuePicker({
             {/* Служебное действие — компактной кнопкой, тач-цель по высоте 38px
                 как у остальных кнопок панели. */}
             <Button variant="ghost" className="w-full justify-start px-2" disabled={pending}>
-              {pending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {labels.add}
+              {pending ? <Spinner size="md" /> : <Plus size={14} />} {labels.add}
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-[16.25rem] overflow-hidden p-0">

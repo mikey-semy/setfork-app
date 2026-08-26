@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { CircleAlert, Loader2, MessageCircleQuestion, Sparkles } from 'lucide-react'
+import { CircleAlert, MessageCircleQuestion, Sparkles } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, type Lang } from '@/shared/i18n'
@@ -10,6 +10,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { PAGE } from '@/shared/ui/control'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -72,7 +73,7 @@ export default async function GenerationHistoryPage() {
 
 function StatusIcon({ status, accepted }: { status: GenerationStatus; accepted: boolean }) {
   if (accepted) return <Sparkles size={15} className="shrink-0 text-accent" />
-  if (status === 'pending') return <Loader2 size={15} className="shrink-0 animate-spin text-muted" />
+  if (status === 'pending') return <Spinner size="md" className="text-muted" />
   if (status === 'failed') return <CircleAlert size={15} className="shrink-0 text-danger" />
   if (status === 'clarify') return <MessageCircleQuestion size={15} className="shrink-0 text-warn" />
   return <Sparkles size={15} className="shrink-0 text-muted" />

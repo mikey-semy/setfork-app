@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { ChevronRight, Loader2, Pickaxe } from 'lucide-react'
+import { ChevronRight, Pickaxe } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { digDeeper, type DigLayerRow } from './actions'
 import { t } from '@/shared/i18n'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * «Копать глубже» под шагом (HQ §8): аккордеон слоёв + кнопка следующего слоя.
@@ -78,7 +79,7 @@ export function DigPanel({
             disabled={pending}
             className={buttonClass({ className: 'disabled:opacity-50' })}
           >
-            {pending ? <Loader2 size={12} className="animate-spin" /> : <Pickaxe size={12} />}
+            {pending ? <Spinner size="xs" /> : <Pickaxe size={12} />}
             {layers.length === 0 ? t('dig.digDeeper2', lang) : t('dig.digLowerN', lang).replace('{a}', String(layers.length)).replace('{b}', String(MAX_LEVEL))}
           </button>
         )}

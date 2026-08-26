@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, ChevronDown, ChevronUp, GraduationCap, Loader2, RotateCcw, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, GraduationCap, RotateCcw, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { submitQuiz } from './actions'
 import type { QuizState } from './queries'
@@ -9,6 +9,7 @@ import { Button } from '@/shared/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, matchRights, shuffleSort, quizKind, type QuizBlockContent } from '@/core'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -342,7 +343,7 @@ export function QuizBlock({
           <span className="text-[0.78125rem] text-muted">{t('quizSnapshotReadOnly', lang)}</span>
         ) : !checked ? (
           <Button variant="primary" disabled={!hasInput || pending || (clientMode && !clientHasAnswer)} onClick={check}>
-            {pending && <Loader2 size={13} className="animate-spin" />}
+            {pending && <Spinner size="sm" />}
             {ru ? 'Проверить' : 'Check'}
           </Button>
         ) : (

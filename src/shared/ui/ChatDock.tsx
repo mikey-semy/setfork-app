@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Loader2 } from 'lucide-react'
 import { ChatComposer } from './ChatComposer'
 import { PanelFoot, PanelHead } from './panel-parts'
 import { GnomeAvatar } from './GnomeAvatar'
@@ -10,6 +9,7 @@ import { Button } from './button'
 import { LAYER, PANEL_PAD } from './control'
 import { useViewportBottom } from './use-viewport-bottom'
 import { t, type Lang } from '@/shared/i18n'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * Окно чата в углу экрана: лента реплик, подсказки-кнопки и композер.
@@ -127,7 +127,7 @@ export function ChatDock({
         )}
         {pending && (
           <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
-            <Loader2 size={13} className="animate-spin" /> {pendingLabel}
+            <Spinner size="sm" /> {pendingLabel}
           </div>
         )}
         {error && <p className="text-[0.78125rem] text-warn">{error}</p>}

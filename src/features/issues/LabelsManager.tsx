@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, Plus, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { ColorSwatch } from '@/shared/ui/ColorSwatch'
 import { chipColors, type CustomLabel } from '@/shared/lib/labels'
 import { createLabel, deleteLabel } from './label-actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 const PRESET = ['#2159d6', '#7c3aed', '#15803d', '#c2570c', '#be123c', '#0f766e', '#b45309', '#475569']
 
@@ -76,7 +77,7 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
           className={buttonClass({ className: 'min-w-0 flex-1 bg-surface-2 outline-hidden' })}
         />
         <Button variant="primary" onClick={add} disabled={pending || !name.trim()}>
-          {pending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} {ru ? 'Добавить' : 'Add'}
+          {pending ? <Spinner size="sm" /> : <Plus size={13} />} {ru ? 'Добавить' : 'Add'}
         </Button>
       </div>
       {err && <span className="text-[0.78125rem] text-danger">{err}</span>}

@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { Check, Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { t, type Lang } from '@/shared/i18n'
 import { PAGE_X } from '@/shared/ui/control'
+import { Spinner } from '@/shared/ui/Spinner'
 import { useViewportBottom } from './use-viewport-bottom'
 
 /**
@@ -128,7 +129,7 @@ export function FormSaveBar({ lang }: { lang: Lang }) {
                 {t('ui.discard', lang)}
               </Button>
               <Button type="submit" variant="primary" size="md" disabled={pending} className="max-sm:flex-1">
-                {pending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                {pending ? <Spinner size="md" /> : <Check size={15} />}
                 {t('common.save', lang)}
               </Button>
             </div>

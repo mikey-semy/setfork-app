@@ -1,8 +1,9 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Spinner } from '@/shared/ui/Spinner'
 import { toggleViewed } from './viewed-actions'
 
 /**
@@ -47,7 +48,7 @@ export function ViewedToggle({
           stale ? 'text-warn' : viewed ? 'text-ok' : 'text-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-ink max-sm:opacity-100'
         }`}
       >
-        {pending ? <Loader2 size={14} className="animate-spin" /> : viewed ? <Eye size={14} /> : <EyeOff size={14} />}
+        {pending ? <Spinner size="md" /> : viewed ? <Eye size={14} /> : <EyeOff size={14} />}
       </button>
     </Tooltip>
   )

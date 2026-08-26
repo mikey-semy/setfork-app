@@ -1,8 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { ImageUp, Loader2, Paperclip, Video as VideoIcon } from 'lucide-react'
+import { ImageUp, Paperclip, Video as VideoIcon } from 'lucide-react'
 import { TEXT, TOUCH_MIN_H } from '@/shared/ui/control'
+import { Spinner } from '@/shared/ui/Spinner'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { ATTACH_MAX_BYTES, megabytes, VIDEO_MAX_BYTES } from '@/shared/media/limits'
 
@@ -46,7 +47,7 @@ export function FileDrop({ kind, uploading, onFile, lang }: { kind: DropKind; up
         over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
       }`}
     >
-      {uploading ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
+      {uploading ? <Spinner size="md" /> : <Icon size={14} />}
       {uploading ? t('editor.uploading', lang) : t(label, lang).replace('{n}', String(mb))}
       <input
         ref={ref}
