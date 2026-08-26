@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Spinner } from '@/shared/ui/Spinner'
 import { toggleViewed } from './viewed-actions'
@@ -38,18 +39,19 @@ export function ViewedToggle({
 
   return (
     <Tooltip label={label}>
-      <button
-        type="button"
-        aria-label={label}
+      <IconButton
+        size="md"
+        variant="ghost"
+        label={label}
         aria-pressed={viewed}
         disabled={pending}
         onClick={() => start(async () => void (await toggleViewed(suggestionId, blockId, fingerprint)))}
-        className={`grid size-9 place-items-center rounded-md transition-colors ${
+        className={`${
           stale ? 'text-warn' : viewed ? 'text-ok' : 'text-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-ink max-sm:opacity-100'
         }`}
       >
         {pending ? <Spinner size="md" /> : viewed ? <Eye size={14} /> : <EyeOff size={14} />}
-      </button>
+      </IconButton>
     </Tooltip>
   )
 }

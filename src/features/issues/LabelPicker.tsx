@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Check } from 'lucide-react'
+import { Chip } from '@/shared/ui/Chip'
 import type { Lang } from '@/shared/i18n'
 import { ISSUE_LABELS, chipColors, customKey, type CustomLabel } from '@/shared/lib/labels'
 
@@ -16,7 +17,6 @@ export function LabelPicker({ lang, initial = [], custom = [] }: { lang: Lang; i
       else next.add(k)
       return next
     })
-  const off = 'border-border bg-surface text-ink-2 hover:text-ink'
   return (
     <div className="flex flex-wrap gap-1.5">
       {[...sel].map((k) => (
@@ -25,33 +25,20 @@ export function LabelPicker({ lang, initial = [], custom = [] }: { lang: Lang; i
       {ISSUE_LABELS.map((l) => {
         const on = sel.has(l.key)
         return (
-          <button
-            key={l.key}
-            type="button"
-            onClick={() => toggle(l.key)}
-            // eslint-disable-next-line no-restricted-syntax -- чип-метка задачи: своя роль, ждёт Ф14 (пилюли)
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-body-sm transition-colors ${on ? l.cls : off}`}
-          >
+          <Chip key={l.key} onClick={() => toggle(l.key)} selected={on} className={on ? l.cls : undefined}>
             {on && <Check size={11} />}
             {lang === 'ru' ? l.ru : l.en}
-          </button>
+          </Chip>
         )
       })}
       {custom.map((c) => {
         const key = customKey(c.id)
         const on = sel.has(key)
         return (
-          <button
-            key={key}
-            type="button"
-            onClick={() => toggle(key)}
-            style={on ? chipColors(c.color) : undefined}
-            // eslint-disable-next-line no-restricted-syntax -- чип-метка задачи: своя роль, ждёт Ф14 (пилюли)
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-body-sm transition-colors ${on ? '' : off}`}
-          >
+          <Chip key={key} onClick={() => toggle(key)} selected={on} style={on ? chipColors(c.color) : undefined}>
             {on ? <Check size={11} /> : <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />}
             {c.name}
-          </button>
+          </Chip>
         )
       })}
     </div>

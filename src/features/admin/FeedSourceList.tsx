@@ -14,6 +14,7 @@ import type { FeedSourceRow } from '@/features/admin/feed-queries'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Input } from '@/shared/ui/input'
 import { cardClass } from '@/shared/ui/card-style'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /**
  * ПОДПИСКИ НА ПОТОК — состав ровными столбцами, как состав специалистов.
@@ -157,37 +158,30 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
                     влезут, а иконка с подсказкой понятна и в 360px. */}
                 <form action={pullFeedNow}>
                   <input type="hidden" name="id" value={r.id} />
-                  <button
-                    type="submit"
-                    aria-label={t('admin.pullNow', lang)}
-                    title={t('admin.pullNow', lang)}
-                    className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-                  >
+                  <IconButton size="xl" variant="ghost" label={t('admin.pullNow', lang)} className="text-muted hover:bg-surface-2 hover:text-ink" type="submit"
+                    title={t('admin.pullNow', lang)}>
                     <RefreshCw size={15} />
-                  </button>
+                  </IconButton>
                 </form>
                 <form action={setFeedSourceEnabled}>
                   <input type="hidden" name="id" value={r.id} />
                   <input type="hidden" name="enabled" value={r.enabled ? 'false' : 'true'} />
-                  <button
+                  <IconButton
                     type="submit"
-                    aria-label={r.enabled ? t('admin.disable', lang) : t('admin.enable', lang)}
-                    title={r.enabled ? t('admin.disable', lang) : t('admin.enable', lang)}
-                    className={`grid size-11 place-items-center rounded-md hover:bg-surface-2 ${r.enabled ? 'text-ok' : 'text-muted'}`}
+                    size="xl"
+                    variant="ghost"
+                    label={r.enabled ? t('admin.disable', lang) : t('admin.enable', lang)}
+                    className={r.enabled ? 'text-ok' : 'text-muted'}
                   >
                     <Power size={15} />
-                  </button>
+                  </IconButton>
                 </form>
                 <form action={removeFeedSource}>
                   <input type="hidden" name="id" value={r.id} />
-                  <button
-                    type="submit"
-                    aria-label={t('admin.deleteCollectedItems', lang)}
-                    title={t('admin.deleteCollectedItems', lang)}
-                    className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-danger"
-                  >
+                  <IconButton size="xl" variant="ghost" label={t('admin.deleteCollectedItems', lang)} className="text-muted hover:bg-surface-2 hover:text-danger" type="submit"
+                    title={t('admin.deleteCollectedItems', lang)}>
                     <Trash2 size={15} />
-                  </button>
+                  </IconButton>
                 </form>
               </div>
             ),

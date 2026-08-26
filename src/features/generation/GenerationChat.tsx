@@ -8,6 +8,7 @@ import type { GenerationCandidate } from '@/shared/db'
 import type { GenMessage } from '@/shared/ai/generation-messages'
 import type { GenerationStatus } from './queries'
 import { LIST_KINDS, kindLabel, refineHint } from '@/shared/ai/list-kind'
+import { Chip } from '@/shared/ui/Chip'
 import { DETAIL_LEVELS, detailLabel, toDetail } from '@/shared/ai/detail-level'
 import { CouncilBubble } from './CouncilBubble'
 import { MAX_VARIANTS } from './limits'
@@ -220,33 +221,27 @@ export function GenerationChat({ generationId, lang, candidates, status, message
           На узком — горизонтальный скролл, на sm+ — перенос строк: пилюли не должны уходить за экран. */}
       <div className="no-scrollbar -mx-4 mb-4 flex items-center gap-1.5 overflow-x-auto px-4 sm:-mx-6 sm:flex-wrap sm:overflow-x-visible sm:px-6">
         {LIST_KINDS.map((k) => (
-          <button
+          <Chip
             key={k}
-            type="button"
             onClick={() => k !== listKind && start(() => setGenerationKind(generationId, k))}
             disabled={working}
-            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-body-sm transition-colors disabled:opacity-40 ${
-              k === listKind ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink'
-            }`}
+            selected={k === listKind}
           >
             {kindLabel(k, ru)}
-          </button>
+          </Chip>
         ))}
         <span className="mx-1 h-4 w-px shrink-0 bg-border" />
         {/* Объём — вторая ось рядом с типом: «слишком куце / слишком много» лечится одним
             кликом, новый вариант приходит в ленту, старые остаются для сравнения. */}
         {DETAIL_LEVELS.map((lv) => (
-          <button
+          <Chip
             key={lv}
-            type="button"
             onClick={() => lv !== detailNow && start(() => setGenerationDetail(generationId, lv))}
             disabled={working}
-            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-body-sm transition-colors disabled:opacity-40 ${
-              lv === detailNow ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink'
-            }`}
+            selected={lv === detailNow}
           >
             {detailLabel(lv, ru)}
-          </button>
+          </Chip>
         ))}
       </div>
 
@@ -375,33 +370,20 @@ export function GenerationChat({ generationId, lang, candidates, status, message
         {!working && (last || status === 'failed') && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             {last && (
-              <button
-                type="button"
-                disabled={!selId}
-                onClick={() => selId && start(() => acceptCandidate(generationId, selId))}
-                className="inline-flex items-center gap-1.5 rounded-full border border-accent/60 bg-accent-soft px-3 py-1.5 text-body-sm font-medium text-accent hover:opacity-90 disabled:opacity-40"
-              >
+              <Chip disabled={!selId} onClick={() => selId && start(() => acceptCandidate(generationId, selId))} selected className="font-medium">
                 <Check size={13} /> {t('generation.useOne', lang)}
-              </button>
+              </Chip>
             )}
             {candidates.length < MAX_VARIANTS && (
-              <button
-                type="button"
-                onClick={() => start(() => regenerateCandidate(generationId))}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-body-sm text-ink-2 hover:border-border-strong hover:text-ink"
-              >
+              <Chip onClick={() => start(() => regenerateCandidate(generationId))}>
                 {/* Сравнивать нечего — значит это не «ещё вариант», а повтор того же запроса. */}
                 <RotateCw size={13} /> {last ? t('generation.anotherVariant', lang) : t('generation.tryAgain', lang)}
-              </button>
+              </Chip>
             )}
             {(last?.hint || '').trim() && (
-              <button
-                type="button"
-                onClick={() => setNote(capFirst(last.hint ?? ''))}
-                className="inline-flex max-w-panel items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-body-sm text-muted hover:border-border-strong hover:text-ink-2"
-              >
+              <Chip onClick={() => setNote(capFirst(last.hint ?? ''))} className="max-w-panel text-muted">
                 <span className="truncate">{capFirst(last.hint ?? '')}</span>
-              </button>
+              </Chip>
             )}
           </div>
         )}

@@ -7,6 +7,7 @@ import { ChatDock } from '@/shared/ui/ChatDock'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { IconButton } from '@/shared/ui/IconButton'
 import { digChatAsk, getDigChatHistory, thankGnome, type DigChatMsg } from './chat-actions'
 
 /**
@@ -217,15 +218,10 @@ function ThankButton({ who, thanked, onThank, lang }: { who: string; thanked: bo
 export function DigChatOpen({ detail, label, hasSession }: { detail: DigChatOpenDetail; label: string; hasSession?: boolean }) {
   return (
     <Tooltip label={label}>
-      <button
-        type="button"
-        aria-label={label}
-        onClick={() => window.dispatchEvent(new CustomEvent(DIG_CHAT_EVENT, { detail }))}
-        className="relative grid size-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:text-accent"
-      >
+      <IconButton size="sm" variant="ghost" label={label} className="relative shrink-0 text-muted hover:text-accent" onClick={() => window.dispatchEvent(new CustomEvent(DIG_CHAT_EVENT, { detail }))}>
         <Pickaxe size={14} />
         {hasSession && <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-accent" aria-hidden />}
-      </button>
+      </IconButton>
     </Tooltip>
   )
 }

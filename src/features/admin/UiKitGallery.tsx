@@ -16,6 +16,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { useConfirm } from '@/shared/ui/use-confirm'
 import { Button, type ButtonVariant } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
+import { Chip } from '@/shared/ui/Chip'
 import { ColorSwatch } from '@/shared/ui/ColorSwatch'
 import { Input } from '@/shared/ui/input'
 import { SearchField } from '@/shared/ui/SearchField'
@@ -231,6 +232,10 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           <Badge variant="chip" size="md">
             md
           </Badge>
+          {/* Chip — это КОНТРОЛ, а не метка: нажимается, помнит выбор, добирает
+              тач-цель. Стоит рядом с Badge намеренно — разницу видно глазами. */}
+          <Chip selected>Chip выбран</Chip>
+          <Chip>Chip</Chip>
           <Tooltip label={t('admin.tooltipNotTitle', lang)}>
             <Badge variant="soft">tooltip →</Badge>
           </Tooltip>

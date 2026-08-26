@@ -23,6 +23,7 @@ import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Badge } from '@/shared/ui/badge'
+import { IconButton } from '@/shared/ui/IconButton'
 
 export interface DiffCommentLabels {
   add: string
@@ -141,14 +142,9 @@ export function DiffComments({
           наведению на строку, на мобиле видна всегда, с клавиатуры — по фокусу. */}
       {canComment && blockId && (
         <Tooltip label={labels.add}>
-          <button
-            type="button"
-            onClick={openComposer}
-            aria-label={labels.add}
-            className="absolute right-1.5 top-1 grid size-9 place-items-center rounded-md bg-surface/80 text-muted opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 hover:text-ink max-sm:opacity-100"
-          >
+          <IconButton variant="ghost" label={labels.add} className="absolute right-1.5 top-1 bg-surface/80 text-muted opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 hover:text-ink max-sm:opacity-100" onClick={openComposer}>
             <MessageSquarePlus size={15} />
-          </button>
+          </IconButton>
         </Tooltip>
       )}
 
@@ -212,14 +208,9 @@ export function DiffComments({
                     <Replace size={13} className="shrink-0 text-accent" />
                     <span className="min-w-0 truncate">{labels.suggestHint}</span>
                     <Tooltip label={labels.cancel}>
-                      <button
-                        type="button"
-                        onClick={() => setSuggest(null)}
-                        aria-label={labels.cancel}
-                        className="ml-auto grid size-9 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
-                      >
+                      <IconButton variant="ghost" label={labels.cancel} className="ml-auto shrink-0 text-muted hover:text-ink" onClick={() => setSuggest(null)}>
                         <X size={14} />
-                      </button>
+                      </IconButton>
                     </Tooltip>
                   </div>
                   <Textarea

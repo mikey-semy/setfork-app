@@ -241,7 +241,7 @@
   },
   "src/features/generation/GenerationChat.tsx": {
     "no-restricted-syntax": {
-      "count": 9
+      "count": 4
     }
   },
   "src/features/generation/actions.ts": {
@@ -445,11 +445,6 @@
   "src/features/quizzes/QuizBlock.tsx": {
     "no-restricted-syntax": {
       "count": 18
-    }
-  },
-  "src/features/reactions/Reactions.tsx": {
-    "no-restricted-syntax": {
-      "count": 2
     }
   },
   "src/features/releases/actions.ts": {

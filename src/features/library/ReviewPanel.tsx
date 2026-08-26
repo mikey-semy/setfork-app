@@ -14,6 +14,7 @@ import type { ReviewView, Verdict } from './review-model'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 
 export interface ReviewLabels {
   title: string
@@ -187,14 +188,10 @@ function DismissButton({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`${labels.dismiss} @${reviewerHandle}`}
-          title={labels.dismiss}
-          className="grid size-8 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-        >
+        <IconButton variant="ghost" label={`${labels.dismiss} className="shrink-0 text-muted hover:bg-surface-2 hover:text-ink" @${reviewerHandle}`}
+          title={labels.dismiss}>
           <ShieldOff size={14} />
-        </button>
+        </IconButton>
       </PopoverTrigger>
       <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-3">
         <div className="mb-2 text-body-sm font-medium text-ink">{labels.dismiss}</div>

@@ -8,6 +8,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
 import { buttonClass } from '@/shared/ui/button-style'
+import { IconButton } from '@/shared/ui/IconButton'
 
 export interface CommitAuthor {
   handle: string
@@ -97,17 +98,18 @@ export function CommitBar({
         )}
         <span className="min-w-0 flex-1 truncate text-ink-2">{head}</span>
         {hasBody && (
-          <button
-            type="button"
+          <IconButton
+            size="xs"
+            variant="outline"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            aria-label={open ? labels.collapse : labels.expand}
-            className={`grid size-6 shrink-0 place-items-center rounded-md border border-border text-muted transition-colors hover:border-border-strong hover:text-ink ${
+            label={open ? labels.collapse : labels.expand}
+            className={`shrink-0 text-muted hover:text-ink ${
               open ? 'bg-surface-2 text-ink' : ''
             }`}
           >
             <Ellipsis size={13} />
-          </button>
+          </IconButton>
         )}
         {/* Номер версии = «короткий sha» у GitHub: ведёт в историю, к этому коммиту. */}
         <Tooltip label={labels.commitLink}>

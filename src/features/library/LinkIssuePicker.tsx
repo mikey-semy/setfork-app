@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 import { toggleClosingRef } from './suggestion-meta-actions'
 
 /**
@@ -87,15 +88,10 @@ export function LinkIssuePicker({
             <div key={n} className="flex items-center gap-1.5 text-body-sm">
               <span className="font-mono text-muted">#{n}</span>
               <Tooltip label={labels.remove}>
-                <button
-                  type="button"
-                  onClick={() => toggle(n)}
-                  aria-label={labels.remove}
-                  disabled={pending}
-                  className="ml-auto grid size-9 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
-                >
+                <IconButton variant="ghost" label={labels.remove} className="ml-auto shrink-0 text-muted hover:text-ink" onClick={() => toggle(n)}
+                  disabled={pending}>
                   <X size={13} />
-                </button>
+                </IconButton>
               </Tooltip>
             </div>
           ))}

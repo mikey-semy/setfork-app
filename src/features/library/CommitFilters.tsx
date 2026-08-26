@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { CalendarDays, Users, X } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { IconButton } from '@/shared/ui/IconButton'
 
 // Фильтры страницы «Коммиты» (как «All users» / «All time» у GitHub): автор + дата.
 // Значения кладём в query (?author=&since=) — сервер перечитывает и фильтрует список.
@@ -77,14 +78,9 @@ export function CommitFilters({
       </Select>
 
       {active && (
-        <button
-          type="button"
-          onClick={() => go({ author: 'all', since: 'all' })}
-          aria-label={labels.reset}
-          className="grid size-8 place-items-center rounded-md border border-border text-muted hover:border-border-strong hover:text-ink"
-        >
+        <IconButton label={labels.reset} className="text-muted hover:border-border-strong hover:text-ink" onClick={() => go({ author: 'all', since: 'all' })}>
           <X size={14} />
-        </button>
+        </IconButton>
       )}
     </div>
   )

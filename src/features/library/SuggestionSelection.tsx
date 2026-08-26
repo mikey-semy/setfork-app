@@ -7,6 +7,7 @@ import { Checkbox } from '@/shared/ui/checkbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 import type { Lang } from '@/shared/i18n'
 import { resolveChip, type CustomLabel } from '@/shared/lib/labels'
 import { bulkSuggestionAction } from './suggestion-meta-actions'
@@ -109,14 +110,9 @@ export function SuggestionSelection({
               {pending ? <Spinner size="md" /> : labels.close}
             </Button>
             <Tooltip label={labels.clear}>
-              <button
-                type="button"
-                onClick={() => setSel([])}
-                aria-label={labels.clear}
-                className="grid size-11 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
-              >
+              <IconButton size="xl" variant="ghost" label={labels.clear} className="shrink-0 text-muted hover:text-ink" onClick={() => setSel([])}>
                 <X size={15} />
-              </button>
+              </IconButton>
             </Tooltip>
           </div>
         </div>

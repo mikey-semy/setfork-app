@@ -6,6 +6,7 @@ import { nodeColumn, numberColumn } from '@/shared/ui/data-table/column-builders
 import { t, tr, type Lang } from '@/shared/i18n'
 import { decideAgendaItem } from '@/features/admin/agenda-actions'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /**
  * Повестка развития (/admin/development) — DataTableV2 (Ф11, хвост миграции с v1-моста).
@@ -49,18 +50,18 @@ export function DevAgendaTable({ rows, lang }: { rows: AgendaRow[]; lang: Lang }
                 <input type="hidden" name="id" value={r.id} />
                 <input type="hidden" name="decision" value="approved" />
                 <Tooltip label={t('admin.approve', lang)}>
-                  <button type="submit" aria-label={t('admin.approve', lang)} className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ok">
+                  <IconButton size="xl" variant="ghost" label={t('admin.approve', lang)} className="text-muted hover:bg-surface-2 hover:text-ok" type="submit">
                     <Check size={16} />
-                  </button>
+                  </IconButton>
                 </Tooltip>
               </form>
               <form action={decideAgendaItem}>
                 <input type="hidden" name="id" value={r.id} />
                 <input type="hidden" name="decision" value="dismissed" />
                 <Tooltip label={t('admin.dismiss', lang)}>
-                  <button type="submit" aria-label={t('admin.dismiss', lang)} className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-warn">
+                  <IconButton size="xl" variant="ghost" label={t('admin.dismiss', lang)} className="text-muted hover:bg-surface-2 hover:text-warn" type="submit">
                     <X size={16} />
-                  </button>
+                  </IconButton>
                 </Tooltip>
               </form>
             </>

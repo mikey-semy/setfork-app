@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Plus, RotateCw } from 'lucide-react'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { IconButton } from '@/shared/ui/IconButton'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import { MAX_VARIANTS } from './limits'
@@ -66,16 +67,11 @@ export function ActionsMenu({
           disabled-кнопка «нажимаю и ничего» ставила в тупик — теперь до первого варианта
           меню честно объясняет, что появится здесь. Тултип — shadcn, не браузерный title. */}
       <Tooltip label={t('generation.variantActions', lang)}>
-        <button
-          type="button"
-          aria-haspopup="menu"
+        <IconButton variant="ghost" label={t('generation.variantActions', lang)} className="rounded-full text-muted hover:bg-surface-2 hover:text-ink" aria-haspopup="menu"
           aria-expanded={open}
-          aria-label={t('generation.variantActions', lang)}
-          onClick={() => setOpen((v) => !v)}
-          className="grid size-9 place-items-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-ink"
-        >
+          onClick={() => setOpen((v) => !v)}>
           <Plus size={18} className={`transition-transform ${open ? 'rotate-45' : ''}`} />
-        </button>
+        </IconButton>
       </Tooltip>
 
       {open && candidates.length === 0 && (

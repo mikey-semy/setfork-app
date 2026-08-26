@@ -8,6 +8,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { editSuggestionNote } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 
 export interface TitleLabels {
   edit: string
@@ -79,14 +80,9 @@ export function SuggestionTitle({
       )}
       {canEdit && (
         <Tooltip label={labels.edit}>
-          <button
-            type="button"
-            aria-label={labels.edit}
-            onClick={() => setEditing(true)}
-            className="grid size-8 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-          >
+          <IconButton variant="ghost" label={labels.edit} className="text-muted hover:bg-surface-2 hover:text-ink" onClick={() => setEditing(true)}>
             <Pencil size={14} />
-          </button>
+          </IconButton>
         </Tooltip>
       )}
     </div>

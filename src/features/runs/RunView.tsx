@@ -21,6 +21,7 @@ import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep,
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
+import { IconButton } from '@/shared/ui/IconButton'
 
 export interface RunStepVM {
   id: string
@@ -186,9 +187,7 @@ export function RunView({
                 </button>
                 {/* «Остановить как неудачу» — иконкой (был длинный текст, фидбек владельца). */}
                 <Tooltip label={t('runFailAction', lang)}>
-                  <button
-                    type="button"
-                    onClick={async () => {
+                  <IconButton variant="danger" label={t('runFailAction', lang)} className="text-danger hover:bg-danger/10" onClick={async () => {
                       const ok = await confirm({
                         title: t('runFailAction', lang),
                         intro: t('runFailConfirm', lang),
@@ -196,20 +195,15 @@ export function RunView({
                         cancelLabel: t('cancel', lang),
                       })
                       if (ok) start(() => failRun(runId))
-                    }}
-                    aria-label={t('runFailAction', lang)}
-                    className="grid size-8 place-items-center rounded-md border border-danger/40 text-danger hover:bg-danger/10"
-                  >
+                    }}>
                     <CircleAlert size={16} />
-                  </button>
+                  </IconButton>
                 </Tooltip>
               </>
             )}
             {/* Delete — реально удаляет прогон (в отличие от «завершить/неудача»), уводит на /runs */}
             <Tooltip label={t('runDelete', lang)}>
-              <button
-                type="button"
-                onClick={async () => {
+              <IconButton variant="ghost" label={t('runDelete', lang)} className="text-muted hover:text-danger" onClick={async () => {
                   const ok = await confirm({
                     title: t('runDelete', lang),
                     intro: t('runDeleteConfirm', lang),
@@ -217,12 +211,9 @@ export function RunView({
                     cancelLabel: t('cancel', lang),
                   })
                   if (ok) start(() => deleteRun(runId))
-                }}
-                aria-label={t('runDelete', lang)}
-                className="grid size-8 place-items-center rounded-md text-muted hover:text-danger"
-              >
+                }}>
                 <Trash2 size={16} />
-              </button>
+              </IconButton>
             </Tooltip>
           </div>
         </div>
@@ -293,17 +284,12 @@ export function RunView({
                 <div className="absolute right-2 top-2 flex items-center gap-1">
                   {showFail && (
                     <Tooltip label={t('runCantComplete', lang)}>
-                      <button
-                        type="button"
-                        onClick={() => {
+                      <IconButton variant="ghost" label={t('runCantComplete', lang)} className="text-muted hover:text-danger" onClick={() => {
                           setBlockingId(s.id)
                           setReasonDraft('')
-                        }}
-                        aria-label={t('runCantComplete', lang)}
-                        className="grid size-8 place-items-center rounded-md text-muted transition-colors hover:text-danger"
-                      >
+                        }}>
                         <Ban size={16} />
-                      </button>
+                      </IconButton>
                     </Tooltip>
                   )}
                   {digEnabled && <DigChatOpen detail={{ templateId, stepN: s.n, stepTitle: s.digTitle }} label={t('digStep', lang)} hasSession={dugLocal.has(s.n)} />}
