@@ -45,19 +45,19 @@ export async function runTriplesSweep(): Promise<{ mined: number; skipped: numbe
   // Не можем работать — это СОСТОЯНИЕ, и оно обязано быть видно. Раньше оба выхода
   // молчали, то есть петля выглядела не просыпавшейся ровно тогда, когда владельцу важнее
   // всего знать: канал к модели лёг или кончились деньги. Замечание авто-ревью на fe#800.
-  const немощь = async (причина: string) => {
+  const giveUp = async (reason: string) => {
     await recordAgentAction({
       loop: 'triples',
       action: 'mine',
       resultStatus: 'skipped',
-      decision: { reason: причина },
+      decision: { reason: reason },
       policyVersion: loop.policyVersion,
     })
-    log.info(`triples: ${причина}`)
+    log.info(`triples: ${reason}`)
     return { mined: 0, skipped: 0 }
   }
-  if (!(await isAiAvailable())) return немощь('ai unavailable')
-  if (!(await globalBudgetOk())) return немощь('budget exhausted')
+  if (!(await isAiAvailable())) return giveUp('ai unavailable')
+  if (!(await globalBudgetOk())) return giveUp('budget exhausted')
 
   // Публичные списки, где рудник ещё не был (или список правился после добычи).
   // Маркер triples_mined_at ставится независимо от урожая — «пустой» список не

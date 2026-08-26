@@ -144,7 +144,7 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
    * руками и молча теряла `resultRef` и `translate`, то есть две формы одной записи
    * разъезжались бы при первой правке.
    */
-  const след = (status: AgentActionInput['resultStatus'], decision: Record<string, unknown>, error?: string) =>
+  const trace = (status: AgentActionInput['resultStatus'], decision: Record<string, unknown>, error?: string) =>
     recordAgentAction({
       loop: 'changelog',
       action: 'changelog.refresh',
@@ -156,7 +156,7 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
     })
 
   if (loop.dryRun) {
-    await след('dry-run', { mode: 'skip-live-run' })
+    await trace('dry-run', { mode: 'skip-live-run' })
     return { added: 0, skipped: 'dry run' }
   }
 
@@ -175,13 +175,13 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
   try {
     items = await pull(s.repo, s.source)
   } catch (e) {
-    const причина = e instanceof Error ? e.message : String(e)
-    await след('skipped', { reason: 'fetch failed' }, причина)
+    const reason = e instanceof Error ? e.message : String(e)
+    await trace('skipped', { reason: 'fetch failed' }, reason)
     captureError(e, { where: 'changelog.pull' })
     return { added: 0, skipped: 'fetch failed' }
   }
   if (items.length === 0) {
-    await след('skipped', { reason: 'nothing pulled' })
+    await trace('skipped', { reason: 'nothing pulled' })
     return { added: 0, skipped: 'nothing pulled' }
   }
 
@@ -193,7 +193,7 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
   )
   const fresh = items.filter((i) => !known.has(i.externalId))
   if (fresh.length === 0) {
-    await след('skipped', { reason: 'up to date', pulled: items.length })
+    await trace('skipped', { reason: 'up to date', pulled: items.length })
     return { added: 0, skipped: 'up to date' }
   }
 
@@ -201,7 +201,7 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
   // Это платные вызовы модели: пачка из 30 разом бьёт в лимиты провайдера и
   // проскакивает мимо суточного потолка, который проверяется перед каждым.
   let added = 0
-  let сорвалось = 0
+  let failed = 0
   for (const it of fresh.slice(0, 30)) {
     const { en, ru } = await bilingual(it.title, s.translate)
     try {
@@ -215,7 +215,7 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
         .returning({ id: changelogEntries.id })
       if (строка) added++
     } catch (e) {
-      сорвалось++
+      failed++
       captureError(e, { where: 'changelog.insert' })
     }
   }
@@ -225,11 +225,11 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
   // проход. Помечай мы весь проход ошибкой из-за одного такого, серия из пяти набралась
   // бы гарантированно и петля погасла бы навсегда, добавляя при этом по 29 записей из 30.
   // Число неудач видно в decision.failed.
-  await след(added === 0 && сорвалось > 0 ? 'error' : added > 0 ? 'ok' : 'skipped', {
+  await trace(added === 0 && failed > 0 ? 'error' : added > 0 ? 'ok' : 'skipped', {
     pulled: items.length,
     fresh: fresh.length,
     added,
-    failed: сорвалось,
+    failed: failed,
   })
   return { added, skipped: '' }
 }
