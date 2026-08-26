@@ -41,6 +41,9 @@ export const en = {
   // Повторы продолжаются и здесь — раз в сутки. Текст зовёт владельца не потому,
   // что мы сдались, а потому что после серии неудач сбой уже не временный.
   mirrorNeedsOwner: 'Failing for a while — check the token and the repository. Retrying daily meanwhile.',
+  'mirror.errNotConfigured': 'Mirror is not configured: set the repository and token.',
+  'mirror.errSecretMissing': 'The server has no token encryption key — mirroring is off until an admin fixes it. Nothing is required from you.',
+  'mirror.errTokenUndecryptable': 'The stored token cannot be read: the encryption key changed. Enter the token again.',
   mirrorCheckAccess: 'Check access',
   mirrorCheckOk: 'Access confirmed: the token can push to this repository.',
   mirrorCheckNotConfigured: 'Set the repository and token first.',
@@ -1302,6 +1305,8 @@ export const en = {
   'branch.errNotFound': 'Not found',
   'branch.errProtected': 'main is protected',
   'branch.errOutOfSync': 'This list’s repository disagrees with its history — writes are paused until it is repaired',
+  'branch.errGateUnavailable': 'Permission check is unavailable — retry in a few seconds',
+  'branch.errGateMalformed': 'Permission check replied in an unknown format: versions diverged. Retrying will not help — we know and are on it',
   'branch.errInternal': 'Something went wrong',
   'release.errBadtag': 'Tag: letters/digits and .-_ (max 40 chars).',
   'release.errBadversion': 'No such version.',

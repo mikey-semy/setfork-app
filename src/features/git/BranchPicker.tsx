@@ -19,6 +19,8 @@ const ERR: Record<string, TKey> = {
   'not-found': 'branch.errNotFound',
   'protected': 'branch.errProtected',
   'out-of-sync': 'branch.errOutOfSync',
+  'gate-unavailable': 'branch.errGateUnavailable',
+  'gate-malformed': 'branch.errGateMalformed',
   'internal': 'branch.errInternal',
 }
 
