@@ -208,12 +208,12 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
       // `returning` обязателен: без него `onConflictDoNothing` молча ничего не пишет, а
       // счётчик всё равно растёт — два воркера (или повтор задачи) на одной записи дали бы
       // проход с «added: 1» и статусом ok, хотя не добавлено ничего.
-      const [строка] = await db
+      const [row] = await db
         .insert(changelogEntries)
         .values({ at: it.at, en, ru, href: it.href || null, source: 'github', externalId: it.externalId })
         .onConflictDoNothing()
         .returning({ id: changelogEntries.id })
-      if (строка) added++
+      if (row) added++
     } catch (e) {
       failed++
       captureError(e, { where: 'changelog.insert' })

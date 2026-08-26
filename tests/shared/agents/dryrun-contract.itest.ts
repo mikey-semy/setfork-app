@@ -89,21 +89,21 @@ describe('сухой прогон уважает каждая петля', () =>
  * предметной проверки. Долг при этом виден списком, а не растворён в умолчании.
  */
 describe('покрытие контракта', () => {
-  const ПОКРЫТЫ = new Set(['triples', 'linkcheck', 'digest', 'changelog'])
+  const COVERED = new Set(['triples', 'linkcheck', 'digest', 'changelog'])
   // Долг на 13.08.2026: у этих петель сухой прогон читается (проверено grep по
   // loopPolicy/dryRun), но предметного теста нет. Список можно только СОКРАЩАТЬ.
-  const ДОЛГ = new Set(['gardener', 'selfgen', 'feedpull', 'finance', 'chronicle', 'aiwatch', 'partners'])
+  const DEBT = new Set(['gardener', 'selfgen', 'feedpull', 'finance', 'chronicle', 'aiwatch', 'partners'])
 
   it('каждая петля реестра либо покрыта, либо числится в долге', async () => {
     const { AUTONOMOUS_LOOPS } = await import('@/shared/agents/policy')
-    const нет = AUTONOMOUS_LOOPS.filter((l) => !ПОКРЫТЫ.has(l) && !ДОЛГ.has(l))
-    expect(нет, `петли без проверки сухого прогона: ${нет.join(', ')}`).toEqual([])
+    const missing = AUTONOMOUS_LOOPS.filter((l) => !COVERED.has(l) && !DEBT.has(l))
+    expect(missing, `петли без проверки сухого прогона: ${missing.join(', ')}`).toEqual([])
   })
 
   it('в списках нет петель, которых больше нет в реестре', async () => {
     const { AUTONOMOUS_LOOPS } = await import('@/shared/agents/policy')
-    const реестр = new Set<string>(AUTONOMOUS_LOOPS)
-    const лишние = [...ПОКРЫТЫ, ...ДОЛГ].filter((l) => !реестр.has(l))
-    expect(лишние, `петля пропала из реестра, а в списке осталась: ${лишние.join(', ')}`).toEqual([])
+    const registry = new Set<string>(AUTONOMOUS_LOOPS)
+    const extra = [...COVERED, ...DEBT].filter((l) => !registry.has(l))
+    expect(extra, `петля пропала из реестра, а в списке осталась: ${extra.join(', ')}`).toEqual([])
   })
 })

@@ -10,11 +10,11 @@ import { resetTables } from '../../helpers/reset-db'
  * что в журнале оказывается на каждом исходе прохода — и, главное, что РАЗНЫЕ исходы
  * различимы: недоступный GitHub не должен выглядеть как «нечего добавлять».
  */
-const сеть = vi.hoisted(() => ({ ответ: null as null | { ok: boolean; status: number; json: () => Promise<unknown> } }))
+const network = vi.hoisted(() => ({ res: null as null | { ok: boolean; status: number; json: () => Promise<unknown> } }))
 vi.mock('@/shared/lib/safe-fetch', () => ({
   fetchPublicUrl: vi.fn(async () => {
-    if (!сеть.ответ) throw new Error('сеть недоступна')
-    return сеть.ответ
+    if (!network.res) throw new Error('сеть недоступна')
+    return network.res
   }),
 }))
 
@@ -22,9 +22,9 @@ const { agentActions, agentLoops, db, changelogEntries } = await import('@/share
 const { refreshChangelog } = await import('@/features/changelog/service')
 const { saveSettings } = await import('@/shared/settings/kv')
 
-const журнал = async () => (await db.select().from(agentActions)).filter((a) => a.loop === 'changelog')
+const journal = async () => (await db.select().from(agentActions)).filter((a) => a.loop === 'changelog')
 
-const ответ = (данные: unknown, status = 200) => ({ ok: status < 400, status, json: async () => данные })
+const reply = (data: unknown, status = 200) => ({ ok: status < 400, status, json: async () => data })
 
 beforeEach(async () => {
   // agentLoops чистим ОБЯЗАТЕЛЬНО: соседний файл контракта включает этой петле сухой
@@ -34,7 +34,7 @@ beforeEach(async () => {
   // Замечание авто-ревью на fe#800 (P2).
   await resetTables([agentActions, agentLoops, changelogEntries])
   await saveSettings({ 'changelog.enabled': 'true', 'changelog.repo': 'owner/name', 'changelog.source': 'releases' })
-  сеть.ответ = null
+  network.res = null
 })
 
 describe('журнал петли changelog', () => {
@@ -46,40 +46,40 @@ describe('журнал петли changelog', () => {
     // Замечания авто-ревью на fe#800.
     const res = await refreshChangelog()
     expect(res.skipped).toBe('fetch failed')
-    const [запись] = await журнал()
-    expect(запись.resultStatus).toBe('skipped')
-    expect(запись.error).toBeTruthy()
+    const [entry] = await journal()
+    expect(entry.resultStatus).toBe('skipped')
+    expect(entry.error).toBeTruthy()
   })
 
   it('GitHub ответил 404 — тоже с причиной и тоже не ошибка петли', async () => {
     // Приватный или переименованный репозиторий отдаёт анонимно именно 404.
-    сеть.ответ = ответ([], 404)
+    network.res = reply([], 404)
     await refreshChangelog()
-    const [запись] = await журнал()
-    expect(запись.resultStatus).toBe('skipped')
-    expect(запись.error).toContain('404')
+    const [entry] = await journal()
+    expect(entry.resultStatus).toBe('skipped')
+    expect(entry.error).toContain('404')
   })
 
   it('репозиторий пуст — skipped БЕЗ причины: этим и отличается от сбоя', async () => {
-    сеть.ответ = ответ([])
+    network.res = reply([])
     const res = await refreshChangelog()
     expect(res.skipped).toBe('nothing pulled')
-    const [запись] = await журнал()
-    expect(запись.resultStatus).toBe('skipped')
-    expect(запись.error).toBeFalsy()
+    const [entry] = await journal()
+    expect(entry.resultStatus).toBe('skipped')
+    expect(entry.error).toBeFalsy()
   })
 
   it('пришло новое — запись ok, и холостой проход следующего раза виден отдельно', async () => {
-    сеть.ответ = ответ([{ tag_name: 'v1.0', name: 'Первый релиз', published_at: '2026-08-01T00:00:00Z', html_url: 'https://e.test/1' }])
+    network.res = reply([{ tag_name: 'v1.0', name: 'Первый релиз', published_at: '2026-08-01T00:00:00Z', html_url: 'https://e.test/1' }])
     const res = await refreshChangelog()
     expect(res.added).toBe(1)
-    expect((await журнал())[0].resultStatus).toBe('ok')
+    expect((await journal())[0].resultStatus).toBe('ok')
 
     // Второй проход по тем же данным: добавлять нечего, но след остаётся — иначе петля
     // выглядела бы никогда не работавшей.
     await refreshChangelog()
-    const строки = await журнал()
-    expect(строки).toHaveLength(2)
-    expect(строки.map((s) => s.resultStatus).sort()).toEqual(['ok', 'skipped'])
+    const rows = await journal()
+    expect(rows).toHaveLength(2)
+    expect(rows.map((s) => s.resultStatus).sort()).toEqual(['ok', 'skipped'])
   })
 })

@@ -67,11 +67,6 @@
       "count": 7
     }
   },
-  "src/app/admin/council/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/app/admin/page.tsx": {
     "no-restricted-syntax": {
       "count": 8
@@ -261,11 +256,6 @@
       "count": 1
     }
   },
-  "src/features/generation/GenerationChat.tsx": {
-    "no-restricted-syntax": {
-      "count": 3
-    }
-  },
   "src/features/generation/actions.ts": {
     "boundaries/dependencies": {
       "count": 4
@@ -288,11 +278,6 @@
   },
   "src/features/git/actions.ts": {
     "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/features/issues/LabelEditor.tsx": {
-    "no-restricted-syntax": {
       "count": 1
     }
   },

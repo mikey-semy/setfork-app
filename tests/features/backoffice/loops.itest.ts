@@ -78,13 +78,13 @@ describe('бухгалтер', () => {
     await spend(1)
     mail.ok = false
     await runFinanceSweep()
-    const строки = (await journal()).filter((a) => a.action === 'money.alert')
+    const rows = (await journal()).filter((a) => a.action === 'money.alert')
     // Заявка на отправку и провал доставки обе идут со статусом skipped, различает их
     // причина: у заявки её нет. Строки 'ok' быть не должно — письмо не дошло.
-    const undelivered = строки.filter((a) => a.resultStatus === 'skipped' && a.error)
+    const undelivered = rows.filter((a) => a.resultStatus === 'skipped' && a.error)
     expect(undelivered).toHaveLength(1)
     expect(undelivered[0].error).toContain('почта')
-    expect(строки.filter((a) => a.resultStatus === 'ok')).toHaveLength(0)
+    expect(rows.filter((a) => a.resultStatus === 'ok')).toHaveLength(0)
   })
 
   it('письмо дошло — в журнале появляется ok, а не только заявка', async () => {
@@ -95,9 +95,9 @@ describe('бухгалтер', () => {
     await spend(1)
     mail.ok = true
     await runFinanceSweep()
-    const строки = (await journal()).filter((a) => a.action === 'money.alert')
-    expect(строки.filter((a) => a.resultStatus === 'ok')).toHaveLength(1)
-    expect(строки.filter((a) => a.resultStatus === 'skipped' && a.error)).toHaveLength(0)
+    const rows = (await journal()).filter((a) => a.action === 'money.alert')
+    expect(rows.filter((a) => a.resultStatus === 'ok')).toHaveLength(1)
+    expect(rows.filter((a) => a.resultStatus === 'skipped' && a.error)).toHaveLength(0)
   })
 
   it('сухой прогон считает, но не пишет владельцу', async () => {

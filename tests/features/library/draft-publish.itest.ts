@@ -13,7 +13,7 @@ import { resetTables } from '../../helpers/reset-db'
  * через git-коммит. Без ядра тест пропускается, а не притворяется зелёным.
  */
 const CORE = process.env.SETFORK_CORE_ADDR
-const описание = CORE ? describe : describe.skip
+const description = CORE ? describe : describe.skip
 
 const { db, listDrafts, templates, templateVersions, users } = await import('@/shared/db')
 const { publishDraftFor, upsertDraft, deleteDraft } = await import('@/features/library/draft')
@@ -55,7 +55,7 @@ const listRow = async (id: string) => {
   return row
 }
 
-описание('черновик правок', () => {
+description('черновик правок', () => {
   beforeAll(async () => {
     if (!CORE) return
     await resetTables([templates, users])

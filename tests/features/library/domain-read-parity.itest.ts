@@ -18,7 +18,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
  * Требует ЖИВОГО ядра — без него пропускается, а не притворяется зелёным.
  */
 const CORE = process.env.SETFORK_CORE_ADDR
-const описание = CORE ? describe : describe.skip
+const description = CORE ? describe : describe.skip
 
 const { db, templates, users } = await import('@/shared/db')
 const { listStore } = await import('@/features/library/list-store')
@@ -35,7 +35,7 @@ beforeAll(async () => {
   ownerId = u.id
 })
 
-описание('паритет чтения: локальный адаптер и ядро отдают одно и то же', () => {
+description('паритет чтения: локальный адаптер и ядро отдают одно и то же', () => {
   it('пометки доезжают обоими путями', async () => {
     const steps = toStepInput([
       {
@@ -64,10 +64,10 @@ beforeAll(async () => {
     expect(remote, 'ядро не вернуло версию').toBeTruthy()
 
     // Сравниваем ПОВЕДЕНИЕ, а не списки имён: обе пометки обязаны пережить оба пути.
-    for (const [путь, s] of [['локальный адаптер', local], ['ядро', remote]] as const) {
-      expect(s?.danger, `${путь}: потеряна пометка «разрушительный пункт»`).toBe(true)
-      expect(s?.needsHuman, `${путь}: потеряна пометка «здесь нужен человек»`).toBe(true)
-      expect(s?.needsHumanAsk, `${путь}: потерян вопрос к человеку`).toMatchObject({ ru: 'Сколько это стоит у вас?' })
+    for (const [path, s] of [['локальный адаптер', local], ['ядро', remote]] as const) {
+      expect(s?.danger, `${path}: потеряна пометка «разрушительный пункт»`).toBe(true)
+      expect(s?.needsHuman, `${path}: потеряна пометка «здесь нужен человек»`).toBe(true)
+      expect(s?.needsHumanAsk, `${path}: потерян вопрос к человеку`).toMatchObject({ ru: 'Сколько это стоит у вас?' })
     }
   })
 })
