@@ -5,23 +5,7 @@
  "высота числом": {},
  "длительность числом": {},
  "значок без имени": {},
- "картинка": {
-  "src/app/admin/collections/[id]/page.tsx": 1,
-  "src/app/collections/[slug]/page.tsx": 1,
-  "src/features/admin/AchievementsAdmin.tsx": 1,
-  "src/features/admin/LandingEditor.tsx": 1,
-  "src/features/badges/BadgesCard.tsx": 1,
-  "src/features/collections/CollectionCard.tsx": 1,
-  "src/features/library/CoverSection.tsx": 1,
-  "src/features/library/FeedCard.tsx": 1,
-  "src/features/library/FeedTile.tsx": 1,
-  "src/features/library/list-editor/MediaBlocks.tsx": 1,
-  "src/features/library/list-editor/StepBlockBody.tsx": 1,
-  "src/features/library/ShareButton.tsx": 1,
-  "src/features/profile/AchievementsGrid.tsx": 2,
-  "src/features/settings/AvatarDropzone.tsx": 1,
-  "src/features/settings/TwoFactorSection.tsx": 1
- },
+ "картинка": {},
  "картинка без alt": {},
  "кегль числом": {},
  "кликабельный не-контрол": {
@@ -40,7 +24,6 @@
   "src/features/admin/ReindexPanel.tsx": 2,
   "src/features/follows/FollowButton.tsx": 1,
   "src/features/generation/CandidateCard.tsx": 1,
-  "src/features/generation/GenerateForm.tsx": 1,
   "src/features/generation/GenerationChat.tsx": 3,
   "src/features/git/CloneDropdown.tsx": 1,
   "src/features/git/ConflictResolver.tsx": 1,
@@ -125,24 +108,8 @@
   "src/widgets/PromoCard.tsx": 1,
   "src/widgets/Sidebar.tsx": 2
  },
- "многострочное поле": {
-  "src/features/generation/GenerateForm.tsx": 1,
-  "src/features/library/ForkForm.tsx": 1,
-  "src/features/library/list-editor/quiz/QuizBlanks.tsx": 1,
-  "src/features/library/ReviewPanel.tsx": 1,
-  "src/features/quizzes/QuizBlock.tsx": 1,
-  "src/features/runs/RunView.tsx": 1
- },
- "нативная подсказка": {
-  "src/app/admin/feeds/page.tsx": 1,
-  "src/features/admin/FeedSourceList.tsx": 1,
-  "src/features/library/ChecksList.tsx": 1,
-  "src/features/library/CommitRow.tsx": 1,
-  "src/features/library/VideoEmbed.tsx": 1,
-  "src/widgets/Footer.tsx": 1,
-  "src/widgets/ListsPanel.tsx": 1,
-  "src/widgets/ListSwitcher.tsx": 1
- },
+ "многострочное поле": {},
+ "нативная подсказка": {},
  "отступ числом": {},
  "пилюля": {
   "src/app/[handle]/[slug]/ListAbout.tsx": 1,

@@ -14,6 +14,7 @@ import { saveLanding, suggestSlogan, uploadLandingImage } from './landing-action
 import { t } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 type FieldKey = keyof Omit<LandingCopy, 'stats'>
 type Field = { key: FieldKey; label: string; max: number; area?: boolean; ai?: boolean }
@@ -218,7 +219,7 @@ function HeroImage({ initial, onRef, lang }: { initial?: string; onRef: (ref: st
       >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="" className="h-16 w-27.5 shrink-0 rounded-md border border-border object-cover" />
+          <SmartImage src={preview} alt="" className="h-16 w-27.5 shrink-0 rounded-md border border-border object-cover" />
         ) : (
           <div className="grid h-16 w-27.5 shrink-0 place-items-center rounded-md bg-surface-2 text-muted">
             <ImageUp size={20} />

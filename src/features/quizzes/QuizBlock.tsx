@@ -11,6 +11,7 @@ import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort,
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Input } from '@/shared/ui/input'
+import { Textarea } from '@/shared/ui/textarea'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -255,15 +256,13 @@ export function QuizBlock({
       )}
 
       {kind === 'code' && (
-        <textarea
+        <Textarea
           disabled={checked || pending || readOnly}
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           rows={4}
           placeholder={ru ? 'Ваш код' : 'Your code'}
-          className={`w-full resize-y rounded-md border px-3 py-2 font-mono text-body-sm text-ink outline-hidden ${
-            checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2 focus:border-border-strong'
-          }`}
+          className={`resize-y font-mono text-body-sm ${checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : ''}`}
         />
       )}
 

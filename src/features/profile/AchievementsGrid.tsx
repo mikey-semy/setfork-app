@@ -6,6 +6,7 @@ import type { Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { IconButton } from '@/shared/ui/IconButton'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 // Одна ачивка для отображения: только заработанные и только с картинкой (картинка —
 // обязательный атрибут; без неё ачивка не показывается вовсе — гейт в AchievementsCard).
@@ -37,8 +38,7 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
               aria-label={a.label}
               className="relative aspect-square overflow-hidden rounded-md border border-border bg-surface-2 outline-hidden transition-transform hover:scale-[1.04] focus-visible:ring-2 focus-visible:ring-accent"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={a.imageUrl} alt="" className="h-full w-full object-cover" />
+              <SmartImage src={a.imageUrl} alt="" className="h-full w-full object-cover" />
               {a.tier > 1 && (
                 <span className="absolute bottom-0.5 right-0.5 rounded-md bg-black/65 px-1 font-mono text-caption font-semibold leading-tight text-white">
                   ×{a.tier}
@@ -66,8 +66,7 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
               >
                 <X size={15} />
               </IconButton>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={open.imageUrl} alt="" className="h-24 w-24 rounded-full border-2 border-surface object-cover shadow-lg" />
+              <SmartImage src={open.imageUrl} alt="" className="h-24 w-24 rounded-full border-2 border-surface object-cover shadow-lg" />
             </div>
 
             <div className="p-4">

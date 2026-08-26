@@ -11,6 +11,7 @@ import { IconButton } from '@/shared/ui/IconButton'
 import { Input } from '@/shared/ui/input'
 import { Switch } from '@/shared/ui/switch'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { SmartImage } from '@/shared/ui/SmartImage'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { isRiskyCommand } from '@/core/domain/destructive-command'
 import { fetchLinkTitleAction } from '../actions/ai'
@@ -158,8 +159,7 @@ export function StepBlockBody({
           снятием в правом верхнем углу картинки. */}
       {item.imagePreview ? (
         <div className="relative w-fit">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.imagePreview} alt="" className="max-h-40 rounded-md border border-border" />
+          <SmartImage src={item.imagePreview} alt="" className="max-h-40 rounded-md border border-border" />
           <IconButton
             size="sm"
             onClick={() => onPatch({ imageKey: '', imagePreview: '' })}

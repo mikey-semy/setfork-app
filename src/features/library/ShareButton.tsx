@@ -6,6 +6,7 @@ import { Check, Copy, Share2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 // Бренд-иконки (24×24, single-path, currentColor) — в lucide их нет.
 const P = (d: string) => (
@@ -123,8 +124,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
 
       {qr && (
         <div className="mt-2 flex flex-col items-center border-t border-border pt-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qr} alt="QR" width={160} height={160} className="rounded-md bg-white p-1" />
+          <SmartImage src={qr} alt="QR" width={160} height={160} className="rounded-md bg-white p-1" />
           <span className="mt-1.5 text-caption text-muted">{qrHint}</span>
         </div>
       )}

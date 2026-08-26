@@ -70,7 +70,9 @@ export function ListSwitcher({
     const visLabel = t(labelKey, lang)
     // span без роли не может нести aria-label (aria-prohibited-attr) — иконке нужна role="img".
     return (
-      <span role="img" title={visLabel} aria-label={visLabel} className="shrink-0 text-muted">
+      // Имя значку даёт aria-label; нативный title его дублировал и на пальце не
+      // показывался вовсе. Подсказка тут не нужна: подпись видимости стоит рядом.
+      <span role="img" aria-label={visLabel} className="shrink-0 text-muted">
         <Icon size={12} />
       </span>
     )

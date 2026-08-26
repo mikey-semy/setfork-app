@@ -13,6 +13,7 @@ import { Alert } from '@/shared/ui/Alert'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,7 +68,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         <div className="mb-3 h-32.5 w-full overflow-hidden rounded-lg border border-border">
           {c.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={c.coverUrl} alt="" className="h-full w-full object-cover" />
+            <SmartImage src={c.coverUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <AutoBanner seed={c.id} accent={c.accent} label={c.slug} height="h-full" />
           )}

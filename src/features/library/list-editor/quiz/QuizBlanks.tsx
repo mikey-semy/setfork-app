@@ -5,6 +5,7 @@ import { t } from '@/shared/i18n'
 import { Hint, LineField } from '../block-fields'
 import type { QuizKindProps } from './kind-props'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Textarea } from '@/shared/ui/textarea'
 
 /**
  * Пропуски: текст с «___», под каждым пропуском — принимаемые ответы.
@@ -16,8 +17,9 @@ export function QuizBlanks({ quiz, set, lang, caseBox, nth }: QuizKindProps) {
   const n = blankCount(quiz.template)
   return (
     <>
-      <textarea
-        className={buttonClass({ className: 'min-h-13 w-full resize-y leading-relaxed outline-hidden focus:border-border-strong' })}
+      <Textarea
+        rows={2}
+        className="resize-y leading-relaxed"
         aria-label={t('quiz.blankText', lang)}
         placeholder={t('quiz.blankTextPh', lang)}
         value={quiz.template}

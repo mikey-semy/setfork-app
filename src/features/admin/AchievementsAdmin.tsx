@@ -14,6 +14,7 @@ import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { IconButton } from '@/shared/ui/IconButton'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 /** Админ-панель достижений: вкл/выкл + своя картинка (drag-and-drop) на каждое. */
 export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; lang: Lang }) {
@@ -110,7 +111,7 @@ function AchRow({
         >
           {d.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={d.imageUrl} alt="" className="h-full w-full object-cover" />
+            <SmartImage src={d.imageUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <Icon size={20} className={meta.color} />
           )}

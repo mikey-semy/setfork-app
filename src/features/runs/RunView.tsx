@@ -22,6 +22,7 @@ import { PAGE_NARROW } from '@/shared/ui/control'
 import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
 import { IconButton } from '@/shared/ui/IconButton'
+import { Textarea } from '@/shared/ui/textarea'
 
 export interface RunStepVM {
   id: string
@@ -365,14 +366,14 @@ export function RunView({
                 {/* Ввод причины «не получилось» (открывает угловая иконка Ban). */}
                 {blockingId === s.id && (
                   <div className={cardClass({ tone: 'danger', pad: 'sm' })}>
-                    <textarea
+                    <Textarea
                       autoFocus
                       value={reasonDraft}
                       onChange={(e) => setReasonDraft(e.target.value)}
                       rows={2}
                       aria-label={t('runReasonPh', lang)}
                       placeholder={t('runReasonPh', lang)}
-                      className={buttonClass({ className: 'w-full resize-none outline-hidden focus:border-border-strong' })}
+                      className="resize-none"
                     />
                     <div className="mt-2 flex items-center gap-2">
                       <button type="button" onClick={() => confirmBlock(i)} className={buttonClass({ variant: 'dangerSolid', className: 'bg-danger text-white' })}>

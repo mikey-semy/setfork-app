@@ -99,7 +99,9 @@ const ROLES = [
     key: 'нативная подсказка',
     primitive: 'Tooltip',
     hint: 'title= на хостовом элементе: на пальце не показывается вовсе, читалке дублирует имя',
-    match: ({ tag, attrs }) => isHost(tag) && hasAttr(attrs, 'title'),
+    // ⚠️ У `iframe` (и у `svg`) title — это ИМЯ элемента, а не подсказка: без него врезка
+    // безымянна для диктора. Правило `jsx-a11y/iframe-has-title` его как раз ТРЕБУЕТ.
+    match: ({ tag, attrs }) => isHost(tag) && tag !== 'iframe' && tag !== 'svg' && hasAttr(attrs, 'title'),
   },
   {
     key: 'кликабельный не-контрол',

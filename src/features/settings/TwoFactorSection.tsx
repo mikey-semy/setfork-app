@@ -9,6 +9,7 @@ import { Alert } from '@/shared/ui/Alert'
 import type { Lang } from '@/shared/i18n'
 import { beginTotpEnroll, confirmTotpEnroll, disableTotp, regenerateRecoveryCodes, type EnrollStart } from '@/features/auth/twofa'
 import { cardClass } from '@/shared/ui/card-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 // Настройки → Двухфакторная аутентификация (TOTP).
 // Флоу включения: QR/секрет → код из приложения → recovery-коды (один раз).
@@ -146,7 +147,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
       {!isOn && enroll && (
         <div className={cardClass({ tone: 'inset', className: 'flex flex-col gap-3 sm:flex-row sm:items-start' })}>
           {/* eslint-disable-next-line @next/next/no-img-element, no-restricted-syntax -- локальный data:URL QR; рамка КАРТИНКИ: белый фон обязателен для читаемости сканером */}
-          <img src={enroll.qrDataUrl} alt="TOTP QR" width={160} height={160} className="shrink-0 rounded-md border border-border bg-white p-1" />
+          <SmartImage src={enroll.qrDataUrl} alt="TOTP QR" width={160} height={160} className="shrink-0 rounded-md border border-border bg-white p-1" />
           <div className="min-w-0 flex-1">
             <p className="text-body text-ink-2">
               {ru

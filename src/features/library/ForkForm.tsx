@@ -9,6 +9,7 @@ import { forkNameStatus, forkTemplate } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Input } from '@/shared/ui/input'
+import { Textarea } from '@/shared/ui/textarea'
 
 export interface ForkLabels {
   ownerLabel: string
@@ -101,13 +102,13 @@ export function ForkForm({
       <p className="-mt-2 text-caption leading-snug text-muted">{labels.nameHint}</p>
 
       <Field label={labels.descLabel}>
-        <textarea
+        <Textarea
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
           rows={2}
           placeholder={labels.descPlaceholder}
           maxLength={350}
-          className={buttonClass({ className: 'w-full resize-none outline-hidden focus:border-accent' })}
+          className="resize-none"
         />
       </Field>
 

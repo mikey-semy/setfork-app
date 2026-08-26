@@ -11,6 +11,7 @@ import { LineField } from './block-fields'
 import { FileDrop } from './FileDrop'
 import { SlashMenu, useSlashMenu } from './SlashMenu'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 // Загрузка СВОИХ видеофайлов выключена по умолчанию: держать объёмы без дохода
 // нечем. Код на месте и включается флагом, когда появится хостинг (S3/Cloudflare
@@ -29,8 +30,7 @@ type BodyProps = {
 function ImagePreview({ src, maxH, onRemove, lang }: { src: string; maxH: string; onRemove: () => void; lang: Lang }) {
   return (
     <div className="relative w-fit">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" className={`${maxH} rounded-md border border-border`} />
+      <SmartImage src={src} alt="" className={`${maxH} rounded-md border border-border`} />
       <button
         type="button"
         onClick={onRemove}

@@ -8,6 +8,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedSourceList } from '@/features/admin/FeedSourceList'
 import { feedSourceRows, recentFeedItems } from '@/features/admin/feed-queries'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 /**
  * ПОДПИСКИ НА ПОТОК (админу): откуда компания узнаёт, что произошло.
@@ -54,16 +55,19 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
           {items.length === 0 && <EmptyState variant="inline" hint={t('admin.nothingCollectedYet', lang)} />}
           {items.map((it) => (
             <div key={it.id} className="flex min-w-0 items-center gap-3 px-4 py-2.5">
-              <a
-                href={it.url}
-                target="_blank"
-                rel="noopener noreferrer nofollow"
-                className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-body text-ink hover:text-accent"
-                title={it.title}
-              >
-                <span className="min-w-0 truncate">{it.title}</span>
-                <ExternalLink size={11} className="shrink-0 text-muted" />
-              </a>
+              {/* Подсказка ПОЛНОГО заголовка у обрезанной строки: нативный title её
+                  не покажет на пальце и продублирует диктору уже прочитанный текст. */}
+              <Tooltip label={it.title}>
+                <a
+                  href={it.url}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-body text-ink hover:text-accent"
+                >
+                  <span className="min-w-0 truncate">{it.title}</span>
+                  <ExternalLink size={11} className="shrink-0 text-muted" />
+                </a>
+              </Tooltip>
               <span className="hidden shrink-0 font-mono text-caption text-muted sm:inline">{timeAgo(it.publishedAt ?? it.createdAt, lang)}</span>
               <span className={`shrink-0 text-caption ${it.usedAt ? 'text-ok' : 'text-muted'}`}>
                 {it.usedAt ? t('admin.inWork', lang) : t('admin.fresh', lang)}

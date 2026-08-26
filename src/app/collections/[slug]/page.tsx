@@ -12,6 +12,7 @@ import { getCollectionDetail } from '@/features/collections/queries'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const [{ slug }, lang] = await Promise.all([params, getLang()])
@@ -33,7 +34,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
       <div className="mb-5 overflow-hidden rounded-xl border border-border">
         {c.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.coverUrl} alt="" className="h-45 w-full object-cover" />
+          <SmartImage src={c.coverUrl} alt="" className="h-45 w-full object-cover" />
         ) : (
           <AutoBanner seed={c.id} accent={c.accent} label={tr(c.title, lang) || c.slug} height="h-45" />
         )}

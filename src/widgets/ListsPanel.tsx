@@ -158,7 +158,9 @@ export function ListsPanel({
     const { Icon, labelKey } = LIST_VISIBILITY_BADGE[state]
     const visLabel = t(labelKey, lang)
     return (
-      <span role="img" title={visLabel} aria-label={visLabel} className="shrink-0 text-muted">
+      // Имя значку даёт aria-label; нативный title его дублировал и на пальце не
+      // показывался вовсе. Подсказка тут не нужна: подпись видимости стоит рядом.
+      <span role="img" aria-label={visLabel} className="shrink-0 text-muted">
         <Icon size={12} />
       </span>
     )

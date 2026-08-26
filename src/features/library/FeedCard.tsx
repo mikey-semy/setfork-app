@@ -6,6 +6,7 @@ import { t, tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
 import type { FeedItem } from './queries'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 import { ListCardMeta } from './ListCardMeta'
 
 function fmt(n: number): string {
@@ -28,7 +29,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
       {/* 1. Обложка — только если реально загружена (иначе идентичность даёт заголовок). */}
       {item.coverImage && (
         // eslint-disable-next-line @next/next/no-img-element -- внешний ассет по готовому URL
-        <img src={item.coverImage} alt="" className="h-24 w-full border-b border-border object-cover sm:h-28" />
+        <SmartImage src={item.coverImage} alt="" className="h-24 w-full border-b border-border object-cover sm:h-28" />
       )}
 
       {/* Шапка отделена так же, как футер. Owner / title — один обрезаемый ряд:

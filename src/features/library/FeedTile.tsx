@@ -8,6 +8,7 @@ import { t, tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
 import type { FeedItem } from './queries'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 function fmt(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0) + 'k'
@@ -23,7 +24,7 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
       <Link href={base} className="block">
         {item.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.coverImage} alt="" className="h-24 w-full object-cover" />
+          <SmartImage src={item.coverImage} alt="" className="h-24 w-full object-cover" />
         ) : (
           <AutoBanner seed={item.id} accent={item.accent} label={tr(item.title, lang)} height="h-24" />
         )}

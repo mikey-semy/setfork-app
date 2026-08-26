@@ -53,7 +53,6 @@ export function ChecksList({ items, labels }: { items: CheckItem[]; labels: { bl
                   target="_blank"
                   rel="noopener noreferrer nofollow"
                   aria-label={labels.details}
-                  title={labels.details}
                   className="ml-auto grid size-8 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
                 >
                   <ExternalLink size={14} />

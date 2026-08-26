@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
+import { SmartImage } from '@/shared/ui/SmartImage'
 import { tr, type Lang } from '@/shared/i18n'
 import type { CollectionCard as CC } from './queries'
 
@@ -14,7 +15,7 @@ export function CollectionCard({ c, lang }: { c: CC; lang: Lang }) {
     >
       {c.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={c.coverUrl} alt="" className="h-32.5 w-full object-cover" />
+        <SmartImage src={c.coverUrl} alt="" className="h-32.5 w-full object-cover" />
       ) : (
         <AutoBanner seed={c.id} accent={c.accent} label={title} height="h-32.5" />
       )}

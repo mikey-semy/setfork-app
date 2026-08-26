@@ -33,10 +33,10 @@ export async function Footer({ lang }: { lang: Lang }) {
       </div>
       <div className="px-6 pb-4 pt-1.5 text-center text-body-sm text-muted">© {year} SetFork</div>
       {/* Версия — незаметно в углу (мелкий прозрачный моно), а не в ряду ссылок. */}
-      <span
-        title={t('appVersion', lang)}
-        className="pointer-events-none absolute bottom-1.5 right-2.5 font-mono text-caption text-muted opacity-50 select-none"
-      >
+      {/* Нативной подсказки тут не было НИКОГДА: у элемента `pointer-events-none`,
+          то есть наведения он не получает и title показать не может. Убрана как
+          мёртвая, а не заменена — версия и так подписана в самой строке. */}
+      <span className="pointer-events-none absolute bottom-1.5 right-2.5 font-mono text-caption text-muted opacity-50 select-none">
         v{APP_VERSION}
       </span>
     </footer>

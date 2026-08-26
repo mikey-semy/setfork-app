@@ -496,7 +496,7 @@
   },
   "src/features/quizzes/QuizBlock.tsx": {
     "no-restricted-syntax": {
-      "count": 16
+      "count": 15
     }
   },
   "src/features/releases/actions.ts": {

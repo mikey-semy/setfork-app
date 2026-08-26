@@ -7,6 +7,7 @@ import { ColorSwatch } from '@/shared/ui/ColorSwatch'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Spinner } from '@/shared/ui/Spinner'
+import { SmartImage } from '@/shared/ui/SmartImage'
 import type { Lang } from '@/shared/i18n'
 import { removeListCover, setListAccent, setListCover } from './cover-actions'
 
@@ -84,7 +85,7 @@ export function CoverSection({
         >
           {cover ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} alt="" className="h-full w-full object-cover" />
+            <SmartImage src={cover} alt="" className="h-full w-full object-cover" />
           ) : (
             <AutoBanner seed={templateId} accent={accent} label={slug} height="h-full" />
           )}

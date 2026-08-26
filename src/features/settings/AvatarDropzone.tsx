@@ -7,6 +7,7 @@ import { AvatarCropper } from '@/shared/ui/AvatarCropper'
 import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 const ACCEPT = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 const MAX_BYTES = 2 * 1024 * 1024
@@ -122,7 +123,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
       >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="" className={`h-18 w-18 shrink-0 object-cover ${shapeCls}`} />
+          <SmartImage src={preview} alt="" className={`h-18 w-18 shrink-0 object-cover ${shapeCls}`} />
         ) : (
           <Avatar handle={handle} avatarUrl={removed ? null : avatarUrl} size={72} rounded={shapeCls} />
         )}

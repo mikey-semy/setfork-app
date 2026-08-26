@@ -113,7 +113,6 @@ export function CommitRow({
         type="button"
         onClick={toggle}
         aria-expanded={open}
-        title={labels.expandHint}
         className="flex w-full items-start gap-2 px-4 py-3 text-left"
       >
         <ChevronRight size={15} className={`mt-0.5 shrink-0 text-muted transition-transform ${open ? 'rotate-90' : ''}`} />

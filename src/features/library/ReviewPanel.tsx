@@ -139,13 +139,7 @@ export function ReviewPanel({
                 </Button>
               </div>
             )}
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={labels.placeholder}
-              rows={3}
-              className={buttonClass({ className: 'w-full resize-y bg-surface-2 outline-hidden focus-visible:border-border-strong' })}
-            />
+            <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={labels.placeholder} rows={3} className="resize-y" />
             {/* Ряд вердиктов: одна высота, к правому краю (thumb-зона). На мобиле
                 подписи короткие — иконка + одно-два слова. */}
             <div className="mt-2 flex flex-wrap items-center justify-end gap-2">

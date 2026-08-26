@@ -91,15 +91,18 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
               <div className={cn('min-w-0', !r.enabled && 'opacity-60')}>
                 <div className="flex min-w-0 items-center gap-2">
                   <Rss size={13} className={`shrink-0 ${r.lastError ? 'text-warn' : 'text-accent'}`} />
-                  <a
-                    href={r.url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="min-w-0 truncate text-body text-ink hover:text-accent"
-                    title={r.url}
-                  >
+                  {/* Полный адрес — подсказкой: строка обрезана, а нативный title
+                      не работает на пальце. */}
+                  <Tooltip label={r.url}>
+                    <a
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="min-w-0 truncate text-body text-ink hover:text-accent"
+                    >
                     {r.title || r.url.replace(/^https?:\/\//, '')}
                   </a>
+                  </Tooltip>
                 </div>
                 {r.lastError && (
                   <Tooltip label={r.lastError}>

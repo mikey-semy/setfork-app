@@ -10,6 +10,8 @@ import { DEFAULT_DETAIL, DETAIL_LEVELS, detailLabel, type DetailLevel } from '@/
 import { kindLabel, LIST_KINDS, type ListKind } from '@/shared/ai/list-kind'
 import { startGeneration } from './actions'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Textarea } from '@/shared/ui/textarea'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /**
  * Старт генерации как у поисковика: большое поле по центру + «живые» варианты-подсказки.
@@ -23,7 +25,8 @@ import { Spinner } from '@/shared/ui/Spinner'
 
 // Герой-ввод главной: ступень `xl` шкалы (44px) и роль кегля `text-lead` — те же, что
 // у поиска-героя рядом. До 26.08.2026 обе величины стояли здесь числами.
-const HERO_INPUT = 'max-h-40 min-h-11 w-full resize-none bg-transparent px-1.5 py-2 text-lead leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70'
+// Только геометрия героя: рамку, фон, фокус и плейсхолдер даёт примитив (variant="bare").
+const HERO_INPUT = 'max-h-40 min-h-11 px-1.5 py-2 text-lead leading-relaxed'
 
 export function GenerateForm({
   lang,
@@ -130,7 +133,8 @@ export function GenerateForm({
           }}
           className="flex items-end gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 shadow-hero transition-colors focus-within:border-border-strong"
         >
-          <textarea
+          <Textarea
+            variant="bare"
             name="q"
             autoFocus
             rows={1}
@@ -146,14 +150,16 @@ export function GenerateForm({
             placeholder={placeholder}
             className={HERO_INPUT}
           />
-          <button
+          <IconButton
             type="submit"
+            size="lg"
+            variant="primary"
             disabled={!q.trim() || !aiOn || launching}
-            aria-label={t('generateWithAi', lang)}
-            className="grid size-[2.5rem] shrink-0 place-items-center rounded-full bg-primary text-primary-fg transition-opacity disabled:opacity-40"
+            label={t('generateWithAi', lang)}
+            className="shrink-0 rounded-full"
           >
             {launching ? <Spinner size="lg" /> : <ArrowUp size={18} />}
-          </button>
+          </IconButton>
         </form>
 
         {/* Тип списка — ДО генерации: «Авто» угадывает по запросу, явный выбор экономит
