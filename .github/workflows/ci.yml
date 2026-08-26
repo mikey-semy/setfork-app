@@ -265,9 +265,14 @@ jobs:
   # сервера; теперь сборка идёт здесь, поэтому значения живут в variables
   # репозитория. Забыть их — молча потерять аналитику и абсолютные ссылки.
   image:
+    # ⚠️ Ручной запуск ТОЛЬКО с master. Раньше условие принимало workflow_dispatch с
+    # любой ветки, а ниже в `target` ручной запуск ещё и пропускает проверку свежести
+    # («выкатываем без проверок») — то есть `gh workflow run ci.yml --ref <моя-ветка>`
+    # собрал бы и выкатил НА ПРОД ветку с правками. Замысел «ручная выкатка текущего
+    # master» был записан комментарием и не держался ничем (26.08.2026).
     if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
-      github.event_name == 'workflow_dispatch'
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [check]
     runs-on: [self-hosted, setfork]
     permissions:
@@ -338,9 +343,10 @@ jobs:
   # пригодности сборки отношения не имеет. Порог покрытия — вопрос качества кода,
   # а не готовности прода, и блокировать выкатку он не должен.
   deploy:
+    # Тот же предохранитель, что у сборки образа: выкатка бывает только с master.
     if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
-      github.event_name == 'workflow_dispatch'
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [check, integration, image]
     runs-on: [self-hosted, setfork]
     # `queue: max` — штатный способ не терять прогоны: по умолчанию (`single`) в
