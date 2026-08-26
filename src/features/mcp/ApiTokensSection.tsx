@@ -12,6 +12,7 @@ import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Badge } from '@/shared/ui/badge'
 import { IconButton } from '@/shared/ui/IconButton'
+import { Input } from '@/shared/ui/input'
 
 // Чистая — на модульном уровне, а не в теле компонента (react-doctor:
 // пересборка на каждый рендер ломает мемоизацию детей).
@@ -103,8 +104,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
 
       {/* Создание */}
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={name}
+        <Input value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -112,9 +112,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
               create()
             }
           }}
-          placeholder="Claude Desktop"
-          className={buttonClass({ className: 'min-w-menu flex-1 bg-surface-2 outline-hidden focus:border-border-strong' })}
-        />
+          placeholder="Claude Desktop" className="min-w-menu flex-1" />
         <Button variant="primary" size="md" onClick={create} disabled={pending || !name.trim()}>
           {pending ? <Spinner size="md" /> : <Plus size={14} />} {ru ? 'Создать токен' : 'Create token'}
         </Button>

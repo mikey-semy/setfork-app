@@ -321,11 +321,6 @@
       "count": 1
     }
   },
-  "src/features/library/ChangeNoteField.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/features/library/CourseOutline.tsx": {
     "no-restricted-syntax": {
       "count": 1
@@ -501,7 +496,7 @@
   },
   "src/features/quizzes/QuizBlock.tsx": {
     "no-restricted-syntax": {
-      "count": 18
+      "count": 16
     }
   },
   "src/features/releases/actions.ts": {

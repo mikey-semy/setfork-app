@@ -106,14 +106,11 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
             </div>
 
             {/* Honeypot: люди поле не видят; непустое значение = бот. */}
-            <input
-              type="text"
+            <Input type="text"
               name="website"
               tabIndex={-1}
               autoComplete="off"
-              aria-hidden="true"
-              className="absolute -left-[624.9375rem] h-0 w-0 opacity-0"
-            />
+              aria-hidden="true" className="absolute -left-[624.9375rem] w-0 opacity-0" />
             <input type="hidden" name="templateId" value={templateId} />
 
             {state?.error && <div className="text-body-sm text-danger">{state.error}</div>}

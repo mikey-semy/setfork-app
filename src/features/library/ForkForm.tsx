@@ -8,6 +8,7 @@ import { Alert } from '@/shared/ui/Alert'
 import { forkNameStatus, forkTemplate } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Input } from '@/shared/ui/input'
 
 export interface ForkLabels {
   ownerLabel: string
@@ -68,16 +69,13 @@ export function ForkForm({
         </Field>
         <span className="pb-2 text-body-lg text-muted">/</span>
         <Field label={labels.nameLabel} className="min-w-0 flex-1">
-          <input
-            value={name}
+          <Input value={name}
             onChange={(e) => {
               setName(e.target.value)
               setStatus(null)
             }}
             spellCheck={false}
-            autoCapitalize="off"
-            className={buttonClass({ className: 'w-full font-mono outline-hidden focus:border-accent' })}
-          />
+            autoCapitalize="off" className="w-full font-mono" />
         </Field>
       </div>
 

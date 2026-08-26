@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, matchRights, shuffleSort, quizKind, type QuizBlockContent } from '@/core'
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Input } from '@/shared/ui/input'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -236,8 +237,8 @@ export function QuizBlock({
       )}
 
       {(kind === 'text' || kind === 'number') && (
-        <input
-          type={kind === 'number' ? 'text' : 'text'}
+        <Input
+          type="text"
           inputMode={kind === 'number' ? 'decimal' : 'text'}
           disabled={checked || pending || readOnly}
           value={textInput}
@@ -249,9 +250,7 @@ export function QuizBlock({
             }
           }}
           placeholder={kind === 'number' ? (ru ? 'Ваш ответ (число)' : 'Your answer (number)') : ru ? 'Ваш ответ' : 'Your answer'}
-          className={`w-full rounded-md border px-3 py-2 text-body text-ink outline-hidden ${
-            checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2 focus:border-border-strong'
-          }`}
+          className={checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : undefined}
         />
       )}
 
@@ -292,15 +291,14 @@ export function QuizBlock({
             <span key={i}>
               {part}
               {i < nBlanks && (
-                <input
+                <Input
                   type="text"
+                  size="sm"
                   disabled={checked || pending || readOnly}
                   value={blankInputs[i] ?? ''}
                   onChange={(e) => setBlankInputs((xs) => xs.map((v, xi) => (xi === i ? e.target.value : v)))}
                   aria-label={`${ru ? 'Пропуск' : 'Blank'} ${i + 1}`}
-                  className={`mx-1 inline-block w-28 rounded-md border px-2 py-0.5 text-body text-ink outline-hidden ${
-                    checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border-strong bg-surface-2 focus:border-accent'
-                  }`}
+                  className={`mx-1 inline-block w-28 ${checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : ''}`}
                 />
               )}
             </span>

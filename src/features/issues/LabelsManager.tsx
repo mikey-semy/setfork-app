@@ -7,9 +7,9 @@ import { Button } from '@/shared/ui/button'
 import { ColorSwatch } from '@/shared/ui/ColorSwatch'
 import { chipColors, type CustomLabel } from '@/shared/lib/labels'
 import { createLabel, deleteLabel } from './label-actions'
-import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Badge } from '@/shared/ui/badge'
+import { Input } from '@/shared/ui/input'
 
 const PRESET = ['#2159d6', '#7c3aed', '#15803d', '#c2570c', '#be123c', '#0f766e', '#b45309', '#475569']
 
@@ -69,14 +69,11 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
             <ColorSwatch key={c} color={c} selected={color === c} label={c} onSelect={() => setColor(c)} />
           ))}
         </div>
-        <input
-          value={name}
+        <Input value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={30}
           placeholder={ru ? 'имя метки' : 'label name'}
-          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())}
-          className={buttonClass({ className: 'min-w-0 flex-1 bg-surface-2 outline-hidden' })}
-        />
+          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())} className="min-w-0 flex-1" />
         <Button variant="primary" onClick={add} disabled={pending || !name.trim()}>
           {pending ? <Spinner size="sm" /> : <Plus size={13} />} {ru ? 'Добавить' : 'Add'}
         </Button>

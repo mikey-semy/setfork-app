@@ -52,14 +52,11 @@ export function FeedbackForm({ lang }: { lang: Lang }) {
       </div>
 
       {/* Honeypot: люди поле не видят и не заполняют; непустое значение = бот. */}
-      <input
-        type="text"
+      <Input type="text"
         name="website"
         tabIndex={-1}
         autoComplete="off"
-        aria-hidden="true"
-        className="absolute -left-[624.9375rem] h-0 w-0 opacity-0"
-      />
+        aria-hidden="true" className="absolute -left-[624.9375rem] w-0 opacity-0" />
       {/* Откуда пришли — справочный контекст; реф-коллбэк вместо state (нет лишнего ререндера). */}
       <input
         type="hidden"

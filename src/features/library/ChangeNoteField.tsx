@@ -8,6 +8,7 @@ import { generateChangeNoteAction } from './actions/ai'
 import { buttonClass } from '@/shared/ui/button-style'
 import { TOUCH_HIT } from '@/shared/ui/control'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Input } from '@/shared/ui/input'
 
 // Поле «Что изменили и почему» + кнопка генерации примечания из диффа версий
 // (как commit-message в Copilot). Читает текущие пункты из скрытого поля формы.
@@ -56,7 +57,7 @@ export function ChangeNoteField({
   return (
     <div className="mb-4">
       <div className="relative">
-        <input
+        <Input
           ref={ref}
           name="note"
           required={required}
@@ -74,9 +75,8 @@ export function ChangeNoteField({
           }}
           aria-invalid={invalid}
           placeholder={placeholder}
-          className={`w-full rounded-md border bg-surface-2 py-2.5 pl-3 pr-11 text-body-lg text-ink outline-hidden ${
-            invalid ? 'border-danger focus:border-danger' : 'border-border focus:border-border-strong'
-          }`}
+          size="lg"
+          className={`pr-11 ${invalid ? 'border-danger focus:border-danger' : ''}`}
         />
         {/* Иконка-генерация внутри инпута справа, как commit-message в VSCode */}
         <Tooltip label={t('generateFromChanges', lang)}>

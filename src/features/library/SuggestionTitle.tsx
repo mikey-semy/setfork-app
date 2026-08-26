@@ -6,9 +6,9 @@ import { Pencil } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { editSuggestionNote } from './actions'
-import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { IconButton } from '@/shared/ui/IconButton'
+import { Input } from '@/shared/ui/input'
 
 export interface TitleLabels {
   edit: string
@@ -52,13 +52,10 @@ export function SuggestionTitle({
   if (editing) {
     return (
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <input
-          value={draft}
+        <Input value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={labels.placeholder}
-          maxLength={300}
-          className={buttonClass({ className: 'min-w-0 flex-1 outline-hidden focus-visible:border-border-strong' })}
-        />
+          maxLength={300} className="min-w-0 flex-1" />
         {/* Действия — вправо, одной высотой (стандарт кнопок). */}
         <Button variant="ghost" onClick={() => setEditing(false)} disabled={pending}>
           {labels.cancel}

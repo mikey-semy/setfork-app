@@ -7,9 +7,9 @@ import { getEmbedSpaceInfo, getReindexStatus, purgeEmbeddings, setEmbedTarget, s
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
-import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Badge } from '@/shared/ui/badge'
+import { Input } from '@/shared/ui/input'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
 type SpaceInfo = Awaited<ReturnType<typeof getEmbedSpaceInfo>>
@@ -188,16 +188,13 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
 
       <div className="mb-3">
         <label htmlFor="reindex-spread" className="mb-1 block text-body-sm text-ink-2">{t('admin.spreadOverMin', lang)}</label>
-        <input
-          id="reindex-spread"
+        <Input id="reindex-spread"
           type="number"
           min={0}
           max={120}
           value={spread}
           disabled={running}
-          onChange={(e) => setSpread(Math.max(0, Math.min(120, Number(e.target.value) || 0)))}
-          className={buttonClass({ className: 'w-24 bg-surface-2 outline-hidden' })}
-        />
+          onChange={(e) => setSpread(Math.max(0, Math.min(120, Number(e.target.value) || 0)))} className="w-24" />
       </div>
 
       {msg && <div className="mb-3 text-body-sm text-ink-2">{msg}</div>}

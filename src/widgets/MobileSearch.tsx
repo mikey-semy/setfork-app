@@ -7,6 +7,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { IconButton } from '@/shared/ui/IconButton'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { MenuItem } from '@/shared/ui/MenuItem'
+import { Input } from '@/shared/ui/input'
 
 /** Мобильный поиск: оверлей НА МЕСТЕ (не редирект на /search — оттуда не вернуться).
  *  На странице списка первая опция — «искать в этом списке» (?find= фильтрует шаги,
@@ -44,16 +45,13 @@ export function MobileSearch({
         <div className="p-3">
           <div className="flex items-center gap-2">
             <Search size={15} className="shrink-0 text-muted" />
-            <input
-              autoFocus
+            <Input autoFocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && q.trim()) go(`/search?q=${encodeURIComponent(q.trim())}`)
               }}
-              placeholder={ru ? 'Поиск…' : 'Search…'}
-              className="min-w-0 flex-1 bg-transparent py-1.5 text-title text-ink outline-hidden placeholder:text-muted"
-            />
+              placeholder={ru ? 'Поиск…' : 'Search…'} className="min-w-0 flex-1" />
           </div>
           <div className="mt-1 border-t border-border pt-1">
             {inList && (

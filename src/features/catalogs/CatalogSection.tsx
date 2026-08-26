@@ -8,6 +8,7 @@ import { t, tr, type Lang } from '@/shared/i18n'
 import { createCatalogAndAssign, setListCatalog } from './actions'
 import type { CatalogRow } from './queries'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Input } from '@/shared/ui/input'
 
 /** Управление каталогом списка (только владелец; settings уже owner-gated). */
 export function CatalogSection({
@@ -52,11 +53,8 @@ export function CatalogSection({
       )}
 
       <form action={createCatalogAndAssign.bind(null, templateId)} className="flex flex-wrap items-center gap-2">
-        <input
-          name="name"
-          placeholder={t('newCatalogPh', lang)}
-          className={buttonClass({ className: 'w-menu bg-surface-2 outline-hidden focus:border-border-strong' })}
-        />
+        <Input name="name"
+          placeholder={t('newCatalogPh', lang)} className="w-menu" />
         <button type="submit" className={buttonClass()}>
           {t('createCatalogBtn', lang)}
         </button>

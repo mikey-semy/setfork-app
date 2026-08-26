@@ -8,7 +8,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { getAdminCollections } from '@/features/collections/queries'
 import { createCollection } from '@/features/admin/collection-actions'
-import { buttonClass } from '@/shared/ui/button-style'
+import { Input } from '@/shared/ui/input'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,13 +35,10 @@ export default async function AdminCollectionsPage() {
       />
 
       <form action={createCollection} className="flex gap-2">
-        <input
-          name="title"
+        <Input name="title"
           required
           maxLength={120}
-          placeholder={ru ? 'Название новой подборки' : 'New collection title'}
-          className={buttonClass({ className: 'flex-1 bg-surface-2 outline-hidden' })}
-        />
+          placeholder={ru ? 'Название новой подборки' : 'New collection title'} className="flex-1" />
         <Button type="submit" variant="primary" size="md">
           <Plus size={14} /> {ru ? 'Создать' : 'Create'}
         </Button>

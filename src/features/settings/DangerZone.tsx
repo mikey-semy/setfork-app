@@ -8,6 +8,7 @@ import { ActionRow, DangerZone as DangerZoneShell } from '@/shared/ui/DangerZone
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { t, type Lang } from '@/shared/i18n'
 import { changeHandle, deleteAccount, type ActionResult } from './actions'
+import { Input } from '@/shared/ui/input'
 
 export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
   const [delState, delAction, delPending] = useActionState<ActionResult | null, FormData>(deleteAccount, null)
@@ -67,17 +68,16 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
           <p className="text-body leading-relaxed text-ink-2">{t('changeHandleWarn', lang)}</p>
           <label className="flex flex-col gap-1.5 text-body-sm font-semibold text-ink-2">
             {t('changeHandleField', lang)}
-            <div className="mt-0.5 flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 focus-within:border-danger">
-              <span className="text-muted">@</span>
-              <input
-                name="handle"
-                defaultValue=""
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={handle}
-                className="w-full bg-transparent py-2 font-mono text-body text-ink outline-hidden"
-              />
-            </div>
+            <Input
+              leading="@"
+              tone="danger"
+              name="handle"
+              defaultValue=""
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={handle}
+              className="mt-0.5 font-mono"
+            />
           </label>
           {hState?.error && <div className="text-body text-danger">{hState.error}</div>}
         </form>

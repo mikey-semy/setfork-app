@@ -8,6 +8,7 @@ import { addCollaborator, removeCollaborator } from './actions'
 import type { CollaboratorRow } from './queries'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
+import { Input } from '@/shared/ui/input'
 
 /** Управление соавторами (только владелец; страница settings уже owner-gated). */
 export function CollaboratorsSection({
@@ -28,11 +29,8 @@ export function CollaboratorsSection({
       }
     >
       <form action={addCollaborator.bind(null, templateId)} className="mb-3 flex flex-wrap items-center gap-2">
-        <input
-          name="handle"
-          placeholder={t('addCollaboratorPh', lang)}
-          className={buttonClass({ className: 'w-menu bg-surface-2 outline-hidden focus:border-border-strong' })}
-        />
+        <Input name="handle"
+          placeholder={t('addCollaboratorPh', lang)} className="w-menu" />
         <Button type="submit" variant="primary" size="md">
           {t('addCollaborator', lang)}
         </Button>
