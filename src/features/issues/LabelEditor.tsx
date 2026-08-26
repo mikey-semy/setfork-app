@@ -7,6 +7,7 @@ import type { Lang } from '@/shared/i18n'
 import { ISSUE_LABELS, customKey, labelText, type CustomLabel } from '@/shared/lib/labels'
 import { LabelChips } from '@/shared/ui/LabelChips'
 import { setIssueLabels } from './actions'
+import { MenuItem } from '@/shared/ui/MenuItem'
 
 // Метки issue: текущие чипы + поповер-редактор (владелец/коллаборатор), как AssigneePicker.
 export function LabelEditor({
@@ -65,34 +66,22 @@ export function LabelEditor({
                 {ISSUE_LABELS.map((l) => {
                   const on = sel.includes(l.key)
                   return (
-                    <button
-                      key={l.key}
-                      type="button"
-                      disabled={pending}
-                      onClick={() => toggle(l.key)}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body text-ink-2 hover:bg-surface-2 disabled:opacity-60"
-                    >
+                    <MenuItem key={l.key} disabled={pending} onClick={() => toggle(l.key)}>
                       <span className={`h-3 w-3 shrink-0 rounded-full border ${l.cls}`} />
                       <span className="flex-1 truncate">{labelText(l.key, lang)}</span>
                       {on && <Check size={13} className="shrink-0 text-accent" />}
-                    </button>
+                    </MenuItem>
                   )
                 })}
                 {custom.map((c) => {
                   const key = customKey(c.id)
                   const on = sel.includes(key)
                   return (
-                    <button
-                      key={key}
-                      type="button"
-                      disabled={pending}
-                      onClick={() => toggle(key)}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body text-ink-2 hover:bg-surface-2 disabled:opacity-60"
-                    >
+                    <MenuItem key={key} disabled={pending} onClick={() => toggle(key)}>
                       <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: c.color }} />
                       <span className="flex-1 truncate">{c.name}</span>
                       {on && <Check size={13} className="shrink-0 text-accent" />}
-                    </button>
+                    </MenuItem>
                   )
                 })}
               </>

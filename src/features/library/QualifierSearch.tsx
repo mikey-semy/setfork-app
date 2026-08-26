@@ -7,6 +7,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { SearchField } from '@/shared/ui/SearchField'
 import { t, type Lang } from '@/shared/i18n'
 import { parseSearchQuery } from './search-query'
+import { MenuItem } from '@/shared/ui/MenuItem'
 
 type SugKind = 'user' | 'tag' | 'ordered' | 'unordered' | 'list' | 'search'
 type SugAction = 'insert' | 'navigate' | 'search'
@@ -277,14 +278,7 @@ export function QualifierSearch({
                 {header && (
                   <div className="px-3 pb-1 pt-1.5 text-caption font-semibold uppercase tracking-wider text-muted">{s.group}</div>
                 )}
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => apply(s)}
-                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-body ${
-                    i === active ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:bg-surface-2'
-                  }`}
-                >
+                <MenuItem onMouseDown={(e) => e.preventDefault()} onClick={() => apply(s)} active={i === active}>
                   {rowIcon(s)}
                   {s.kind === 'search' ? (
                     <span className="truncate">
@@ -297,7 +291,7 @@ export function QualifierSearch({
                       {s.count != null && <span className="ml-auto shrink-0 font-mono text-caption text-muted">{s.count}</span>}
                     </>
                   )}
-                </button>
+                </MenuItem>
               </Fragment>
             )
           })}

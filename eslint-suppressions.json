@@ -271,7 +271,7 @@
   },
   "src/features/issues/LabelEditor.tsx": {
     "no-restricted-syntax": {
-      "count": 3
+      "count": 1
     }
   },
   "src/features/issues/LabelsManager.tsx": {

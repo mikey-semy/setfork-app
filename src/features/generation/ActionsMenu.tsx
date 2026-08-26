@@ -8,6 +8,7 @@ import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import { MAX_VARIANTS } from './limits'
 import { t } from '@/shared/i18n'
+import { MenuItem } from '@/shared/ui/MenuItem'
 
 /**
  * Меню действий у поля ввода (фидбек владельца): «Использовать этот» и «Ещё
@@ -82,23 +83,21 @@ export function ActionsMenu({
 
       {open && candidates.length > 0 && (
         <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-panel-lg overflow-hidden rounded-md border border-border bg-surface shadow-card">
-          <button
-            type="button"
+          <MenuItem
             disabled={!canAccept}
             onClick={() => {
               setOpen(false)
               onAccept()
             }}
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-body font-semibold text-ink hover:bg-surface-2 disabled:opacity-40"
+            className="font-semibold text-ink"
           >
             <Check size={14} className="shrink-0 text-accent" />
             <span className="min-w-0">
               {t('generation.useOne', lang)}
               {selected && <span className="block truncate text-caption font-normal text-muted">{selected.title}</span>}
             </span>
-          </button>
-          <button
-            type="button"
+          </MenuItem>
+          <MenuItem
             disabled={!canRegen}
             onClick={() => {
               setOpen(false)
@@ -111,25 +110,20 @@ export function ActionsMenu({
             <span className="ml-auto text-caption tabular-nums text-muted">
               {candidates.length}/{MAX_VARIANTS}
             </span>
-          </button>
+          </MenuItem>
           {candidates.length > 1 && (
             <div className="border-t border-border">
               <div className="px-3 pb-1 pt-2 text-caption font-semibold uppercase tracking-wide text-muted">
                 {t('generation.variants', lang)}
               </div>
               {candidates.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => jump(c)}
-                  className={`flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-surface-2 ${c.id === selId ? 'bg-surface-2' : ''}`}
-                >
+                <MenuItem key={c.id} onClick={() => jump(c)} active={c.id === selId} className="items-start">
                   <span className="mt-px shrink-0 text-caption tabular-nums text-muted">{c.idx}</span>
                   <span className="min-w-0">
                     <span className="block truncate text-body-sm text-ink">{c.title}</span>
                     {c.summary && <span className="mt-0.5 block truncate text-caption text-muted">{c.summary}</span>}
                   </span>
-                </button>
+                </MenuItem>
               ))}
             </div>
           )}
