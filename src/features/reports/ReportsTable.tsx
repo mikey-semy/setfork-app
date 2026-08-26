@@ -25,15 +25,9 @@ const STATUS_LABEL = {
 } as const
 
 function StatusBadge({ status, lang }: { status: ReportItem['status']; lang: Lang }) {
-  const cls =
-    status === 'new'
-      ? 'bg-accent/10 text-accent'
-      : status === 'actioned'
-        ? 'bg-ok/15 text-ok'
-        : status === 'reviewed'
-          ? 'bg-warn/10 text-ink-2'
-          : 'bg-surface-2 text-muted'
-  return <span className={`rounded-full px-2 py-0.5 text-caption font-semibold ${cls}`}>{t(STATUS_LABEL[status], lang)}</span>
+  const variant =
+    status === 'new' ? 'accent' : status === 'actioned' ? 'ok' : status === 'reviewed' ? 'warn' : 'soft'
+  return <Badge variant={variant}>{t(STATUS_LABEL[status], lang)}</Badge>
 }
 
 function Row({ item, lang }: { item: ReportItem; lang: Lang }) {

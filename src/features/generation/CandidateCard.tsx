@@ -8,6 +8,7 @@ import { safeHref } from '@/shared/lib/safe-url'
 import { detectLang, LANG_LABEL } from '@/shared/ui/detect-lang'
 import { t } from '@/shared/i18n'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Badge } from '@/shared/ui/badge'
 
 /**
  * Вариант списка карточкой. СВЁРНУТ по умолчанию (фидбек владельца: показывать
@@ -54,9 +55,9 @@ export function CandidateCard({
       {cand.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {cand.tags.map((tg) => (
-            <span key={tg} className="rounded-full bg-surface-2 px-2 py-0.5 text-caption text-ink-2">
+            <Badge variant="soft" key={tg}>
               {tg}
-            </span>
+            </Badge>
           ))}
         </div>
       )}

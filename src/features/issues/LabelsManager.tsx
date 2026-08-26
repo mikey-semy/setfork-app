@@ -9,6 +9,7 @@ import { chipColors, type CustomLabel } from '@/shared/lib/labels'
 import { createLabel, deleteLabel } from './label-actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Badge } from '@/shared/ui/badge'
 
 const PRESET = ['#2159d6', '#7c3aed', '#15803d', '#c2570c', '#be123c', '#0f766e', '#b45309', '#475569']
 
@@ -53,12 +54,12 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
       <div className="flex flex-wrap gap-1.5">
         {labels.length === 0 && <span className="text-body-sm text-muted">{ru ? 'Кастомных меток пока нет.' : 'No custom labels yet.'}</span>}
         {labels.map((l) => (
-          <span key={l.id} style={chipColors(l.color)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-body-sm font-medium">
+          <Badge size="md" className="font-medium" key={l.id} style={chipColors(l.color)}>
             {l.name}
             <button type="button" onClick={() => remove(l.id)} disabled={pending} aria-label={ru ? 'удалить' : 'delete'} className="opacity-70 hover:opacity-100">
               <X size={12} />
             </button>
-          </span>
+          </Badge>
         ))}
       </div>
 

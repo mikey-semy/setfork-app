@@ -22,6 +22,7 @@ import { Tag } from 'lucide-react'
 import { PAGE } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Badge } from '@/shared/ui/badge'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -184,9 +185,9 @@ export default async function IssuesPage({
                     </Link>
                     <LabelChips labels={it.labels} lang={lang} custom={custom} />
                     {it.milestoneTitle && (
-                      <span className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-caption text-ink-2 [overflow-wrap:anywhere]">
+                      <Badge variant="chip" className="min-w-0 [overflow-wrap:anywhere]">
                         <MilestoneIcon size={11} className="text-accent" /> {it.milestoneTitle}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   <div className="mt-0.5 text-body-sm text-muted">

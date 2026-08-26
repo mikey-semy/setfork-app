@@ -7,6 +7,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { setFeedbackStatus } from './actions'
 import type { FeedbackFilter, FeedbackItem } from './queries'
 import { cardClass } from '@/shared/ui/card-style'
+import { Badge } from '@/shared/ui/badge'
 
 const CAT_LABEL = {
   bug: 'fbCatBug',
@@ -17,14 +18,9 @@ const CAT_LABEL = {
 } as const
 
 function StatusBadge({ status, lang }: { status: FeedbackItem['status']; lang: Lang }) {
-  const cls =
-    status === 'new'
-      ? 'bg-accent/10 text-accent'
-      : status === 'seen'
-        ? 'bg-warn/10 text-ink-2'
-        : 'bg-surface-2 text-muted'
+  const variant = status === 'new' ? 'accent' : status === 'seen' ? 'warn' : 'soft'
   const label = status === 'new' ? 'fbStatusNew' : status === 'seen' ? 'fbStatusSeen' : 'fbStatusDone'
-  return <span className={`rounded-full px-2 py-0.5 text-caption font-semibold ${cls}`}>{t(label, lang)}</span>
+  return <Badge variant={variant}>{t(label, lang)}</Badge>
 }
 
 function Row({ item, lang }: { item: FeedbackItem; lang: Lang }) {
@@ -37,9 +33,9 @@ function Row({ item, lang }: { item: FeedbackItem; lang: Lang }) {
     <div className={cardClass()}>
       <div className="mb-2 flex flex-wrap items-center gap-2 text-body-sm text-ink-2">
         <StatusBadge status={item.status} lang={lang} />
-        <span className="rounded-full bg-surface-2 px-2 py-0.5 text-caption font-semibold text-ink-2">
+        <Badge variant="soft">
           {t(CAT_LABEL[item.category], lang)}
-        </span>
+        </Badge>
         {item.handle ? (
           <Link href={`/${item.handle}`} className="font-semibold text-ink hover:underline">
             {item.handle}

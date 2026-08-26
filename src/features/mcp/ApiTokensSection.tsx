@@ -10,6 +10,7 @@ import { createApiToken, revokeApiToken } from './actions'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Badge } from '@/shared/ui/badge'
 
 // Чистая — на модульном уровне, а не в теле компонента (react-doctor:
 // пересборка на каждый рендер ломает мемоизацию детей).
@@ -149,11 +150,11 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-body font-medium text-ink">{tk.name}</span>
-                  <span className="rounded-full border border-border px-1.5 py-0.5 text-caption font-semibold uppercase tracking-wide text-muted">
+                  <Badge className="uppercase tracking-wide">
                     {tk.scope === 'read' ? (ru ? 'чтение' : 'read') : (ru ? 'запись' : 'write')}
-                  </span>
+                  </Badge>
                   {expired && (
-                    <span className="rounded-full bg-danger/10 px-1.5 py-0.5 text-caption font-semibold uppercase text-danger">{ru ? 'истёк' : 'expired'}</span>
+                    <Badge variant="danger" className="uppercase">{ru ? 'истёк' : 'expired'}</Badge>
                   )}
                 </div>
                 <div className="font-mono text-caption text-muted">

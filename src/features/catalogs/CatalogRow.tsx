@@ -4,6 +4,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { tr, type Lang } from '@/shared/i18n'
 import type { PublicCatalog } from './queries'
 import { cardClass } from '@/shared/ui/card-style'
+import { Badge } from '@/shared/ui/badge'
 
 /** Каталог строкой для ленты Explore (в один столбец, как список репозиториев GitHub).
  *  Без баннера — иконка-папка + бейдж «Каталог» отличают его от списка. */
@@ -21,7 +22,7 @@ export function CatalogRow({ c, lang }: { c: PublicCatalog; lang: Lang }) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-body-lg font-semibold text-ink">{title}</span>
-          <span className="rounded-full border border-border px-1.5 py-0.5 text-caption text-ink-2">{ru ? 'Каталог' : 'Catalog'}</span>
+          <Badge>{ru ? 'Каталог' : 'Catalog'}</Badge>
         </div>
         {tr(c.desc, lang) && <div className="mt-1 truncate text-body-sm text-ink-2">{tr(c.desc, lang)}</div>}
         <div className="mt-1.5 flex min-w-0 items-center gap-2 text-caption text-muted">

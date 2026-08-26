@@ -10,6 +10,7 @@ import { TagInput } from '@/shared/ui/TagInput'
 import { Field } from '@/shared/ui/Field'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Badge } from '@/shared/ui/badge'
 import { createSavedQuery, deleteSavedQuery } from './saved-queries-actions'
 import type { SavedQuery } from './saved-queries'
 import { t } from '@/shared/i18n'
@@ -27,10 +28,12 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
       {queries.map((q) => {
         const isActive = q.id === active
         return (
-          <span
+          <Badge
             key={q.id}
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-body-sm ${
-              isActive ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:text-ink'
+            size="md"
+            variant={isActive ? 'accent' : 'outline'}
+            className={`${
+              isActive ? 'border border-accent' : 'text-ink-2 hover:text-ink'
             }`}
           >
             <Link href={isActive ? '/my-lists' : `/my-lists?sq=${q.id}`}>{q.name}</Link>
@@ -43,7 +46,7 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
             >
               <X size={10} />
             </button>
-          </span>
+          </Badge>
         )
       })}
       <Popover>

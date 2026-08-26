@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Badge } from '@/shared/ui/badge'
 
 /**
  * Реплика участника совета — облачко как в мессенджере (фидбек владельца по
@@ -50,10 +51,10 @@ export function CouncilBubble({ who, name, badge, badgeTitle, typing, src, child
               {badge ? (
                 badgeTitle ? (
                   <Tooltip label={badgeTitle}>
-                    <span className="rounded-full bg-accent-soft px-1.5 py-px text-caption font-semibold text-accent">{badge}</span>
+                    <Badge variant="accent">{badge}</Badge>
                   </Tooltip>
                 ) : (
-                  <span className="rounded-full bg-accent-soft px-1.5 py-px text-caption font-semibold text-accent">{badge}</span>
+                  <Badge variant="accent">{badge}</Badge>
                 )
               ) : null}
             </div>

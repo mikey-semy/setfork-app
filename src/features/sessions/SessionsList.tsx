@@ -8,6 +8,7 @@ import type { UserSession } from './queries'
 import { revokeOtherSessions, revokeSession } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Badge } from '@/shared/ui/badge'
 
 export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang: Lang }) {
   const [pending, start] = useTransition()
@@ -33,15 +34,15 @@ export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang
             <div className="flex items-center gap-2 font-medium text-ink">
               {s.device}
               {s.current ? (
-                <span className="rounded-full bg-ok/15 px-2 py-0.5 text-caption font-semibold text-ok">
+                <Badge variant="ok">
                   {t('currentSession', lang)}
-                </span>
+                </Badge>
               ) : s.online ? (
                 <Tooltip label={t('onlineLabel', lang)}>
                   <span className="h-2 w-2 rounded-full bg-ok" />
                 </Tooltip>
               ) : stale ? (
-                <span className="rounded-full bg-surface px-2 py-0.5 text-caption font-semibold text-muted">{t('staleLabel', lang)}</span>
+                <Badge variant="soft">{t('staleLabel', lang)}</Badge>
               ) : null}
             </div>
             <div className="text-body-sm text-muted">

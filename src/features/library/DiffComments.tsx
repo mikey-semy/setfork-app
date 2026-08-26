@@ -22,6 +22,7 @@ import type { ThreadState } from '@/features/comments/state'
 import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Badge } from '@/shared/ui/badge'
 
 export interface DiffCommentLabels {
   add: string
@@ -289,7 +290,7 @@ function ThreadCard({
           {/* «Устарел» — отдельно от привязки: якорь может отлично находиться, а
               пункт вокруг него переписан, и спор ниже уже про другое. */}
           {state.outdated && (
-            <span className="rounded-full bg-warn/15 px-1.5 py-0.5 font-semibold text-warn">{labels.outdated}</span>
+            <Badge variant="warn">{labels.outdated}</Badge>
           )}
           {orphaned ? labels.orphanHint : state.state === 'reanchored' ? `${labels.stateReanchored} · ${state.confidence}%` : null}
         </div>
@@ -306,7 +307,7 @@ function ThreadCard({
                 {/* Свой неотправленный черновик: видно только автору — говорим об этом
                     прямо, иначе он решит, что замечание уже прочитали. */}
                 {c.pending && (
-                  <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-caption font-semibold text-warn">{labels.pendingBadge}</span>
+                  <Badge variant="warn">{labels.pendingBadge}</Badge>
                 )}
               </div>
               <Markdown className="text-body">{c.body}</Markdown>

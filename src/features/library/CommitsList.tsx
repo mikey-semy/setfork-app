@@ -6,6 +6,7 @@ import { CopyButton } from '@/shared/ui/CopyButton'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { Badge } from '@/shared/ui/badge'
 import { t, type Lang } from '@/shared/i18n'
 
 /** Наш пользователь, опознанный по e-mail подписи коммита (может не найтись). */
@@ -81,9 +82,9 @@ export function CommitsList({
                     </Tooltip>
                   )}
                   {c.parents > 1 && (
-                    <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-1.5 py-0.5 text-caption font-semibold text-accent">
+                    <Badge variant="accent" className="mt-0.5 shrink-0">
                       <GitMerge size={11} /> {labels.merge}
-                    </span>
+                    </Badge>
                   )}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-muted">

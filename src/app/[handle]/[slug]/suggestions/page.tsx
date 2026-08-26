@@ -40,6 +40,7 @@ import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/pag
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { resolveChip } from '@/shared/lib/labels'
 import { PAGE } from '@/shared/ui/control'
+import { Badge } from '@/shared/ui/badge'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -233,9 +234,9 @@ export default async function SuggestionsPage({
                   </Link>
                   <LabelChips labels={s.labels} lang={lang} custom={custom} />
                   {s.milestoneTitle && (
-                    <span className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-caption text-ink-2 [overflow-wrap:anywhere]">
+                    <Badge className="min-w-0 [overflow-wrap:anywhere]">
                       <MilestoneIcon size={11} className="text-accent" /> {s.milestoneTitle}
-                    </span>
+                    </Badge>
                   )}
                 </div>
                 {/* Вторая строка — метаданные. Номер, автор, дата, объём. У ветки

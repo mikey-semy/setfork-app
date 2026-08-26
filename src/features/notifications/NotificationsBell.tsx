@@ -13,6 +13,7 @@ import type { NotificationItem } from './queries'
 import { markNotificationsRead } from './actions'
 import { NOTIF_VERB } from './verbs'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { Badge } from '@/shared/ui/badge'
 
 
 export function NotificationsBell({ unread, items, lang }: { unread: number; items: NotificationItem[]; lang: Lang }) {
@@ -32,10 +33,12 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
             а не пишутся здесь (до этого высота была 30px — мимо шкалы 24/28/32). */}
         <IconButton variant="ghost" label={t('notifications', lang)} className="relative">
           <Bell size={17} />
+          {/* Счётчик — единственная пилюля, которой ступень отступа велика: она круг 16px
+              поверх значка, а не метка в тексте. Отсюда px-1 поверх примитива. */}
           {count > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 text-caption font-bold text-white">
+            <Badge variant="dangerSolid" className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center px-1 font-bold">
               {count > 9 ? '9+' : count}
-            </span>
+            </Badge>
           )}
         </IconButton>
       </DropdownMenuTrigger>

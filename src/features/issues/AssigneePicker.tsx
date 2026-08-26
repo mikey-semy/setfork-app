@@ -6,6 +6,7 @@ import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { toggleIssueAssignee } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Badge } from '@/shared/ui/badge'
 
 
 type Person = { handle: string; avatarUrl: string | null }
@@ -117,7 +118,7 @@ export function AssigneePicker({
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {assignees.map((a) => (
-            <span key={a.handle} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 py-0.5 pl-0.5 pr-2 text-body-sm">
+            <Badge variant="chip" size="md" className="gap-1.5 pl-0.5 pr-2" key={a.handle}>
               <Avatar handle={a.handle} avatarUrl={a.avatarUrl} size={20} />
               <span className="text-ink">{a.handle}</span>
               {canEdit && (
@@ -125,7 +126,7 @@ export function AssigneePicker({
                   <X size={13} />
                 </button>
               )}
-            </span>
+            </Badge>
           ))}
         </div>
       )}

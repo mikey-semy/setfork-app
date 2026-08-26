@@ -3,6 +3,7 @@ import { CONTROL_H } from '@/shared/ui/control'
 import { ScrollRow } from '@/shared/ui/ScrollRow'
 import { MessagesSquare, FileDiff, CircleCheck, GitCommitHorizontal, Eye } from 'lucide-react'
 import { cardClass } from '@/shared/ui/card-style'
+import { Badge } from '@/shared/ui/badge'
 
 export type SuggestionTab = 'conversation' | 'commits' | 'checks' | 'files' | 'result'
 
@@ -54,7 +55,7 @@ export function SuggestionTabs({
       >
         <span className={on ? 'text-ink' : 'text-muted'}>{icon}</span>
         {label}
-        {count > 0 && <span className="rounded-full bg-surface px-1.5 text-caption text-ink-2">{count}</span>}
+        {count > 0 && <Badge variant="soft">{count}</Badge>}
       </Link>
     )
   }

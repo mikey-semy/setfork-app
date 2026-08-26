@@ -5,6 +5,7 @@ import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { setIssueMilestone } from '@/features/milestones/actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Badge } from '@/shared/ui/badge'
 
 type Opt = { id: string; title: string; closed: boolean }
 
@@ -75,7 +76,7 @@ export function MilestonePicker({
       </div>
 
       {current ? (
-        <span className="inline-flex w-fit min-w-0 max-w-full items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-body-sm">
+        <Badge variant="chip" size="md" className="w-fit min-w-0 max-w-full gap-1.5">
           <MilestoneIcon size={13} className="shrink-0 text-accent" />
           {/* Название вехи — до 120 символов от человека: без переноса чип уносил
               сайдбар задачи за край (замер: 906px при экране 390). */}
@@ -85,7 +86,7 @@ export function MilestonePicker({
               <X size={13} />
             </button>
           )}
-        </span>
+        </Badge>
       ) : (
         <span className="text-body text-muted">{L('без вехи', 'no milestone')}</span>
       )}

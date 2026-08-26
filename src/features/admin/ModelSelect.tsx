@@ -6,6 +6,7 @@ import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, TEXT } from '@/shared/ui/control'
 import { SearchField } from '@/shared/ui/SearchField'
+import { Badge } from '@/shared/ui/badge'
 import { t, type Lang } from '@/shared/i18n'
 
 /** Значение-пустышка для «нет модели». */
@@ -334,12 +335,12 @@ function OptionBody({ o, lang }: { o: Option; lang: Lang }) {
       <span className="flex min-w-0 items-center gap-1.5">
         <span className={`min-w-0 truncate ${TEXT.bodySm}`}>{o.label ?? o.id}</span>
         {o.family && (
-          <span className={`shrink-0 rounded-full border border-border bg-surface-2 px-1.5 py-px ${TEXT.caption} text-muted`}>{o.family}</span>
+          <Badge variant="chip" className="shrink-0 px-1.5 py-px text-muted">{o.family}</Badge>
         )}
         {o.missing && (
-          <span className={`shrink-0 rounded-full border border-warn px-1.5 py-px ${TEXT.caption} text-warn`}>
+          <Badge variant="warn" className="shrink-0 px-1.5 py-px">
             {t('models.notInCatalogShort', lang)}
-          </span>
+          </Badge>
         )}
         {o.price && <span className={`ml-auto shrink-0 pl-2 tabular-nums ${TEXT.caption} ${o.priceClass ?? ''}`}>{o.price}</span>}
       </span>
@@ -385,7 +386,7 @@ function OptionBody({ o, lang }: { o: Option; lang: Lang }) {
                     {h.avatarUrl ? (
                       <GnomeAvatar src={h.avatarUrl} size={16} alt={h.label} className="size-4 rounded-full" />
                     ) : (
-                      <span className="rounded-full border border-border bg-surface-2 px-1.5 py-px text-ink-2">{h.label}</span>
+                      <Badge variant="chip">{h.label}</Badge>
                     )}
                   </span>
                 </Tooltip>

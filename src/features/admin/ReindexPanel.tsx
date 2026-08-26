@@ -9,6 +9,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Badge } from '@/shared/ui/badge'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
 type SpaceInfo = Awaited<ReturnType<typeof getEmbedSpaceInfo>>
@@ -132,9 +133,9 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 text-body font-medium text-ink">
                 {t('admin.indexSpace', lang)}
-                <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-caption font-semibold">
+                <Badge variant="chip">
                   {providerLabel(space.index.provider)}
-                </span>
+                </Badge>
                 <Tooltip label={space.index.docModel}>
                   <span className="truncate font-mono text-caption text-ink-2">{space.index.docLabel}</span>
                 </Tooltip>

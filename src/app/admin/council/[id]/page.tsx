@@ -14,6 +14,7 @@ import { timeAgo } from '@/shared/ui/timeAgo'
 import { ExpertSettings } from '@/features/admin/ExpertSettings'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Badge } from '@/shared/ui/badge'
 
 /**
  * СТРАНИЦА СПЕЦИАЛИСТА (админу): его развитие И его настройки — в одном месте.
@@ -114,14 +115,14 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {/* Настроение гнома (RPG): вытекает из принятости, окрашивает его реплики. */}
             <Tooltip label={mood.style || t('admin.notEnoughDataYet', lang)}>
-              <span tabIndex={0} className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-caption text-ink-2">
+              <Badge variant="soft" tabIndex={0}>
                 {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
-              </span>
+              </Badge>
             </Tooltip>
             {e.domains.map((d) => (
-              <span key={d} className="rounded-full border border-border px-2 py-0.5 text-caption text-ink-2">
+              <Badge key={d}>
                 {d}
-              </span>
+              </Badge>
             ))}
           </div>
         </div>
@@ -231,9 +232,9 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
               <div className="mt-2 flex flex-wrap items-center gap-1.5 text-caption text-muted">
                 <span>{t('admin.alsoOnIt', lang)}</span>
                 {alsoOnModel.map((h) => (
-                  <span key={`${h.kind}-${h.label}`} className="rounded-full border border-border bg-surface-2 px-2 py-0.5 text-ink-2">
+                  <Badge variant="chip" key={`${h.kind}-${h.label}`}>
                     {h.label}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             )}

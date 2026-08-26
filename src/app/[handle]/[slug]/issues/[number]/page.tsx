@@ -22,6 +22,7 @@ import { PAGE_NARROW } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
 import { cardClass } from '@/shared/ui/card-style'
 import { Pagination } from '@/shared/ui/Pagination'
+import { Badge } from '@/shared/ui/badge'
 import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
@@ -87,14 +88,10 @@ export default async function IssueThreadPage({
           </h1>
         </div>
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-body-sm font-semibold text-white ${
-              closed ? 'bg-accent' : 'bg-ok-solid'
-            }`}
-          >
+          <Badge size="md" variant={closed ? 'accentSolid' : 'okSolid'} className="gap-1.5 px-3">
             {closed ? <CircleCheck size={14} /> : <CircleDot size={14} />}
             {closed ? t('issueClosedBadge', lang) : t('issueOpenBadge', lang)}
-          </span>
+          </Badge>
           <span className="text-body text-ink-2">
             <span className="font-semibold text-ink">{issue.authorHandle}</span> {t('openedThis', lang)} ·{' '}
             {comments.length} {t('commentBtn', lang).toLowerCase()}

@@ -8,6 +8,7 @@ import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
+import { Badge } from '@/shared/ui/badge'
 
 // Стиль бейджа ранга по tier: выше — заметнее. Ученик (0) — приглушённо (стартовый
 // ранг, не «пусто»); Старший мастер (3) — самый выразительный. Только токены темы.
@@ -61,17 +62,17 @@ export default async function GuildsPage() {
                       tabIndex: Radix Tooltip открывается по focus — тап на touch
                       фокусирует бейдж и показывает подсказку (Codex #643). */}
                   <Tooltip label={t('guilds.craftRankEarnedBy', lang)}>
-                    <span tabIndex={0} className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-semibold ${RANK_CLS[rank.tier]}`}>
+                    <Badge tabIndex={0} variant="soft" className={`mt-1 ${RANK_CLS[rank.tier]}`}>
                       {rank.tier >= 1 && <Award size={11} />}
                       {ru ? rank.labelRu : rank.labelEn}
-                    </span>
+                    </Badge>
                   </Tooltip>
                 </div>
                 {share !== null && (
                   <Tooltip label={t('guilds.shareCouncilsWhoseList', lang)}>
-                    <span tabIndex={0} className="ml-auto shrink-0 self-start rounded-full bg-accent-soft px-2 py-0.5 text-caption font-semibold text-accent">
+                    <Badge variant="accent" className="ml-auto shrink-0 self-start" tabIndex={0}>
                       ✓ {share}%
-                    </span>
+                    </Badge>
                   </Tooltip>
                 )}
               </div>
@@ -85,9 +86,9 @@ export default async function GuildsPage() {
               {e.domains.length > 0 && !e.domains.includes('*') && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {e.domains.map((d) => (
-                    <span key={d} className="rounded-full border border-border px-2 py-0.5 text-caption text-ink-2">
+                    <Badge key={d}>
                       {d}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               )}

@@ -41,7 +41,7 @@ import { cardClass } from '@/shared/ui/card-style'
 // формы, дефолт), sm (панели), xs (плотные тулбары).
 const SIZES: ControlSize[] = ['xl', 'lg', 'md', 'sm', 'xs']
 const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'outline', 'ghost', 'danger', 'dangerSolid']
-const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft', 'danger', 'warn']
+const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'chip', 'ok', 'accent', 'soft', 'danger', 'warn', 'accentSolid', 'okSolid', 'dangerSolid', 'dashed']
 const ALERT_VARIANTS: AlertVariant[] = ['danger', 'warn', 'ok', 'info']
 // Палитра витрины — не «настоящие» акценты продукта, а достаточный набор, чтобы увидеть
 // выбранное состояние, кружок «без цвета» и размер цели.
@@ -226,6 +226,11 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
               {v}
             </Badge>
           ))}
+          {/* Вторая ступень кегля: пилюли живут в двух размерах, и без ступени
+              половина мест обходила примитив (замер 26.08.2026). */}
+          <Badge variant="chip" size="md">
+            md
+          </Badge>
           <Tooltip label={t('admin.tooltipNotTitle', lang)}>
             <Badge variant="soft">tooltip →</Badge>
           </Tooltip>

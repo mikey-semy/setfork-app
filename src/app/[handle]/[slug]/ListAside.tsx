@@ -5,6 +5,7 @@ import { ReportButton } from '@/features/reports/ReportButton'
 import { AsideCard, PageAside } from '@/shared/ui/PageAside'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
 import { UserLine } from '@/shared/ui/UserLine'
+import { Badge } from '@/shared/ui/badge'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { ListAbout } from './ListAbout'
 import type { ListPageData } from './load'
@@ -80,7 +81,7 @@ export function ListAside(props: Props) {
                 Сеткой аватаров было не разобрать, кто есть кто. */}
             <SectionLabel className="mb-2 flex items-center gap-1.5">
               {t('contributors', lang)}
-              <span className="rounded-full bg-surface-2 px-1.5 text-caption font-semibold text-ink-2">{contributors.length}</span>
+              <Badge variant="soft">{contributors.length}</Badge>
             </SectionLabel>
             <div className="flex flex-col gap-1">
               {contributors.slice(0, CONTRIBUTORS_SHOWN).map((c) => (

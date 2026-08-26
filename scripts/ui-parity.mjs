@@ -85,7 +85,7 @@ const ROLES = [
   },
   {
     key: 'пилюля',
-    primitive: 'Badge (6 вариантов) / TagChip / StepLevelBadge',
+    primitive: 'Badge (11 вариантов × 2 ступени) / TagChip / StepLevelBadge; свип 26.08.2026: 62 → 21, остаток — кликабельные (роль «кнопка»)',
     hint: 'своя пилюля rounded-full с отступами',
     match: ({ cls }) => every(cls, /^rounded-full$/, /^p[xy]?-/),
   },

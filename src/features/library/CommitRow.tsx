@@ -11,6 +11,7 @@ import type { Lang } from '@/shared/i18n'
 import { getCommitDiff, type CommitDiff } from './commit-diff'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Badge } from '@/shared/ui/badge'
 
 const STATUS = {
   added: { sign: '+', cls: 'text-ok' },
@@ -121,7 +122,7 @@ export function CommitRow({
           <span className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-ink">{msg}</span>
             <span className="shrink-0 rounded-md border border-accent/50 bg-accent-soft px-1.5 font-mono text-caption text-accent">v{version}</span>
-            {isCurrent && <span className="shrink-0 rounded-full bg-ok/15 px-1.5 py-0.5 text-caption font-semibold text-ok">{labels.current}</span>}
+            {isCurrent && <Badge variant="ok" className="shrink-0">{labels.current}</Badge>}
           </span>
           {/* Строка 2 — кто и когда. */}
           <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-muted">

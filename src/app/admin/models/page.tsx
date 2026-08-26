@@ -9,6 +9,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { TEXT } from '@/shared/ui/control'
+import { Badge } from '@/shared/ui/badge'
 import { fetchModels, prettyModelName } from '@/shared/ai/models'
 import { STATS_WINDOW_DAYS } from '@/shared/ai/model-stats'
 import { modelMeta } from '@/features/admin/model-enrich'
@@ -190,10 +191,10 @@ export default async function AdminModelsPage() {
                     <span className="flex flex-wrap items-center gap-1">
                       {m.holders?.map((h) => (
                         <Tooltip key={`${h.kind}-${h.label}`} label={`${h.label} — ${h.what}`}>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-1.5 py-px text-ink-2">
+                          <Badge variant="chip">
                             {h.avatarUrl && <GnomeAvatar src={h.avatarUrl} size={12} alt="" className="size-3 rounded-full" />}
                             {h.label}
-                          </span>
+                          </Badge>
                         </Tooltip>
                       ))}
                     </span>

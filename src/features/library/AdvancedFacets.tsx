@@ -7,6 +7,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { SearchField } from '@/shared/ui/SearchField'
 import { buildSearchQuery, parseSearchQuery, type ParsedQuery } from './search-query'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Badge } from '@/shared/ui/badge'
 
 /**
  * Боковые фасеты в стиле GitHub: клик-переключатели (Type/Verified/Tags) дописывают
@@ -101,7 +102,7 @@ export function AdvancedFacets({
           className={buttonClass({ className: 'mb-1 w-full uppercase tracking-wider outline-hidden hover:text-ink-2 focus-visible:ring-2 focus-visible:ring-border-strong' })}
         >
           {t('tags', lang)}
-          {parsed.tags.length > 0 && <span className="rounded-full bg-surface px-1.5 text-caption normal-case text-ink-2">{parsed.tags.length}</span>}
+          {parsed.tags.length > 0 && <Badge variant="soft" className="normal-case">{parsed.tags.length}</Badge>}
           <ChevronDown size={13} className={`ml-auto transition-transform ${tagsOpen ? 'rotate-180' : ''}`} />
         </button>
         {tagsOpen && (

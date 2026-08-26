@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { CircleDot, ListChecks, Users } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
+import { Badge } from '@/shared/ui/badge'
 
 export type Scope = 'lists' | 'people' | 'issues'
 
@@ -71,7 +72,7 @@ export function ScopeSwitcher({
         <Link key={it.scope} href={href(it.scope)} className={row(active === it.scope)}>
           <it.icon size={14} className="shrink-0 text-muted" />
           {it.label}
-          <span className="ml-auto rounded-full bg-surface px-1.5 font-mono text-caption text-muted">{it.count}</span>
+          <Badge variant="soft" className="ml-auto font-mono">{it.count}</Badge>
         </Link>
       ))}
     </div>
