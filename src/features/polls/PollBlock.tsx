@@ -7,6 +7,7 @@ import { pollHistory, votePoll } from './actions'
 import type { PollHistoryEvent, PollResult } from './queries'
 import { PollHistoryChart } from './PollHistoryChart'
 import { cardClass } from '@/shared/ui/card-style'
+import { TextButton } from '@/shared/ui/TextButton'
 
 export interface PollContent {
   question: string
@@ -68,6 +69,7 @@ export function PollBlock({
           const pct = total > 0 ? Math.round((c / total) * 100) : 0
           const mine = result.myVotes.includes(o.id)
           return (
+            // ui-parity-ok: вариант опроса — под текстом лежит полоса результата, у карточки такой роли нет
             <button
               key={o.id}
               type="button"
@@ -105,10 +107,10 @@ export function PollBlock({
         )}
         {!canVote && <span>· {ru ? 'войдите, чтобы голосовать' : 'log in to vote'}</span>}
         {total > 0 && (
-          <button type="button" onClick={toggleHistory} className="ml-auto inline-flex items-center gap-1 text-muted hover:text-accent">
+          <TextButton size="caption" onClick={toggleHistory} className="ml-auto gap-1">
             <LineChart size={12} />
             {ru ? 'динамика' : 'dynamics'}
-          </button>
+          </TextButton>
         )}
       </div>
       {histOpen && (

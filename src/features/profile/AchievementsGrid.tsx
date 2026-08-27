@@ -32,6 +32,7 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
       <div className="grid grid-cols-3 gap-2">
         {items.map((a) => (
           <Tooltip key={a.key} label={a.tier > 1 ? `${a.label} ×${a.tier}` : a.label}>
+            {/* ui-parity-ok: плитка достижения — квадрат целиком занят картинкой и растёт под курсором */}
             <button
               type="button"
               onClick={() => setOpen(a)}

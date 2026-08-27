@@ -14,6 +14,7 @@ import { Field } from '@/shared/ui/Field'
 import { AvatarDropzone } from './AvatarDropzone'
 import { SOCIAL_TYPES, SocialIcon } from './socials'
 import { updateProfile, type ActionResult } from './actions'
+import { TextButton } from '@/shared/ui/TextButton'
 
 // Строка соцсети редактируется (type/url меняются) и удаляется из середины списка,
 // поэтому ни индекс, ни содержимое не годятся как key — генерируем id при создании строки.
@@ -133,13 +134,9 @@ export function SettingsForm({
               </IconButton>
             </div>
           ))}
-          <button
-            type="button"
-            onClick={addRow}
-            className="inline-flex w-fit items-center gap-1.5 text-body font-medium text-accent hover:underline"
-          >
+          <TextButton tone="accent" size="md" onClick={addRow} className="w-fit font-medium">
             <Plus size={14} /> {t('addSocial', lang)}
-          </button>
+          </TextButton>
         </div>
       </Field>
 

@@ -1,7 +1,5 @@
 {
- "вкладки": {
-  "src/features/git/CloneDropdown.tsx": 1
- },
+ "вкладки": {},
  "высота числом": {},
  "длительность числом": {},
  "значок без имени": {},
@@ -10,41 +8,19 @@
  "кегль числом": {},
  "клик на не-контроле без клавиатуры": {},
  "кнопка": {
-  "src/features/admin/ExpertSettings.tsx": 1,
-  "src/features/admin/LandingEditor.tsx": 1,
-  "src/features/admin/ModelSelect.tsx": 2,
-  "src/features/generation/CandidateCard.tsx": 1,
-  "src/features/git/CloneDropdown.tsx": 1,
+  "src/features/admin/ModelSelect.tsx": 1,
   "src/features/git/ConflictResolver.tsx": 1,
   "src/features/library/CommitRow.tsx": 1,
-  "src/features/library/CoverSection.tsx": 1,
-  "src/features/library/SavedQueryBar.tsx": 1,
-  "src/features/polls/PollBlock.tsx": 1,
-  "src/features/profile/AchievementsGrid.tsx": 1,
-  "src/features/profile/activity/ContributionGrid.tsx": 1,
-  "src/features/quizzes/QuizBlock.tsx": 1,
-  "src/widgets/TopNav/TopNavMenus.tsx": 2
+  "src/widgets/TopNav/TopNavMenus.tsx": 1
  },
  "кнопка-невидимка": {
   "src/app/global-error.tsx": 1,
-  "src/features/admin/ExpertSettings.tsx": 2,
-  "src/features/admin/LandingEditor.tsx": 2,
+  "src/features/admin/ExpertSettings.tsx": 1,
+  "src/features/admin/LandingEditor.tsx": 1,
   "src/features/generation/GenerationChat.tsx": 1,
-  "src/features/library/CoverSection.tsx": 1,
-  "src/features/library/list-editor/block-fields.tsx": 1,
   "src/features/library/list-editor/BlockInserter.tsx": 1,
   "src/features/library/ListActionsMenu.tsx": 1,
-  "src/features/library/ListSettingsDanger.tsx": 2,
-  "src/features/library/ShareButton.tsx": 1,
-  "src/features/polls/PollBlock.tsx": 1,
-  "src/features/profile/PinsPicker.tsx": 1,
-  "src/features/quizzes/QuizBlock.tsx": 1,
-  "src/features/reports/ReportButton.tsx": 1,
-  "src/features/runs/RunView.tsx": 2,
-  "src/features/settings/AppearanceSettings.tsx": 3,
-  "src/features/settings/AvatarDropzone.tsx": 4,
-  "src/features/settings/SettingsForm.tsx": 1,
-  "src/widgets/ListHeader.tsx": 1
+  "src/features/library/ShareButton.tsx": 1
  },
  "многострочное поле": {},
  "нативная подсказка": {},
@@ -67,5 +43,17 @@
  "тень числом": {},
  "флажок": {},
  "цвет сырой переменной": {},
- "ширина числом": {}
+ "ширина числом": {},
+ "разобрано и законно": {
+  "src/features/admin/ExpertSettings.tsx": 1,
+  "src/features/generation/CandidateCard.tsx": 1,
+  "src/features/git/CloneDropdown.tsx": 2,
+  "src/features/library/CoverSection.tsx": 1,
+  "src/features/polls/PollBlock.tsx": 1,
+  "src/features/profile/AchievementsGrid.tsx": 1,
+  "src/features/profile/activity/ContributionGrid.tsx": 1,
+  "src/features/quizzes/QuizBlock.tsx": 1,
+  "src/features/runs/RunView.tsx": 2,
+  "src/widgets/TopNav/TopNavMenus.tsx": 1
+ }
 }

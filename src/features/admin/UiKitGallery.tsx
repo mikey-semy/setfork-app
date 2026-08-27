@@ -23,6 +23,7 @@ import { SearchField } from '@/shared/ui/SearchField'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { SideNav } from '@/shared/ui/SideNav'
 import { Spinner } from '@/shared/ui/Spinner'
+import { TextButton } from '@/shared/ui/TextButton'
 import { Switch } from '@/shared/ui/switch'
 import { TagInput } from '@/shared/ui/TagInput'
 import { Textarea } from '@/shared/ui/textarea'
@@ -140,6 +141,16 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
               <span>{CONTROL_TEXT[s]}</span>
             </div>
           ))}
+        </div>
+      </Section>
+
+      <Section title={t('admin.textActions', lang)} hint={t('admin.textActionsHint', lang)}>
+        <div className="flex flex-wrap items-center gap-4">
+          <TextButton tone="accent">accent</TextButton>
+          <TextButton>muted</TextButton>
+          <TextButton tone="danger">danger</TextButton>
+          <TextButton size="caption">caption</TextButton>
+          <TextButton size="md">md</TextButton>
         </div>
       </Section>
 

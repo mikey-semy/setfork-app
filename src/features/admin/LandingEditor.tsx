@@ -15,6 +15,8 @@ import { t } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { SmartImage } from '@/shared/ui/SmartImage'
+import { TextButton } from '@/shared/ui/TextButton'
+import { IconButton } from '@/shared/ui/IconButton'
 
 type FieldKey = keyof Omit<LandingCopy, 'stats'>
 type Field = { key: FieldKey; label: string; max: number; area?: boolean; ai?: boolean }
@@ -146,14 +148,16 @@ function LimitedField({
 
   const aiBtn = onSuggest && (
     <Tooltip label="AI">
-      <button
-        type="button"
+      <IconButton
+        size="xs"
+        variant="ghost"
+        label="AI"
         onClick={suggest}
         disabled={busy}
-        className="grid size-6 place-items-center rounded-md text-accent hover:bg-accent-soft disabled:opacity-50"
+        className="text-accent hover:bg-accent-soft"
       >
         {busy ? <Spinner size="sm" /> : <Sparkles size={13} />}
-      </button>
+      </IconButton>
     </Tooltip>
   )
 
@@ -232,9 +236,9 @@ function HeroImage({ initial, onRef, lang }: { initial?: string; onRef: (ref: st
           </div>
           <p className="mt-1 text-body-sm text-muted">{t('admin.pNGJpgWebpReplaces', lang)}</p>
           {preview && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setPreview(null); onRef('') }} className="mt-1 inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-danger">
+            <TextButton tone="danger" onClick={(e) => { e.stopPropagation(); setPreview(null); onRef('') }} className="mt-1">
               <X size={12} /> {t('admin.resetDefault', lang)}
-            </button>
+            </TextButton>
           )}
           {err && <p className="mt-1 text-body-sm text-danger">{err}</p>}
         </div>

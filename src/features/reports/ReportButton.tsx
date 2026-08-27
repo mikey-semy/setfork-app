@@ -11,6 +11,7 @@ import { Textarea } from '@/shared/ui/textarea'
 import { REPORT_BODY_MAX, type ReportReason } from './validate'
 import { submitReport, type ReportResult } from './actions'
 import { Radio } from '@/shared/ui/checkbox'
+import { TextButton } from '@/shared/ui/TextButton'
 
 const REASONS = [
   { value: 'illegal', label: 'rpReasonIllegal' },
@@ -28,13 +29,9 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 text-left text-muted transition-colors hover:text-ink-2"
-      >
+      <TextButton onClick={() => setOpen(true)} className="gap-2">
         <Flag size={14} /> {t('reportList', lang)}
-      </button>
+      </TextButton>
 
       <OverlayPanel
         open={open}

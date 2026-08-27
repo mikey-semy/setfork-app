@@ -65,6 +65,7 @@ export function UserMenu({ user, isAdmin, lang, focusRing }: { user: SessionUser
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
+        {/* ui-parity-ok: аватар как открывалка меню — сам круг и есть вид, рамка и отступ кнопки его бы обрезали */}
         <button type="button" aria-label={user.handle} className={`shrink-0 rounded-full ${TOUCH_HIT} ${focusRing}`}>
           <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={32} />
         </button>

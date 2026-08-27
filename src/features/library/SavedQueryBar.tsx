@@ -14,6 +14,7 @@ import { Badge } from '@/shared/ui/badge'
 import { createSavedQuery, deleteSavedQuery } from './saved-queries-actions'
 import type { SavedQuery } from './saved-queries'
 import { t } from '@/shared/i18n'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /**
  * Чипы сохранённых запросов на /my-lists (HQ §11, Dataview-аналог): клик —
@@ -37,15 +38,16 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
             }`}
           >
             <Link href={isActive ? '/my-lists' : `/my-lists?sq=${q.id}`}>{q.name}</Link>
-            <button
-              type="button"
-              aria-label={t('library.deleteQuery', lang)}
+            <IconButton
+              size="xs"
+              variant="ghost"
+              label={t('library.deleteQuery', lang)}
               disabled={pending}
               onClick={() => start(() => deleteSavedQuery(q.id))}
-              className="grid size-4 place-items-center rounded-full text-muted hover:text-danger"
+              className="rounded-full text-muted hover:text-danger"
             >
               <X size={10} />
-            </button>
+            </IconButton>
           </Badge>
         )
       })}

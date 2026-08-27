@@ -299,10 +299,17 @@ export function RunView({
 
               {/* Шапка: чекбокс (верх-лево) + номер + заголовок + уровень. pr — под угловые иконки. */}
               <div className="flex items-start gap-2.5 pr-14">
+                {/* Это ФЛАЖОК, а не кнопка: диктор обязан сказать «отмечено / не отмечено», иначе
+                    человек слышит «кнопка check» и не узнаёт состояние шага. Роль ставим руками —
+                    вид тут крупная иконка на всю тач-цель, нативный флажок так не рисуется.
+                    Подпись была английским литералом ('check'/'uncheck') в русском интерфейсе.
+                    ui-parity-ok: флажок шага — крупный значок на всю тач-цель, нативным input не рисуется */}
                 <button
                   type="button"
+                  role="checkbox"
+                  aria-checked={s.done}
                   onClick={() => toggle(i)}
-                  aria-label={s.done ? 'uncheck' : 'check'}
+                  aria-label={t(s.done ? 'runStepUncheck' : 'runStepCheck', lang)}
                   className={`grid size-8 shrink-0 place-items-center ${s.done ? 'text-ok' : 'text-muted hover:text-ink'}`}
                 >
                   {s.done ? <SquareCheckBig size={20} /> : <Square size={20} />}
@@ -337,7 +344,15 @@ export function RunView({
                       const checked = s.subtasksDone.includes(idx)
                       return (
                         <li key={idx}>
-                          <button type="button" onClick={() => toggleSub(i, idx)} className="flex items-start gap-2 text-left text-body text-ink-2">
+                          {/* Подпункт — тот же флажок: имя ему даёт собственный текст, не хватало только состояния.
+                              ui-parity-ok: флажок подпункта, значок и текст в одной строке — нативным input не рисуется */}
+                          <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={checked}
+                            onClick={() => toggleSub(i, idx)}
+                            className="flex items-start gap-2 text-left text-body text-ink-2"
+                          >
                             <span className={`mt-0.5 shrink-0 ${checked ? 'text-ok' : 'text-muted'}`}>{checked ? <Check size={14} /> : <Square size={14} />}</span>
                             <span className={`min-w-0 [overflow-wrap:anywhere] ${checked ? 'line-through opacity-70' : ''}`}>{sub}</span>
                           </button>

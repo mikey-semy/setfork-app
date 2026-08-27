@@ -41,15 +41,15 @@ const ROLES = [
     // фокус и тач-цель приходят оттуда же, откуда у Button. Так пишут кнопку отправки
     // серверной формы, и считать её нарушением — врать замером. Первая версия счётчика
     // именно это и делала: 62 законных места лежали в «невидимках» и раздували число.
-    match: ({ tag, cls, attrs }) =>
-      tag === 'button' && !SHARED_RECIPE.test(attrs) && cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
+    match: ({ tag, cls, attrs, local }) =>
+      tag === 'button' && !recipe(attrs, local) && cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
   },
   {
     key: 'кнопка-невидимка',
     primitive: 'IconButton (или сознательный disable с причиной)',
     hint: 'голый <button> без вида и без общего рецепта — часто законно (обёртка, карточка), но мимо тач-цели и фокуса',
-    match: ({ tag, cls, attrs }) =>
-      tag === 'button' && !SHARED_RECIPE.test(attrs) && !cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
+    match: ({ tag, cls, attrs, local }) =>
+      tag === 'button' && !recipe(attrs, local) && !cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
   },
   {
     key: 'поле',
@@ -246,7 +246,68 @@ const A11Y = [
  * сегменты сплит-кнопки на `splitSegment`. Ошибка в эту сторону дороже пропуска:
  * завышенный долг заставляет людей «чинить» правильное.
  */
+/**
+ * ОТМЕТКА «РАЗОБРАНО И ЗАКОННО»: `ui-parity-ok: <причина>` в комментарии над местом.
+ *
+ * Без неё храповик врал в другую сторону. Число в слепке не различало «до этого места
+ * не дошли руки» и «сюда смотрели и решили, что примитив не годится»: пузырь реплики
+ * изображает скруглениями хвостик, зона перетаскивания живёт пунктирной рамкой в две
+ * толщины, сетка аватаров подсвечивает круг кольцом — всё это не карточка и общим
+ * рецептом не рисуется. Пока сказать об этом было негде, такие места оставались в
+ * долге навсегда, а долг переставал что-либо значить.
+ *
+ * Причина обязательна и не короче 20 знаков — отметка без объяснения это тот же
+ * молчаливый пропуск, только узаконенный. Отмеченные места из долга уходят, но НЕ
+ * исчезают: `--list` печатает их отдельным разделом, а гейт считает их число.
+ */
+const OK_MARK = /ui-parity-ok:\s*(\S.*)$/
+
+/** Отметка действует на три строки вперёд и на три назад.
+ *
+ *  Вперёд — обычный случай, комментарий стоит над тегом. Назад — потому что над тегом
+ *  место есть не всегда: сразу после `cond ? (` или `: (` JSX-комментарий поставить
+ *  нельзя, это синтаксическая ошибка (проверено трижды). Тогда отметку пишут ВНУТРИ
+ *  списка атрибутов, обычным `//`, и тег оказывается выше неё.
+ *
+ *  Три строки в обе стороны — это ширина списка атрибутов до `className`, но заведомо
+ *  меньше расстояния до соседнего элемента. */
+const excusedLines = (src) => {
+  const out = new Map()
+  src.split('\n').forEach((line, i) => {
+    const m = OK_MARK.exec(line)
+    if (!m) return
+    const reason = m[1].replace(/\s*(\*\/|-->|\*\/\}|\}).*$/, '').trim()
+    for (let k = i - 2; k <= i + 4; k++) if (k >= 1) out.set(k, reason)
+  })
+  return out
+}
+
 const SHARED_RECIPE = /\b(buttonClass|cardClass|badgeClass|splitSegment)\(/
+
+/**
+ * ЛОКАЛЬНАЯ ОБЁРТКА НАД ОБЩИМ РЕЦЕПТОМ. В файле заводят помощник вида
+ *   const pickCls = (on) => cardClass({ tone: on ? 'accent' : 'surface', … })
+ * и зовут его из разметки. Вид у такой кнопки приходит ровно оттуда же, откуда у
+ * примитива, — просто через один вызов. Считать её самопалом значит требовать
+ * РАЗВЕРНУТЬ рецепт по трём местам, то есть чинить ровно наоборот.
+ *
+ * Ищем имена, объявленные в этом же файле, чьё тело зовёт общий рецепт. Одного
+ * уровня хватает: обёртка над обёрткой в коде не встречается, а гнаться за ней
+ * значит писать в счётчике свой резолвер и получить третий источник ошибок.
+ */
+const localRecipes = (code) => {
+  const out = new Set()
+  const re = /(?:const|function)\s+([A-Za-z_$][\w$]*)\s*(?:[:=(][^\n]*)?/g
+  for (const m of code.matchAll(re)) {
+    // Тело помощника — до следующего объявления верхнего уровня, но не длиннее
+    // разумного: длинный хвост затянул бы чужой вызов рецепта и оправдал бы всё.
+    if (SHARED_RECIPE.test(code.slice(m.index, m.index + 400))) out.add(m[1])
+  }
+  return out
+}
+
+const recipe = (attrs, local) =>
+  SHARED_RECIPE.test(attrs) || [...local].some((n) => new RegExp(`\\b${n}\\(`).test(attrs))
 
 const only = process.argv.slice(2).find((a) => !a.startsWith('--'))
 const LIST = process.argv.includes('--list')
@@ -256,6 +317,8 @@ const roles = ROLES.filter((r) => !only || r.key.includes(only))
 const values = VALUES.filter((v) => !only || v.key.includes(only))
 const a11y = A11Y.filter((v) => !only || v.key.includes(only))
 const hits = new Map([...roles, ...values, ...a11y].map((r) => [r.key, []]))
+/** Места, снятые отметкой: считаются и печатаются отдельно, чтобы не пропасть из виду. */
+const marked = []
 
 // Значения считаем и в .ts тоже: рецепты классов живут в константах (control.ts,
 // button-style.ts, HERO_INPUT), и там разнобой прячется охотнее, чем в разметке.
@@ -291,6 +354,9 @@ for (const file of walkFiles(SRC, ['.tsx', '.ts'])) {
   }
 
   if (!path.endsWith('.tsx')) continue
+  const local = localRecipes(code)
+  // Отметки читаем из ИСХОДНОГО текста: выше их вырезали вместе с комментариями.
+  const excused = excusedLines(src)
   // Разбираем ТОТ ЖЕ текст без комментариев: в док-блоках примитивов живут примеры
   // разметки («<input type="date">», «<button …>»), и без этого счётчик считал бы
   // документацию за нарушение — на первом же прогоне так и вышло.
@@ -304,7 +370,15 @@ for (const file of walkFiles(SRC, ['.tsx', '.ts'])) {
     if (HOME.test(path)) continue
     const cls = classesOf(el.attrs)
     for (const role of roles) {
-      if (role.match({ ...el, cls })) hits.get(role.key).push({ path, line: el.line, tag: el.tag })
+      if (!role.match({ ...el, cls, local })) continue
+      const why = excused.get(el.line)
+      if (why && why.length >= 20) {
+        marked.push({ path, line: el.line, tag: el.tag, key: role.key, why })
+        continue
+      }
+      // Отметка без внятной причины НЕ освобождает: пусть лучше место останется в
+      // долге, чем в коде заведётся способ гасить счётчик словом «ok».
+      hits.get(role.key).push({ path, line: el.line, tag: el.tag })
     }
   }
 }
@@ -318,6 +392,11 @@ if (JSON_OUT) {
     for (const h of hits.get(role.key)) byFile[h.path] = (byFile[h.path] ?? 0) + 1
     out[role.key] = Object.fromEntries(Object.entries(byFile).sort(([a], [b]) => a.localeCompare(b)))
   }
+  // Отметки едут в тот же слепок отдельной строкой: новая отметка обязана быть видна
+  // в дифференциале как осознанный шаг, а не тихо гасить число.
+  const byMark = {}
+  for (const m of marked) byMark[m.path] = (byMark[m.path] ?? 0) + 1
+  out['разобрано и законно'] = Object.fromEntries(Object.entries(byMark).sort(([a], [b]) => a.localeCompare(b)))
   console.log(JSON.stringify(out, null, 1))
   process.exit(0)
 }
@@ -344,3 +423,10 @@ const a = table('РОЛЬ ПЕРЕОТКРЫТА РУКАМИ (вне src/shared
 const b = table('\nЗНАЧЕНИЕ НАПИСАНО ЧИСЛОМ МИМО ТОКЕНА\n', values, 'token')
 const c = table('\nНЕ ДОХОДИТ ДО ЧЕЛОВЕКА БЕЗ ЗРЕНИЯ\n', a11y, 'fix')
 console.log(`\nвсего мест: ${a + b + c} (ролей ${a}, значений ${b}, доступности ${c})`)
+
+// Разобранное печатаем ВСЕГДА, а не только под --list: смысл отметки в том, что решение
+// видно, а не в том, что место исчезло. Число рядом с долгом — вторая половина картины.
+if (marked.length) {
+  console.log(`\nРАЗОБРАНО И ПРИЗНАНО ЗАКОННЫМ: ${marked.length}`)
+  for (const m of marked) console.log(`      ${m.path}:${m.line} ${m.tag} — ${m.why}`)
+}

@@ -13,6 +13,7 @@ import { Spinner } from '@/shared/ui/Spinner'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { IconButton } from '@/shared/ui/IconButton'
+import { TextButton } from '@/shared/ui/TextButton'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -214,6 +215,7 @@ export function QuizBlock({
             return (
               <button
                 key={o.id}
+                // ui-parity-ok: вариант ответа — рамка и фон меняются по итогу проверки, у карточки такой роли нет
                 type="button"
                 disabled={checked || pending || readOnly}
                 onClick={() => toggle(o.id)}
@@ -357,9 +359,9 @@ export function QuizBlock({
               {ok ? (ru ? 'Верно' : 'Correct') : ru ? 'Неверно' : 'Incorrect'}
             </span>
             {!clientMode && attempts > 1 && <span className="text-caption text-muted">{ru ? `попытка ${attempts}` : `attempt ${attempts}`}</span>}
-            <button type="button" onClick={reset} className="ml-auto inline-flex items-center gap-1 text-body-sm text-muted hover:text-ink">
+            <TextButton onClick={reset} className="ml-auto gap-1">
               <RotateCcw size={13} /> {ru ? 'Заново' : 'Retry'}
-            </button>
+            </TextButton>
           </>
         )}
         {!checked && (multi || (clientMode && !clientHasAnswer)) && (

@@ -30,6 +30,7 @@ export function CandidateCard({
 }) {
   const [open, setOpen] = useState(false)
   return (
+    // ui-parity-ok: пузырь реплики, скруглениями изображает хвостик — общим рецептом карточки не рисуется
     <button
       type="button"
       onClick={() => {

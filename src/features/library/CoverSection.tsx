@@ -10,6 +10,7 @@ import { Spinner } from '@/shared/ui/Spinner'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import type { Lang } from '@/shared/i18n'
 import { removeListCover, setListAccent, setListCover } from './cover-actions'
+import { TextButton } from '@/shared/ui/TextButton'
 
 const ACCENTS = ['', '#2159d6', '#7c3aed', '#15803d', '#c2570c', '#be123c', '#0f766e', '#b45309']
 
@@ -68,6 +69,7 @@ export function CoverSection({
   return (
     <SettingsSection title={ru ? 'Обложка' : 'Cover'}>
       <Tooltip label={ru ? 'Перетащи или выбери картинку' : 'Drag or pick an image'}>
+        {/* ui-parity-ok: зона перетаскивания — рамка в две толщины меняет цвет под курсором, у карточки такой роли нет */}
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -114,9 +116,9 @@ export function CoverSection({
           ))}
         </div>
         {cover && (
-          <button type="button" onClick={clear} className="inline-flex items-center gap-1.5 text-body-sm text-muted hover:text-danger">
+          <TextButton tone="danger" onClick={clear}>
             <Trash2 size={13} /> {ru ? 'Убрать обложку' : 'Remove cover'}
-          </button>
+          </TextButton>
         )}
       </div>
       {err && <p className="mt-2 text-body-sm text-danger">{err}</p>}
