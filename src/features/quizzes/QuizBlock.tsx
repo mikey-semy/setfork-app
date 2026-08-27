@@ -286,11 +286,16 @@ export function QuizBlock({
               {!checked && (
                 <span className="flex shrink-0 flex-col">
                   {/* Подписи из словаря: были английские литералы `up`/`down`, то есть
-                      русский диктор читал их по буквам посреди русской фразы. */}
-                  <IconButton size="xs" variant="ghost" onClick={() => moveSort(i, -1)} disabled={i === 0 || readOnly} label={t('editor.moveUp', lang)} className="text-muted hover:text-ink disabled:opacity-20">
+                      русский диктор читал их по буквам посреди русской фразы.
+                      touch="grow" — обязательно: стрелки стоят В СТОЛБИК, а дефолтный
+                      `hit` растит зону нажатия вверх-вниз БЕЗ резерва места. Две кнопки
+                      по 24px тогда перекрываются зонами примерно на 20px, и тап у
+                      границы двигает пункт В ДРУГУЮ СТОРОНУ. Тот же приём и по той же
+                      причине — в редакторе (QuizSort). Найдено авто-ревью. */}
+                  <IconButton size="xs" variant="ghost" touch="grow" onClick={() => moveSort(i, -1)} disabled={i === 0 || readOnly} label={t('editor.moveUp', lang)} className="text-muted hover:text-ink disabled:opacity-20">
                     <ChevronUp size={14} />
                   </IconButton>
-                  <IconButton size="xs" variant="ghost" onClick={() => moveSort(i, 1)} disabled={i === sortOrder.length - 1 || readOnly} label={t('editor.moveDown', lang)} className="text-muted hover:text-ink disabled:opacity-20">
+                  <IconButton size="xs" variant="ghost" touch="grow" onClick={() => moveSort(i, 1)} disabled={i === sortOrder.length - 1 || readOnly} label={t('editor.moveDown', lang)} className="text-muted hover:text-ink disabled:opacity-20">
                     <ChevronDown size={14} />
                   </IconButton>
                 </span>
