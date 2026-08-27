@@ -96,7 +96,7 @@ function RowCheck({ size, lang }: { size: ControlSize; lang: Lang }) {
   return (
     <div className="flex items-center gap-2">
       <SizeTag>{size}</SizeTag>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
         <Button size={size} variant="primary">
           {t('common.save', lang)}
         </Button>
@@ -214,7 +214,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         {SIZES.map((size) => (
           <div key={size} className="flex items-center gap-2">
             <SizeTag>{size}</SizeTag>
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
               {BUTTON_VARIANTS.map((v) => (
                 <Button key={v} size={size} variant={v}>
                   {v}

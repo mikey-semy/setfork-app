@@ -161,7 +161,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
       )}
 
       {isOn && mode === 'idle' && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           <Button onClick={() => { setMode('regen'); setCode(''); setErr(null) }}>
             <KeyRound size={13} /> {ru ? 'Новые recovery-коды' : 'Regenerate recovery codes'}
           </Button>

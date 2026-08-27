@@ -157,7 +157,12 @@ export function ShareButton({
         {/* Вид решает САМА кнопка, а не вызывающий: на телефоне квадрат со значком,
             от sm — значок с подписью. Раньше этот рецепт приезжал пропом className, и
             подпись для диктора падала на английское 'Share' в русском интерфейсе. */}
-        <Button size="md" aria-label={label} className="size-8 p-0 sm:size-auto sm:px-3.5">
+        {/* Меняется только ШИРИНА: на телефоне квадрат под значок, от sm — авто под
+            подпись. Высоту не трогаем вовсе, она приходит из ступени md. Прошлая
+            редакция писала `size-8 sm:size-auto`, а `size-auto` снимает ОБЕ стороны —
+            на десктопе кнопка схлопывалась до высоты строки и выпадала из ряда
+            32-пиксельных контролов шапки. Найдено авто-ревью. */}
+        <Button size="md" aria-label={label} className="w-8 p-0 sm:w-auto sm:px-3.5">
           <Share2 size={15} /> {label && <span className="hidden sm:inline">{label}</span>}
         </Button>
       </DropdownMenuTrigger>

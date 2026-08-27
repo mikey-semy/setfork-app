@@ -166,7 +166,7 @@ export default async function IssueThreadPage({
               <input type="hidden" name="slug" value={slug} />
               <input type="hidden" name="number" value={issue.number} />
               <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} people={issuePeople} />
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-3">
                 {canToggle && (
                   <Button type="submit" form="issue-status-form" size="md">
                     {closed ? <CircleDot size={14} className="text-ok" /> : <CircleCheck size={14} className="text-accent" />}

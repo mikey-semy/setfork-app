@@ -57,7 +57,11 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
         {labels.map((l) => (
           <Badge size="md" className="font-medium" key={l.id} style={chipColors(l.color)}>
             {l.name}
-            <IconButton size="xs" variant="ghost" onClick={() => remove(l.id)} disabled={pending} label={ru ? 'удалить' : 'delete'} className="opacity-70 hover:opacity-100">
+            {/* touch="grow": метки лежат в ПЕРЕНОСЯЩЕМСЯ ряду, и при двух и более строках
+                соседи оказываются друг над другом. Дефолтный `hit` растит зону на 44px без
+                резерва места, зазора `gap-1.5` не хватает — палец у края снял бы ЧУЖУЮ
+                метку. Тот же корень, что у стрелок в квизе, только через перенос строки. */}
+            <IconButton size="xs" variant="ghost" touch="grow" onClick={() => remove(l.id)} disabled={pending} label={ru ? 'удалить' : 'delete'} className="opacity-70 hover:opacity-100">
               <X size={12} />
             </IconButton>
           </Badge>

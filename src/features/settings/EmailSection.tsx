@@ -49,7 +49,7 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-3">
         <span className="font-mono text-body text-ink">{email}</span>
         {verified ? (
           <Badge variant="ok">
@@ -95,7 +95,7 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
           <label className="text-body-sm text-ink-2" htmlFor="new-email">
             {ru ? 'Новый адрес почты' : 'New email address'}
           </label>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <Input id="new-email" name="email" type="email" required placeholder="you@example.com" className="max-w-panel" />
             <Button type="submit" disabled={changing}>
               {ru ? 'Отправить подтверждение' : 'Send confirmation'}

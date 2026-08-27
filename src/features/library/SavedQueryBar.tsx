@@ -38,9 +38,15 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
             }`}
           >
             <Link href={isActive ? '/my-lists' : `/my-lists?sq=${q.id}`}>{q.name}</Link>
+            {/* touch="grow", а не зазор: крестик живёт ВНУТРИ пилюли высотой 28px, и его
+                зона в 44px выступает за неё на 10px сверху и снизу. При переносе строки
+                это зона СОСЕДНЕЙ пилюли — палец у края удалил бы чужой запрос. Растить
+                зазор до 20px в ряду пилюль нельзя, они бы рассыпались; растёт сама цель,
+                и только на грубом указателе. */}
             <IconButton
               size="xs"
               variant="ghost"
+              touch="grow"
               label={t('library.deleteQuery', lang)}
               disabled={pending}
               onClick={() => start(() => deleteSavedQuery(q.id))}
