@@ -85,8 +85,12 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
           {p.critique && (
             <div>
               <span className="font-semibold text-ink-2">{t('ui.criticSaid', lang)}:</span>
-              {/* Критик пишет markdown (**жирный**, списки) — рендерим, а не показываем звёздочки. */}
-              <Markdown className="mt-1 space-y-1 text-muted [&_strong]:text-ink-2">{p.critique.slice(0, 800)}</Markdown>
+              {/* Критик пишет markdown (**жирный**, списки) — рендерим, а не показываем звёздочки.
+                  Разбор критика бывает длинным, и обрезать его нельзя: он объясняет, ПОЧЕМУ список
+                  такой, и обрыв на полуслове это молчаливая потеря смысла. Раньше стояло
+                  `slice(0, 800)` — текст кончался посреди фразы, без многоточия и без способа
+                  дочитать. Теперь высота ограничена, а не текст: блок прокручивается. */}
+              <Markdown className="scroll-thin mt-1 max-h-64 overflow-y-auto overscroll-contain space-y-1 pr-1 text-muted [&_strong]:text-ink-2">{p.critique}</Markdown>
             </div>
           )}
           {p.depth === 'single' && <div className="text-muted">{t('ui.simpleTopicSingleMaster', lang)}</div>}

@@ -1382,6 +1382,7 @@ export const ru: Record<DictKey, string> = {
   'audit.accountHandleChange': 'Смена ника',
   'admin.create': 'Создать',
   'admin.createAccounts': 'Завести аккаунты',
+  'admin.accountsPartial': 'Заведено аккаунтов: {made}. Не удалось: {left} — причина в журнале сервера ([gnome-account] ensure failed). Повторите: действие идемпотентно, уже заведённые не тронутся.',
   'admin.created': 'Создано',
   'admin.dailyCapOff': 'дневной кап выключен',
   'admin.danger': 'Опасный',

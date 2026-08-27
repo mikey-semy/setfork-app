@@ -176,6 +176,28 @@ const VIEWPORT_RULE = {
     'Предел по экрану ставят утилиты темы: cap-viewport (ширина — не шире экрана, поле у краёв одно на всё приложение) и cap-screen (высота — 70dvh, dvh а не vh: на телефоне vh считает экран вместе со сворачивающейся панелью браузера). Свой предел по вьюпорту — точечный disable с причиной.',
 }
 
+// Узда центрирования: `block` поверх кнопки убивает её центровку.
+//
+// `buttonClass` строит кнопку на `inline-flex` с `items-center justify-center`. Класс
+// `block` меняет display — и обе центровки перестают работать, потому что это свойства
+// флекса. Подпись прижимается к верхнему краю при верной высоте, и кнопка выглядит
+// сломанной. Владелец называл это ТРИЖДЫ («More выше середины», «Set up MCP access
+// прижат к верху»); прошлые заходы правили перенос строки, а не display, — то есть
+// чинили похожий симптом.
+//
+// Нужна полная ширина — `w-full`: он не трогает display и центровку сохраняет.
+// ⚠️ Сужено до КНОПОК. Первая редакция ловила любой `block` в любом className и дала 62
+// срабатывания, почти все законные: `block` — обычный класс для абзаца, подписи, ссылки в
+// тексте. Ровно та ошибка замера, которую этот проект ловил уже восемь раз: правило числит
+// законное нарушением, и тогда его отключают целиком. Смотрим ТУДА, где центровка есть:
+// вызов `buttonClass` и разметка примитивов кнопки.
+const BLOCK_BUTTON_RULE = {
+  selector:
+    "CallExpression[callee.name='buttonClass'] :matches(Literal[value=/(?:^|\\s)block(?:\\s|$)/], TemplateElement[value.cooked=/(?:^|\\s)block(?:\\s|$)/]), JSXElement[openingElement.name.name=/^(Button|IconButton|SubmitButton)$/] JSXAttribute[name.name='className'] :matches(Literal[value=/(?:^|\\s)block(?:\\s|$)/], TemplateElement[value.cooked=/(?:^|\\s)block(?:\\s|$)/])",
+  message:
+    'Класс `block` на кнопке убивает её центровку: buttonClass строит кнопку на inline-flex, а items-center/justify-center на блочном элементе не работают — подпись уезжает к верхнему краю. Нужна полная ширина — используй w-full. На НЕ-кнопке (абзац, ссылка в тексте) — точечный disable с причиной.',
+}
+
 // Узда ожидания (свип 26.08.2026): роль «идёт работа» была самой массовой из
 // переоткрытых руками — 60 мест в 44 файлах и восемь размеров кружка (12, 13, 14,
 // 15, 16, 17, 18 и один честный iconSizeFor). Примитива под неё не было вовсе,
@@ -354,7 +376,7 @@ export default [
     files: ['src/**/*.tsx'],
     ignores: ['src/shared/ui/**'],
     rules: {
-      'no-restricted-syntax': ['error', ...RESTRICTED, CARD_RULE, SPINNER_RULE, VIEWPORT_RULE],
+      'no-restricted-syntax': ['error', ...RESTRICTED, CARD_RULE, SPINNER_RULE, VIEWPORT_RULE, BLOCK_BUTTON_RULE],
     },
   },
 ]

@@ -158,7 +158,13 @@ export function Feed({
 
       <Link
         href="/explore"
-        className={buttonClass({ size: 'lg', className: 'mt-3 block text-center text-accent hover:bg-surface' })}
+        /* `w-full`, а НЕ `block`: buttonClass строит кнопку на `inline-flex` с
+                    `items-center justify-center`, а `block` меняет display — и обе
+                    центровки перестают работать, потому что это свойства флекса. Подпись
+                    прижимается к верхнему краю, и кнопка выглядит сломанной при верной
+                    высоте. Владелец называл это трижды («More выше середины»); прошлые
+                    заходы правили перенос строки, а не display. */
+        className={buttonClass({ size: 'lg', className: 'mt-3 w-full text-accent hover:bg-surface' })}
       >
         {ru ? 'Ещё' : 'More'}
       </Link>

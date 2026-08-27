@@ -79,6 +79,13 @@ export function TopNav({
                 lang={lang}
                 initial=""
                 size="md"
+                /* Высоту шапки задаёт НЕ поиск: она собрана из py-2.5 вокруг контрола
+                   ступени md и равна 53px (токен --h-topbar). Дефолтный `grow` растит
+                   поле до 44px на грубом указателе — полоса стала бы 65px, а соседние
+                   кнопка «плюс» и колокольчик остались бы 32px, и ряд разъезжается.
+                   Ровно тот случай, под который заведён проп `fixed`, и ровно то, что
+                   владелец видел как «кнопка не по высоте поиска». */
+                touch="fixed"
                 containerClassName="w-menu xl:w-panel-lg"
                 hint={<kbd className="hidden rounded-md border border-border px-1.5 text-caption font-medium leading-[1.125rem] text-muted lg:inline">/</kbd>}
               />

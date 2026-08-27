@@ -52,7 +52,7 @@ export function PromoCard({ lang }: { lang: Lang }) {
       </div>
       <Link
         href={PROMO.href}
-        className={buttonClass({ className: 'mt-3 block text-center' })}
+        className={buttonClass({ className: 'mt-3 w-full' })}
       >
         {c.cta}
       </Link>

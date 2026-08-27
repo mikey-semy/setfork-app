@@ -1391,6 +1391,7 @@ export const en = {
   'audit.accountHandleChange': 'Handle changed',
   'admin.create': 'Create',
   'admin.createAccounts': 'Create accounts',
+  'admin.accountsPartial': 'Accounts created: {made}. Failed: {left} — see the server log ([gnome-account] ensure failed). Retry is safe: the action is idempotent and existing accounts are untouched.',
   'admin.created': 'Created',
   'admin.dailyCapOff': 'daily cap off',
   'admin.danger': 'Danger',

@@ -534,10 +534,27 @@ export async function setExpertAvatar(id: string, builtin: string): Promise<void
 export async function createGnomeAccounts(): Promise<void> {
   await requireAdmin()
   const { ensureGnomeUsers } = await import('@/shared/ai/gnome-account')
-  const { getRoster } = await import('@/shared/ai/roster')
-  await ensureGnomeUsers(await getRoster())
+  const { getRosterAll } = await import('@/shared/ai/roster')
+
+  // ⚠️ `getRosterAll`, а НЕ `getRoster`. Счётчик над кнопкой считает по всему составу
+  // (страница зовёт getRosterAll), а кнопка обрабатывала только СОВЕТ — getRoster
+  // отбирает `orgRole in ('expert','chief')`. Методолог, хранитель качества и
+  // планировщик развития в совет не входят, значит до них действие не доходило вовсе:
+  // человек жал «Завести аккаунты», страница перезагружалась, и число «8 из 27 без
+  // аккаунта» не менялось никогда. Найдено владельцем 27.08.2026 как «завести аккаунты
+  // невозможно» — и это было точное описание: множества у счётчика и у действия разные.
+  const roster = (await getRosterAll()).filter((e) => e.enabled && e.lifecycle === 'active')
+  const before = roster.filter((e) => !e.userId).length
+  const made = await ensureGnomeUsers(roster)
+  const still = roster.filter((e) => !e.userId && !made[e.id]).length
+
   revalidatePath('/admin/council')
-  redirect('/admin/council')
+  // Отказ НЕ проглатывается: `ensureGnomeUser` ловит ошибку внутри и возвращает null,
+  // чтобы совет работал и без аккаунтов, — но тогда кнопка обязана сказать, что часть
+  // не завелась. Молчаливая деградация здесь и была причиной, по которой дефект жил:
+  // действие «сработало», страница перерисовалась, и понять, что ничего не произошло,
+  // можно было только сосчитав строки глазами.
+  redirect(still > 0 ? `/admin/council?accounts=partial&made=${before - still}&left=${still}` : '/admin/council')
 }
 
 /**

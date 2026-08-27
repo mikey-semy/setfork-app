@@ -317,6 +317,10 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       ownerHandle: users.handle,
       ownerName: users.name,
       ownerAvatarUrl: users.avatarUrl,
+      // Нужно правилу видимости: черновик служебного аккаунта админ обязан открыть,
+      // черновик человека — нет. Поле едет вместе с метой, а не спрашивается отдельно:
+      // иначе каждый вызывающий обязан вспомнить про этот шаг, и один из них забудет.
+      ownerIsAgent: sql<boolean>`${users.accountType} = 'agent'`,
       slug: templates.slug,
       title: templates.title,
       desc: templates.desc,
