@@ -307,6 +307,7 @@ function ThreadCard({
                   ровно то, что видно. */}
               {c.suggestedText !== null && (
                 <div className="mt-1.5 overflow-hidden rounded-md border border-accent/40">
+                  {/* ui-parity-ok: шапка ВНУТРИ карточки комментария — рамка снизу и без скруглений, плашкой не является */}
                   <div className="flex items-center gap-1.5 border-b border-accent/30 bg-accent-soft px-2 py-1 text-caption text-ink-2">
                     <Replace size={12} className="shrink-0 text-accent" />
                     <span className="min-w-0 truncate">{labels.suggestLabel}</span>

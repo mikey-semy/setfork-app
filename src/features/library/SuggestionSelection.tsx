@@ -11,6 +11,7 @@ import { IconButton } from '@/shared/ui/IconButton'
 import type { Lang } from '@/shared/i18n'
 import { resolveChip, type CustomLabel } from '@/shared/lib/labels'
 import { bulkSuggestionAction } from './suggestion-meta-actions'
+import { Alert } from '@/shared/ui/Alert'
 
 export interface BulkLabels {
   selectAll: string
@@ -86,14 +87,15 @@ export function SuggestionSelection({
 
   return (
     <SelCtx.Provider value={{ sel, toggle, label: labels.selected }}>
+      {/* Действия — вправо; на мобиле строка действий занимает всю ширину,
+          чтобы кнопки не жались к краю и не липли к тексту. */}
       {sel.length > 0 && (
-        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent-soft px-3 py-2">
-          <span className="text-body font-semibold text-ink">
-            {labels.selected}: {sel.length}
-          </span>
-          {/* Действия — вправо; на мобиле строка действий занимает всю ширину,
-              чтобы кнопки не жались к краю и не липли к тексту. */}
-          <div className="ml-auto flex items-center gap-2 max-sm:w-full max-sm:justify-end">
+        <Alert
+          variant="accent"
+          icon={null}
+          className="mb-2"
+          action={
+            <div className="flex items-center gap-2 max-sm:w-full max-sm:justify-end">
             <BulkMenu
               label={labels.label}
               disabled={pending}
@@ -114,8 +116,13 @@ export function SuggestionSelection({
                 <X size={15} />
               </IconButton>
             </Tooltip>
-          </div>
-        </div>
+            </div>
+          }
+        >
+          <span className="font-semibold text-ink">
+            {labels.selected}: {sel.length}
+          </span>
+        </Alert>
       )}
 
       {ids.length > 0 && (

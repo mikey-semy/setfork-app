@@ -31,6 +31,7 @@ export function FileDrop({ kind, uploading, onFile, lang }: { kind: DropKind; up
   return (
     <div
       role="button"
+      // ui-parity-ok: зона перетаскивания файла — тон означает наведение курсора, а не состояние данных
       tabIndex={0}
       onClick={() => ref.current?.click()}
       // Зона объявлена кнопкой и получает фокус — значит обязана работать с клавиатуры:

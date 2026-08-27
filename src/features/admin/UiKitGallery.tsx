@@ -146,6 +146,15 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         </div>
       </Section>
 
+      <Section title={t('admin.alertAction', lang)} hint={t('admin.alertActionHint', lang)}>
+        <Alert variant="accent" action={<Button size="sm">Действие</Button>}>
+          Полоса контекста: «вы смотрите ветку», «версия v3, только чтение».
+        </Alert>
+        <Alert variant="warn" action={<TextButton tone="accent">Ссылкой</TextButton>}>
+          Тот же блок с тихим действием вместо кнопки.
+        </Alert>
+      </Section>
+
       <Section title={t('admin.simpleTable', lang)} hint={t('admin.simpleTableHint', lang)}>
         <Table>
           <TableHeader>

@@ -23,6 +23,7 @@ import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Textarea } from '@/shared/ui/textarea'
+import { Alert } from '@/shared/ui/Alert'
 
 export interface RunStepVM {
   id: string
@@ -231,15 +232,18 @@ export function RunView({
           бы сертификат, который страница выдачи честно не даёт. Отмеченные шаги здесь
           только выбирают формулировку — завершено сейчас или уже было раньше. */}
       {certificateHref && completed && (
-        <div className="mb-5 flex items-center gap-3 rounded-lg border border-ok/40 bg-ok/10 px-4 py-3">
-          <GraduationCap size={18} className="shrink-0 text-ok" />
-          <span className="min-w-0 flex-1 text-body font-medium text-ink">
-            {total > 0 && done === total && blockedCount === 0 ? t('courseAllStepsDone', lang) : t('courseCompletedEarlier', lang)}
-          </span>
-          <Link href={certificateHref} className={buttonClass({ className: 'border-ok/40 text-ok hover:bg-ok/15' })}>
-            <Award size={14} /> {t('courseCertificate', lang)}
-          </Link>
-        </div>
+        <Alert
+          variant="ok"
+          icon={GraduationCap}
+          className="mb-5 text-ink"
+          action={
+            <Link href={certificateHref} className={buttonClass({ className: 'border-ok/40 text-ok hover:bg-ok/15' })}>
+              <Award size={14} /> {t('courseCertificate', lang)}
+            </Link>
+          }
+        >
+          {total > 0 && done === total && blockedCount === 0 ? t('courseAllStepsDone', lang) : t('courseCompletedEarlier', lang)}
+        </Alert>
       )}
 
       {/* Шаги */}
@@ -274,10 +278,10 @@ export function RunView({
           return (
             <div
               key={s.id}
-              // eslint-disable-next-line no-restricted-syntax -- цвет рамки меняется по состоянию шага прогона
-              className={`relative rounded-lg border p-4 transition-colors ${
-                s.blocked ? 'border-danger/40 bg-danger/5' : s.done ? 'border-ok/40 bg-ok/5' : 'border-border bg-surface'
-              }`}
+              className={cardClass({
+                tone: s.blocked ? 'danger' : s.done ? 'ok' : 'surface',
+                className: 'relative transition-colors',
+              })}
             >
               {/* Служебные иконки — правый верхний угол (mobile-ui: absolute, без текста, тултипы):
                   «Шаг не получается» (красная) + «кирка» (dig-чат «в шахту»). */}

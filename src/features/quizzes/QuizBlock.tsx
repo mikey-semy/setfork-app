@@ -273,7 +273,14 @@ export function QuizBlock({
         <div className="flex flex-col gap-1.5">
           {/* key — сам элемент: список переупорядочивается, ключ с индексом «прыгал» бы при каждом сдвиге. */}
           {sortOrder.map((it2, i) => (
-            <div key={it2} className={`flex items-center gap-2 rounded-md border px-3 py-2 text-body ${checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2'}`}>
+            <div
+              key={it2}
+              className={cardClass({
+                tone: checked ? (ok ? 'ok' : 'danger') : 'inset',
+                pad: 'sm',
+                className: 'flex items-center gap-2 text-body',
+              })}
+            >
               <span className="w-4 shrink-0 text-right font-mono text-caption text-muted">{i + 1}</span>
               <span className="min-w-0 flex-1 text-ink">{it2}</span>
               {!checked && (

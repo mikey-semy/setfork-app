@@ -34,6 +34,22 @@ const ROLES = [
     match: ({ cls }) => cls.includes('animate-spin'),
   },
   {
+    key: 'заметка-плашка',
+    primitive: 'Alert (variant danger/warn/ok/info) или cardClass({ tone })',
+    hint: 'блок-состояние рисуют руками: свой тон, свой отступ, и роль для диктора не объявлена',
+    /**
+     * Признак: ТОНОВЫЙ ФОН вместе с рамкой и отступом. Именно эта тройка и есть
+     * «плашка состояния» — предупреждение, ошибка, подсказка. Одного тона мало
+     * (им красят значки и текст), рамки с отступом мало (это обычная карточка).
+     */
+    match: ({ tag, cls, attrs, local }) =>
+      ['div', 'p', 'section', 'aside'].includes(tag) &&
+      !recipe(attrs, local) &&
+      /(^|\s)bg-(danger|warn|ok|accent)(\/|-soft)/.test(cls) &&
+      /(^|\s)border(\s|-)/.test(cls) &&
+      /(^|\s)(px-|py-|p-\d)/.test(cls),
+  },
+  {
     key: 'сегмент переключателя',
     primitive: 'SegmentedControl + Segment',
     hint: 'активный сегмент красят вручную (bg-primary text-primary-fg) — обойма и пилюля каждый раз свои',
