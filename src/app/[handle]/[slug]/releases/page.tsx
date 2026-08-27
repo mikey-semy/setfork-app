@@ -23,6 +23,7 @@ import { cardClass } from '@/shared/ui/card-style'
 import { Pagination } from '@/shared/ui/Pagination'
 import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { IconButton } from '@/shared/ui/IconButton'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -133,7 +134,7 @@ export default async function ReleasesPage({
                 )}
 
                 <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border/60 pt-2.5 text-body-sm">
-                  <span className="text-caption font-semibold uppercase tracking-widest text-muted">Assets</span>
+                  <SectionLabel as="span">Assets</SectionLabel>
                   <a href={`${base}/export?format=md`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
                     <FileText size={13} /> markdown
                   </a>

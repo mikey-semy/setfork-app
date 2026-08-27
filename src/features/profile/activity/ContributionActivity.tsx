@@ -6,6 +6,7 @@ import { Skeleton } from '@/shared/ui/Skeleton'
 import { fullDate, monthYearLong } from '@/shared/lib/date'
 import { ActivityTopicItem } from './ActivityTopicItem'
 import { parseDayKey, type ActivityTopic, type DayKey } from './types'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /** Лента активности (Contribution activity, как GitHub): темы работ с иконками
  *  на полоске таймлайна — версии, созданные списки, задачи, предложения.
@@ -43,9 +44,9 @@ export function ContributionActivity({
           месяц». Резерв на телефоне — 48px: тач-цель 44 плюс отступ до линии,
           иначе ряд вырастал на выборе дня и заголовок ленты дёргался. */}
       <div className="mb-4 flex h-7 items-center justify-between gap-2 border-b border-border pb-1 pointer-coarse:h-12">
-        <span key={day ?? month} className="animate-sf-fade sf-slow min-w-0 truncate text-body-sm font-semibold uppercase tracking-wide text-muted">
+        <SectionLabel as="span" key={day ?? month} size="bodySm" className="animate-sf-fade sf-slow min-w-0 truncate">
           {day ? fullDate(parseDayKey(day) ?? day, lang) : monthYearLong(parseDayKey(`${month}-01`) ?? `${month}-01`, lang)}
-        </span>
+        </SectionLabel>
         {/* Пока лента сужена до дня, стрелки месяцев уводили бы не туда: на их
             месте — выход из фильтра, как и открывает его календарь. */}
         {day ? (

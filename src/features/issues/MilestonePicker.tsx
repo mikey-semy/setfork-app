@@ -6,6 +6,7 @@ import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { setIssueMilestone } from '@/features/milestones/actions'
 import { Badge } from '@/shared/ui/badge'
 import { IconButton } from '@/shared/ui/IconButton'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 type Opt = { id: string; title: string; closed: boolean }
 
@@ -40,7 +41,7 @@ export function MilestonePicker({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-body-sm font-semibold uppercase tracking-[0.04em] text-muted">{L('Веха', 'Milestone')}</span>
+        <SectionLabel as="span" size="bodySm">{L('Веха', 'Milestone')}</SectionLabel>
         {canEdit && (
           <AnchoredMenu
             align="right"

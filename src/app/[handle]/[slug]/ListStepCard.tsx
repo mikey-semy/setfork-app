@@ -14,6 +14,7 @@ import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ListPageData } from './load'
 import { cardClass } from '@/shared/ui/card-style'
 import { badgeClass } from '@/shared/ui/badge'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 type Props = Pick<ListPageData, 'tpl' | 'base' | 'viewer' | 'readOnlyView' | 'isOwner' | 'digSteps' | 'stepImages' | 'mon'> & {
   step: ListPageData['steps'][number]
@@ -121,9 +122,9 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
               {/* subtasks — критерии проверки шага (см. промпт генерации:
                   «verification checks»), а не под-шаги: подписываем и рисуем
                   чек-квадратами, иначе выглядят оторванным списком. */}
-              <div className="mb-1 text-caption font-semibold uppercase tracking-wide text-muted">
+              <SectionLabel className="mb-1">
                 {t('stepChecksLabel', lang)}
-              </div>
+              </SectionLabel>
               <ul className="flex flex-col gap-1.5">
                 {/* Ключ по тексту проверки, а не по индексу: при правке шага
                     список пересобирается, и индексные ключи путают строки. */}

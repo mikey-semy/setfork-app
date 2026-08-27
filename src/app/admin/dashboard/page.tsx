@@ -11,6 +11,7 @@ import { getModerationCounts } from '@/features/moderation/queries'
 import { getReportsCounts } from '@/features/reports/queries'
 import { getFeedbackCounts } from '@/features/feedback/queries'
 import { cardClass } from '@/shared/ui/card-style'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -68,9 +69,9 @@ export default async function AdminDashboardPage() {
 
       {/* Тренды за 14 дней */}
       <div className="flex flex-col gap-3">
-        <h2 className="text-body font-semibold uppercase tracking-wide text-ink-2">
+        <SectionLabel as="h2" size="body">
           {t('admin.trends14Days', lang)}
-        </h2>
+        </SectionLabel>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {charts.map((c) => (
             <div key={c.title} className={cardClass()}>
@@ -86,7 +87,7 @@ export default async function AdminDashboardPage() {
 
       {/* Инбокс — очереди, требующие действия */}
       <div className="flex flex-col gap-3">
-        <h2 className="text-body font-semibold uppercase tracking-wide text-ink-2">{t('admin.inbox', lang)}</h2>
+        <SectionLabel as="h2" size="body">{t('admin.inbox', lang)}</SectionLabel>
         <div className="grid grid-cols-3 gap-3">
           {inbox.map((i) => (
             <StatTile key={i.href} href={i.href} label={i.label} value={num(i.value)} tone={i.value > 0 ? 'accent' : 'ink'} />

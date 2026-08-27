@@ -12,6 +12,7 @@ import { isQuarantined, modelHealth, QUARANTINE_WINDOW_MS } from '@/shared/ai/he
 import { prettyModelName } from '@/shared/ai/models'
 import { cardClass } from '@/shared/ui/card-style'
 import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 const WINDOWS = [
   { days: 1, en: '24h', ru: '24ч' },
@@ -88,25 +89,25 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
             {credits && (
               <div>
-                <div className="text-caption uppercase tracking-wide text-muted">
+                <SectionLabel>
                   {t('admin.openRouterBalance', lang)}
-                </div>
+                </SectionLabel>
                 <div className="mt-1 text-heading font-bold text-ink">{money(credits.remaining)}</div>
               </div>
             )}
             {avgPerGen != null && (
               <div>
-                <div className="text-caption uppercase tracking-wide text-muted">
+                <SectionLabel>
                   {t('admin.avgGeneration', lang)}
-                </div>
+                </SectionLabel>
                 <div className="mt-1 text-heading font-bold text-ink">{money(avgPerGen)}</div>
               </div>
             )}
             {runwayGens != null && (
               <div>
-                <div className="text-caption uppercase tracking-wide text-muted">
+                <SectionLabel>
                   {t('admin.balanceAffords', lang)}
-                </div>
+                </SectionLabel>
                 <div className="mt-1 text-heading font-bold text-accent">
                   ≈ {num(runwayGens)} {t('admin.generations', lang)}
                 </div>

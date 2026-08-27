@@ -13,6 +13,7 @@ import { SuggestionFiles } from './SuggestionFiles'
 import { SuggestionHeader } from './SuggestionHeader'
 import { SuggestionNotices } from './SuggestionNotices'
 import { SuggestionReview } from './SuggestionReview'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; id: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -78,9 +79,9 @@ export default async function SuggestionThreadPage({
               компании копились непринятыми: посмотреть результат было негде. */}
           {tab === 'result' && (
             <>
-              <div className="mb-1.5 text-caption font-semibold uppercase tracking-[0.07em] text-muted">
+              <SectionLabel className="mb-1.5">
                 {t('resultTab', lang)} · {t('pr.becomesV', lang).replace('{v}', String(meta.currentVersion + 1))}
-              </div>
+              </SectionLabel>
               <SuggestionResult items={items} lang={lang} ordered={meta.ordered} />
             </>
           )}

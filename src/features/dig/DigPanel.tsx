@@ -8,6 +8,7 @@ import { digDeeper, type DigLayerRow } from './actions'
 import { t } from '@/shared/i18n'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * «Копать глубже» под шагом (HQ §8): аккордеон слоёв + кнопка следующего слоя.
@@ -89,9 +90,9 @@ export function DigPanel({
         <div className="mt-2 space-y-2 border-l-2 border-border pl-3">
           {layers.map((l) => (
             <div key={l.level}>
-              <div className="mb-0.5 text-caption font-semibold uppercase tracking-wide text-muted">
+              <SectionLabel className="mb-0.5">
                 {t('dig.layerN', lang).replace('{n}', String(l.level))} · {levelTitle(l.level)}
-              </div>
+              </SectionLabel>
               <Markdown className="text-body-sm leading-relaxed text-ink-2">{l.content}</Markdown>
             </div>
           ))}

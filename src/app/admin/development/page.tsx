@@ -17,6 +17,7 @@ import { AUTONOMOUS_LOOPS, allLoopPolicies } from '@/shared/agents/policy'
 import { stallReports } from '@/shared/agents/stall'
 import { cardClass } from '@/shared/ui/card-style'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * Дашборд РАЗВИТИЯ (Ф-D0) — компания гномов, видимая сверху: куда движемся, а не
@@ -126,9 +127,9 @@ export default async function AdminDevelopmentPage() {
         {/* ПОЧЕМУ не прошло планку — «не прошло» без причины это та же vanity-метрика. */}
         {today.holdReasons.length > 0 && (
           <div className={cardClass({ pad: 'sm' })}>
-            <div className="mb-2 text-caption font-semibold uppercase tracking-wide text-muted">
+            <SectionLabel className="mb-2">
               {t('admin.whyListsDidNot', lang)}
-            </div>
+            </SectionLabel>
             <ul className="flex flex-col gap-1.5">
               {today.holdReasons.map((r) => (
                 <li key={r.reason} className="flex min-w-0 items-start justify-between gap-3 text-body-sm text-ink-2">
@@ -370,13 +371,13 @@ export default async function AdminDevelopmentPage() {
                 {t('admin.acceptanceCountsEveryDrafter', lang)}
               </span>
             </div>
-            <div className="grid min-w-column grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-caption uppercase tracking-wide text-muted">
+            <SectionLabel className="grid min-w-column grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5">
               <span>{t('admin.specialist', lang)}</span>
               <span className="text-right">{t('admin.rank', lang)}</span>
               <span className="text-right">{t('admin.councils', lang)}</span>
               <span className="text-right">{t('admin.accepted', lang)}</span>
               <span className="text-right">{t('admin.share', lang)}</span>
-            </div>
+            </SectionLabel>
             {m.gnomes.map((g) => (
               <Link
                 key={g.id}

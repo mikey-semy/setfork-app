@@ -53,7 +53,7 @@ const ROLES = [
       !recipe(attrs, local) &&
       /(^|\s)uppercase(\s|$)/.test(cls) &&
       /(^|\s)tracking-/.test(cls) &&
-      /(^|\s)text-(caption|body)(\s|$)/.test(cls) &&
+      /(^|\s)text-(caption|body-sm|body)(\s|$)/.test(cls) &&
       /(^|\s)text-(muted|ink-2)(\s|$)/.test(cls),
   },
   {

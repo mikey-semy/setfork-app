@@ -9,6 +9,7 @@ import { detectLang, LANG_LABEL } from '@/shared/ui/detect-lang'
 import { t } from '@/shared/i18n'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * Вариант списка карточкой. СВЁРНУТ по умолчанию (фидбек владельца: показывать
@@ -70,7 +71,7 @@ export function CandidateCard({
       <div className={open ? 'mt-3.5 space-y-4' : 'hidden'}>
         {groupBySection(cand.items).map((g, gi) => (
           <div key={gi}>
-            {g.section && <div className="mb-1.5 text-caption font-semibold tracking-wide text-muted uppercase">{g.section}</div>}
+            {g.section && <SectionLabel className="mb-1.5">{g.section}</SectionLabel>}
             <ol className="space-y-3">
               {g.items.map(({ it, n }) => (
                 <li key={n} className="border-l-2 border-border pl-3">
@@ -83,7 +84,7 @@ export function CandidateCard({
                     // горизонтального скролла. CopyButton нельзя: карточка сама <button>.
                     <code className="relative mt-1 block whitespace-pre-wrap rounded-md bg-surface-2 px-2 py-1 pr-14 font-mono text-body-sm text-ink [overflow-wrap:anywhere]">
                       {it.command}
-                      <span className="absolute right-1.5 top-1 font-mono text-caption uppercase tracking-wide text-muted">{LANG_LABEL[detectLang(it.command)]}</span>
+                      <SectionLabel as="span" className="absolute right-1.5 top-1 font-mono">{LANG_LABEL[detectLang(it.command)]}</SectionLabel>
                     </code>
                   )}
                   {it.subtasks.length > 0 && (

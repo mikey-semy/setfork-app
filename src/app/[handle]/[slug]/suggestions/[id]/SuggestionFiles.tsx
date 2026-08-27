@@ -8,6 +8,7 @@ import { DiffViewToggle } from '@/features/library/DiffViewToggle'
 import { PendingReviewBar } from '@/features/library/PendingReviewBar'
 import { submitPendingComments } from '@/features/comments/actions'
 import type { loadSuggestionPage } from './load'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 type Loaded = Awaited<ReturnType<typeof loadSuggestionPage>>
 
@@ -36,9 +37,9 @@ export function SuggestionFiles({
   const open = sug.status === 'open'
   return (
     <>
-      <div className="mb-1.5 text-caption font-semibold uppercase tracking-[0.07em] text-muted">
+      <SectionLabel className="mb-1.5">
         {t('proposedChanges', lang)} · {t('pr.baseToSuggestion', lang).replace('{v}', String(sug.baseVersion))}
-      </div>
+      </SectionLabel>
       {/* Ряд действий над диффом: слева прогресс ревью, справа правка и
           переключатель вида — одной высоты (эталон настроек). */}
       <div className="mb-3 flex items-center justify-end gap-2">

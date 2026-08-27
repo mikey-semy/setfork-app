@@ -9,6 +9,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getListBlame } from '@/features/library/blame'
 import { PAGE } from '@/shared/ui/control'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 // «Blame» по шагам: видно, что давно не трогали, а что свежее. Автор версий
 // пока не хранится — показываем версию/дату/note изменения.
@@ -41,7 +42,7 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
             const fresh = s.lastVersion === blame.currentVersion
             return (
               <div key={s.n}>
-                {showSec && <div className="bg-surface-2 px-4 py-1.5 text-caption font-semibold uppercase tracking-wide text-muted">{sec}</div>}
+                {showSec && <SectionLabel className="bg-surface-2 px-4 py-1.5">{sec}</SectionLabel>}
                 <div className="flex items-center gap-3 px-4 py-2.5">
                   <span className="w-6 shrink-0 text-right font-mono text-caption text-muted">{s.n}</span>
                   <span className="min-w-0 flex-1 truncate text-body text-ink">{tr(s.title, lang)}</span>

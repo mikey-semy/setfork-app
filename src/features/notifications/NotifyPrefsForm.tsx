@@ -8,6 +8,7 @@ import { DEFAULT_LANG, isLang, LANG_META, LOCALES, t, type Lang } from '@/shared
 import type { NotifyPrefs } from '@/shared/db/schema'
 import { updateNotifyPrefs } from './actions'
 import { subscribeToPush, unsubscribeFromPush } from './push-client'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 const ROWS: {
   key: keyof NotifyPrefs
@@ -48,7 +49,7 @@ export function NotifyPrefsForm({
 
       {/* Доставка: дублирование включённых выше событий на почту */}
       <div className="border-t border-border pt-4">
-        <div className="mb-3 text-body-sm font-semibold uppercase tracking-wider text-muted">{t('deliverySection', lang)}</div>
+        <SectionLabel size="bodySm" className="mb-3">{t('deliverySection', lang)}</SectionLabel>
         <div className="flex items-center justify-between gap-4">
           <div>
             <span className="text-body-lg text-ink">{t('prefEmail', lang)}</span>

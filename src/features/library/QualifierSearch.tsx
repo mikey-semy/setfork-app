@@ -8,6 +8,7 @@ import { SearchField } from '@/shared/ui/SearchField'
 import { t, type Lang } from '@/shared/i18n'
 import { parseSearchQuery } from './search-query'
 import { MenuItem } from '@/shared/ui/MenuItem'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 type SugKind = 'user' | 'tag' | 'ordered' | 'unordered' | 'list' | 'search'
 type SugAction = 'insert' | 'navigate' | 'search'
@@ -276,7 +277,7 @@ export function QualifierSearch({
             return (
               <Fragment key={`${s.action}/${s.group}/${s.value}`}>
                 {header && (
-                  <div className="px-3 pb-1 pt-1.5 text-caption font-semibold uppercase tracking-wider text-muted">{s.group}</div>
+                  <SectionLabel className="px-3 pb-1 pt-1.5">{s.group}</SectionLabel>
                 )}
                 <MenuItem onMouseDown={(e) => e.preventDefault()} onClick={() => apply(s)} active={i === active}>
                   {rowIcon(s)}

@@ -13,11 +13,16 @@ import { TEXT } from './control'
  * произвольные 0.04em, 0.06em, 0.08em при 0.07em в самом примитиве), насыщенность то
  * `font-semibold`, то никакая, цвет то `text-muted`, то `text-ink-2`.
  *
- * Две ступени, потому что роль правда двойная и обе живые:
+ * Три ступени — ровно те, что нашлись в коде, и все из лестницы кеглей:
  *  • `caption` (44 места) — метка над блоком, приглушённая;
+ *  • `bodySm` (5 мест) — она же, но в плотном ряду рядом с текстом того же кегля;
  *  • `body` (12 мест) — метка, которая ОДНОВРЕМЕННО заголовок секции: крупнее,
  *    контрастнее, и в разметке она обязана быть `h2`, иначе диктор не найдёт её в
  *    списке заголовков страницы.
+ *
+ * Три ступени — это не тот же разнобой под другим именем: разнобоем была РАЗРЯДКА
+ * (шесть значений на одну роль) и цвет. Кегль же тут содержательный, и каждая ступень
+ * названа в лестнице, а не подобрана.
  *
  * Отсюда и `as`: тег задаёт вызывающий, потому что решение «это заголовок» —
  * смысловое, а не оформительское. По умолчанию `div`: метка над списком заголовком
@@ -31,7 +36,7 @@ export function SectionLabel({
   ...props
 }: {
   as?: ElementType
-  size?: 'caption' | 'body'
+  size?: 'caption' | 'bodySm' | 'body'
   children: ReactNode
   className?: string
 } & Record<string, unknown>) {
@@ -39,7 +44,7 @@ export function SectionLabel({
     <Tag
       className={cn(
         'font-semibold uppercase tracking-label',
-        size === 'caption' ? cn(TEXT.caption, 'text-muted') : cn(TEXT.body, 'text-ink-2'),
+        size === 'body' ? cn(TEXT.body, 'text-ink-2') : cn(size === 'bodySm' ? TEXT.bodySm : TEXT.caption, 'text-muted'),
         className,
       )}
       {...props}

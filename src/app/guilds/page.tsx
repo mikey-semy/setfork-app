@@ -9,6 +9,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
 import { Badge } from '@/shared/ui/badge'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 // Стиль бейджа ранга по tier: выше — заметнее. Ученик (0) — приглушённо (стартовый
 // ранг, не «пусто»); Старший мастер (3) — самый выразительный. Только токены темы.
@@ -78,7 +79,7 @@ export default async function GuildsPage() {
               </div>
               {e.code && (
                 <div className="mt-3">
-                  <div className="mb-1 text-caption font-semibold uppercase tracking-wide text-muted">{t('common.guildCode', lang)}</div>
+                  <SectionLabel className="mb-1">{t('common.guildCode', lang)}</SectionLabel>
                   {/* Людям — на их языке; агентам в промпты всегда едет EN `code` (вердикт владельца, линза 07). */}
                   <p className="whitespace-pre-wrap text-body-sm leading-[1.55] text-ink-2">{ru ? e.codeRu || e.code : e.code}</p>
                 </div>

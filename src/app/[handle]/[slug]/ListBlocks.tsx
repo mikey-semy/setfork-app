@@ -4,6 +4,8 @@ import { t, tr, type Lang } from '@/shared/i18n'
 import { renderListBlock } from './ListBlock'
 import { ListStepCard } from './ListStepCard'
 import { sectionAnchor, type ListPageData } from './load'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
+import { cn } from '@/shared/lib/cn'
 
 type Props = Pick<
   ListPageData,
@@ -49,9 +51,14 @@ export function ListBlocks(props: Props) {
         const prevSection = si > 0 ? tr(steps[si - 1].section, lang) : ''
         const header =
           section && section !== prevSection ? (
-            <h2 id={sectionAnchor(section)} className={`scroll-mt-24 text-body font-semibold uppercase tracking-[0.06em] text-ink-2 [overflow-wrap:anywhere] ${si > 0 ? 'mt-3' : ''}`}>
+            <SectionLabel
+              as="h2"
+              size="body"
+              id={sectionAnchor(section)}
+              className={cn('scroll-mt-24 [overflow-wrap:anywhere]', si > 0 && 'mt-3')}
+            >
               {section}
-            </h2>
+            </SectionLabel>
           ) : null
 
         // Quiz-gate: блоки заблокированного урока не показываем; на первом —

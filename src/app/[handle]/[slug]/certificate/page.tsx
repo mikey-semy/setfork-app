@@ -10,6 +10,7 @@ import { CertificatePrintButton } from '@/features/quizzes/CertificatePrintButto
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { SITE_HOST } from '@/shared/site'
 import { cardClass } from '@/shared/ui/card-style'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -60,9 +61,9 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
             <div className="w-full overflow-hidden rounded-xl border-2 border-ok/50 bg-surface p-8 text-center shadow-card sm:p-12">
               <div className="mx-auto flex flex-col items-center gap-1 border-b border-border pb-6">
                 <Award size={40} className="text-ok" />
-                <div className="mt-2 font-mono text-caption uppercase tracking-[0.2em] text-muted">
+                <SectionLabel className="mt-2 font-mono tracking-display">
                   {t('certHeading', lang)}
-                </div>
+                </SectionLabel>
               </div>
               <p className="mt-6 text-body text-muted">{t('certThisCertifies', lang)}</p>
               <p className="mt-1 text-display-lg font-bold tracking-tight text-ink">{learner}</p>
@@ -70,15 +71,15 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
               <p className="mt-1 text-heading font-semibold text-ink">{title}</p>
               <div className="mt-8 flex items-center justify-center gap-8 text-body-sm text-ink-2">
                 <div className="flex flex-col">
-                  <span className="font-mono text-caption uppercase tracking-[0.14em] text-muted">{t('certDate', lang)}</span>
+                  <SectionLabel as="span" className="font-mono tracking-display">{t('certDate', lang)}</SectionLabel>
                   <span className="mt-0.5 font-medium text-ink">{completion.completedAt.toLocaleDateString(ru ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-mono text-caption uppercase tracking-[0.14em] text-muted">{t('certVersion', lang)}</span>
+                  <SectionLabel as="span" className="font-mono tracking-display">{t('certVersion', lang)}</SectionLabel>
                   <span className="mt-0.5 font-medium text-ink">v{completion.version}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-mono text-caption uppercase tracking-[0.14em] text-muted">{t('certIssuedBy', lang)}</span>
+                  <SectionLabel as="span" className="font-mono tracking-display">{t('certIssuedBy', lang)}</SectionLabel>
                   <span className="mt-0.5 font-medium text-ink">{issuer}</span>
                 </div>
               </div>
@@ -89,7 +90,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
                   {t('certRestoredNote', lang)}
                 </div>
               )}
-              <div className="mt-8 font-mono text-caption uppercase tracking-[0.18em] text-muted">SetFork · {SITE_HOST}/{owner}/{slug}</div>
+              <SectionLabel className="mt-8 font-mono tracking-display">SetFork · {SITE_HOST}/{owner}/{slug}</SectionLabel>
             </div>
             <div className="flex items-center gap-3 print:hidden">
               <CertificatePrintButton label={t('certPrintPdf', lang)} />

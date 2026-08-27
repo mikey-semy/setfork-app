@@ -8,6 +8,7 @@ import { toggleIssueAssignee } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
 import { IconButton } from '@/shared/ui/IconButton'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 
 type Person = { handle: string; avatarUrl: string | null }
@@ -61,7 +62,7 @@ export function AssigneePicker({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-body-sm font-semibold uppercase tracking-[0.04em] text-muted">{labels?.title ?? L('Исполнители', 'Assignees')}</span>
+        <SectionLabel as="span" size="bodySm">{labels?.title ?? L('Исполнители', 'Assignees')}</SectionLabel>
         {canEdit && (
           <AnchoredMenu
             align="right"

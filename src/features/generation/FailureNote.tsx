@@ -8,6 +8,7 @@ import { Button } from '@/shared/ui/button'
 import { toast } from '@/shared/ui/toast'
 import { t } from '@/shared/i18n'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * «Почему не получилось» — свёрнуто по умолчанию.
@@ -98,7 +99,7 @@ export function FailureNote({
           {/* Служебное действие — в правом верхнем углу контейнера (мобильный стандарт),
               а не в потоке под текстом: при переносе строк оно уплывало бы в середину. */}
           <div className="flex items-center justify-between gap-2 border-b border-border py-1 pl-2.5 pr-1">
-            <span className="truncate text-caption uppercase tracking-wide text-muted">{t('generation.whatHappened', lang)}</span>
+            <SectionLabel as="span" className="truncate">{t('generation.whatHappened', lang)}</SectionLabel>
             {/* На узком — только иконка, но тач-цель полная (44px). Именно min-*, а не h/w:
                 высота у кнопки уже задана шкалой контролов, а минимум её честно перебивает
                 независимо от порядка классов. */}
