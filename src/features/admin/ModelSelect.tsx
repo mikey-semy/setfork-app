@@ -224,6 +224,7 @@ export function ModelSelect({
         <button
           type="button"
           id={id}
+          // ui-parity-ok: открывалка своего списка — вид поля из шкалы (CONTROL_H/PX/TEXT), примитива под комбобокс с поиском нет
           onClick={() => setOpen((v) => !v)}
           className={`flex ${CONTROL_H.md} w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-2 ${CONTROL_PX.md} ${CONTROL_TEXT.md} outline-hidden focus:border-border-strong`}
         >

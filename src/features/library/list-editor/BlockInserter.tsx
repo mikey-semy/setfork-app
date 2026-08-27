@@ -111,6 +111,7 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
       })()}
       <button
         type="button"
+        // ui-parity-ok: «+» между блоками меняет размер и прозрачность по наведению — кнопкой из шкалы не рисуется
         aria-label={t('editor.addBlock', lang)}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}

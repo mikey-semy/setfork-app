@@ -13,6 +13,7 @@ import { deleteTag, mergeTags, refreshTagUsage, renameTag, setTagCurated } from 
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { IconButton } from '@/shared/ui/IconButton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 
 // Админ-реестр тегов: курирование, переименование, слияние, удаление, пересчёт usage.
 // Экшены (requireAdmin) — в ./actions; revalidatePath('/admin/tags') + router.refresh().
@@ -47,19 +48,18 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-body">
-          <thead className="bg-surface-2 text-caption uppercase tracking-wide text-muted">
-            <tr>
-              <th className="px-3 py-2 text-left font-semibold">{t('tags.tag', lang)}</th>
-              <th className="px-3 py-2 text-right font-semibold">usage</th>
-              <th className="px-3 py-2 text-right font-semibold">{t('tags.actions', lang)}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((tg) => (
-              <tr key={tg.slug} className="border-t border-border align-top">
-                <td className="px-3 py-2">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t('tags.tag', lang)}</TableHead>
+            <TableHead className="text-right">usage</TableHead>
+            <TableHead className="text-right">{t('tags.actions', lang)}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filtered.map((tg) => (
+            <TableRow key={tg.slug}>
+              <TableCell>
                   <span className="inline-flex items-center gap-1.5">
                     {tg.curated && <Badge variant="accent">✓</Badge>}
                     <span className="font-medium text-ink">{tg.slug}</span>
@@ -95,9 +95,9 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
                       </IconButton>
                     </div>
                   )}
-                </td>
-                <td className="px-3 py-2 text-right font-mono text-muted">{tg.usageCount}</td>
-                <td className="px-3 py-2">
+              </TableCell>
+              <TableCell className="text-right font-mono text-muted">{tg.usageCount}</TableCell>
+              <TableCell>
                   <div className="flex items-center justify-end gap-1">
                     <IconBtn title={tg.curated ? t('tags.uncurate', lang) : t('tags.curate', lang)} active={tg.curated} onClick={() => run(() => setTagCurated(tg.slug, !tg.curated))}>
                       <Star size={14} />
@@ -127,12 +127,11 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
                       <Trash2 size={14} />
                     </IconBtn>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
       <p className="mt-2 text-body-sm text-muted">
         {filtered.length} / {tags.length}
       </p>

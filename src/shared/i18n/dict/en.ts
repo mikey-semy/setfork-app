@@ -1278,6 +1278,8 @@ export const en = {
   'admin.contentLang': 'Content language',
   'admin.textActions': 'Quiet text actions',
   'admin.segmented': 'Segmented control',
+  'admin.simpleTable': 'Simple table',
+  'admin.simpleTableHint': 'A static list of rows. If rows move, use DataTableV2 with sorting and mobile cards.',
   'admin.segmentedHint': 'Two or three mutually exclusive views of the same thing. A link when the view lives in the URL.',
   'admin.textActionsHint': 'Neither a solid button nor a link: an action inside a line. No control height — it would swell the row.',
   'admin.calls': 'Calls',

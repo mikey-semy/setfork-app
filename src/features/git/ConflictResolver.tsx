@@ -42,6 +42,7 @@ function Side({
   return (
     <button
       type="button"
+      // ui-parity-ok: сторона конфликта — рамка и фон означают ВЫБОР, а внутри своя шапка с полосой
       onClick={onSelect}
       className={`min-w-0 flex-1 rounded-md border text-left transition-colors ${
         selected ? (tone === 'ours' ? 'border-accent bg-accent-soft' : 'border-ok bg-ok/10') : 'border-border bg-surface hover:border-border-strong'

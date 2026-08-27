@@ -101,6 +101,7 @@ function AvatarPicker({
   return (
     <div className="relative shrink-0">
       <Tooltip label={t('admin.change', lang)}>
+        {/* ui-parity-ok: аватар как открывалка — сам круг и есть вид, рамка и отступ кнопки его бы обрезали */}
         <button type="button" onClick={() => setOpen((v) => !v)} className="relative block">
           <GnomeAvatar src={src} size={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-accent" />
           {busy && (

@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Backdrop } from './Backdrop'
+import { LAYER } from './control'
 
 // Якорный дропдаун «под кнопкой» (паттерн BranchPicker / GitHub branch-picker):
 // relative-обёртка + прозрачный клик-мимо слой + absolute-меню. Esc закрывает.
@@ -40,10 +42,13 @@ export function AnchoredMenu({
           {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). Диктору
               он не нужен и не должен попадаться на пути: aria-hidden убирает его из дерева
               доступности, клавиатурный путь закрытия — Esc. */}
-          <div className="fixed inset-0 z-10" aria-hidden onClick={close} />
+          <Backdrop onClose={close} layer="sticky" />
+          {/* Меню — ступень `dropdown` лестницы слоёв, подложка под ним — `sticky`.
+              До 27.08.2026 оба стояли мимо лестницы (z-20 и z-10), и держались они не
+              на слоях, а на порядке в разметке: подложка объявлена раньше меню. */}
           <div
             style={{ width }}
-            className={`animate-sf-pop absolute z-20 mt-1 max-w-[calc(100vw-24px)] overflow-hidden rounded-md border border-border bg-surface shadow-lg ${align === 'right' ? 'right-0' : 'left-0'} ${className}`}
+            className={`animate-sf-pop absolute ${LAYER.dropdown} mt-1 max-w-[calc(100vw-24px)] overflow-hidden rounded-md border border-border bg-surface shadow-lg ${align === 'right' ? 'right-0' : 'left-0'} ${className}`}
           >
             {children(close)}
           </div>

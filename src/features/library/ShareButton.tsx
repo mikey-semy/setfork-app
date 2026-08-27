@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
+import { Button } from '@/shared/ui/button'
 
 // Бренд-иконки (24×24, single-path, currentColor) — в lucide их нет.
 const P = (d: string) => (
@@ -137,7 +138,6 @@ export function ShareButton({
   path,
   title = '',
   ru = false,
-  className,
   label,
   copiedLabel,
   copyLinkLabel,
@@ -148,15 +148,17 @@ export function ShareButton({
   title?: string
   /** Порядок соцсетей под аудиторию локали (ru: VK/TG/OK первыми). */
   ru?: boolean
-  className?: string
 } & ShareLabels) {
   return (
     <DropdownMenu>
       <Tooltip label={label}>
       <DropdownMenuTrigger asChild>
-        <button type="button" className={className} aria-label={label || 'Share'}>
+        {/* Вид решает САМА кнопка, а не вызывающий: на телефоне квадрат со значком,
+            от sm — значок с подписью. Раньше этот рецепт приезжал пропом className, и
+            подпись для диктора падала на английское 'Share' в русском интерфейсе. */}
+        <Button size="md" aria-label={label} className="size-8 p-0 sm:size-auto sm:px-3.5">
           <Share2 size={15} /> {label && <span className="hidden sm:inline">{label}</span>}
-        </button>
+        </Button>
       </DropdownMenuTrigger>
       </Tooltip>
       <DropdownMenuContent align="end" className="w-menu p-3">

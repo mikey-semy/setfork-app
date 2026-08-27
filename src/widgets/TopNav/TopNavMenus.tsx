@@ -8,6 +8,7 @@ import { LangSwitch, ThemeModeSwitch } from '@/shared/ui/controls'
 import { TOUCH_HIT } from '@/shared/ui/control'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import type { SessionUser } from '@/shared/auth/session'
+import { IconButton } from '@/shared/ui/IconButton'
 
 // Иконки пунктов меню — приглушённые: ведёт текст, значок только помогает нащупать
 // строку взглядом (как в меню аккаунта у GitHub).
@@ -122,13 +123,9 @@ export function GuestMenu({ lang, focusRing }: { lang: Lang; focusRing: string }
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={t('signIn', lang)}
-          className={`grid size-8 shrink-0 place-items-center rounded-full border border-border text-ink-2 hover:text-ink ${TOUCH_HIT} ${focusRing}`}
-        >
+        <IconButton size="md" label={t('signIn', lang)} className="rounded-full text-ink-2">
           <UserRound size={17} />
-        </button>
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <MenuLink href="/login" icon={<LogIn size={15} className={menuIcon} />}>{t('signIn', lang)}</MenuLink>

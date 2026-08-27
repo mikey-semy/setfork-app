@@ -1269,6 +1269,8 @@ export const ru: Record<DictKey, string> = {
   'admin.contentLang': 'Язык содержимого',
   'admin.textActions': 'Тихие действия текстом',
   'admin.segmented': 'Сегментный переключатель',
+  'admin.simpleTable': 'Простая таблица',
+  'admin.simpleTableHint': 'Неподвижный список строк. Шевелятся — тогда DataTableV2 с сортировкой и карточками на телефоне.',
   'admin.segmentedHint': 'Два-три взаимоисключающих вида одного и того же. Ссылкой — если вид живёт в адресе.',
   'admin.textActionsHint': 'Не плашка и не переход: действие внутри строки. Высоты контрола нет — иначе строка распухнет.',
   'admin.calls': 'Вызовов',

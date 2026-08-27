@@ -12,6 +12,7 @@ import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { createBranchAction, deleteBranchAction, type BranchActionResult } from './actions'
 import { branchLabel, isServerBranch } from './branch-label'
+import { Backdrop } from '@/shared/ui/Backdrop'
 
 const ERR: Record<string, TKey> = {
   'bad-name': 'branch.errBadName',
@@ -111,10 +112,8 @@ export function BranchPicker({
       </Tooltip>
       {open && (
         <>
-          {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). Для
-              диктора слоя нет (aria-hidden) — иначе он объявлял бы пустой элемент поверх
-              содержимого; с клавиатуры меню закрывает Esc. */}
-          <div className="fixed inset-0 z-40" aria-hidden onClick={() => setOpen(false)} />
+          {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). */}
+          <Backdrop onClose={() => setOpen(false)} />
           <div className="animate-sf-pop absolute left-0 top-full z-50 mt-1.5 w-panel-lg max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-surface shadow-card">
             <PickerPanel
               title={t('switchBranch', lang)}

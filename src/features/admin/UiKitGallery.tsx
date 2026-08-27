@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SideNav } from '@/shared/ui/SideNav'
 import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { TextButton } from '@/shared/ui/TextButton'
 import { Switch } from '@/shared/ui/switch'
 import { TagInput } from '@/shared/ui/TagInput'
@@ -143,6 +144,27 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section title={t('admin.simpleTable', lang)} hint={t('admin.simpleTableHint', lang)}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Колонка</TableHead>
+              <TableHead className="text-right">Число</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>Строка</TableCell>
+              <TableCell className="text-right font-mono">42</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Ещё строка</TableCell>
+              <TableCell className="text-right font-mono">7</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </Section>
 
       <Section title={t('admin.segmented', lang)} hint={t('admin.segmentedHint', lang)}>

@@ -216,7 +216,6 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               copyLinkLabel={t('copyLink', lang)}
               shareViaLabel={t('shareVia', lang)}
               qrHint={t('qrHint', lang)}
-              className={buttonClass({ className: 'size-8 p-0 sm:size-auto sm:h-8 sm:px-3.5' })}
             />
             {/* Use (клон) и Edit/Suggest переехали в область списка (version-bar) — как
                 зелёная Code и карандаш у GitHub живут в контенте, не в шапке. */}

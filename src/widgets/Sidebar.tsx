@@ -9,6 +9,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { ListsPanel, type ListsPanelItem } from './ListsPanel'
 import { useSidebar } from './sidebar-context'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Backdrop } from '@/shared/ui/Backdrop'
 
 // ОДИН сайдбар: показан ЦЕЛИКОМ (иконки + подписи + «Top lists») или скрыт ЦЕЛИКОМ —
 // без промежуточного мини-рельса (иконки+подписи в узкой колонке смысла не давали).
@@ -123,9 +124,9 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
       {/* Mobile: тот же сайдбар оверлеем (бургер в топ-баре) */}
       {mobileOpen && (
         <>
-          {/* Затемнение — удобство мыши; для диктора его нет (aria-hidden), закрытие
-              с клавиатуры — Esc и крестик в шапке панели. */}
-          <div className="animate-sf-fade fixed inset-0 z-40 bg-black/40 lg:hidden" aria-hidden onClick={() => setMobileOpen(false)} />
+          {/* Затемнение — удобство мыши; для диктора его нет, закрытие с клавиатуры —
+              Esc и крестик в шапке панели. */}
+          <Backdrop dim onClose={() => setMobileOpen(false)} className="lg:hidden" />
           <aside className="animate-slide-in-left fixed left-0 top-0 z-50 flex h-full w-panel max-w-[85vw] flex-col border-r border-border bg-surface p-3 shadow-xl lg:hidden">
             <div className="mb-3 flex items-center justify-between px-1">
               <span className="font-logo text-page leading-none text-ink">SF</span>
