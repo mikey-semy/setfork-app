@@ -1,16 +1,50 @@
-import type { ReactNode } from 'react'
+import type { ElementType, ReactNode } from 'react'
 import { cn } from '@/shared/lib/cn'
+import { TEXT } from './control'
 
 /**
- * Секционный лейбл-«eyebrow» (О СПИСКЕ, КОНТРИБЬЮТОРЫ, СПИСКИ, вкладки Получить и т.п.).
- * Единый стиль в одном месте — обычный шрифт (не моно), мелкий, ЗАГЛАВНЫЕ, разрядка,
- * приглушённый. Раньше это был продублированный в ~10 местах класс с `font-mono`.
- * Контекстные отступы/флекс с иконкой передаются через className.
+ * ПРОПИСНАЯ МЕТКА ГРУППЫ — «О СПИСКЕ», «КОНТРИБЬЮТОРЫ», «ФАЙЛЫ», «ВАША ВЕТКА».
+ * Не заголовок раздела (тот крупный и обычным регистром) и не бейдж (тот с фоном),
+ * а надпись над блоком, которая говорит, что за блок ниже.
+ *
+ * Примитив живёт с Ф4 и зовётся из семнадцати мест. Замер 27.08.2026 показал другую
+ * половину картины: ЕЩЁ СОРОК ВОСЕМЬ мест писали тот же рецепт руками, и разошлось в
+ * нём всё, что могло, — разрядка шестью значениями (`wide`, `wider`, `widest`, и
+ * произвольные 0.04em, 0.06em, 0.08em при 0.07em в самом примитиве), насыщенность то
+ * `font-semibold`, то никакая, цвет то `text-muted`, то `text-ink-2`.
+ *
+ * Две ступени, потому что роль правда двойная и обе живые:
+ *  • `caption` (44 места) — метка над блоком, приглушённая;
+ *  • `body` (12 мест) — метка, которая ОДНОВРЕМЕННО заголовок секции: крупнее,
+ *    контрастнее, и в разметке она обязана быть `h2`, иначе диктор не найдёт её в
+ *    списке заголовков страницы.
+ *
+ * Отсюда и `as`: тег задаёт вызывающий, потому что решение «это заголовок» —
+ * смысловое, а не оформительское. По умолчанию `div`: метка над списком заголовком
+ * не является, и подсовывать её в оглавление страницы было бы враньём.
  */
-export function SectionLabel({ children, className }: { children: ReactNode; className?: string }) {
+export function SectionLabel({
+  as: Tag = 'div',
+  size = 'caption',
+  children,
+  className,
+  ...props
+}: {
+  as?: ElementType
+  size?: 'caption' | 'body'
+  children: ReactNode
+  className?: string
+} & Record<string, unknown>) {
   return (
-    <div className={cn('text-caption font-semibold uppercase tracking-[0.07em] text-muted', className)}>
+    <Tag
+      className={cn(
+        'font-semibold uppercase tracking-label',
+        size === 'caption' ? cn(TEXT.caption, 'text-muted') : cn(TEXT.body, 'text-ink-2'),
+        className,
+      )}
+      {...props}
+    >
       {children}
-    </div>
+    </Tag>
   )
 }
