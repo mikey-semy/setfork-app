@@ -1175,6 +1175,8 @@ export const en = {
   deleteList: 'Delete this list',
   deleteListHint: 'Permanently deletes the list, its versions and stars. Cannot be undone.',
   deleteListCascade: 'This permanently deletes the list — every version, its steps, runs, suggestions, issues and stars. This cannot be undone.',
+  deleteListCanonNote: 'The copy of the history in git storage is removed by cleanup, not at that very moment.',
+  deleteListMirrorWarn: 'This list has a mirror on an external host. SetFork cannot remove the external copy — delete it there yourself.',
   changeVisibility: 'Change visibility',
   visibilityCurrent: 'This list is currently',
   makePrivateEffects: 'The list disappears from explore, search and everyone else — only you will see it. Stars and watchers from other users lose access.',
