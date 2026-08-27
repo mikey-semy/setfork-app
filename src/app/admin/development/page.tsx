@@ -149,8 +149,11 @@ export default async function AdminDevelopmentPage() {
         ) : (
           <Table className="min-w-note">
             <TableBody>
-              {today.events.map((e, i) => (
-                <TableRow key={i}>
+              {/* Ключ — время события плюс действие: лента дня отсортирована и
+                  фильтруется, а по индексу React переиспользовал бы строку под ЧУЖОЕ
+                  событие. Найдено React Doctor. */}
+              {today.events.map((e) => (
+                <TableRow key={`${e.at.getTime()}:${e.action}:${e.ref ?? ''}`}>
                   <TableCell className="whitespace-nowrap font-mono text-muted">
                     {new Intl.DateTimeFormat('ru', { hour: '2-digit', minute: '2-digit' }).format(e.at)}
                   </TableCell>

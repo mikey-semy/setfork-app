@@ -48,8 +48,12 @@ export function SegmentedControl({
   className?: string
   children: React.ReactNode
 }) {
+  // Значение контекста — через useMemo: без него объект пересоздаётся на каждый рендер
+  // обоймы, и КАЖДЫЙ сегмент перерисовывается вместе с ней, даже когда ничего не менялось.
+  // Найдено React Doctor.
+  const ctx = React.useMemo(() => ({ size, shape }), [size, shape])
   return (
-    <Ctx.Provider value={{ size, shape }}>
+    <Ctx.Provider value={ctx}>
       <div
         role="group"
         aria-label={label}
