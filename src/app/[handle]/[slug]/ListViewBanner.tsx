@@ -1,12 +1,11 @@
 import Link from 'next/link'
-import { GitCommitHorizontal, GitPullRequest, History, Info, Tag } from 'lucide-react'
+import { GitCommitHorizontal, GitPullRequest, History, Tag } from 'lucide-react'
 import { openBranchPr, revertToVersion } from '@/features/library/actions'
 import { branchLabel } from '@/features/git/branch-label'
 import { Button } from '@/shared/ui/button'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { t, type Lang } from '@/shared/i18n'
 import type { ListPageData } from './load'
-import { buttonClass } from '@/shared/ui/button-style'
 import { Alert } from '@/shared/ui/Alert'
 import { TextButton } from '@/shared/ui/TextButton'
 
