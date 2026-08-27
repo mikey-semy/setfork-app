@@ -213,7 +213,9 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           <label className="flex cursor-pointer items-center gap-2 text-body text-ink">
             <Switch checked={checked} onCheckedChange={setChecked} /> Switch
           </label>
-          <div className="flex items-center gap-2 text-body text-ink">
+          {/* `flex-wrap` по той же причине, что в настройках обложки: на пальце кружок
+              палитры — это 44px, и ряд без переноса распирает узкий экран. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-2 text-body text-ink">
             ColorSwatch
             {SWATCHES.map((c) => (
               <ColorSwatch key={c ?? 'none'} color={c} selected={swatch === c} label={c ?? 'default'} onSelect={() => setSwatch(c)} />

@@ -97,7 +97,11 @@ export function CoverSection({
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => upload(e.target.files?.[0])} />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
+        {/* ⚠️ `flex-wrap` ОБЯЗАТЕЛЕН: на грубом указателе каждый кружок палитры дорастает
+            до тач-цели 44px (TOUCH_MIN_BOX), и пять кружков с подписью не помещаются в
+            360px — ряд распирал бы страницу горизонтально. Замечание авто-ревью по
+            fe#827: цель не должна выигрывать у мобильной ширины, они обе обязательны. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <span className="mr-1 text-body-sm text-ink-2">{ru ? 'Акцент:' : 'Accent:'}</span>
           {ACCENTS.map((a) => (
             <ColorSwatch
