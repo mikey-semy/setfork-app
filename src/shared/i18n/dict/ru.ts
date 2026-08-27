@@ -642,6 +642,8 @@ export const ru: Record<DictKey, string> = {
   runAbandon: 'Бросить прогон',
   runAbandonConfirm: 'Бросить прогон? Прогресс сохранится, но пометится брошенным.',
   runDone: 'Завершён 🎉',
+  slugTakenTitle: 'Такой адрес уже занят',
+  slugTakenBody: 'Список с адресом «{slug}» у вас уже есть. Измените название — адрес соберётся из него заново, — или откройте существующий список.',
   viewMode: 'Вид',
   runStepCheck: 'Отметить шаг выполненным',
   runStepUncheck: 'Снять отметку с шага',

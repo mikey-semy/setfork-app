@@ -23,7 +23,7 @@ export async function generateMetadata() {
   return { title: t('newList', lang) }
 }
 
-export default async function NewListPage({ searchParams }: { searchParams: Promise<{ e?: string; blocked?: string; step?: string }> }) {
+export default async function NewListPage({ searchParams }: { searchParams: Promise<{ e?: string; blocked?: string; step?: string; slug?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (!session) redirect('/login')
   const quotaHit = sp.e === 'list_quota'
@@ -42,6 +42,16 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
 
         {/* Отказ стража исполняемых команд: причина словами и номер шага — иначе
             кнопка «Создать» выглядит сломанной. */}
+        {/* Адрес занят. Текст ядра на этом отказе — `already exists`, четырнадцать
+            символов, не говорящие даже о том, ЧТО занято. Человеку нужно другое: что
+            именно занято, кем это можно исправить и одним ли действием. */}
+        {sp.e === 'slug_taken' && (
+          <Alert variant="danger" className="mb-5">
+            <span className="block font-semibold">{t('slugTakenTitle', lang)}</span>
+            <span className="block">{t('slugTakenBody', lang).replace('{slug}', sp.slug ?? '')}</span>
+          </Alert>
+        )}
+
         {sp.blocked && (
           <Alert variant="danger" className="mb-5">
             <span className="block font-semibold">{t('destructiveBlockedTitle', lang)}</span>

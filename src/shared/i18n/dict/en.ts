@@ -650,6 +650,8 @@ export const en = {
   runAbandon: 'Abandon run',
   runAbandonConfirm: 'Abandon this run? Progress will be kept but marked abandoned.',
   runDone: 'Completed 🎉',
+  slugTakenTitle: 'That address is already taken',
+  slugTakenBody: 'You already have a list at “{slug}”. Change the title — the address is derived from it — or open the existing list.',
   viewMode: 'View',
   runStepCheck: 'Mark step as done',
   runStepUncheck: 'Unmark step',
