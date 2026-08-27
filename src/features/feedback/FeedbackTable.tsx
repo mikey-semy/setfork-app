@@ -88,13 +88,13 @@ export function FeedbackTable({
   ]
   return (
     <div>
-      <div className="mb-4 flex gap-1.5">
+      <SegmentedControl label={t('admin.filter', lang)} className="mb-4 flex-wrap">
         {tabs.map((tab) => (
           <Segment key={tab.key} active={filter === tab.key} href={tab.key === 'all' ? '/admin/feedback' : `/admin/feedback?filter=${tab.key}`}>
             {tab.label} <span className="opacity-70">{counts[tab.key]}</span>
           </Segment>
         ))}
-      </div>
+      </SegmentedControl>
       {items.length === 0 ? (
         <EmptyState variant="plain" hint={t('fbEmpty', lang)} />
       ) : (

@@ -1266,6 +1266,7 @@ export const ru: Record<DictKey, string> = {
   'admin.burnToday': 'Расход сегодня',
   'admin.buttons': 'Кнопки',
   'admin.period': 'Период',
+  'admin.filter': 'Фильтр',
   'admin.contentLang': 'Язык содержимого',
   'admin.textActions': 'Тихие действия текстом',
   'admin.segmented': 'Сегментный переключатель',

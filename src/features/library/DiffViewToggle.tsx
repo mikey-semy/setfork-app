@@ -1,7 +1,5 @@
 import Link from 'next/link'
 import { Code2, List } from 'lucide-react'
-import { CONTROL_H } from '@/shared/ui/control'
-import { cardClass } from '@/shared/ui/card-style'
 import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
 
 /**

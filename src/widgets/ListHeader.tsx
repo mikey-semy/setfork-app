@@ -26,7 +26,6 @@ import { humanModerationReason } from '@/features/moderation/reason'
 import { ListTabs } from './ListTabs'
 import { ShowOnListRoot } from './ShowOnListRoot'
 import { PAGE_X } from '@/shared/ui/control'
-import { buttonClass } from '@/shared/ui/button-style'
 import { TextButton } from '@/shared/ui/TextButton'
 
 /** Общая шапка страницы списка (= «репозиторий»): owner/name, действия, вкладки.

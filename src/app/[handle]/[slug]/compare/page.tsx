@@ -1,21 +1,16 @@
 import type { ReactNode } from 'react'
-import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { Code2, List } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
-import { t, type Lang } from '@/shared/i18n'
-import { Markdown } from '@/shared/ui/Markdown'
+import { t } from '@/shared/i18n'
 import { PageHeader } from '@/shared/ui/PageHeader'
-import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { VersionPicker } from '@/features/library/VersionPicker'
 import { getVersions, getVersionSteps } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { HistoryNav } from '@/widgets/HistoryNav'
-import { safeHref } from '@/shared/lib/safe-url'
 import { rowsToCmp } from '@/features/library/diff'
 import { CodeDiff, ListDiff } from '@/features/library/DiffViews'
 import { PAGE } from '@/shared/ui/control'
-import { cardClass } from '@/shared/ui/card-style'
 import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
 
 
@@ -68,10 +63,10 @@ export default async function ComparePage({
           size="section"
           title={t('compareTitle', lang)}
           actions={
-            <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'flex items-center gap-1' })}>
+            <SegmentedControl label={t('viewMode', lang)}>
               {toggle('code', <Code2 size={14} />, 'viewCode')}
               {toggle('list', <List size={14} />, 'viewList')}
-            </div>
+            </SegmentedControl>
           }
         />
 

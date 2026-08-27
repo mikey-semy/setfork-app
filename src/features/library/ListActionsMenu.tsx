@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { Languages, MoreHorizontal, Pencil, Rocket, type LucideIcon } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { buttonClass } from '@/shared/ui/button-style'
 import { LANG_META, t, type Lang } from '@/shared/i18n'
 import { toast } from '@/shared/ui/toast'
 // Прямые модули, а не фасад './actions': бочка тянет в клиентский бандл все

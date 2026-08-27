@@ -1275,6 +1275,7 @@ export const en = {
   'admin.burnToday': 'Burn today',
   'admin.buttons': 'Buttons',
   'admin.period': 'Period',
+  'admin.filter': 'Filter',
   'admin.contentLang': 'Content language',
   'admin.textActions': 'Quiet text actions',
   'admin.segmented': 'Segmented control',

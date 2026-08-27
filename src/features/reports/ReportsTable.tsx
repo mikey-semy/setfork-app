@@ -100,13 +100,13 @@ export function ReportsTable({
   ]
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-1.5">
+      <SegmentedControl label={t('admin.filter', lang)} className="mb-4 flex-wrap">
         {tabs.map((tab) => (
           <Segment key={tab.key} active={filter === tab.key} href={tab.key === 'all' ? '/admin/reports' : `/admin/reports?filter=${tab.key}`}>
             {tab.label} <span className="opacity-70">{counts[tab.key]}</span>
           </Segment>
         ))}
-      </div>
+      </SegmentedControl>
       {items.length === 0 ? (
         <EmptyState variant="plain" hint={t('fbEmpty', lang)} />
       ) : (

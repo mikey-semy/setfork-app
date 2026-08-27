@@ -4,7 +4,6 @@ import { ChevronDown, Milestone as MilestoneIcon, X } from 'lucide-react'
 import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { setIssueMilestone } from '@/features/milestones/actions'
-import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
 import { IconButton } from '@/shared/ui/IconButton'
 

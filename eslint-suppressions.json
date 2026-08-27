@@ -1,9 +1,4 @@
 {
-  "src/app/[handle]/[slug]/compare/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/app/[handle]/[slug]/discussions/[number]/page.tsx": {
     "no-restricted-syntax": {
       "count": 5
@@ -231,11 +226,6 @@
   "src/features/feed/FeedFilter.tsx": {
     "no-restricted-syntax": {
       "count": 7
-    }
-  },
-  "src/features/feedback/FeedbackTable.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
     }
   },
   "src/features/follows/actions.ts": {
@@ -481,11 +471,6 @@
       "count": 2
     }
   },
-  "src/features/reports/ReportsTable.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/features/runs/RunView.tsx": {
     "jsx-a11y/no-autofocus": {
       "count": 1
@@ -588,11 +573,6 @@
   "src/shared/ui/TagChip.tsx": {
     "no-restricted-syntax": {
       "count": 1
-    }
-  },
-  "src/shared/ui/controls.tsx": {
-    "no-restricted-syntax": {
-      "count": 3
     }
   },
   "src/shared/ui/timeAgo.ts": {
