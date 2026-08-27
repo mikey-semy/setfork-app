@@ -48,7 +48,7 @@ const input = {
   ordered: true,
   visibility: 'public' as const,
   status: 'draft' as const,
-  origin: 'manual' as const,
+  origin: 'authored' as const,
   note: '',
   steps: [],
 }

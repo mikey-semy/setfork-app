@@ -7,6 +7,7 @@
 //
 // Осознанно НЕ в v0: AI-генерация, community-trust, PR/merge, права/биллинг.
 
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import {
   bigint,
@@ -352,7 +353,22 @@ export const templates = pgTable(
      */
     living: boolean('living').notNull().default(false),
     repositoryId: uuid('repository_id'), // каталог-репозиторий (FK задаётся в relations); null = solo
-    forkedFromId: uuid('forked_from_id'), // самоссылка задаётся в relations
+    /**
+     * Родитель форка. Ключ с `set null`, а НЕ cascade: форк — работа другого человека,
+     * и удаление исходного списка не должно её уносить. Теряется родословная, а не список.
+     *
+     * ⚠️ Ключа здесь не было до 27.08.2026, и это нашла вертикаль «собрать список»: ссылка
+     * на удалённый список просто ложилась в базу и оставалась висеть. Замер прода в тот же
+     * день: форков ОДИН, и он уже был сломан. Заметить это было нечем — интерфейс
+     * `forkedFromId` не читает вовсе (строка словаря `forkedFrom` есть и не зовётся
+     * ниоткуда), а дерево форков идёт сверху вниз, поэтому висячий форк не появляется ни в
+     * одном дереве. Слой базы хранил связь, слой интерфейса её не читал, и расхождение
+     * между ними не имело наблюдателя.
+     *
+     * Самоссылка объявляется через `AnyPgColumn`: без явного типа TypeScript уходит в
+     * бесконечный вывод на таблице, ссылающейся на саму себя.
+     */
+    forkedFromId: uuid('forked_from_id').references((): AnyPgColumn => templates.id, { onDelete: 'set null' }),
     runsCount: integer('runs_count').notNull().default(0),
     forksCount: integer('forks_count').notNull().default(0),
     starsCount: integer('stars_count').notNull().default(0),
