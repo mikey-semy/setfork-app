@@ -42,14 +42,14 @@ const ROLES = [
     // серверной формы, и считать её нарушением — врать замером. Первая версия счётчика
     // именно это и делала: 62 законных места лежали в «невидимках» и раздували число.
     match: ({ tag, cls, attrs }) =>
-      tag === 'button' && !/buttonClass\(/.test(attrs) && cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
+      tag === 'button' && !SHARED_RECIPE.test(attrs) && cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
   },
   {
     key: 'кнопка-невидимка',
     primitive: 'IconButton (или сознательный disable с причиной)',
     hint: 'голый <button> без вида и без общего рецепта — часто законно (обёртка, карточка), но мимо тач-цели и фокуса',
     match: ({ tag, cls, attrs }) =>
-      tag === 'button' && !/buttonClass\(/.test(attrs) && !cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
+      tag === 'button' && !SHARED_RECIPE.test(attrs) && !cls1(cls, /(^|\s)(bg-|border|rounded|px-|py-|p-\d|shadow|hover:bg-)/),
   },
   {
     key: 'поле',
@@ -236,6 +236,17 @@ const A11Y = [
     check: ({ tag, attrs }) => tag === 'img' && !hasAttr(attrs, 'alt') && !/\{\.\.\./.test(attrs),
   },
 ]
+
+/**
+ * Общие РЕЦЕПТЫ-ФУНКЦИИ из shared/ui: место, которое зовёт любой из них, берёт вид
+ * оттуда же, откуда примитив, и самопалом не является. Список закрытый и короткий —
+ * это ровно те четыре, что экспортирует библиотека.
+ *
+ * ⚠️ Без него счётчик числил нарушением кнопку на `buttonClass` (62 места, 26.08) и
+ * сегменты сплит-кнопки на `splitSegment`. Ошибка в эту сторону дороже пропуска:
+ * завышенный долг заставляет людей «чинить» правильное.
+ */
+const SHARED_RECIPE = /\b(buttonClass|cardClass|badgeClass|splitSegment)\(/
 
 const only = process.argv.slice(2).find((a) => !a.startsWith('--'))
 const LIST = process.argv.includes('--list')

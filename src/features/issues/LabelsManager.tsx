@@ -10,6 +10,7 @@ import { createLabel, deleteLabel } from './label-actions'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Badge } from '@/shared/ui/badge'
 import { Input } from '@/shared/ui/input'
+import { IconButton } from '@/shared/ui/IconButton'
 
 const PRESET = ['#2159d6', '#7c3aed', '#15803d', '#c2570c', '#be123c', '#0f766e', '#b45309', '#475569']
 
@@ -56,9 +57,9 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
         {labels.map((l) => (
           <Badge size="md" className="font-medium" key={l.id} style={chipColors(l.color)}>
             {l.name}
-            <button type="button" onClick={() => remove(l.id)} disabled={pending} aria-label={ru ? 'удалить' : 'delete'} className="opacity-70 hover:opacity-100">
+            <IconButton size="xs" variant="ghost" onClick={() => remove(l.id)} disabled={pending} label={ru ? 'удалить' : 'delete'} className="opacity-70 hover:opacity-100">
               <X size={12} />
-            </button>
+            </IconButton>
           </Badge>
         ))}
       </div>

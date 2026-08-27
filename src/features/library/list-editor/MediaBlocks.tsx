@@ -12,6 +12,7 @@ import { FileDrop } from './FileDrop'
 import { SlashMenu, useSlashMenu } from './SlashMenu'
 import { buttonClass } from '@/shared/ui/button-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
+import { IconButton } from '@/shared/ui/IconButton'
 
 // Загрузка СВОИХ видеофайлов выключена по умолчанию: держать объёмы без дохода
 // нечем. Код на месте и включается флагом, когда появится хостинг (S3/Cloudflare
@@ -97,9 +98,9 @@ export function FileBlockBody({ item, onPatch, uploading, onFile, lang }: BodyPr
       <a href={item.fileUrl} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-accent hover:underline">
         {item.fileName || item.fileUrl}
       </a>
-      <button type="button" onClick={() => onPatch({ fileUrl: '', fileName: '' })} className="text-muted hover:text-danger" aria-label={t('editor.remove', lang)}>
+      <IconButton size="xs" variant="ghost" onClick={() => onPatch({ fileUrl: '', fileName: '' })} className="text-muted hover:text-danger" label={t('editor.remove', lang)}>
         <X size={14} />
-      </button>
+      </IconButton>
     </div>
   )
 }

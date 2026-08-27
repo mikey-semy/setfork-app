@@ -12,6 +12,7 @@ import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -275,8 +276,14 @@ export function QuizBlock({
               <span className="min-w-0 flex-1 text-ink">{it2}</span>
               {!checked && (
                 <span className="flex shrink-0 flex-col">
-                  <button type="button" onClick={() => moveSort(i, -1)} disabled={i === 0 || readOnly} className="text-muted hover:text-ink disabled:opacity-20" aria-label="up"><ChevronUp size={14} /></button>
-                  <button type="button" onClick={() => moveSort(i, 1)} disabled={i === sortOrder.length - 1 || readOnly} className="text-muted hover:text-ink disabled:opacity-20" aria-label="down"><ChevronDown size={14} /></button>
+                  {/* Подписи из словаря: были английские литералы `up`/`down`, то есть
+                      русский диктор читал их по буквам посреди русской фразы. */}
+                  <IconButton size="xs" variant="ghost" onClick={() => moveSort(i, -1)} disabled={i === 0 || readOnly} label={t('editor.moveUp', lang)} className="text-muted hover:text-ink disabled:opacity-20">
+                    <ChevronUp size={14} />
+                  </IconButton>
+                  <IconButton size="xs" variant="ghost" onClick={() => moveSort(i, 1)} disabled={i === sortOrder.length - 1 || readOnly} label={t('editor.moveDown', lang)} className="text-muted hover:text-ink disabled:opacity-20">
+                    <ChevronDown size={14} />
+                  </IconButton>
                 </span>
               )}
             </div>

@@ -83,9 +83,9 @@ export function MilestonePicker({
               сайдбар задачи за край (замер: 906px при экране 390). */}
           <span className="min-w-0 text-ink [overflow-wrap:anywhere]">{current.title}</span>
           {canEdit && (
-            <button type="button" disabled={pending} onClick={() => set('')} aria-label={L('снять', 'clear')} className="text-muted hover:text-danger">
+            <IconButton size="xs" variant="ghost" disabled={pending} onClick={() => set('')} label={L('снять', 'clear')} className="text-muted hover:text-danger">
               <X size={13} />
-            </button>
+            </IconButton>
           )}
         </Badge>
       ) : (
