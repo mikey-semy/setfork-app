@@ -14,6 +14,7 @@ import { cancelTransfer, initiateTransfer, type TransferResult } from '@/feature
 import { deleteListAction, setListArchived, setListFrozen, setListVisibility } from './actions/list-settings'
 import { renameList, type RenameResult } from './actions/rename'
 import { publishList } from './actions/versions'
+import { Input } from '@/shared/ui/input'
 
 // Опасная зона списка (аналог GitHub Danger Zone): опасные действия собраны
 // в одном месте, каждое — через модалку. Удаление подтверждается вводом
@@ -175,16 +176,20 @@ export function ListSettingsDanger({
         }
       >
         <form id={transferFormId} action={trAction} className="flex flex-col gap-4">
-          <p className="text-[0.8125rem] leading-relaxed text-ink-2">{t('transferWarn', lang)}</p>
-          <label className="flex flex-col gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
+          <p className="text-body leading-relaxed text-ink-2">{t('transferWarn', lang)}</p>
+          <label className="flex flex-col gap-1.5 text-body-sm font-semibold text-ink-2">
             {t('transferRecipientField', lang)}
-            <div className="mt-0.5 flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 focus-within:border-danger">
-              <span className="text-muted">@</span>
-              <input name="toHandle" autoComplete="off" spellCheck={false} className="w-full bg-transparent py-2 font-mono text-[0.8125rem] text-ink outline-hidden" />
-            </div>
+            <Input
+              leading="@"
+              tone="danger"
+              name="toHandle"
+              autoComplete="off"
+              spellCheck={false}
+              className="mt-0.5 font-mono"
+            />
           </label>
-          {trState?.error && <div className="text-[0.8125rem] text-danger">{trState.error}</div>}
-          {trState?.ok && <div className="text-[0.8125rem] text-ok">✓</div>}
+          {trState?.error && <div className="text-body text-danger">{trState.error}</div>}
+          {trState?.ok && <div className="text-body text-ok">✓</div>}
         </form>
       </OverlayPanel>
 
@@ -212,26 +217,25 @@ export function ListSettingsDanger({
         }
       >
         <form key={slug} id={renameFormId} action={rnAction} className="flex flex-col gap-4">
-          <p className="text-[0.8125rem] leading-relaxed text-ink-2">{t('renameHint', lang)}</p>
-          <div className="text-[0.78125rem] text-ink-2">
+          <p className="text-body leading-relaxed text-ink-2">{t('renameHint', lang)}</p>
+          <div className="text-body-sm text-ink-2">
             {t('renameCurrent', lang)}: <span className="font-mono text-ink">{fullName}</span>
           </div>
-          <label className="flex flex-col gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
+          <label className="flex flex-col gap-1.5 text-body-sm font-semibold text-ink-2">
             {t('renameNewLabel', lang)}
-            <div className="mt-0.5 flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 focus-within:border-danger">
-              <span className="shrink-0 font-mono text-muted">{handle}/</span>
-              {/* Поле НЕконтролируемое, а начальное значение задаёт key={slug}: копия
-                  пропа в useState устаревала бы после переименования (поле показывало бы
-                  прежний адрес). Кнопка ниже пишет в него напрямую. */}
-              <input
-                ref={slugInput}
-                name="slug"
-                defaultValue={slug}
-                autoComplete="off"
-                spellCheck={false}
-                className="w-full bg-transparent py-2 font-mono text-[0.8125rem] text-ink outline-hidden"
-              />
-            </div>
+            {/* Поле НЕконтролируемое, а начальное значение задаёт key={slug}: копия
+                пропа в useState устаревала бы после переименования (поле показывало бы
+                прежний адрес). Кнопка ниже пишет в него напрямую. */}
+            <Input
+              leading={`${handle}/`}
+              tone="danger"
+              ref={slugInput}
+              name="slug"
+              defaultValue={slug}
+              autoComplete="off"
+              spellCheck={false}
+              className="mt-0.5 font-mono"
+            />
           </label>
           {/* Подставить адрес из названия — тем же slugify, что и при создании, поэтому
               человек видит ровно то, что получится, и может поправить руками. */}
@@ -240,12 +244,12 @@ export function ListSettingsDanger({
             onClick={() => {
               if (slugInput.current) slugInput.current.value = slugify(title)
             }}
-            className="self-start text-[0.78125rem] text-accent hover:underline"
+            className="self-start text-body-sm text-accent hover:underline"
           >
             {t('renameSuggest', lang)}
           </button>
           {rnState?.error && (
-            <div className="flex flex-wrap items-center gap-2 text-[0.8125rem] text-danger">
+            <div className="flex flex-wrap items-center gap-2 text-body text-danger">
               {rnState.error}
               {/* Занято — но вот свободный похожий: клик подставляет его в поле. */}
               {rnState.suggestion && (

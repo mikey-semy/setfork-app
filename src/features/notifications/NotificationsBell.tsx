@@ -13,6 +13,7 @@ import type { NotificationItem } from './queries'
 import { markNotificationsRead } from './actions'
 import { NOTIF_VERB } from './verbs'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { Badge } from '@/shared/ui/badge'
 
 
 export function NotificationsBell({ unread, items, lang }: { unread: number; items: NotificationItem[]; lang: Lang }) {
@@ -32,10 +33,12 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
             а не пишутся здесь (до этого высота была 30px — мимо шкалы 24/28/32). */}
         <IconButton variant="ghost" label={t('notifications', lang)} className="relative">
           <Bell size={17} />
+          {/* Счётчик — единственная пилюля, которой ступень отступа велика: она круг 16px
+              поверх значка, а не метка в тексте. Отсюда px-1 поверх примитива. */}
           {count > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 grid h-[0.9375rem] min-w-[0.9375rem] place-items-center rounded-full bg-danger px-1 text-[0.6875rem] font-bold text-white">
+            <Badge variant="dangerSolid" className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center px-1 font-bold">
               {count > 9 ? '9+' : count}
-            </span>
+            </Badge>
           )}
         </IconButton>
       </DropdownMenuTrigger>
@@ -46,12 +49,12 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
           нельзя. Тот же приём уже применён у CloneDropdown — значит грабли не новые. */}
       <DropdownMenuContent
         align="end"
-        className="flex max-h-(--radix-dropdown-menu-content-available-height) w-[21.25rem] flex-col p-0"
+        className="flex max-h-(--radix-dropdown-menu-content-available-height) w-panel-xl flex-col p-0"
       >
         <PanelHead title={t('notifications', lang)} />
 
         {items.length === 0 ? (
-          <div className="px-3 py-8 text-center text-[0.78125rem] text-muted">{t('noNotifications', lang)}</div>
+          <div className="px-3 py-8 text-center text-body-sm text-muted">{t('noNotifications', lang)}</div>
         ) : (
           // min-h-0 обязателен: без него flex-ребёнок не сжимается ниже содержимого,
           // и прокрутка не включается — список снова выдавит хвост за край.
@@ -70,14 +73,14 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
                 <Link
                   key={n.id}
                   href={href}
-                  className={`flex items-start gap-2.5 px-3 py-2.5 hover:bg-surface-2 ${n.read ? '' : 'bg-(--accent-soft)'}`}
+                  className={`flex items-start gap-2.5 px-3 py-2.5 hover:bg-surface-2 ${n.read ? '' : 'bg-accent-soft'}`}
                 >
                   <Avatar handle={n.actorHandle ?? '?'} avatarUrl={n.actorAvatarUrl} size={26} />
-                  <div className="min-w-0 flex-1 text-[0.78125rem] leading-snug text-ink-2">
+                  <div className="min-w-0 flex-1 text-body-sm leading-snug text-ink-2">
                     <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(NOTIF_VERB[n.type], lang)}
                     {!isFollow && <> <span className="text-ink">{n.title ? tr(n.title, lang) : t('aList', lang)}</span></>}
                   </div>
-                  <span className="shrink-0 font-mono text-[0.6875rem] text-muted">{timeAgo(n.createdAt, lang)}</span>
+                  <span className="shrink-0 font-mono text-caption text-muted">{timeAgo(n.createdAt, lang)}</span>
                 </Link>
               )
             })}

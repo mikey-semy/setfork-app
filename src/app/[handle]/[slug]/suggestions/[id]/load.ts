@@ -43,6 +43,12 @@ const MERGE_ERR: Record<string, TKey> = {
   orphaned: 'prMergeErrOrphaned',
   // Хранилище списка разошлось с базой: слияние ждёт починки, а не повтора.
   'out-of-sync': 'prMergeErrOutOfSync',
+  // Спросить о праве на запись не удалось. Два случая, и советы противоположные:
+  // связь сорвалась — повторить; ответ не разобран — повтор бесполезен. Без этих
+  // строк оба падали в общий `prMergeErrGeneric` («не удалось»), то есть человек
+  // не узнавал ни причины, ни того, ждать ему или нет.
+  'gate-unavailable': 'branch.errGateUnavailable',
+  'gate-malformed': 'branch.errGateMalformed',
 }
 
 /**

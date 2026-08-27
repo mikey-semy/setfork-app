@@ -44,7 +44,7 @@ function naText(reason: NaReason, lang: Lang): string {
   return t('admin.noSourceDomainsNot', lang)
 }
 
-const h2 = 'text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2'
+const h2 = 'text-body font-semibold uppercase tracking-wide text-ink-2'
 
 export default async function AdminDevelopmentPage() {
   await requireAdmin()
@@ -67,7 +67,7 @@ export default async function AdminDevelopmentPage() {
         title={t('admin.development', lang)}
         subtitle={t('admin.whereWeHeadingLibrary', lang)}
         actions={
-          <Link href="/admin/dashboard" className="-mr-2 inline-flex items-center px-2 py-2.5 text-[0.8125rem] text-accent hover:underline">
+          <Link href="/admin/dashboard" className="-mr-2 inline-flex items-center px-2 py-2.5 text-body text-accent hover:underline">
             {t('admin.liveMonitoring', lang)}
           </Link>
         }
@@ -83,7 +83,7 @@ export default async function AdminDevelopmentPage() {
             {Object.entries(stalls)
               .filter(([, r]) => r.stalled)
               .map(([loop, r]) => (
-                <li key={loop} className="min-w-0 text-[0.78125rem] text-ink-2">
+                <li key={loop} className="min-w-0 text-body-sm text-ink-2">
                   <span className="font-mono text-ink-2">{loop}</span>{' '}
                   <span className="text-muted">
                     {t('admin.recentActionsNone', lang).replace('{n}', String(r.seen))}
@@ -117,7 +117,7 @@ export default async function AdminDevelopmentPage() {
         </div>
 
         {today.dryRun > 0 && (
-          <p className="text-[0.78125rem] text-muted">
+          <p className="text-body-sm text-muted">
             {t('admin.dryRunDecisions', lang).replace('{n}', String(today.dryRun))}
           </p>
         )}
@@ -125,12 +125,12 @@ export default async function AdminDevelopmentPage() {
         {/* ПОЧЕМУ не прошло планку — «не прошло» без причины это та же vanity-метрика. */}
         {today.holdReasons.length > 0 && (
           <div className={cardClass({ pad: 'sm' })}>
-            <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
+            <div className="mb-2 text-caption font-semibold uppercase tracking-wide text-muted">
               {t('admin.whyListsDidNot', lang)}
             </div>
             <ul className="flex flex-col gap-1.5">
               {today.holdReasons.map((r) => (
-                <li key={r.reason} className="flex min-w-0 items-start justify-between gap-3 text-[0.78125rem] text-ink-2">
+                <li key={r.reason} className="flex min-w-0 items-start justify-between gap-3 text-body-sm text-ink-2">
                   <span className="min-w-0 [overflow-wrap:anywhere]">{r.reason}</span>
                   <span className="shrink-0 font-mono text-muted">×{r.times}</span>
                 </li>
@@ -141,12 +141,12 @@ export default async function AdminDevelopmentPage() {
 
         {/* Лента событий дня. Пусто — так и пишем: «сегодня компания ничего не делала». */}
         {today.events.length === 0 ? (
-          <p className="text-[0.78125rem] text-muted">
+          <p className="text-body-sm text-muted">
             {t('admin.nothingTodayLoopsOff', lang)}
           </p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full min-w-[26.25rem] text-[0.78125rem]">
+            <table className="w-full min-w-note text-body-sm">
               <tbody>
                 {today.events.map((e, i) => (
                   <tr key={i} className="border-b border-border last:border-0">
@@ -168,14 +168,14 @@ export default async function AdminDevelopmentPage() {
           уволим. Две оси обязательны (одна обманывает), доверие в домен не переносится. */}
       <section className="flex min-w-0 flex-col gap-3">
         <h2 className={h2}>{t('admin.scorecardByCraftShadow', lang)}</h2>
-        <p className="text-[0.78125rem] text-muted">
+        <p className="text-body-sm text-muted">
           {t('admin.twoAxesRequiredAcceptance', lang)}
         </p>
         {cards.length === 0 ? (
-          <p className="text-[0.78125rem] text-muted">{t('admin.noDataYet', lang)}</p>
+          <p className="text-body-sm text-muted">{t('admin.noDataYet', lang)}</p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full min-w-[32.5rem] text-[0.78125rem]">
+            <table className="w-full min-w-column text-body-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted">
                   <th className="px-3 py-2 font-medium">{t('admin.specialist', lang)}</th>
@@ -253,7 +253,7 @@ export default async function AdminDevelopmentPage() {
           <StatTile label={t('admin.margin', lang)} na={naText(UNAVAILABLE.margin, lang)} />
         </div>
         {m.money.runwayGens != null && (
-          <p className="text-[0.78125rem] text-muted">
+          <p className="text-body-sm text-muted">
             {t('admin.balanceAffordsGens', lang).replace('{n}', num(m.money.runwayGens))}
           </p>
         )}
@@ -276,7 +276,7 @@ export default async function AdminDevelopmentPage() {
             hint={t('admin.aOfB', lang).replace('{a}', String(m.engines.single.accepted)).replace('{b}', String(m.engines.single.gens))}
           />
         </div>
-        <p className="text-[0.78125rem] text-muted">
+        <p className="text-body-sm text-muted">
           {t('admin.theCouncilCostsSeveral', lang)}
         </p>
       </section>
@@ -287,7 +287,7 @@ export default async function AdminDevelopmentPage() {
       <section id="agenda" className="flex min-w-0 flex-col gap-3">
         <h2 className={h2}>{t('admin.developmentAgenda', lang)}</h2>
         {agenda.length === 0 ? (
-          <p className="text-[0.78125rem] text-muted">
+          <p className="text-body-sm text-muted">
             {t('admin.nothingProposedYetPartners', lang)}
           </p>
         ) : (
@@ -303,7 +303,7 @@ export default async function AdminDevelopmentPage() {
             }))}
           />
         )}
-        <p className="text-[0.78125rem] text-muted">
+        <p className="text-body-sm text-muted">
           {t('admin.approvedTopicsWhatProduction', lang)}
         </p>
       </section>
@@ -327,7 +327,7 @@ export default async function AdminDevelopmentPage() {
               humanEdits: f.humanEdits,
             }))}
           />
-          <p className="text-[0.78125rem] text-muted">
+          <p className="text-body-sm text-muted">
             {t('admin.aFeedWorthIts', lang)}
           </p>
         </section>
@@ -368,12 +368,12 @@ export default async function AdminDevelopmentPage() {
         {m.gnomes.length > 0 && (
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
             <div className="border-b border-border px-4 py-2.5">
-              <span className="text-[0.8125rem] font-semibold text-ink">{t('admin.councilParticipation', lang)}</span>
-              <span className="ml-2 text-[0.78125rem] text-muted">
+              <span className="text-body font-semibold text-ink">{t('admin.councilParticipation', lang)}</span>
+              <span className="ml-2 text-body-sm text-muted">
                 {t('admin.acceptanceCountsEveryDrafter', lang)}
               </span>
             </div>
-            <div className="grid min-w-[32.5rem] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-[0.6875rem] uppercase tracking-wide text-muted">
+            <div className="grid min-w-column grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-caption uppercase tracking-wide text-muted">
               <span>{t('admin.specialist', lang)}</span>
               <span className="text-right">{t('admin.rank', lang)}</span>
               <span className="text-right">{t('admin.councils', lang)}</span>
@@ -384,16 +384,16 @@ export default async function AdminDevelopmentPage() {
               <Link
                 key={g.id}
                 href={`/admin/council/${g.id}`}
-                className="grid min-w-[32.5rem] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] items-center gap-4 border-b border-border px-4 py-3 hover:bg-surface-2"
+                className="grid min-w-column grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] items-center gap-4 border-b border-border px-4 py-3 hover:bg-surface-2"
               >
-                <span className="truncate text-[0.8125rem] font-medium text-ink">{lang === 'ru' ? g.nameRu : g.nameEn}</span>
-                <span className="text-right text-[0.78125rem] text-muted">{lang === 'ru' ? g.rankRu : g.rankEn}</span>
-                <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{num(g.gens)}</span>
-                <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{num(g.accepted)}</span>
-                <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{g.trusted ? pct(g.score) : '—'}</span>
+                <span className="truncate text-body font-medium text-ink">{lang === 'ru' ? g.nameRu : g.nameEn}</span>
+                <span className="text-right text-body-sm text-muted">{lang === 'ru' ? g.rankRu : g.rankEn}</span>
+                <span className="text-right font-mono tabular-nums text-body text-ink-2">{num(g.gens)}</span>
+                <span className="text-right font-mono tabular-nums text-body text-ink-2">{num(g.accepted)}</span>
+                <span className="text-right font-mono tabular-nums text-body text-ink-2">{g.trusted ? pct(g.score) : '—'}</span>
               </Link>
             ))}
-            <div className="px-4 py-2.5 text-[0.6875rem] text-muted">
+            <div className="px-4 py-2.5 text-caption text-muted">
               {t('admin.tooFewCouncilsTrust', lang)}
             </div>
           </div>
@@ -403,8 +403,8 @@ export default async function AdminDevelopmentPage() {
         {m.topics.length > 0 && (
           <div className="min-w-0 rounded-lg border border-border bg-surface">
             <div className="border-b border-border px-4 py-2.5">
-              <span className="text-[0.8125rem] font-semibold text-ink">{t('admin.uncoveredTopics', lang)}</span>
-              <span className="ml-2 text-[0.78125rem] text-muted">
+              <span className="text-body font-semibold text-ink">{t('admin.uncoveredTopics', lang)}</span>
+              <span className="ml-2 text-body-sm text-muted">
                 {t('admin.theGeneralistCoveredThese', lang)}
               </span>
             </div>
@@ -413,7 +413,7 @@ export default async function AdminDevelopmentPage() {
                 <TagChip key={s.tag} slug={s.tag} count={s.n} />
               ))}
             </div>
-            <div className="px-4 pb-3 text-[0.6875rem] text-muted">
+            <div className="px-4 pb-3 text-caption text-muted">
               {t('admin.rawSignalFromDraft', lang)}
             </div>
           </div>
@@ -430,7 +430,7 @@ export default async function AdminDevelopmentPage() {
         />
       </section>
 
-      <p className="text-[0.78125rem] text-muted">
+      <p className="text-body-sm text-muted">
         {t('admin.metricsReadOnlyAggregates', lang)}
       </p>
     </div>

@@ -29,9 +29,12 @@ export default async function TelegramLoginPage() {
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[23.75rem] text-center shadow-card' })}>
-        <div className="font-logo mb-1 text-[2.375rem] leading-none text-ink">SF</div>
-        <div className="mb-6 text-[0.875rem] text-ink-2">{t('tgLoginIntro', lang)}</div>
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('signInTelegram', lang)}</h1>
+      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-form text-center shadow-card' })}>
+        <div className="font-logo mb-1 text-logo leading-none text-ink">SF</div>
+        <div className="mb-6 text-body-lg text-ink-2">{t('tgLoginIntro', lang)}</div>
 
         <a
           href={botLink}
@@ -44,7 +47,7 @@ export default async function TelegramLoginPage() {
 
         <TelegramLoginWatcher lang={lang} />
 
-        <Link href="/login" className="mt-6 inline-block text-[0.78125rem] text-ink-2 hover:text-ink">
+        <Link href="/login" className="mt-6 inline-block text-body-sm text-ink-2 hover:text-ink">
           ← {t('tgLoginAnother', lang)}
         </Link>
       </div>

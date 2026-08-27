@@ -48,7 +48,7 @@ export function ActivityGraph({
 
   return (
     <div className={cardClass()}>
-      <div key={year} className="sf-fade-in sf-slow mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-ink-2">
+      <div key={year} className="animate-sf-fade sf-slow mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-body text-ink-2">
         <span>
           <b className="text-ink">{fmtNumber(calendar.total, lang)}</b> {plural(calendar.total, 'contributions', lang)}{' '}
           {fill('profile.activity.inYear', lang, { year: year ?? now?.getFullYear() ?? '' })}
@@ -71,7 +71,7 @@ export function ActivityGraph({
               key={y}
               // Текущий год адресуется базой профиля: у «сейчас» один канонический адрес.
               href={y === years[0] ? base : `${base}?year=${y}`}
-              className={`shrink-0 rounded-md border px-2 py-0.5 font-mono text-[0.78125rem] ${year === y ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+              className={`shrink-0 rounded-md border px-2 py-0.5 font-mono text-body-sm ${year === y ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
             >
               {y}
             </Link>
@@ -83,13 +83,13 @@ export function ActivityGraph({
           она остаётся видимой слева, скроллятся только месяцы и квадратики. */}
       <div className="flex">
         {/* Дни недели слева (пн/ср/пт), как у GitHub. Высота spacer'а ЖЁСТКО равна
-            высоте строки месяцев (h-[0.8125rem]), а каждая подпись центрируется в h-[0.6875rem]
+            высоте строки месяцев (h-3.5), а каждая подпись центрируется в h-3
             строке — той же, что и квадратик-ячейка, — иначе метки уезжают на пол-клетки. */}
-        <div className="flex w-[1.625rem] shrink-0 flex-col gap-1 bg-surface">
-          <div className="h-[0.8125rem]" />
-          <div className="flex flex-col gap-[0.1875rem] text-[0.6875rem] text-muted">
+        <div className="flex w-6.5 shrink-0 flex-col gap-1 bg-surface">
+          <div className="h-3.5" />
+          <div className="flex flex-col gap-[0.1875rem] text-caption text-muted">
             {[0, 1, 2, 3, 4, 5, 6].map((d) => (
-              <div key={d} className="flex h-[0.6875rem] items-center leading-none">
+              <div key={d} className="flex h-3 items-center leading-none">
                 {/* Название дня даёт Intl по языку профиля, а не наш словарь: так
                     третий язык получает свои «пн/ср/пт» без единой правки кода. */}
                 {LABELED_WEEKDAYS.includes(d) && firstWeek ? weekdayShort(parseDayKey(firstWeek[d].date) ?? firstWeek[d].date, lang) : ''}
@@ -105,10 +105,10 @@ export function ActivityGraph({
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-end gap-1 text-[0.6875rem] text-muted">
+      <div className="mt-2 flex items-center justify-end gap-1 text-caption text-muted">
         <span>{t('less', lang)}</span>
         {LEVEL.map((cls, i) => (
-          <span key={i} className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] ${cls}`} />
+          <span key={i} className={`h-3 w-3 rounded-xs ${cls}`} />
         ))}
         <span>{t('more', lang)}</span>
       </div>

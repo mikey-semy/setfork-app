@@ -34,8 +34,86 @@
   --color-primary-fg: var(--primary-fg);
   --color-cur: var(--cur);
   --color-ok: rgb(var(--ok-rgb));
+  /* Заливка «получить/готово» с белым текстом. Была ЕДИНСТВЕННЫМ цветом мимо темы:
+     код писал `bg-(--ok-solid)`, то есть обходил её через сырую переменную. */
+  --color-ok-solid: var(--ok-solid);
   --color-warn: rgb(var(--warn-rgb));
   --color-danger: rgb(var(--danger-rgb));
+
+  /* ── Лестница кеглей (Ф5a трека ui-system, в токены Tailwind — 26.08.2026) ──
+     Роли жили в `shared/ui/control.ts` строками произвольных значений, и в разметке
+     стояло 1165 записей вида `text-[0.78125rem]`: число вместо роли, мимо всего, что
+     Tailwind умеет с темой. Теперь это НАСТОЯЩИЕ утилиты — `text-body-sm` и остальные,
+     — а `TEXT` в control.ts просто на них ссылается.
+
+     Почему у ступени нет парного line-height (`--text-*--line-height`): произвольные
+     значения его тоже не задавали, интерлиньяж по проекту ставится отдельно и осознанно.
+     Добавить его здесь — значит молча изменить вид сотен мест. */
+  --text-caption: 0.6875rem;
+  /* Между caption и body-sm: текст самых плотных контролов (xs) и мет листалки.
+     ⚠️ Три ступени в пределах 1px (11 / 12 / 12.5px) — это вопрос к лестнице, а не
+     к местам; пока ступень названа, чтобы её было видно и можно было решить. */
+  --text-caption-lg: 0.75rem;
+  --text-body-sm: 0.78125rem;
+  --text-body: 0.8125rem;
+  --text-body-lg: 0.875rem;
+  --text-title: 1rem;
+  --text-page: 1.125rem;
+  /* Ступень «крупный заголовок/число»: h1 страницы списка и ошибок, показатели в
+     сводках. Её не было в лестнице, и все 12 мест писали 1.25rem руками. */
+  --text-heading: 1.25rem;
+  --text-stat: 1.375rem;
+  /* Ведущий ввод: поле генерации и поиск-герой — единственные два места, где текст
+     контрола крупнее любой ступени шкалы, потому что поле там и есть вся страница. */
+  --text-lead: 0.9375rem;
+  /* Витринные заголовки: обложка подборки, имя в сертификате. */
+  --text-display: 1.5rem;
+  --text-display-lg: 1.625rem;
+  /* Логотип. Три ступени, потому что на главной он ещё и отзывчивый. */
+  --text-logo: 2.375rem;
+  --text-logo-lg: 2.75rem;
+  --text-logo-xl: 4rem;
+
+  /* ── Ширины поверхностей (замер 26.08.2026) ─────────────────────────────
+     Шкалы ширин в проекте не было ВОВСЕ: 129 мест, 50 разных значений от 7 до
+     420px — каждое меню, поповер и диалог выбирали ширину сами. Та же болезнь,
+     что была с высотами до Ф12, только незамеченная: высоту хотя бы считал скрипт.
+
+     Ступени названы ролью, а не размером: `w-panel` говорит, ЧТО это, и следующий
+     поповер берёт ту же ширину, не думая. Пространство имён `--container-` — то,
+     из которого Tailwind делает утилиты ширины (w-, max-w-, min-w-); встроенные
+     ступени (xs, sm, md) не переопределены — в коде они не использовались ни разу,
+     а имя `max-w-md` для «карточки входа» ничего не значит.
+
+     ⚠️ В комментариях этого файла нельзя писать `w-*` со звёздочкой перед косой
+     чертой: последовательность закрывает комментарий, и сборка падает с
+     «Invalid declaration». Поймано ровно так, при первой же сборке.
+
+     Шаг 2.5rem (40px) плюс две роли с устоявшимся значением (карточка входа 380,
+     узкая страница 420 — по 7 и 5 совпадающих мест). Свип округляет ВВЕРХ, а не
+     к ближайшей: у ширины несимметричная цена ошибки — выросшая панель занимает
+     лишние пиксели, сузившаяся ломает содержимое переносом.
+
+     Разовая геометрия (иконка, полоска, колонка таблицы) ступени НЕ получает —
+     ей место на сетке 4px: `w-18`, `w-26`. Токен только там, где роль повторяется. */
+  --container-field-sm: 8rem; /* 128 — короткое поле в ряду (число, код) */
+  --container-field: 10rem; /* 160 — поле в ряду формы */
+  --container-field-lg: 12.5rem; /* 200 — широкое поле, селект с текстом */
+  --container-menu: 15rem; /* 240 — выпадающее меню, тултип */
+  --container-panel: 17.5rem; /* 280 — поповер, боковая колонка */
+  --container-panel-lg: 20rem; /* 320 — панель со списком */
+  --container-panel-xl: 22.5rem; /* 360 — панель с содержимым */
+  --container-form: 23.75rem; /* 380 — карточка входа/регистрации */
+  --container-note: 26.25rem; /* 420 — узкая страница-сообщение */
+  /* Страничные роли. Ширина страницы (1180) жила строкой в `control.ts` с точечным
+     отключением линта — «здесь ширина и живёт»; теперь она живёт ТАМ, ГДЕ ЖИВУТ
+     ВСЕ РАЗМЕРЫ, и отключение больше не нужно. */
+  --container-column: 32.5rem; /* 520 — узкая колонка, таблица настроек */
+  --container-hero: 37.5rem; /* 600 — герой-ввод генерации и поиска */
+  --container-prose: 40rem; /* 640 — сплошной текст: лендинг, гильдии, настройки */
+  --container-page-narrow: 45rem; /* 720 — страница-форма/текст целиком (PAGE_NARROW) */
+  --container-wide: 53.75rem; /* 860 — широкая секция админки */
+  --container-page: 73.75rem; /* 1180 — рамка страницы, одна на весь сайт */
 
   --radius-xl: 16px;
   --radius-lg: 11px;
@@ -46,6 +124,10 @@
   --radius: 0.25rem;
 
   --shadow-card: 0 30px 80px -30px rgba(0, 0, 0, 0.35);
+  /* Подъём героя — ввод генерации и поиск на главной. Теней было ДВЕ почти одинаковых
+     (0 18px 50px -24px и 0 12px 36px -14px), написанных числами в двух файлах: одна
+     роль, два значения, ни одного имени. Взята более мягкая. */
+  --shadow-hero: 0 12px 36px -14px rgb(0 0 0 / 0.22);
 }
 
 /*
@@ -290,38 +372,68 @@ textarea::placeholder {
   opacity: 0.55;
 }
 
-/* ── Моушен-система (Ф8 трека ui-system) ─────────────────────────────────
+/* ── Моушен-система (Ф8 трека ui-system; в тему Tailwind — 26.08.2026) ────
       Токены длительностей/изингов — ЕДИНСТВЕННЫЙ источник; свои ms в фичах
-      не пишем. Три класса появления:
-        .sf-overlay-in — бекдропы (fade);
-        .sf-pop-in     — поповеры/дропдауны/панели (fade + подъём + лёгкий scale);
-        .sf-rise-in    — нижние панели/бары (fade + подъём).
+      не пишем. Появление живёт УТИЛИТАМИ фреймворка, а не рукописными классами:
+        .animate-sf-fade — бекдропы и смена содержимого на месте;
+        .animate-sf-pop  — поповеры/дропдауны/панели (fade + подъём + лёгкий scale);
+        .animate-sf-rise — нижние панели/бары (fade + подъём).
+      До переезда это были свои классы `.sf-pop-in` — то есть слово `animate-`
+      в разметке ничего не значило, а половина мест писала длительность числом
+      (`duration-200` при токене 180). Теперь всё в одном пространстве имён.
+
+      `.sf-overlay-in` и `.sf-fade-in` были ОДНИМ И ТЕМ ЖЕ правилом под двумя
+      именами (обе — `sf-fade`); слились в одно.
+
       prefers-reduced-motion гасит ВСЁ глобально (блок ниже). ── */
 :root {
   --dur-fast: 120ms;
   --dur-base: 180ms;
   --dur-slow: 280ms;
+}
+
+@theme {
+  /* Изинг проекта ЗАМЕЩАЕТ дефолтный `ease-out` Tailwind: кривая у нас одна на всё,
+     и утилита `ease-out` обязана давать именно её — иначе рядом живут две разные
+     «плавности», одна из которых пришла из коробки незаметно. */
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+  --animate-sf-fade: sf-fade var(--dur-base) var(--ease-out);
+  --animate-sf-pop: sf-pop var(--dur-base) var(--ease-out);
+  --animate-sf-rise: sf-rise var(--dur-base) var(--ease-out);
+
+  @keyframes sf-fade {
+    from { opacity: 0; }
+  }
+  @keyframes sf-pop {
+    from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  }
+  @keyframes sf-rise {
+    from { opacity: 0; transform: translateY(8px); }
+  }
 }
-@keyframes sf-fade {
-  from { opacity: 0; }
-}
-@keyframes sf-pop {
-  from { opacity: 0; transform: translateY(4px) scale(0.98); }
-}
-@keyframes sf-rise {
-  from { opacity: 0; transform: translateY(8px); }
-}
-.sf-overlay-in { animation: sf-fade var(--dur-base) var(--ease-out); }
-/* Смена текста/контента НА МЕСТЕ (заголовок ленты активности, счётчики): без него
-   подмена читается как рывок, а подъём тут лишний — блок никуда не приезжает. */
-.sf-fade-in { animation: sf-fade var(--dur-base) var(--ease-out); }
-.sf-pop-in { animation: sf-pop var(--dur-base) var(--ease-out); }
-.sf-rise-in { animation: sf-rise var(--dur-base) var(--ease-out); }
+
 /* Модификатор скорости: крупному блоку (лента активности, раскрытый уровень)
    базовых 180 мс мало — движение большой площади читается рывком. Ставится
    ПОСЛЕ класса появления, иначе не переопределит длительность. */
-.sf-slow { animation-duration: var(--dur-slow); }
+@utility sf-slow {
+  animation-duration: var(--dur-slow);
+}
+
+/* Длительность ПЕРЕХОДА из токенов. У Tailwind нет пространства имён темы под
+   `duration-*`, поэтому это свои утилиты — но именно утилиты: они получают
+   варианты (`md:`, `hover:`) и видны в разметке как часть системы, а не как
+   число. До них в коде стояли `duration-200` и `duration-150` — соседние с
+   токенами 180 и 120, то есть разнобой ровно там, где токены и заведены. */
+@utility dur-fast {
+  transition-duration: var(--dur-fast);
+}
+@utility dur-base {
+  transition-duration: var(--dur-base);
+}
+@utility dur-slow {
+  transition-duration: var(--dur-slow);
+}
 
 /* ── ОЖИДАНИЕ, КОТОРОЕ НЕ МИГАЕТ ─────────────────────────────────────────
    Индикатор загрузки, показанный на 100 мс, — это не сообщение, а мигание: глаз
@@ -362,61 +474,66 @@ textarea::placeholder {
 }
 
 /* Клетка сетки индексации «лопается» при заполнении. */
-@keyframes cell-pop {
-  0% {
-    transform: scale(0.3);
+@theme {
+  --animate-cell-pop: cell-pop var(--dur-slow) var(--ease-out);
+
+  @keyframes cell-pop {
+    0% {
+      transform: scale(0.3);
+    }
+    55% {
+      transform: scale(1.18);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
-  55% {
-    transform: scale(1.18);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-.animate-cell-pop {
-  animation: cell-pop var(--dur-slow) var(--ease-out);
 }
 
 /* Одноразовая точка-подсказка у меню публикации: при первом открытии она
    расширяется короткой вспышкой и исчезает, будто лопнула. */
-@keyframes sf-hint-burst {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgb(var(--warn-rgb) / 0.55);
+@theme {
+  --animate-sf-hint-burst: sf-hint-burst var(--dur-slow) var(--ease-out) forwards;
+
+  @keyframes sf-hint-burst {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgb(var(--warn-rgb) / 0.55);
+    }
+    45% {
+      opacity: 1;
+      transform: scale(1.45);
+      box-shadow: 0 0 0 3px rgb(var(--warn-rgb) / 0.3);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(2.4);
+      box-shadow: 0 0 0 7px rgb(var(--warn-rgb) / 0);
+    }
   }
-  45% {
-    opacity: 1;
-    transform: scale(1.45);
-    box-shadow: 0 0 0 3px rgb(var(--warn-rgb) / 0.3);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(2.4);
-    box-shadow: 0 0 0 7px rgb(var(--warn-rgb) / 0);
-  }
-}
-.sf-hint-burst {
-  animation: sf-hint-burst var(--dur-slow) var(--ease-out) forwards;
 }
 
 /* Плавное появление сменяемой фразы в лоадере генерации. */
-@keyframes fadein {
-  from {
-    opacity: 0;
-    transform: translateY(3px);
+@theme {
+  /* лоадер генерации: намеренно медленнее базовых токенов */
+  --animate-fadein: fadein 500ms var(--ease-out);
+
+  @keyframes fadein {
+    from {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-fadein {
-  animation: fadein 500ms var(--ease-out); /* лоадер генерации: намеренно медленнее базовых токенов */
 }
 
-/* Логотип SetFork — шрифт с прямыми углами (см. layout, --font-logo). */
-.font-logo {
+/* Логотип SetFork — шрифт с прямыми углами (см. layout, --font-logo). Утилитой,
+   а не голым классом: получает варианты и стоит в одном ряду с font-sans/font-mono. */
+@utility font-logo {
   font-family: var(--font-logo), var(--font-sans);
   letter-spacing: 0.02em;
 }
@@ -424,16 +541,17 @@ textarea::placeholder {
 /* Плавное появление бокового меню: затемнение фона (общий .sf-overlay-in) +
    выезд панели слева. Дубль fade-in удалён — бекдроп берёт sf-fade;
    reduced-motion — глобальным блоком моушен-системы выше. */
-@keyframes slide-in-left {
-  from {
-    transform: translateX(-100%);
+@theme {
+  --animate-slide-in-left: slide-in-left var(--dur-slow) var(--ease-out);
+
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
   }
-  to {
-    transform: translateX(0);
-  }
-}
-.animate-slide-in-left {
-  animation: slide-in-left var(--dur-slow) var(--ease-out);
 }
 
 /* Emoji-mart: подгоняем фон/текст/инпут под наши токены (иначе фон отличается),

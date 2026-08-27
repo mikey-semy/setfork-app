@@ -10,10 +10,24 @@ import { cn } from '@/shared/lib/cn'
 export type CheckboxProps = React.ComponentProps<'input'>
 
 export function Checkbox({ className, ...props }: CheckboxProps) {
-  return <input type="checkbox" className={cn('accent-(--accent)', className)} {...props} />
+  return <input type="checkbox" className={cn('accent-accent', className)} {...props} />
 }
 
 /** Строка «чекбокс + заголовок + подпись» — форма чекбокс-списков (фильтры, настройки). */
+/**
+ * Переключатель ОДНОГО ИЗ НЕСКОЛЬКИХ. Тот же примитив, что чекбокс, только тип другой —
+ * и заведён по той же причине: без него радиокнопки красились кто во что. Замер
+ * 26.08.2026 нашёл `accent-current` в списке причин жалобы (то есть цвет наследовался
+ * от текста и менялся вместе с ним) при `accent-accent` у соседних чекбоксов.
+ *
+ * ⚠️ Радио, СПРЯТАННОЕ `sr-only` под своей карточкой-подписью, примитивом не заменяют:
+ * это признанный приём (нативная семантика и клавиатура остаются, вид рисует label),
+ * и вмешиваться в него нечем.
+ */
+export function Radio({ className, ...props }: React.ComponentProps<'input'>) {
+  return <input type="radio" className={cn('accent-accent', className)} {...props} />
+}
+
 export function CheckboxRow({
   checked,
   onChange,
@@ -33,10 +47,10 @@ export function CheckboxRow({
     <label className={cn('flex cursor-pointer items-start gap-2.5 rounded-md px-1.5 py-1.5 hover:bg-surface-2', className)}>
       <Checkbox checked={checked} onChange={onChange} className="mt-0.5" />
       <span className="min-w-0">
-        <span className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-ink">
+        <span className="flex items-center gap-1.5 text-body font-semibold text-ink">
           {icon} {title}
         </span>
-        {sub && <span className="block text-[0.6875rem] leading-snug text-muted">{sub}</span>}
+        {sub && <span className="block text-caption leading-snug text-muted">{sub}</span>}
       </span>
     </label>
   )

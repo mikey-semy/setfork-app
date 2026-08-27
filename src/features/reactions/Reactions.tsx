@@ -6,6 +6,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import type { ReactionAgg } from './constants'
 import { toggleReaction } from './actions'
 import { t, type Lang } from '@/shared/i18n'
+import { Chip } from '@/shared/ui/Chip'
 
 export function Reactions({
   targetType,
@@ -34,17 +35,10 @@ export function Reactions({
     <div className="flex flex-wrap items-center gap-1.5">
       {shown.map((r) => (
         <Tooltip key={r.emoji} label={r.mine ? t('reactions.removeReaction', lang) : t('reactions.reaction', lang)}>
-          <button
-            type="button"
-            disabled={!canReact || pending}
-            onClick={() => react(r.emoji)}
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.78125rem] transition-colors disabled:opacity-60 ${
-              r.mine ? 'border-accent bg-accent/10 text-ink' : 'border-border bg-surface-2 text-ink-2 hover:border-border-strong'
-            }`}
-          >
+          <Chip disabled={!canReact || pending} onClick={() => react(r.emoji)} selected={r.mine}>
             <span>{r.emoji}</span>
             <span className="tabular-nums">{r.count}</span>
-          </button>
+          </Chip>
         </Tooltip>
       ))}
 
@@ -56,13 +50,9 @@ export function Reactions({
           tooltip={t('reactions.addReaction', lang)}
           onPick={react}
           button={
-            <button
-              type="button"
-              aria-label={t('reactions.addReaction', lang)}
-              className="inline-flex items-center rounded-full border border-border bg-surface-2 px-2 py-1 text-muted hover:text-ink"
-            >
+            <Chip aria-label={t('reactions.addReaction', lang)} className="text-muted">
               <SmilePlus size={14} />
-            </button>
+            </Chip>
           }
         />
       )}

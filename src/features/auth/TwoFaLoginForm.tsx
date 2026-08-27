@@ -24,12 +24,12 @@ export function TwoFaLoginForm({ lang }: { lang: Lang }) {
         autoComplete="one-time-code"
         inputMode="numeric"
         autoFocus
-        className="text-center font-mono text-[1rem] tracking-widest"
+        className="text-center font-mono text-title tracking-widest"
       />
       <Button type="submit" variant="primary" size="lg" disabled={pending} className="w-full">
         {ru ? 'Войти' : 'Verify'}
       </Button>
-      <Link href="/login" className="text-center text-[0.78125rem] text-ink-2 hover:text-ink">
+      <Link href="/login" className="text-center text-body-sm text-ink-2 hover:text-ink">
         {ru ? '← назад ко входу' : '← back to sign in'}
       </Link>
     </form>

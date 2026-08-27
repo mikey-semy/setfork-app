@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, MessageSquare, GitPullRequestClosed, Loader2, X, ShieldOff } from 'lucide-react'
+import { Check, MessageSquare, GitPullRequestClosed, X, ShieldOff } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -13,6 +13,8 @@ import { dismissSuggestionReview, submitSuggestionReview, withdrawSuggestionRevi
 import type { ReviewView, Verdict } from './review-model'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 
 export interface ReviewLabels {
   title: string
@@ -77,7 +79,7 @@ export function ReviewPanel({
   return (
     <div className={cardClass()}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="text-[0.8125rem] font-semibold text-ink">{labels.title}</span>
+        <span className="text-body font-semibold text-ink">{labels.title}</span>
         {blocking && <Badge variant="danger">{labels.blocked}</Badge>}
       </div>
 
@@ -90,7 +92,7 @@ export function ReviewPanel({
               <div key={r.id} className="flex gap-2">
                 <Avatar handle={r.reviewer.handle} avatarUrl={r.reviewer.avatarUrl} size={20} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline gap-x-2 text-[0.78125rem]">
+                  <div className="flex flex-wrap items-baseline gap-x-2 text-body-sm">
                     <span className="font-semibold text-ink">{r.reviewer.name || r.reviewer.handle}</span>
                     {/* Снятый вердикт показываем приглушённо и зачёркнуто: он был,
                         но принятие больше не держит — обе половины важны. */}
@@ -100,10 +102,10 @@ export function ReviewPanel({
                     <span className="text-muted">{timeAgo(r.createdAt, lang)}</span>
                   </div>
                   {r.body && (
-                    <div className={`whitespace-pre-wrap text-[0.8125rem] [overflow-wrap:anywhere] ${r.dismissed ? 'text-muted' : 'text-ink-2'}`}>{r.body}</div>
+                    <div className={`whitespace-pre-wrap text-body [overflow-wrap:anywhere] ${r.dismissed ? 'text-muted' : 'text-ink-2'}`}>{r.body}</div>
                   )}
                   {r.dismissed && (
-                    <div className="mt-0.5 text-[0.78125rem] text-muted [overflow-wrap:anywhere]">
+                    <div className="mt-0.5 text-body-sm text-muted [overflow-wrap:anywhere]">
                       {labels.dismissedBy}
                       {r.dismissed.by ? ` @${r.dismissed.by}` : ''}: {r.dismissed.reason}
                     </div>
@@ -119,12 +121,12 @@ export function ReviewPanel({
       )}
 
       {isAuthor ? (
-        <div className="text-[0.78125rem] text-muted">{labels.ownAuthor}</div>
+        <div className="text-body-sm text-muted">{labels.ownAuthor}</div>
       ) : (
         canReview && (
           <div className="border-t border-border pt-2.5">
             {myVerdict && (
-              <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.78125rem] text-ink-2">
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-body-sm text-ink-2">
                 <span>
                   {labels.yourReview}: <b className={VERDICT_META[myVerdict].cls}>{labels[VERDICT_META[myVerdict].key]}</b>
                 </span>
@@ -137,13 +139,7 @@ export function ReviewPanel({
                 </Button>
               </div>
             )}
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={labels.placeholder}
-              rows={3}
-              className={buttonClass({ className: 'w-full resize-y bg-surface-2 outline-hidden focus-visible:border-border-strong' })}
-            />
+            <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={labels.placeholder} rows={3} className="resize-y" />
             {/* Ряд вердиктов: одна высота, к правому краю (thumb-зона). На мобиле
                 подписи короткие — иконка + одно-два слова. */}
             <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
@@ -154,7 +150,7 @@ export function ReviewPanel({
                 <GitPullRequestClosed size={13} /> {labels.requestChanges}
               </Button>
               <Button variant="primary" disabled={pending} onClick={() => send('approve')}>
-                {pending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} {labels.approve}
+                {pending ? <Spinner size="sm" /> : <Check size={13} />} {labels.approve}
               </Button>
             </div>
           </div>
@@ -186,23 +182,19 @@ function DismissButton({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`${labels.dismiss} @${reviewerHandle}`}
-          title={labels.dismiss}
-          className="grid size-8 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-        >
+        <IconButton variant="ghost" label={`${labels.dismiss} className="shrink-0 text-muted hover:bg-surface-2 hover:text-ink" @${reviewerHandle}`}
+          title={labels.dismiss}>
           <ShieldOff size={14} />
-        </button>
+        </IconButton>
       </PopoverTrigger>
       <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-3">
-        <div className="mb-2 text-[0.78125rem] font-medium text-ink">{labels.dismiss}</div>
+        <div className="mb-2 text-body-sm font-medium text-ink">{labels.dismiss}</div>
         <Textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder={labels.dismissReason}
           rows={3}
-          className="text-[0.8125rem]"
+          className="text-body"
         />
         <div className="mt-2 flex justify-end">
           <Button
@@ -218,7 +210,7 @@ function DismissButton({
               })
             }
           >
-            {pending ? <Loader2 size={13} className="animate-spin" /> : <ShieldOff size={13} />} {labels.dismiss}
+            {pending ? <Spinner size="sm" /> : <ShieldOff size={13} />} {labels.dismiss}
           </Button>
         </div>
       </PopoverContent>

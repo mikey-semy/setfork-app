@@ -13,7 +13,7 @@ export default async function AboutPage() {
   return (
     <div className={PAGE_NARROW}>
       <PageHeader title={t('aboutProject', lang)} />
-      <p className="text-[0.875rem] leading-relaxed text-ink-2">{t('aboutBody', lang)}</p>
+      <p className="text-body-lg leading-relaxed text-ink-2">{t('aboutBody', lang)}</p>
     </div>
   )
 }

@@ -33,10 +33,10 @@ export function CourseOutline({ lessons, showProgress, lang }: { lessons: Outlin
           return (
             <li key={`${l.anchor}-${i}`}>
               <a href={`#${l.anchor}`} className={buttonClass({ variant: 'ghost', className: 'hover:text-accent' })}>
-                <span className="min-w-4 shrink-0 text-right font-mono text-[0.6875rem] text-muted">{num ?? i + 1}</span>
+                <span className="min-w-4 shrink-0 text-right font-mono text-caption text-muted">{num ?? i + 1}</span>
                 <span className="min-w-0 flex-1 truncate">{text}</span>
                 {showProgress && l.quizTotal > 0 && (
-                  <span className={`inline-flex shrink-0 items-center gap-0.5 font-mono text-[0.6875rem] ${done ? 'text-ok' : 'text-muted'}`}>
+                  <span className={`inline-flex shrink-0 items-center gap-0.5 font-mono text-caption ${done ? 'text-ok' : 'text-muted'}`}>
                     {done && <Check size={12} />}
                     {l.quizPassed}/{l.quizTotal}
                   </span>

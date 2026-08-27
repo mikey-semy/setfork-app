@@ -11,7 +11,7 @@ import { Tooltip } from './Tooltip'
  * всем в обзоре и поиске») съедают экран, а выбор из двух-трёх состояний узнаётся по
  * иконке.
  */
-const BOX = `grid size-9 cursor-pointer place-items-center rounded-[0.3125rem] text-ink-2 transition-colors hover:text-ink ${TOUCH_BOX}`
+const BOX = `grid size-9 cursor-pointer place-items-center rounded text-ink-2 transition-colors hover:text-ink ${TOUCH_BOX}`
 const CHECKED = 'has-[:checked]:bg-accent has-[:checked]:text-white'
 
 export type IconOption = { value: string; Icon: LucideIcon; label: string; hint?: string; checked?: boolean }

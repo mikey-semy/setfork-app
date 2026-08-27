@@ -6,6 +6,7 @@ import { Terminal, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Badge } from '@/shared/ui/badge'
 
 // Промо-слот сайдбара (место под «свою рекламу», как Copilot-карточка у GitHub).
 // Одна активная кампания; id — для повторного показа после смены кампании.
@@ -40,14 +41,14 @@ export function PromoCard({ lang }: { lang: Lang }) {
 
   if (hidden) return null
   return (
-    <div className={cardClass({ className: 'relative overflow-hidden bg-linear-to-br from-(--accent-soft) to-surface' })}>
+    <div className={cardClass({ className: 'relative overflow-hidden bg-linear-to-br from-accent-soft to-surface' })}>
       <button type="button" onClick={dismiss} className={buttonClass({ variant: 'ghost', size: 'sm', className: 'absolute right-2 top-2 size-7 p-0' })} aria-label="Dismiss">
         <X size={13} />
       </button>
-      <span className="inline-block rounded-full bg-accent px-2 py-0.5 text-[0.6875rem] font-semibold text-white">{c.badge}</span>
+      <Badge variant="accentSolid" className="inline-block">{c.badge}</Badge>
       <div className="mt-2 flex items-start gap-2">
         <Terminal size={16} className="mt-0.5 shrink-0 text-accent" />
-        <div className="text-[0.875rem] font-semibold leading-snug text-ink">{c.title}</div>
+        <div className="text-body-lg font-semibold leading-snug text-ink">{c.title}</div>
       </div>
       <Link
         href={PROMO.href}

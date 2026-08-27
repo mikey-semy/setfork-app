@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
+import { IconButton } from '@/shared/ui/IconButton'
 import { SearchField } from '@/shared/ui/SearchField'
 
 // Поиск на лендинге: печатаешь → Enter/стрелка → /explore?q=…, с кнопкой очистки.
@@ -19,11 +20,11 @@ export function HeroSearch({ placeholder, clearLabel }: { placeholder: string; c
         e.preventDefault()
         go()
       }}
-      className="flex w-full max-w-[37.5rem] items-center gap-3 rounded-[0.875rem] border border-border bg-surface px-4 py-3.5 shadow-[0_12px_36px_-14px_rgba(0,0,0,.22)]"
+      className="flex w-full max-w-hero items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3.5 shadow-hero"
     >
       <SearchField
         variant="bare"
-        size="hero"
+        size="xl"
         value={q}
         onValueChange={setQ}
         placeholder={placeholder}
@@ -31,9 +32,11 @@ export function HeroSearch({ placeholder, clearLabel }: { placeholder: string; c
         clearLabel={clearLabel}
         autoFocus
       />
-      <button type="submit" className="grid h-[2.125rem] w-[2.125rem] shrink-0 place-items-center rounded-md bg-primary text-primary-fg" aria-label="Search">
+      {/* Ступень ряда, а не своя: рядом стоит поле-герой `xl`, и 34px против 44px
+          читались ступенькой ровно там, где страница смотрит на человека. */}
+      <IconButton type="submit" size="xl" variant="primary" label="Search">
         <ArrowRight size={16} />
-      </button>
+      </IconButton>
     </form>
   )
 }

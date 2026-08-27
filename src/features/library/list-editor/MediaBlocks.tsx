@@ -11,6 +11,7 @@ import { LineField } from './block-fields'
 import { FileDrop } from './FileDrop'
 import { SlashMenu, useSlashMenu } from './SlashMenu'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 // Загрузка СВОИХ видеофайлов выключена по умолчанию: держать объёмы без дохода
 // нечем. Код на месте и включается флагом, когда появится хостинг (S3/Cloudflare
@@ -29,8 +30,7 @@ type BodyProps = {
 function ImagePreview({ src, maxH, onRemove, lang }: { src: string; maxH: string; onRemove: () => void; lang: Lang }) {
   return (
     <div className="relative w-fit">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" className={`${maxH} rounded-md border border-border`} />
+      <SmartImage src={src} alt="" className={`${maxH} rounded-md border border-border`} />
       <button
         type="button"
         onClick={onRemove}
@@ -48,7 +48,7 @@ export function ImageBlockBody({ item, onPatch, uploading, onFile, lang }: BodyP
   return (
     <div className="flex flex-col gap-2">
       {item.imagePreview ? (
-        <ImagePreview src={item.imagePreview} maxH="max-h-[20rem]" onRemove={() => onPatch({ imageKey: '', imagePreview: '' })} lang={lang} />
+        <ImagePreview src={item.imagePreview} maxH="max-h-80" onRemove={() => onPatch({ imageKey: '', imagePreview: '' })} lang={lang} />
       ) : (
         <FileDrop kind="image" uploading={uploading} onFile={onFile} lang={lang} />
       )}
@@ -92,7 +92,7 @@ export function VideoBlockBody({ item, onPatch, uploading, onFile, lang }: BodyP
 export function FileBlockBody({ item, onPatch, uploading, onFile, lang }: BodyProps) {
   if (!item.fileUrl) return <FileDrop kind="file" uploading={uploading} onFile={onFile} lang={lang} />
   return (
-    <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.8125rem]">
+    <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-body">
       <Paperclip size={14} className="shrink-0 text-muted" />
       <a href={item.fileUrl} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-accent hover:underline">
         {item.fileName || item.fileUrl}
@@ -110,6 +110,9 @@ export function FileBlockBody({ item, onPatch, uploading, onFile, lang }: BodyPr
 export function TextBlockBody({ value, onChange, onRetype, lang }: { value: string; onChange: (v: string) => void; onRetype: (type: BlockType) => void; lang: Lang }) {
   const menu = useSlashMenu({ value, lang, onPick: onRetype })
   return (
+    // Обёртка ловит клавиши для slash-меню, всплывшие от поля ввода внутри; своей роли
+    // у неё нет.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- обёртка slash-меню
     <div className="relative" onKeyDown={menu.onKeyDown}>
       <BubbleTextEditor
         value={value}

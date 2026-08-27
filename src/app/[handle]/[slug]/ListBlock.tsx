@@ -53,7 +53,7 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
             />
           </span>
         )}
-        <Markdown className={`text-[0.875rem] leading-relaxed text-ink-2${canDig ? ' pr-10' : ''}`}>{renderWikiLinks(md)}</Markdown>
+        <Markdown className={`text-body-lg leading-relaxed text-ink-2${canDig ? ' pr-10' : ''}`}>{renderWikiLinks(md)}</Markdown>
       </div>
     )
   },
@@ -65,8 +65,8 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
     const caption = typeof step.content?.caption === 'string' ? step.content.caption : ''
     return (
       <figure className="break-inside-avoid">
-        <SmartImage src={url} alt={caption || t('screenshot', lang)} className="max-h-[32.5rem] w-auto rounded-lg border border-border" />
-        {caption && <figcaption className="mt-1.5 text-[0.78125rem] text-muted">{caption}</figcaption>}
+        <SmartImage src={url} alt={caption || t('screenshot', lang)} className="max-h-130 w-auto rounded-lg border border-border" />
+        {caption && <figcaption className="mt-1.5 text-body-sm text-muted">{caption}</figcaption>}
       </figure>
     )
   },
@@ -87,7 +87,7 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
     if (!url) return null
     const name = typeof step.content?.name === 'string' ? step.content.name : ''
     return (
-      <SafeLink href={url} className="inline-flex max-w-full items-center gap-2 break-inside-avoid rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.8125rem] text-accent hover:border-border-strong">
+      <SafeLink href={url} className="inline-flex max-w-full items-center gap-2 break-inside-avoid rounded-md border border-border bg-surface-2 px-3 py-2 text-body text-accent hover:border-border-strong">
         <Paperclip size={15} className="shrink-0 text-muted" />
         <span className="min-w-0 truncate">{name || url}</span>
       </SafeLink>

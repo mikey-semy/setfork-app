@@ -2,12 +2,17 @@
 
 import Link from 'next/link'
 import { useLayoutEffect, useRef, useState, useTransition } from 'react'
-import { ArrowUp, Loader2 } from 'lucide-react'
+import { ArrowUp } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
+import { buttonClass } from '@/shared/ui/button-style'
 import { DEFAULT_DETAIL, DETAIL_LEVELS, detailLabel, type DetailLevel } from '@/shared/ai/detail-level'
 import { kindLabel, LIST_KINDS, type ListKind } from '@/shared/ai/list-kind'
 import { startGeneration } from './actions'
+import { Spinner } from '@/shared/ui/Spinner'
+import { Textarea } from '@/shared/ui/textarea'
+import { IconButton } from '@/shared/ui/IconButton'
+import { Chip } from '@/shared/ui/Chip'
 
 /**
  * Старт генерации как у поисковика: большое поле по центру + «живые» варианты-подсказки.
@@ -19,8 +24,10 @@ import { startGeneration } from './actions'
  * во flex, а перелёт в низ — плавным transform без магических величин.
  */
 
-// eslint-disable-next-line no-restricted-syntax -- герой-ввод главной: 15px — прямая пара к SearchField lg, сознательно вне лестницы ролей
-const HERO_INPUT = 'max-h-40 min-h-[2.75rem] w-full resize-none bg-transparent px-1.5 py-2 text-[0.9375rem] leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70'
+// Герой-ввод главной: ступень `xl` шкалы (44px) и роль кегля `text-lead` — те же, что
+// у поиска-героя рядом. До 26.08.2026 обе величины стояли здесь числами.
+// Только геометрия героя: рамку, фон, фокус и плейсхолдер даёт примитив (variant="bare").
+const HERO_INPUT = 'max-h-40 min-h-11 px-1.5 py-2 text-lead leading-relaxed'
 
 export function GenerateForm({
   lang,
@@ -101,7 +108,7 @@ export function GenerateForm({
       {/* Уведомления (нет ключа / ошибки) и лоадер — absolute сверху: не влияют на центровку поля. */}
       {notice && !launching && (
         <div className="pointer-events-none absolute inset-x-4 top-4 z-10 sm:inset-x-6">
-          <div className={cn('mx-auto max-w-[37.5rem] rounded-md border bg-surface px-3 py-2.5 text-[0.8125rem]', noticeTone[notice.tone])}>
+          <div className={cn('mx-auto max-w-hero rounded-md border bg-surface px-3 py-2.5 text-body', noticeTone[notice.tone])}>
             {notice.text}
           </div>
         </div>
@@ -109,9 +116,9 @@ export function GenerateForm({
       {launching && (
         <div className="animate-fadein absolute inset-x-4 top-4 z-10 sm:inset-x-6">
           {/* Спокойный статус вместо мем-заставки: показываем сам запрос и что идёт работа. */}
-          <div className="mx-auto flex max-w-[37.5rem] items-center gap-2.5 rounded-lg border border-border bg-surface px-4 py-3">
-            <Loader2 size={15} className="shrink-0 animate-spin text-accent" />
-            <span className="min-w-0 truncate text-[0.8125rem] text-ink-2">
+          <div className="mx-auto flex max-w-hero items-center gap-2.5 rounded-lg border border-border bg-surface px-4 py-3">
+            <Spinner size="md" className="text-accent" />
+            <span className="min-w-0 truncate text-body text-ink-2">
               {t('generation.buildingYourList', lang)}: <span className="text-ink">{q.trim()}</span>
             </span>
           </div>
@@ -119,15 +126,16 @@ export function GenerateForm({
       )}
 
       {/* Поле — перелетающий элемент (boxRef). По центру в покое, внизу после старта. */}
-      <div ref={boxRef} className="mx-auto w-full max-w-[37.5rem] will-change-transform">
+      <div ref={boxRef} className="mx-auto w-full max-w-hero will-change-transform">
         <form
           onSubmit={(e) => {
             e.preventDefault()
             launch(q)
           }}
-          className="flex items-end gap-2 rounded-[1.125rem] border border-border bg-surface px-3 py-2.5 shadow-[0_18px_50px_-24px_rgba(0,0,0,.34)] transition-colors focus-within:border-border-strong"
+          className="flex items-end gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 shadow-hero transition-colors focus-within:border-border-strong"
         >
-          <textarea
+          <Textarea
+            variant="bare"
             name="q"
             autoFocus
             rows={1}
@@ -143,42 +151,29 @@ export function GenerateForm({
             placeholder={placeholder}
             className={HERO_INPUT}
           />
-          <button
+          <IconButton
             type="submit"
+            size="lg"
+            variant="primary"
             disabled={!q.trim() || !aiOn || launching}
-            aria-label={t('generateWithAi', lang)}
-            className="grid size-[2.5rem] shrink-0 place-items-center rounded-full bg-primary text-primary-fg transition-opacity disabled:opacity-40"
+            label={t('generateWithAi', lang)}
+            className="shrink-0 rounded-full"
           >
-            {launching ? <Loader2 size={17} className="animate-spin" /> : <ArrowUp size={18} />}
-          </button>
+            {launching ? <Spinner size="lg" /> : <ArrowUp size={18} />}
+          </IconButton>
         </form>
 
         {/* Тип списка — ДО генерации: «Авто» угадывает по запросу, явный выбор экономит
             целую генерацию при промахе. На узком экране пилюли переносятся, не прячутся. */}
         {!launching && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[0.78125rem]">
-            <button
-              type="button"
-              onClick={() => setKind('')}
-              className={cn(
-                'rounded-full border px-2.5 py-[0.1875rem] transition-colors',
-                kind === '' ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
-              )}
-            >
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-body-sm">
+            <Chip onClick={() => setKind('')} selected={kind === ''}>
               {t('generation.auto', lang)}
-            </button>
+            </Chip>
             {LIST_KINDS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setKind(k)}
-                className={cn(
-                  'rounded-full border px-2.5 py-[0.1875rem] transition-colors',
-                  kind === k ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
-                )}
-              >
+              <Chip key={k} onClick={() => setKind(k)} selected={kind === k}>
                 {kindLabel(k, lang === 'ru')}
-              </button>
+              </Chip>
             ))}
           </div>
         )}
@@ -186,19 +181,11 @@ export function GenerateForm({
         {/* Объём списка. Уровень уезжает в колонку generations.detail, поэтому переживает
             «ещё вариант» — и его же можно переключить потом прямо в чате. */}
         {!launching && (
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[0.78125rem]">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-body-sm">
             {DETAIL_LEVELS.map((lv) => (
-              <button
-                key={lv}
-                type="button"
-                onClick={() => setDetail(lv)}
-                className={cn(
-                  'rounded-full border px-2.5 py-[0.1875rem] transition-colors',
-                  detail === lv ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
-                )}
-              >
+              <Chip key={lv} onClick={() => setDetail(lv)} selected={detail === lv}>
                 {detailLabel(lv, lang === 'ru')}
-              </button>
+              </Chip>
             ))}
           </div>
         )}
@@ -206,7 +193,7 @@ export function GenerateForm({
         {/* Прошлые черновики: за историей логичнее всего идти отсюда же. */}
         {!launching && (
           <div className="mt-3 text-center">
-            <Link href="/generate/history" className="text-[0.78125rem] text-muted hover:text-ink">
+            <Link href="/generate/history" className="text-body-sm text-muted hover:text-ink">
               {t('generation.draftHistory', lang)}
             </Link>
           </div>
@@ -222,7 +209,7 @@ export function GenerateForm({
                 type="button"
                 onClick={() => launch(s)}
                 disabled={!aiOn}
-                className="rounded-full border border-border bg-surface-2 px-3.5 py-[0.4375rem] text-[0.8125rem] text-ink-2 transition-colors hover:text-ink disabled:opacity-50"
+                className={buttonClass({ variant: 'outline', className: 'rounded-full' })}
               >
                 {s}
               </button>

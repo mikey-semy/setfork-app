@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Avatar } from '@/shared/ui/Avatar'
+import { IconButton } from '@/shared/ui/IconButton'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { useRouter } from 'next/navigation'
 
@@ -69,7 +70,9 @@ export function ListSwitcher({
     const visLabel = t(labelKey, lang)
     // span без роли не может нести aria-label (aria-prohibited-attr) — иконке нужна role="img".
     return (
-      <span role="img" title={visLabel} aria-label={visLabel} className="shrink-0 text-muted">
+      // Имя значку даёт aria-label; нативный title его дублировал и на пальце не
+      // показывался вовсе. Подсказка тут не нужна: подпись видимости стоит рядом.
+      <span role="img" aria-label={visLabel} className="shrink-0 text-muted">
         <Icon size={12} />
       </span>
     )
@@ -127,17 +130,13 @@ export function ListSwitcher({
     >
       <Tooltip label={label}>
         <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label={label}
-            className="grid size-7 shrink-0 place-items-center rounded-md text-ink-2 outline-hidden hover:bg-surface-2 hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong"
-          >
+          <IconButton size="sm" variant="ghost" label={label} className="shrink-0 text-ink-2 outline-hidden hover:bg-surface-2 hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong">
             <ChevronDown size={14} />
-          </button>
+          </IconButton>
         </PopoverTrigger>
       </Tooltip>
       {/* Ширину режем по экрану: на 360px поповер не должен вылезать за край. */}
-      <PopoverContent align="start" className="w-[18.75rem] max-w-[calc(100vw-16px)] overflow-hidden p-0">
+      <PopoverContent align="start" className="w-panel-lg max-w-[calc(100vw-16px)] overflow-hidden p-0">
         <PickerPanel
           title={label}
           onClose={() => setOpen(false)}
@@ -180,7 +179,7 @@ export function ListSwitcher({
             />
           ))}
           {shown.length === 0 && (
-            <div className="px-2 py-3 text-[0.78125rem] text-muted">
+            <div className="px-2 py-3 text-body-sm text-muted">
               {failed ? t('loadFailed', lang) : t('nothingFound', lang)}
             </div>
           )}

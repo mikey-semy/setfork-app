@@ -40,7 +40,7 @@ import { LOOPS } from './loops'
  * должен закричать, а не тихо выключиться. Тихое выключение — ровно тот отказ, ради
  * устранения которого линза 06 и писалась. Замечание авто-ревью на fe#800 (P3).
  */
-const прогрессПетли = (loop: string): readonly string[] => LOOPS.find((l) => l.name === loop)?.progress ?? []
+const loopProgress = (loop: string): readonly string[] => LOOPS.find((l) => l.name === loop)?.progress ?? []
 
 /** Сколько последних записей смотрим. Больше — дольше «помним» давний прогресс. */
 const WINDOW = 12
@@ -69,8 +69,8 @@ export async function stallReport(loop: string, window = WINDOW): Promise<StallR
     .orderBy(desc(agentActions.occurredAt))
     .limit(window)
 
-  const дела = прогрессПетли(loop)
-  const isProgress = (a: string, s: string) => дела.includes(a) && s === 'ok'
+  const steps = loopProgress(loop)
+  const isProgress = (a: string, s: string) => steps.includes(a) && s === 'ok'
   let sinceProgress = 0
   let progress = 0
   let found = false

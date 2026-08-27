@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/shared/providers/theme-provider'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { avatarSrc } from '@/shared/media'
 import { getBrowserNotifyEnabled, getNotifications, getUnreadCount } from '@/features/notifications/queries'
 import { getUserTemplates } from '@/features/library/queries'
@@ -12,6 +13,8 @@ import { SIDEBAR_LISTS } from '@/shared/lib/paging'
 import { listVisibilityState } from '@/features/library/list-visibility'
 import { getUserAppearance } from '@/features/settings/appearance'
 import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
+import { LAYER } from '@/shared/ui/control'
+import { buttonClass } from '@/shared/ui/button-style'
 import { HydrationSignal } from '@/shared/ui/HydrationSignal'
 import { UpdateBanner } from '@/shared/ui/UpdateBanner'
 import { getBuildId } from '@/shared/version'
@@ -206,6 +209,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <body>
+        {/* ПЕРЕХОД К СОДЕРЖИМОМУ — первая цель Tab на любой странице.
+            Без него человек с клавиатуры и диктором обязан на КАЖДОЙ странице пройти
+            шапку и весь боковой список, прежде чем добраться до текста (WCAG 2.4.1
+            «Обход блоков»). Ссылка не видна, пока не получит фокус — приём стандартный,
+            так сделано у GitHub и в государственных дизайн-системах. */}
+        <a href="#main" className={buttonClass({ variant: 'outline', className: `sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 ${LAYER.toast}` })}>
+          {t('skipToContent', lang)}
+        </a>
         <HydrationSignal />
         {/* Локальный выбор (localStorage) приоритетнее аккаунтного SSR — мгновенная
             реакция на этом устройстве; иначе остаются data-атрибуты из аккаунта. */}
@@ -226,7 +237,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </Suspense>
                 <div className="flex flex-1">
                   <Sidebar lang={lang} authed={!!navUser} topLists={topLists} />
-                  <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+                  {/* tabIndex=-1: цель перехода обязана уметь ПРИНЯТЬ фокус, иначе браузер
+                      прокрутит страницу, но чтение диктора продолжится со старого места. */}
+                  <main id="main" tabIndex={-1} className="flex min-w-0 flex-1 flex-col outline-hidden">
+                    {children}
+                  </main>
                 </div>
               </SidebarProvider>
               <Footer lang={lang} />
@@ -236,7 +251,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {user && browserNotify && <BrowserNotifier enabled />}
             </div>
           </TooltipProvider>
-          <AppToaster />
+          <AppToaster lang={lang} />
         </ThemeProvider>
         {process.env.NEXT_PUBLIC_UMAMI_URL && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <script

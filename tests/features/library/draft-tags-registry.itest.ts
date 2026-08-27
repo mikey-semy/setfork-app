@@ -17,7 +17,7 @@ import { resetTables } from '../../helpers/reset-db'
  * Требует живого ядра: публикация идёт обычным путём записи, через git-коммит.
  */
 const CORE = process.env.SETFORK_CORE_ADDR
-const описание = CORE ? describe : describe.skip
+const description = CORE ? describe : describe.skip
 
 const { db, tags, templates, users } = await import('@/shared/db')
 const { registerTagsRegistrar, publishDraftFor, upsertDraft } = await import('@/features/library/draft')
@@ -26,7 +26,7 @@ const { listStore } = await import('@/features/library/list-store')
 
 let ownerId = ''
 
-описание('теги черновика попадают в реестр', () => {
+description('теги черновика попадают в реестр', () => {
   beforeAll(async () => {
     await resetTables([templates, users, tags])
     const [u] = await db.insert(users).values({ handle: 'tagger', email: 'tagger@x.dev', name: 'T' }).returning({ id: users.id })

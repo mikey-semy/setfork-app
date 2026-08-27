@@ -7,6 +7,8 @@ import { UserLine } from '@/shared/ui/UserLine'
 import { addCollaborator, removeCollaborator } from './actions'
 import type { CollaboratorRow } from './queries'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Badge } from '@/shared/ui/badge'
+import { Input } from '@/shared/ui/input'
 
 /** Управление соавторами (только владелец; страница settings уже owner-gated). */
 export function CollaboratorsSection({
@@ -27,24 +29,21 @@ export function CollaboratorsSection({
       }
     >
       <form action={addCollaborator.bind(null, templateId)} className="mb-3 flex flex-wrap items-center gap-2">
-        <input
-          name="handle"
-          placeholder={t('addCollaboratorPh', lang)}
-          className={buttonClass({ className: 'w-[13.75rem] bg-surface-2 outline-hidden focus:border-border-strong' })}
-        />
+        <Input name="handle"
+          placeholder={t('addCollaboratorPh', lang)} className="w-menu" />
         <Button type="submit" variant="primary" size="md">
           {t('addCollaborator', lang)}
         </Button>
       </form>
 
       {collaborators.length === 0 ? (
-        <p className="text-[0.8125rem] text-muted">{t('noCollaborators', lang)}</p>
+        <p className="text-body text-muted">{t('noCollaborators', lang)}</p>
       ) : (
         <div className="flex flex-col gap-1.5">
           {collaborators.map((c) => (
             <div key={c.userId} className="flex items-center gap-2.5 rounded-md border border-border px-3 py-2">
               <UserLine handle={c.handle} avatarUrl={c.avatarUrl} size="md" className="min-w-0" />
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-ink-2">{c.role}</span>
+              <Badge variant="soft">{c.role}</Badge>
               <form action={removeCollaborator.bind(null, templateId, c.userId)} className="ml-auto">
                 <Tooltip label={t('removeLabel', lang)}>
                   <button

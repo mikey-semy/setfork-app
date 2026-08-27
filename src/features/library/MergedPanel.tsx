@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { GitMerge, Trash2, Loader2, Undo2, X } from 'lucide-react'
+import { GitMerge, Trash2, Undo2, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { Spinner } from '@/shared/ui/Spinner'
 // eslint-disable-next-line boundaries/dependencies -- удаление ветки уже реализовано в git-фиче
 import { deleteBranchAction } from '@/features/git/actions'
 import { revertSuggestionAction } from './suggestion-revert-action'
@@ -72,21 +73,21 @@ export function MergedPanel({
     <div className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3.5 py-3 ${tone}`}>
       <span className={accepted ? 'text-accent' : 'text-muted'}>{accepted ? <GitMerge size={18} /> : <X size={18} />}</span>
       <div className="min-w-0 flex-1">
-        <div className="text-[0.8125rem] font-semibold text-ink">{accepted ? labels.merged : labels.closed}</div>
-        {branch && !done && <div className="text-[0.78125rem] text-ink-2">{labels.branchSafeToDelete}</div>}
-        {done && <div className="text-[0.78125rem] text-muted">{labels.branchDeleted}</div>}
-        {failed && <div className="text-[0.78125rem] text-danger">{labels.deleteFailed}</div>}
-        {revertError && <div className="text-[0.78125rem] text-danger [overflow-wrap:anywhere]">{revertError}</div>}
+        <div className="text-body font-semibold text-ink">{accepted ? labels.merged : labels.closed}</div>
+        {branch && !done && <div className="text-body-sm text-ink-2">{labels.branchSafeToDelete}</div>}
+        {done && <div className="text-body-sm text-muted">{labels.branchDeleted}</div>}
+        {failed && <div className="text-body-sm text-danger">{labels.deleteFailed}</div>}
+        {revertError && <div className="text-body-sm text-danger [overflow-wrap:anywhere]">{revertError}</div>}
       </div>
       {/* Действие — к правому краю (thumb-зона), единая высота ряда. */}
       {revertOf && (
         <Button variant="outline" disabled={pending} onClick={revert}>
-          {pending ? <Loader2 size={13} className="animate-spin" /> : <Undo2 size={13} />} {labels.revert}
+          {pending ? <Spinner size="sm" /> : <Undo2 size={13} />} {labels.revert}
         </Button>
       )}
       {branch && !done && (
         <Button variant="outline" disabled={pending} onClick={remove}>
-          {pending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} {labels.deleteBranch}
+          {pending ? <Spinner size="sm" /> : <Trash2 size={13} />} {labels.deleteBranch}
         </Button>
       )}
     </div>

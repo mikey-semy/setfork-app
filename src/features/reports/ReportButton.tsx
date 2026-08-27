@@ -10,6 +10,7 @@ import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { REPORT_BODY_MAX, type ReportReason } from './validate'
 import { submitReport, type ReportResult } from './actions'
+import { Radio } from '@/shared/ui/checkbox'
 
 const REASONS = [
   { value: 'illegal', label: 'rpReasonIllegal' },
@@ -53,32 +54,29 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
       >
         {state?.ok ? (
           <div className="text-center">
-            <div className="mb-1 text-[1rem] font-bold text-ink">{t('rpThanks', lang)}</div>
-            <p className="text-[0.8125rem] text-ink-2">{t('rpThanksBody', lang)}</p>
+            <div className="mb-1 text-title font-bold text-ink">{t('rpThanks', lang)}</div>
+            <p className="text-body text-ink-2">{t('rpThanksBody', lang)}</p>
           </div>
         ) : (
           <form id={formId} action={action} className="flex flex-col gap-3">
-            <p className="text-[0.78125rem] text-ink-2">{t('rpIntro', lang)}</p>
+            <p className="text-body-sm text-ink-2">{t('rpIntro', lang)}</p>
 
             <div className="flex flex-col gap-1.5">
               {REASONS.map((r) => (
-                <label key={r.value} className="inline-flex items-center gap-2 text-[0.8125rem] text-ink">
-                  <input
-                    type="radio"
+                <label key={r.value} className="inline-flex items-center gap-2 text-body text-ink">
+                  <Radio
                     name="reason"
                     value={r.value}
                     required
                     checked={reason === r.value}
-                    onChange={() => setReason(r.value)}
-                    className="accent-current"
-                  />
+                    onChange={() => setReason(r.value)} />
                   {t(r.label, lang)}
                 </label>
               ))}
             </div>
 
             {reason === 'copyright' && (
-              <p className="rounded-md bg-warn/10 px-3 py-2 text-[0.78125rem] leading-relaxed text-ink-2">
+              <p className="rounded-md bg-warn/10 px-3 py-2 text-body-sm leading-relaxed text-ink-2">
                 {t('rpCopyrightNote', lang)}{' '}
                 <a
                   href={legalUrl('copyright', lang)}
@@ -102,21 +100,18 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
 
             <div>
               <Input name="email" type="email" autoComplete="email" placeholder={t('fbEmailPlaceholder', lang)} />
-              <p className="mt-1 text-[0.6875rem] text-muted">{t('fbEmailHint', lang)}</p>
+              <p className="mt-1 text-caption text-muted">{t('fbEmailHint', lang)}</p>
             </div>
 
             {/* Honeypot: люди поле не видят; непустое значение = бот. */}
-            <input
-              type="text"
+            <Input type="text"
               name="website"
               tabIndex={-1}
               autoComplete="off"
-              aria-hidden="true"
-              className="absolute -left-[624.9375rem] h-0 w-0 opacity-0"
-            />
-            <input type="hidden" name="templateId" value={templateId} />
+              aria-hidden="true" className="absolute -left-[624.9375rem] w-0 opacity-0" />
+            <Radio type="hidden" name="templateId" value={templateId} />
 
-            {state?.error && <div className="text-[0.78125rem] text-danger">{state.error}</div>}
+            {state?.error && <div className="text-body-sm text-danger">{state.error}</div>}
           </form>
         )}
       </OverlayPanel>

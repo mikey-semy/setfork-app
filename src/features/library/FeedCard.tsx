@@ -6,6 +6,7 @@ import { t, tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
 import type { FeedItem } from './queries'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 import { ListCardMeta } from './ListCardMeta'
 
 function fmt(n: number): string {
@@ -28,7 +29,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
       {/* 1. Обложка — только если реально загружена (иначе идентичность даёт заголовок). */}
       {item.coverImage && (
         // eslint-disable-next-line @next/next/no-img-element -- внешний ассет по готовому URL
-        <img src={item.coverImage} alt="" className="h-24 w-full border-b border-border object-cover sm:h-28" />
+        <SmartImage src={item.coverImage} alt="" className="h-24 w-full border-b border-border object-cover sm:h-28" />
       )}
 
       {/* Шапка отделена так же, как футер. Owner / title — один обрезаемый ряд:
@@ -38,7 +39,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
           <Link href={base} className="-m-1 grid size-6 shrink-0 place-items-center text-muted hover:text-accent" aria-label={tr(item.title, lang)}>
             <ListChecks size={16} />
           </Link>
-          <div className="min-w-0 flex-1 truncate whitespace-nowrap text-[1rem] leading-5">
+          <div className="min-w-0 flex-1 truncate whitespace-nowrap text-title leading-5">
             <Link href={`/${item.ownerHandle}`} className="font-medium text-ink-2 hover:text-accent">
               {item.ownerHandle}
             </Link>
@@ -65,7 +66,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
 
       <div className="px-4 py-3">
         {/* Описание. */}
-        {desc && <p className="line-clamp-2 text-[0.8125rem] leading-snug text-ink-2">{desc}</p>}
+        {desc && <p className="line-clamp-2 text-body leading-snug text-ink-2">{desc}</p>}
 
         {/* Теги. */}
         {item.tags.length > 0 && (
@@ -80,7 +81,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
       </div>
 
       {/* Футер — самостоятельная полоса, симметричная шапке. */}
-      <div className="border-t border-border px-4 py-2 text-[0.6875rem] text-muted">
+      <div className="border-t border-border px-4 py-2 text-caption text-muted">
         {t('updated', lang)} {updated}
       </div>
     </div>

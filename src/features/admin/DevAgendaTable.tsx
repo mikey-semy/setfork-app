@@ -6,6 +6,7 @@ import { nodeColumn, numberColumn } from '@/shared/ui/data-table/column-builders
 import { t, tr, type Lang } from '@/shared/i18n'
 import { decideAgendaItem } from '@/features/admin/agenda-actions'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /**
  * Повестка развития (/admin/development) — DataTableV2 (Ф11, хвост миграции с v1-моста).
@@ -29,12 +30,12 @@ export function DevAgendaTable({ rows, lang }: { rows: AgendaRow[]; lang: Lang }
     nodeColumn<AgendaRow>({
       id: 'what',
       header: t('admin.whatGrow', lang),
-      render: (r) => <span className="block min-w-0 truncate text-[0.8125rem] text-ink">{r.label}</span>,
+      render: (r) => <span className="block min-w-0 truncate text-body text-ink">{r.label}</span>,
     }),
     nodeColumn<AgendaRow>({
       id: 'why',
       header: t('admin.whyNumbers', lang),
-      render: (r) => <span className="block min-w-0 truncate font-mono text-[0.6875rem] text-ink-2">{r.why}</span>,
+      render: (r) => <span className="block min-w-0 truncate font-mono text-caption text-ink-2">{r.why}</span>,
     }),
     numberColumn<AgendaRow>({ id: 'score', header: t('admin.priority', lang), size: 96, value: (r) => r.score, format: (n) => n.toFixed(2) }),
     nodeColumn<AgendaRow>({
@@ -49,24 +50,24 @@ export function DevAgendaTable({ rows, lang }: { rows: AgendaRow[]; lang: Lang }
                 <input type="hidden" name="id" value={r.id} />
                 <input type="hidden" name="decision" value="approved" />
                 <Tooltip label={t('admin.approve', lang)}>
-                  <button type="submit" aria-label={t('admin.approve', lang)} className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ok">
+                  <IconButton size="xl" variant="ghost" label={t('admin.approve', lang)} className="text-muted hover:bg-surface-2 hover:text-ok" type="submit">
                     <Check size={16} />
-                  </button>
+                  </IconButton>
                 </Tooltip>
               </form>
               <form action={decideAgendaItem}>
                 <input type="hidden" name="id" value={r.id} />
                 <input type="hidden" name="decision" value="dismissed" />
                 <Tooltip label={t('admin.dismiss', lang)}>
-                  <button type="submit" aria-label={t('admin.dismiss', lang)} className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-warn">
+                  <IconButton size="xl" variant="ghost" label={t('admin.dismiss', lang)} className="text-muted hover:bg-surface-2 hover:text-warn" type="submit">
                     <X size={16} />
-                  </button>
+                  </IconButton>
                 </Tooltip>
               </form>
             </>
           ) : (
             <Tooltip label={r.ownerExpertId ?? ''}>
-              <span className={`text-[0.78125rem] ${r.status === 'approved' ? 'text-ok' : 'text-muted'}`}>
+              <span className={`text-body-sm ${r.status === 'approved' ? 'text-ok' : 'text-muted'}`}>
                 {r.status === 'approved' ? t('admin.approved', lang) : t('admin.dismissed', lang)}
               </span>
             </Tooltip>

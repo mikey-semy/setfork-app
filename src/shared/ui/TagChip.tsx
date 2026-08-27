@@ -8,25 +8,30 @@ export function TagChip({
   label,
   count,
   curated,
+  href,
   className,
 }: {
   slug: string
   label?: string
   count?: number
   curated?: boolean
+  /** Куда ведёт чип. По умолчанию — страница тега; но в фасетах поиска клик по тегу
+   *  ДОЛЖЕН оставаться поиском (фильтр по `tag:`), а не уводить со страницы. Вид у
+   *  роли один, назначение бывает разным — поэтому адрес это проп, а не догма. */
+  href?: string
   className?: string
 }) {
   return (
     <Link
-      href={`/tags/${encodeURIComponent(slug)}`}
+      href={href ?? `/tags/${encodeURIComponent(slug)}`}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full bg-(--accent-soft) px-2 py-0.5 text-[0.6875rem] font-medium text-accent hover:underline',
+        'inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-caption font-medium text-accent hover:underline',
         className,
       )}
     >
       {curated && <span aria-hidden>✓</span>}
       {label || slug}
-      {count != null && <span className="font-mono text-[0.6875rem] opacity-70">{count}</span>}
+      {count != null && <span className="font-mono text-caption opacity-70">{count}</span>}
     </Link>
   )
 }

@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { Check, Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { t, type Lang } from '@/shared/i18n'
 import { PAGE_X } from '@/shared/ui/control'
+import { Spinner } from '@/shared/ui/Spinner'
 import { useViewportBottom } from './use-viewport-bottom'
 
 /**
@@ -116,11 +117,11 @@ export function FormSaveBar({ lang }: { lang: Lang }) {
           // садится НАД полосой, а не поверх «Сохранить» (см. ScrollToTop).
           data-sticky-input
           style={gap ? { bottom: gap } : undefined}
-          className="sf-rise-in fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
+          className="animate-sf-rise fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
         >
           <div className={`${PAGE_X} flex items-center justify-between gap-3 py-2.5`}>
             {/* На телефоне текста нет: там важнее две крупные кнопки, а не пояснение. */}
-            <span className="hidden min-w-0 truncate text-[0.8125rem] text-ink-2 sm:inline">
+            <span className="hidden min-w-0 truncate text-body text-ink-2 sm:inline">
               {t('ui.unsavedChanges', lang)}
             </span>
             <div className="flex flex-1 items-center justify-end gap-2 sm:flex-none">
@@ -128,7 +129,7 @@ export function FormSaveBar({ lang }: { lang: Lang }) {
                 {t('ui.discard', lang)}
               </Button>
               <Button type="submit" variant="primary" size="md" disabled={pending} className="max-sm:flex-1">
-                {pending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                {pending ? <Spinner size="md" /> : <Check size={15} />}
                 {t('common.save', lang)}
               </Button>
             </div>

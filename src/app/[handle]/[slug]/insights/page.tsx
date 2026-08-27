@@ -14,13 +14,13 @@ import { BadgesCard } from '@/features/badges/BadgesCard'
 import { PAGE } from '@/shared/ui/control'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { isPubliclyVisible } from '@/core'
+import { cardClass } from '@/shared/ui/card-style'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
   return { title: `${t('insightsTab', lang)} · ${handle}/${slug}` }
 }
 
-const card = 'rounded-lg border border-border bg-surface p-4'
 
 export default async function InsightsPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle: owner, slug }, lang] = await Promise.all([params, getLang()])
@@ -61,11 +61,11 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
         {/* Итоги */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           {stats.map(({ icon: Icon, label, v }) => (
-            <div key={label} className={card}>
-              <div className="flex items-center gap-1.5 text-[0.6875rem] uppercase tracking-wide text-muted">
+            <div key={label} className={cardClass()}>
+              <div className="flex items-center gap-1.5 text-caption uppercase tracking-wide text-muted">
                 <Icon size={12} /> {label}
               </div>
-              <div className="mt-1 text-[1.25rem] font-bold tabular-nums text-ink">{v}</div>
+              <div className="mt-1 text-heading font-bold tabular-nums text-ink">{v}</div>
             </div>
           ))}
         </div>
@@ -77,10 +77,10 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
           {/* Графики за 12 недель */}
           <div className="grid grid-cols-1 min-w-0 gap-4 sm:grid-cols-2">
             {charts.map((c) => (
-              <div key={c.key} className={`${card} min-w-0`}>
+              <div key={c.key} className={cardClass({ className: 'min-w-0' })}>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate text-[0.8125rem] font-semibold text-ink">{c.title}</span>
-                  <span className="shrink-0 whitespace-nowrap font-mono text-[0.6875rem] text-muted">
+                  <span className="min-w-0 truncate text-body font-semibold text-ink">{c.title}</span>
+                  <span className="shrink-0 whitespace-nowrap font-mono text-caption text-muted">
                     {c.points.reduce((s, v) => s + v, 0)} / {WEEKS}{ru ? ' нед' : 'w'}
                   </span>
                 </div>
@@ -91,9 +91,9 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
 
           {/* Справа: трафик прогонов + контрибьюторы */}
           <aside className="flex flex-col gap-4">
-            <div className={card}>
-              <div className="mb-2 text-[0.8125rem] font-semibold text-ink">{ru ? 'Трафик прогонов' : 'Run traffic'}</div>
-              <dl className="flex flex-col gap-1.5 text-[0.8125rem]">
+            <div className={cardClass()}>
+              <div className="mb-2 text-body font-semibold text-ink">{ru ? 'Трафик прогонов' : 'Run traffic'}</div>
+              <dl className="flex flex-col gap-1.5 text-body">
                 <div className="flex justify-between">
                   <dt className="text-ink-2">{ru ? 'Всего прогонов' : 'Total runs'}</dt>
                   <dd className="font-mono tabular-nums text-ink">{totals.runs}</dd>
@@ -114,8 +114,8 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
               </dl>
             </div>
 
-            <div className={card}>
-              <div className="mb-2 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-ink">
+            <div className={cardClass()}>
+              <div className="mb-2 flex items-center gap-1.5 text-body font-semibold text-ink">
                 <Users size={13} className="text-muted" /> {ru ? 'Контрибьюторы' : 'Contributors'}
               </div>
               <div className="flex flex-col gap-1">
@@ -125,7 +125,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
                     {c.accepted === Infinity ? (
                       <Badge className="ml-auto">{ru ? 'владелец' : 'owner'}</Badge>
                     ) : (
-                      <span className="ml-auto font-mono text-[0.6875rem] text-muted">
+                      <span className="ml-auto font-mono text-caption text-muted">
                         {c.accepted} {ru ? 'принято' : 'accepted'}
                       </span>
                     )}

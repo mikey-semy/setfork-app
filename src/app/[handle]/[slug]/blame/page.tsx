@@ -41,22 +41,22 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
             const fresh = s.lastVersion === blame.currentVersion
             return (
               <div key={s.n}>
-                {showSec && <div className="bg-surface-2 px-4 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{sec}</div>}
+                {showSec && <div className="bg-surface-2 px-4 py-1.5 text-caption font-semibold uppercase tracking-wide text-muted">{sec}</div>}
                 <div className="flex items-center gap-3 px-4 py-2.5">
-                  <span className="w-6 shrink-0 text-right font-mono text-[0.6875rem] text-muted">{s.n}</span>
-                  <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-ink">{tr(s.title, lang)}</span>
-                  {s.note && <span className="hidden min-w-0 max-w-[13.75rem] truncate text-[0.78125rem] text-muted sm:block">{s.note}</span>}
+                  <span className="w-6 shrink-0 text-right font-mono text-caption text-muted">{s.n}</span>
+                  <span className="min-w-0 flex-1 truncate text-body text-ink">{tr(s.title, lang)}</span>
+                  {s.note && <span className="hidden min-w-0 max-w-menu truncate text-body-sm text-muted sm:block">{s.note}</span>}
                   <Tooltip label={t('versionHistory', lang)}>
                     <Link
                       href={`${base}/versions`}
-                      className={`shrink-0 rounded-md border px-1.5 font-mono text-[0.6875rem] ${
-                        fresh ? 'border-(--accent)/50 bg-(--accent-soft) text-accent' : 'border-border bg-surface-2 text-ink-2'
+                      className={`shrink-0 rounded-md border px-1.5 font-mono text-caption ${
+                        fresh ? 'border-accent/50 bg-accent-soft text-accent' : 'border-border bg-surface-2 text-ink-2'
                       }`}
                     >
                       v{s.lastVersion}
                     </Link>
                   </Tooltip>
-                  <span className="w-[5.75rem] shrink-0 text-right text-[0.6875rem] text-muted">{timeAgo(s.lastAt, lang)}</span>
+                  <span className="w-23 shrink-0 text-right text-caption text-muted">{timeAgo(s.lastAt, lang)}</span>
                 </div>
               </div>
             )

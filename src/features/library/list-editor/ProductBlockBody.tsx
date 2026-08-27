@@ -45,8 +45,8 @@ export function ProductBlockBody({
         chip={(p) => (
           <>
             <Package size={iconSizeFor('xs')} className="shrink-0 text-muted" />
-            <span className="max-w-[10rem] truncate">{p.name || linkHost(p.url)}</span>
-            {p.name && p.url ? <span className="max-w-[8rem] truncate font-mono text-muted">{linkHost(p.url)}</span> : null}
+            <span className="max-w-field truncate">{p.name || linkHost(p.url)}</span>
+            {p.name && p.url ? <span className="max-w-field-sm truncate font-mono text-muted">{linkHost(p.url)}</span> : null}
           </>
         )}
         addButton={(open) => <AddLink onClick={open}>{t('productAdd', lang)}</AddLink>}

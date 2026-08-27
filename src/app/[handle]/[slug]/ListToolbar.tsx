@@ -64,7 +64,7 @@ export function ListToolbar({
   if (!currentVersion) return null
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.78125rem] text-ink-2 print:hidden">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-body-sm text-ink-2 print:hidden">
         {/* Пикер веток показываем ВСЕГДА, когда ветка есть (как GitHub «main ▾» —
             даже одна ветка и на чужом списке; canManage лишь гейтит создание). */}
         {branches.length > 0 && (

@@ -16,10 +16,13 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { useConfirm } from '@/shared/ui/use-confirm'
 import { Button, type ButtonVariant } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
+import { Chip } from '@/shared/ui/Chip'
+import { ColorSwatch } from '@/shared/ui/ColorSwatch'
 import { Input } from '@/shared/ui/input'
 import { SearchField } from '@/shared/ui/SearchField'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { SideNav } from '@/shared/ui/SideNav'
+import { Spinner } from '@/shared/ui/Spinner'
 import { Switch } from '@/shared/ui/switch'
 import { TagInput } from '@/shared/ui/TagInput'
 import { Textarea } from '@/shared/ui/textarea'
@@ -34,39 +37,45 @@ import { cardClass } from '@/shared/ui/card-style'
 // ряду, и любое расхождение по высоте/кеглю бросается в глаза до того, как
 // расползётся по страницам. Новый примитив/размер/вариант — сначала сюда.
 
-// Порядок сверху вниз — от крупного к плотному: lg (одиночная кнопка формы во всю
-// ширину), md (ряды действий и формы, дефолт), sm (панели), xs (плотные тулбары).
-const SIZES: ControlSize[] = ['lg', 'md', 'sm', 'xs']
+// Порядок сверху вниз — от крупного к плотному: xl (герой страницы — поиск главной,
+// ввод генерации), lg (одиночная кнопка формы во всю ширину), md (ряды действий и
+// формы, дефолт), sm (панели), xs (плотные тулбары).
+const SIZES: ControlSize[] = ['xl', 'lg', 'md', 'sm', 'xs']
 const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'outline', 'ghost', 'danger', 'dangerSolid']
-const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft', 'danger', 'warn']
+const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'chip', 'ok', 'accent', 'soft', 'danger', 'warn', 'accentSolid', 'okSolid', 'dangerSolid', 'dashed']
 const ALERT_VARIANTS: AlertVariant[] = ['danger', 'warn', 'ok', 'info']
+// Палитра витрины — не «настоящие» акценты продукта, а достаточный набор, чтобы увидеть
+// выбранное состояние, кружок «без цвета» и размер цели.
+const SWATCHES: (string | null)[] = [null, '#2159d6', '#1a9c5b', '#d4a017', '#c2410c']
 
 type DemoRow = { name: string; role: string; score: number }
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <section className={cardClass({ pad: 'lg' })}>
-      <h2 className="mb-1 text-[0.875rem] font-bold text-ink">{title}</h2>
-      {hint && <p className="mb-4 text-[0.78125rem] text-muted">{hint}</p>}
+      <h2 className="mb-1 text-body-lg font-bold text-ink">{title}</h2>
+      {hint && <p className="mb-4 text-body-sm text-muted">{hint}</p>}
       <div className="flex flex-col gap-4">{children}</div>
     </section>
   )
 }
 
 function SizeTag({ children }: { children: React.ReactNode }) {
-  return <div className="w-14 shrink-0 font-mono text-[0.6875rem] text-muted">{children}</div>
+  return <div className="w-14 shrink-0 font-mono text-caption text-muted">{children}</div>
 }
 
 /** Живое демо классов появления: перезапуск перемонтированием по ключу. */
 function MotionDemo({ lang }: { lang: Lang }) {
   const [run, setRun] = useState(0)
-  const box = 'rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.8125rem] text-ink'
+  // Подложка ДЕМО, а не роль интерфейса: три одинаковых прямоугольника нужны только
+  // затем, чтобы на них было видно движение. Своего примитива у такого нет и не надо.
+  const box = cardClass({ tone: 'inset', pad: 'sm', className: 'text-body text-ink' })
   return (
     <div className="flex flex-col gap-3">
       <div key={run} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className={cn2('sf-overlay-in', box)}>sf-overlay-in</div>
-        <div className={cn2('sf-pop-in', box)}>sf-pop-in</div>
-        <div className={cn2('sf-rise-in', box)}>sf-rise-in</div>
+        <div className={cn2('animate-sf-fade', box)}>animate-sf-fade</div>
+        <div className={cn2('animate-sf-pop', box)}>animate-sf-pop</div>
+        <div className={cn2('animate-sf-rise', box)}>animate-sf-rise</div>
       </div>
       <div>
         <Button size="sm" variant="ghost" onClick={() => setRun((v) => v + 1)}>
@@ -100,6 +109,9 @@ function RowCheck({ size, lang }: { size: ControlSize; lang: Lang }) {
           </SelectContent>
         </Select>
         <SearchField size={size} value={q} onValueChange={setQ} placeholder="search" className="w-36 flex-none" ariaLabel="search" />
+        {/* Кружок ожидания стоит В РЯДУ с контролами своей ступени: размер он берёт
+            от них (iconSizeFor), и разъехавшийся видно тут же. */}
+        <Spinner size={size} />
       </div>
     </div>
   )
@@ -107,6 +119,7 @@ function RowCheck({ size, lang }: { size: ControlSize; lang: Lang }) {
 
 export function UiKitGallery({ lang }: { lang: Lang }) {
   const [checked, setChecked] = useState(true)
+  const [swatch, setSwatch] = useState<string | null>('#2159d6')
   const { confirm, confirmDialog } = useConfirm()
   const [confirmed, setConfirmed] = useState<string | null>(null)
 
@@ -121,7 +134,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         ))}
         <div className="flex flex-wrap gap-4 border-t border-border pt-3">
           {SIZES.map((s) => (
-            <div key={s} className="flex items-center gap-2 font-mono text-[0.6875rem] text-muted">
+            <div key={s} className="flex items-center gap-2 font-mono text-caption text-muted">
               <span>{s}</span>
               <span>{CONTROL_H[s]}</span>
               <span>{CONTROL_TEXT[s]}</span>
@@ -194,12 +207,20 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section title={t('admin.choiceControls', lang)}>
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex cursor-pointer items-center gap-2 text-[0.8125rem] text-ink">
+          <label className="flex cursor-pointer items-center gap-2 text-body text-ink">
             <Checkbox defaultChecked className="size-4" /> Checkbox
           </label>
-          <label className="flex cursor-pointer items-center gap-2 text-[0.8125rem] text-ink">
+          <label className="flex cursor-pointer items-center gap-2 text-body text-ink">
             <Switch checked={checked} onCheckedChange={setChecked} /> Switch
           </label>
+          {/* `flex-wrap` по той же причине, что в настройках обложки: на пальце кружок
+              палитры — это 44px, и ряд без переноса распирает узкий экран. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-2 text-body text-ink">
+            ColorSwatch
+            {SWATCHES.map((c) => (
+              <ColorSwatch key={c ?? 'none'} color={c} selected={swatch === c} label={c ?? 'default'} onSelect={() => setSwatch(c)} />
+            ))}
+          </div>
         </div>
       </Section>
 
@@ -210,6 +231,15 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
               {v}
             </Badge>
           ))}
+          {/* Вторая ступень кегля: пилюли живут в двух размерах, и без ступени
+              половина мест обходила примитив (замер 26.08.2026). */}
+          <Badge variant="chip" size="md">
+            md
+          </Badge>
+          {/* Chip — это КОНТРОЛ, а не метка: нажимается, помнит выбор, добирает
+              тач-цель. Стоит рядом с Badge намеренно — разницу видно глазами. */}
+          <Chip selected>Chip выбран</Chip>
+          <Chip>Chip</Chip>
           <Tooltip label={t('admin.tooltipNotTitle', lang)}>
             <Badge variant="soft">tooltip →</Badge>
           </Tooltip>
@@ -273,7 +303,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
             >
               {t('common.delete', lang)}
             </Button>
-            {confirmed && <span className="text-[0.78125rem] text-muted">{confirmed}</span>}
+            {confirmed && <span className="text-body-sm text-muted">{confirmed}</span>}
           </ActionRow>
         </DangerZone>
         {confirmDialog}
@@ -318,13 +348,13 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         <div className="flex flex-col gap-2">
           {(Object.entries(TEXT) as [keyof typeof TEXT, string][]).map(([role, cls]) => (
             <div key={role} className="flex items-baseline gap-3">
-              <span className="w-20 shrink-0 font-mono text-[0.6875rem] text-muted">{role}</span>
+              <span className="w-20 shrink-0 font-mono text-caption text-muted">{role}</span>
               <span className={cls}>{t('admin.sampleTextRole', lang)}</span>
-              <span className="font-mono text-[0.6875rem] text-muted">{cls}</span>
+              <span className="font-mono text-caption text-muted">{cls}</span>
             </div>
           ))}
         </div>
-        <div className="flex flex-wrap gap-3 border-t border-border pt-3 font-mono text-[0.6875rem] text-muted">
+        <div className="flex flex-wrap gap-3 border-t border-border pt-3 font-mono text-caption text-muted">
           {Object.entries(LAYER).map(([name, z]) => (
             <span key={name}>
               {name}={z}
@@ -337,7 +367,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         title={t('admin.sideNavigation', lang)}
         hint={t('admin.oneSidenavSettingsAdmin', lang)}
       >
-        <div className="max-w-[16.25rem]">
+        <div className="max-w-panel">
           <SideNav
             mobileLabel={t('admin.sections', lang)}
             groups={[

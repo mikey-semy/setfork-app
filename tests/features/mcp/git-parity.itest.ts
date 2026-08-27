@@ -20,7 +20,7 @@ import { resetTables } from '../../helpers/reset-db'
  * Без ядра тест пропускается, а не притворяется зелёным.
  */
 const CORE = process.env.SETFORK_CORE_ADDR
-const описание = CORE ? describe : describe.skip
+const description = CORE ? describe : describe.skip
 
 const { db, templates, templateVersions, steps, users } = await import('@/shared/db')
 const { listStore } = await import('@/features/library/list-store')
@@ -67,7 +67,7 @@ const firstBid = async (tplId: string) => {
   return rows[0]?.blockId as string
 }
 
-описание('запись через MCP: база против git', () => {
+description('запись через MCP: база против git', () => {
   beforeAll(async () => {
     if (!CORE) return
     await resetTables([templates, users])

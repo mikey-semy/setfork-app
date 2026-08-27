@@ -5,6 +5,7 @@ import { t } from '@/shared/i18n'
 import { Hint, LineField } from '../block-fields'
 import type { QuizKindProps } from './kind-props'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Textarea } from '@/shared/ui/textarea'
 
 /**
  * Пропуски: текст с «___», под каждым пропуском — принимаемые ответы.
@@ -16,8 +17,9 @@ export function QuizBlanks({ quiz, set, lang, caseBox, nth }: QuizKindProps) {
   const n = blankCount(quiz.template)
   return (
     <>
-      <textarea
-        className={buttonClass({ className: 'min-h-[3.25rem] w-full resize-y leading-relaxed outline-hidden focus:border-border-strong' })}
+      <Textarea
+        rows={2}
+        className="resize-y leading-relaxed"
         aria-label={t('quiz.blankText', lang)}
         placeholder={t('quiz.blankTextPh', lang)}
         value={quiz.template}
@@ -29,7 +31,7 @@ export function QuizBlanks({ quiz, set, lang, caseBox, nth }: QuizKindProps) {
         <div className="flex flex-col gap-1.5">
           {Array.from({ length: n }, (_, bi) => (
             <div key={bi} className="flex items-center gap-2">
-              <span className="w-5 shrink-0 text-right font-mono text-[0.6875rem] text-muted">#{bi + 1}</span>
+              <span className="w-5 shrink-0 text-right font-mono text-caption text-muted">#{bi + 1}</span>
               <LineField
                 value={quiz.blanks[bi] ?? ''}
                 onChange={(v) => set({ blanks: Array.from({ length: n }, (_, i) => (i === bi ? v : (quiz.blanks[i] ?? ''))) })}
@@ -41,7 +43,7 @@ export function QuizBlanks({ quiz, set, lang, caseBox, nth }: QuizKindProps) {
           ))}
         </div>
       )}
-      <div className="self-start text-[0.78125rem]">{caseBox}</div>
+      <div className="self-start text-body-sm">{caseBox}</div>
     </>
   )
 }

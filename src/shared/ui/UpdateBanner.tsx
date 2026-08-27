@@ -64,13 +64,13 @@ export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {
     >
       <TriangleAlert size={18} className="mt-0.5 shrink-0 text-warn" />
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.8125rem] font-semibold text-ink">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-body font-semibold text-ink">
           {t('ui.updateAvailable', lang)}
-          <span className="font-mono text-[0.6875rem] font-medium text-ink-2">
+          <span className="font-mono text-caption font-medium text-ink-2">
             v{APP_VERSION} · {nextBuild.slice(0, 7)}
           </span>
         </div>
-        <p className="mt-0.5 text-[0.78125rem] leading-snug text-ink-2">
+        <p className="mt-0.5 text-body-sm leading-snug text-ink-2">
           {t('ui.reloadPageSoEverything', lang)}
         </p>
       </div>

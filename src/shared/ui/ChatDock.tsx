@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Loader2 } from 'lucide-react'
 import { ChatComposer } from './ChatComposer'
 import { PanelFoot, PanelHead } from './panel-parts'
 import { GnomeAvatar } from './GnomeAvatar'
@@ -10,6 +9,7 @@ import { Button } from './button'
 import { LAYER, PANEL_PAD } from './control'
 import { useViewportBottom } from './use-viewport-bottom'
 import { t, type Lang } from '@/shared/i18n'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * Окно чата в углу экрана: лента реплик, подсказки-кнопки и композер.
@@ -104,18 +104,18 @@ export function ChatDock({
         closeLabel={t('close', lang)}
       />
 
-      <div ref={scrollRef} className={`min-h-[7.5rem] flex-1 space-y-3 overflow-y-auto ${PANEL_PAD}`}>
-        {messages.length === 0 && <p className="text-[0.78125rem] leading-relaxed text-muted">{emptyHint}</p>}
+      <div ref={scrollRef} className={`min-h-30 flex-1 space-y-3 overflow-y-auto ${PANEL_PAD}`}>
+        {messages.length === 0 && <p className="text-body-sm leading-relaxed text-muted">{emptyHint}</p>}
         {messages.map((m, i) =>
           m.role === 'user' ? (
             <div key={i} className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3 py-1.5 text-[0.8125rem] leading-[1.5] text-primary-fg">{m.text}</div>
+              <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3 py-1.5 text-body leading-[1.5] text-primary-fg">{m.text}</div>
             </div>
           ) : (
             <div key={i} ref={i === messages.length - 1 ? lastReplyRef : undefined} className="group flex items-start gap-2">
               <GnomeAvatar src={`/gnomes/${m.who ?? 'generalist'}.webp`} size={32} className="size-8 shrink-0" />
-              <div className="min-w-0 rounded-2xl rounded-bl-md bg-(--surface-2) px-3 py-1.5">
-                <Markdown className="text-[0.8125rem] leading-[1.5] text-ink-2">{m.text}</Markdown>
+              <div className="min-w-0 rounded-2xl rounded-bl-md bg-surface-2 px-3 py-1.5">
+                <Markdown className="text-body leading-[1.5] text-ink-2">{m.text}</Markdown>
                 {bubbleActions && (
                   <div className="mt-1 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100">
                     {bubbleActions(i, m)}
@@ -126,11 +126,11 @@ export function ChatDock({
           ),
         )}
         {pending && (
-          <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
-            <Loader2 size={13} className="animate-spin" /> {pendingLabel}
+          <div className="flex items-center gap-2 text-body-sm text-muted">
+            <Spinner size="sm" /> {pendingLabel}
           </div>
         )}
-        {error && <p className="text-[0.78125rem] text-warn">{error}</p>}
+        {error && <p className="text-body-sm text-warn">{error}</p>}
         {chips && chips.length > 0 && !pending && (
           <div className="flex flex-wrap gap-1.5">
             {chips.map((q) => (

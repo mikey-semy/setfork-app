@@ -23,7 +23,7 @@ export function QuizSort({ quiz, set, lang, nth }: QuizKindProps) {
       <div className="flex flex-col gap-1.5">
         {items.map((it, ii) => (
           <div key={ii} className="flex items-center gap-1.5">
-            <span className="w-4 text-right font-mono text-[0.6875rem] text-muted">{ii + 1}</span>
+            <span className="w-4 text-right font-mono text-caption text-muted">{ii + 1}</span>
             {/* Стрелки — общие иконочные кнопки: пальцем по 13px значку не попасть. */}
             <div className="flex flex-col">
               <IconButton size="xs" variant="ghost" touch="grow" onClick={() => move(ii, -1)} disabled={ii === 0} label={t('editor.moveUp', lang)}>
@@ -38,7 +38,7 @@ export function QuizSort({ quiz, set, lang, nth }: QuizKindProps) {
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-4 pt-0.5 text-[0.78125rem]">
+      <div className="flex items-center gap-4 pt-0.5 text-body-sm">
         <AddLink onClick={() => setItems([...items, ''])}>{t('quiz.addItem', lang)}</AddLink>
         <Hint>{t('quiz.sortHint', lang)}</Hint>
       </div>

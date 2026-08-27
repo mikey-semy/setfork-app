@@ -2,11 +2,12 @@
 
 import { type Lang } from '@/shared/i18n'
 import { useEffect, useState } from 'react'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { Meter } from '@/shared/ui/Meter'
 import { Alert } from '@/shared/ui/Alert'
 import { fetchOpenRouterCredits } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 type Credits = { total: number; used: number; remaining: number }
 
@@ -46,7 +47,7 @@ export function CreditsWidget({ lang }: { lang: Lang }) {
       disabled={loading}
       className={buttonClass({ className: 'disabled:opacity-60' })}
     >
-      {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+      {loading ? <Spinner size="xs" /> : <RefreshCw size={12} />}
       {ru ? 'Обновить' : 'Refresh'}
     </button>
   )
@@ -63,7 +64,7 @@ export function CreditsWidget({ lang }: { lang: Lang }) {
   }
 
   if (!c) {
-    return <div className="text-[0.78125rem] text-muted">{loading ? (ru ? 'Получаем баланс…' : 'Loading balance…') : '—'}</div>
+    return <div className="text-body-sm text-muted">{loading ? (ru ? 'Получаем баланс…' : 'Loading balance…') : '—'}</div>
   }
 
   const pctUsed = c.total > 0 ? Math.min(100, Math.round((c.used / c.total) * 100)) : 0
@@ -71,18 +72,18 @@ export function CreditsWidget({ lang }: { lang: Lang }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 text-[0.8125rem]">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 text-body">
         <div className="text-ink">
           {ru ? 'Остаток:' : 'Remaining:'}{' '}
           <span className="font-mono font-semibold tabular-nums">${c.remaining.toFixed(2)}</span>
-          <span className="ml-1 text-[0.78125rem] text-muted">
+          <span className="ml-1 text-body-sm text-muted">
             {ru ? 'из' : 'of'} ${c.total.toFixed(2)}
           </span>
         </div>
         {refresh}
       </div>
       <Meter value={pctUsed / 100} tone={barTone} className="h-2" />
-      <p className="text-[0.78125rem] text-muted">
+      <p className="text-body-sm text-muted">
         {ru ? 'Использовано' : 'Used'} ${c.used.toFixed(2)} ({pctUsed}%).
       </p>
     </div>

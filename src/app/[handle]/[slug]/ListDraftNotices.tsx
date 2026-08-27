@@ -27,10 +27,10 @@ export function ListDraftNotices({ myDraft, tpl, base, lang }: Props) {
       {myDraft && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-2 px-4 py-3 print:hidden">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-ink">
+            <div className="flex items-center gap-1.5 text-body font-semibold text-ink">
               <FileText size={15} className="text-muted" /> {t('draftEditsPending', lang)}
             </div>
-            <p className="mt-0.5 text-[0.78125rem] text-ink-2">
+            <p className="mt-0.5 text-body-sm text-ink-2">
               {t('draftEditsPendingHint', lang).replace('{when}', timeAgo(myDraft.updatedAt, lang))}
             </p>
           </div>
@@ -48,7 +48,7 @@ export function ListDraftNotices({ myDraft, tpl, base, lang }: Props) {
       {tpl.origin === 'ai_draft' && tpl.status === 'published' && (
         <DismissibleHint
           storageKey={`hint:ai-draft:${tpl.id}`}
-          className="rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3 text-[0.8125rem] text-accent print:hidden"
+          className="rounded-lg border border-accent bg-accent-soft px-4 py-3 text-body text-accent print:hidden"
         >
           <Sparkles size={15} className="shrink-0" /> {t('aiVerifyHint', lang)}
         </DismissibleHint>

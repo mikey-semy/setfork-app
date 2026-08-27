@@ -57,7 +57,7 @@ export function TopNav({
           <Menu size={21} strokeWidth={2.75} />
         </IconButton>
         {/* Имя начинается с видимого «SF» (WCAG 2.5.3 label-in-name): голый "SetFork" его не содержал. */}
-        <Link href="/" className="font-logo text-[1.125rem] leading-none text-ink" aria-label="SF — SetFork">
+        <Link href="/" className="font-logo text-page leading-none text-ink" aria-label="SF — SetFork">
           SF
         </Link>
       </div>
@@ -66,7 +66,7 @@ export function TopNav({
         <TopNavCrumb crumb={crumb} title={crumbTitle} visibility={visibility} isListPage={isListPage} pathname={pathname} lang={lang} focusRing={focusRing} />
       )}
 
-      {titleKey && <span className="ml-1 truncate text-[1rem] font-semibold text-ink">{t(titleKey, lang)}</span>}
+      {titleKey && <span className="ml-1 truncate text-title font-semibold text-ink">{t(titleKey, lang)}</span>}
 
       {/* Правая группа не сжимается: место отдаёт бредкрамб (у него truncate), а аватар
           и иконки держат свой размер — иначе аватар плющится в овал. */}
@@ -79,8 +79,8 @@ export function TopNav({
                 lang={lang}
                 initial=""
                 size="md"
-                containerClassName="w-[13.75rem] xl:w-[18.75rem]"
-                hint={<kbd className="hidden rounded-md border border-border px-1.5 text-[0.6875rem] font-medium leading-[1.125rem] text-muted lg:inline">/</kbd>}
+                containerClassName="w-menu xl:w-panel-lg"
+                hint={<kbd className="hidden rounded-md border border-border px-1.5 text-caption font-medium leading-[1.125rem] text-muted lg:inline">/</kbd>}
               />
             </div>
             {/* Мобильный поиск — оверлей на месте (не редирект); на странице списка

@@ -8,6 +8,7 @@ import { safeHref } from '@/shared/lib/safe-url'
 import { detectLang, LANG_LABEL } from '@/shared/ui/detect-lang'
 import { t } from '@/shared/i18n'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Badge } from '@/shared/ui/badge'
 
 /**
  * Вариант списка карточкой. СВЁРНУТ по умолчанию (фидбек владельца: показывать
@@ -38,56 +39,56 @@ export function CandidateCard({
       aria-pressed={selected}
       aria-expanded={open}
       // eslint-disable-next-line no-restricted-syntax -- реплика чата: скруглениями изображает «хвостик» пузыря, это не карточка
-      className={`w-full rounded-2xl rounded-bl-md border bg-(--surface) p-4 text-left transition-colors ${
-        selected ? 'border-(--accent)' : 'border-border hover:border-border-strong'
+      className={`w-full rounded-2xl rounded-bl-md border bg-surface p-4 text-left transition-colors ${
+        selected ? 'border-accent' : 'border-border hover:border-border-strong'
       }`}
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className="text-[0.875rem] font-semibold text-ink">{cand.title}</div>
-          {cand.desc && <p className="mt-1 text-[0.78125rem] text-ink-2">{cand.desc}</p>}
+          <div className="text-body-lg font-semibold text-ink">{cand.title}</div>
+          {cand.desc && <p className="mt-1 text-body-sm text-ink-2">{cand.desc}</p>}
         </div>
-        <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-[0.6875rem] text-muted">
+        <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-caption text-muted">
           {cand.items.length} <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
         </span>
       </div>
       {cand.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {cand.tags.map((tg) => (
-            <span key={tg} className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-ink-2">
+            <Badge variant="soft" key={tg}>
               {tg}
-            </span>
+            </Badge>
           ))}
         </div>
       )}
       {!open && (
-        <div className="mt-2 text-[0.6875rem] text-muted">{t('generation.tapSeeFullList', lang)}</div>
+        <div className="mt-2 text-caption text-muted">{t('generation.tapSeeFullList', lang)}</div>
       )}
       {/* Секции (напр. рецепт: «Ингредиенты» / «Приготовление») — двойной список, а не всё в кучу.
           Группируем по item.section; нет секций → плоский список, как раньше. Нумерация внутри секции. */}
       <div className={open ? 'mt-3.5 space-y-4' : 'hidden'}>
         {groupBySection(cand.items).map((g, gi) => (
           <div key={gi}>
-            {g.section && <div className="mb-1.5 text-[0.6875rem] font-semibold tracking-wide text-muted uppercase">{g.section}</div>}
+            {g.section && <div className="mb-1.5 text-caption font-semibold tracking-wide text-muted uppercase">{g.section}</div>}
             <ol className="space-y-3">
               {g.items.map(({ it, n }) => (
                 <li key={n} className="border-l-2 border-border pl-3">
-                  <div className="text-[0.8125rem] font-medium text-ink">
+                  <div className="text-body font-medium text-ink">
                     <span className="text-muted">{n}.</span> {it.title}
                   </div>
-                  {it.desc && <div className="mt-0.5 text-[0.78125rem] text-ink-2">{it.desc}</div>}
+                  {it.desc && <div className="mt-0.5 text-body-sm text-ink-2">{it.desc}</div>}
                   {it.command && (
                     // Бейдж языка в углу (detect-lang, как в редакторе); перенос вместо
                     // горизонтального скролла. CopyButton нельзя: карточка сама <button>.
-                    <code className="relative mt-1 block whitespace-pre-wrap rounded-md bg-surface-2 px-2 py-1 pr-14 font-mono text-[0.78125rem] text-ink [overflow-wrap:anywhere]">
+                    <code className="relative mt-1 block whitespace-pre-wrap rounded-md bg-surface-2 px-2 py-1 pr-14 font-mono text-body-sm text-ink [overflow-wrap:anywhere]">
                       {it.command}
-                      <span className="absolute right-1.5 top-1 font-mono text-[0.6875rem] uppercase tracking-wide text-muted">{LANG_LABEL[detectLang(it.command)]}</span>
+                      <span className="absolute right-1.5 top-1 font-mono text-caption uppercase tracking-wide text-muted">{LANG_LABEL[detectLang(it.command)]}</span>
                     </code>
                   )}
                   {it.subtasks.length > 0 && (
                     <ul className="mt-1 space-y-0.5">
                       {it.subtasks.map((s, j) => (
-                        <li key={j} className="text-[0.78125rem] text-muted">
+                        <li key={j} className="text-body-sm text-muted">
                           ○ {s}
                         </li>
                       ))}

@@ -78,7 +78,11 @@ export function BubbleToolbar({
   return (
     <div
       ref={barRef}
-      className="absolute z-30 flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5 shadow-lg transition-[top,left] duration-150 ease-out motion-reduce:transition-none"
+      // Это панель инструментов над выделенным текстом — роль у неё настоящая, а не
+      // подставленная ради линта: с ней диктор объявляет группу, а стрелки внутри
+      // получают привычное поведение toolbar (WAI-ARIA APG).
+      role="toolbar"
+      className="absolute z-30 flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5 shadow-lg transition-[top,left] dur-fast ease-out motion-reduce:transition-none"
       style={{ top: Math.max(0, top), left: caret.left }}
       // Нажатие на панель не должно уводить фокус из поля — иначе выделение пропадёт.
       onMouseDown={(e) => e.preventDefault()}
@@ -127,7 +131,7 @@ export function BubbleToolbar({
         </Popover>
         {moreOpen && (
           // Сетка с переносом: меню тоже не должно быть шире экрана.
-          <div className="absolute right-0 top-full z-40 mt-1 flex w-max max-w-[11.75rem] flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-1 shadow-lg">
+          <div className="absolute right-0 top-full z-40 mt-1 flex w-max max-w-field-lg flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-1 shadow-lg">
             {hidden.map((tool) => (
               <Tooltip key={tool.t} label={tool.t}>
                 <IconButton

@@ -43,7 +43,7 @@ export function ActivityTopicItem({
       </span>
       <div className="min-w-0 flex-1">
         <DisclosureToggle open={open} onToggle={() => setOpen((was) => !was)} label={summaryText(topic, lang)}>
-          <span className="min-w-0 flex-1 text-[0.8125rem] font-medium text-ink">{summaryText(topic, lang)}</span>
+          <span className="min-w-0 flex-1 text-body font-medium text-ink">{summaryText(topic, lang)}</span>
         </DisclosureToggle>
         {open && <TopicLists handle={handle} kind={topic.kind} windowKey={windowKey} lang={lang} />}
       </div>

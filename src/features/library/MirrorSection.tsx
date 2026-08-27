@@ -9,6 +9,7 @@ import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { disableMirror, mirrorNow, saveMirror } from './mirror-actions'
 import { MIRROR_HELP_AFTER_ATTEMPTS, mirrorRetryDueAt } from './mirror-policy'
 import { MirrorCheckButton } from './MirrorCheckButton'
+import { mirrorErrorText } from './mirror-error'
 
 /** Настройки списка → Зеркало (Ф3): push-копия на GitHub/GitLab.
  *  Пушит ядро после каждой версии; здесь URL + токен (шифруется, повторно не
@@ -66,7 +67,7 @@ export function MirrorSection({
         {/* Статус последнего пуша: иконка + время; текст ошибки — полностью,
             это главный канал диагностики (никакой молчаливой деградации). */}
         {configured && (
-          <div className="flex min-w-0 items-start gap-2 text-[0.8125rem]">
+          <div className="flex min-w-0 items-start gap-2 text-body">
             {error ? (
               <AlertCircle size={16} className="mt-0.5 shrink-0 text-danger" />
             ) : (
@@ -79,7 +80,8 @@ export function MirrorSection({
                   <span className="text-muted"> · {syncedAt.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-GB')}</span>
                 )}
               </div>
-              {error && <div className="mt-0.5 break-words text-danger">{error}</div>}
+              {/* Код отказа от ядра переводится, вывод git показывается как есть. */}
+              {error && <div className="mt-0.5 break-words text-danger">{mirrorErrorText(error, lang)}</div>}
               {/* Что будет дальше. Без этой строки красная ошибка читается как
                   тупик, хотя повтор уже назначен, — и владелец идёт чинить то,
                   что чинится само. Перенос по словам: на 360px текст «повторы

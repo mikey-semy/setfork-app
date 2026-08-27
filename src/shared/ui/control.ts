@@ -3,7 +3,7 @@
 // Все примитивы берут размеры ОТСЮДА; свои px/py/text в фичах не пишем.
 // Эталон вживую — /admin/ui-kit.
 
-export type ControlSize = 'xs' | 'sm' | 'md' | 'lg'
+export type ControlSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
 /** Высота: xs — плотные тулбары/поповеры, sm — панели/фильтры, md — формы и
  *  ряды действий, lg — одиночная кнопка формы во всю ширину.
@@ -25,13 +25,22 @@ export const CONTROL_H: Record<ControlSize, string> = {
   sm: 'h-7',
   md: 'h-8',
   lg: 'h-10',
+  /** 44px — «герой»: единственный контрол страницы, ради которого она и открыта
+   *  (поиск на главной, ввод генерации). Ступень добавлена 26.08.2026: до неё
+   *  высота 44px жила ОТДЕЛЬНОЙ таблицей размеров внутри SearchField под именем
+   *  `hero` — то есть рядом со шкалой стояла вторая шкала на одну ступень. Пока
+   *  она была своя, ряд героя разъезжался: кнопка отправки в HeroSearch была 34px
+   *  против 44px у поля, и узда этого не видела (высота была записана произвольным
+   *  значением `h-[2.75rem]`, а правило искало `h-<цифра>`). */
+  xl: 'h-11',
 }
 
 export const CONTROL_TEXT: Record<ControlSize, string> = {
-  xs: 'text-[0.75rem]',
-  sm: 'text-[0.78125rem]',
-  md: 'text-[0.8125rem]',
-  lg: 'text-[0.875rem]',
+  xs: 'text-caption-lg',
+  sm: 'text-body-sm',
+  md: 'text-body',
+  lg: 'text-body-lg',
+  xl: 'text-lead',
 }
 
 /** Горизонтальные отступы полей ввода; у Button свои (шире на md — текст в
@@ -41,9 +50,10 @@ export const CONTROL_PX: Record<ControlSize, string> = {
   sm: 'px-2',
   md: 'px-2.5',
   lg: 'px-3',
+  xl: 'px-3.5',
 }
 
-// FIELD_TEXT_MOBILE (`max-sm:text-[1rem]`) УДАЛЁН 13.08.2026 — он дублировал уже
+// FIELD_TEXT_MOBILE (`max-sm:text-title`) УДАЛЁН 13.08.2026 — он дублировал уже
 // существующее правило и делал это ХУЖЕ оригинала.
 //
 // Анти-зум iOS живёт в globals.css одним блоком `@media (pointer: coarse)` по типу
@@ -60,22 +70,30 @@ export const CONTROL_PX: Record<ControlSize, string> = {
 // До неё в коде жило 20 разных кеглей с полупиксельными шагами (13 ×406,
 // 12.5 ×313, 12 ×254, 11 ×134, 11.5 ×130, 13.5 ×108…). Ролей — семь; всё
 // новое пишется ролью, свип старого — Ф5b, после него text-[..px] вне
-// shared/ui запрещает линт (Ф7). Герои (20/22/24) в лестницу не входят.
+// shared/ui запрещает линт (Ф7).
+//
+// 26.08.2026 лестница переехала В ТЕМУ Tailwind (`@theme` в globals.css): роли стали
+// НАСТОЯЩИМИ утилитами (`text-body-sm`), а не строками произвольных значений. До этого
+// лестница существовала только на бумаге — в разметке стояло 1190 записей `text-[…rem]`,
+// то есть число вместо роли, и любой новый кегль проходил незамеченным. Здесь остались
+// ИМЕНА для тех, кто собирает класс в коде; в разметке пишут утилиту напрямую.
+//
+// Герои тоже названы (`text-display`, `text-logo`): роль без имени возвращается числом.
 export const TEXT = {
   /** Мелкие подписи: бейджи, моно-меты, uppercase-заголовки групп. */
-  caption: 'text-[0.6875rem]',
+  caption: 'text-caption',
   /** Вторичный текст: подписи полей, хинты, меты. */
-  bodySm: 'text-[0.78125rem]',
+  bodySm: 'text-body-sm',
   /** Основной текст интерфейса. */
-  body: 'text-[0.8125rem]',
+  body: 'text-body',
   /** Крупный текст: поля ввода md, важные абзацы. */
-  bodyLg: 'text-[0.875rem]',
+  bodyLg: 'text-body-lg',
   /** Заголовок раздела/секции. */
-  title: 'text-[1rem]',
+  title: 'text-title',
   /** Заголовок страницы (PageHeader). */
-  page: 'text-[1.125rem]',
+  page: 'text-page',
   /** Число-показатель (StatTile). */
-  stat: 'text-[1.375rem]',
+  stat: 'text-stat',
 } as const
 
 /** Размер lucide-иконки при размере контрола: единый вместо 12 разных чисел. */
@@ -84,6 +102,7 @@ export const ICON_SIZE: Record<ControlSize, number> = {
   sm: 13,
   md: 14,
   lg: 16,
+  xl: 16,
 }
 
 /** То же с дефолтом — чтобы в разметке не писать ICON_SIZE.md у каждой иконки. */
@@ -98,21 +117,18 @@ export const iconSizeFor = (size: ControlSize = 'md'): number => ICON_SIZE[size]
 //
 // PAGE — рамка страницы: горизонтальные поля и вертикальный ритм тоже здесь,
 // иначе разнобой возвращается через px-4/px-6 и py-6/py-8/py-12.
-// eslint-disable-next-line no-restricted-syntax -- здесь ширина и живёт; узда ниже по коду запрещает её повторять
-export const PAGE = 'mx-auto w-full max-w-[73.75rem] px-4 py-6 sm:px-6'
+export const PAGE = 'mx-auto w-full max-w-page px-4 py-6 sm:px-6'
 
 /** То же выравнивание без вертикальных полей — для полос со своим ритмом:
  *  шапка списка, футер, липкая панель сохранения. Их край обязан совпадать с
  *  краем контента, иначе разнобой виден как ступенька. */
-// eslint-disable-next-line no-restricted-syntax -- источник ширины, см. PAGE выше
-export const PAGE_X = 'mx-auto w-full max-w-[73.75rem] px-4 sm:px-6'
+export const PAGE_X = 'mx-auto w-full max-w-page px-4 sm:px-6'
 
 /** Рамка страницы, которая ЦЕЛИКОМ форма или сплошной текст (создание списка,
  *  обратная связь, тред обсуждения, о проекте): поля и вертикальный ритм те же,
  *  ширина — читаемая колонка. Строка в 1180px не читается: норма 60–80 знаков.
  *  Ленты, таблицы и сетки этим не пользуются — им PAGE. */
-// eslint-disable-next-line no-restricted-syntax -- источник ширины, см. PAGE выше
-export const PAGE_NARROW = 'mx-auto w-full max-w-[45rem] px-4 py-6 sm:px-6'
+export const PAGE_NARROW = 'mx-auto w-full max-w-page-narrow px-4 py-6 sm:px-6'
 
 /** Вертикальный ритм колонки контента: полосы, карточки и список блоков стоят
  *  через ОДИН интервал. Раньше каждая полоса задавала отступ сама (mb-2/mb-3/
@@ -205,4 +221,4 @@ export const TOUCH_HIT =
  *
  *  В горизонтальном ряду резерв, наоборот, вреден: он раздувает высоту полосы
  *  (шапка приложения выросла с 53 до 75px), ничего не разнося — соседи там сбоку. */
-export const TOUCH_HIT_ROW = `${TOUCH_HIT} pointer-coarse:my-[0.6875rem]`
+export const TOUCH_HIT_ROW = `${TOUCH_HIT} pointer-coarse:my-2.75`

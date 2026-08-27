@@ -22,7 +22,7 @@ export function ListCardMeta({ item, lang, className }: { item: FeedItem; lang: 
   const VisibilityIcon = visibility.Icon
 
   return (
-    <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.78125rem] text-ink-2', className)}>
+    <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-ink-2', className)}>
       <Link href={`${base}/releases`} className="inline-flex items-center gap-1.5 hover:text-accent">
         <Tag size={14} className="text-muted" />
         <span>

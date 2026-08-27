@@ -31,7 +31,7 @@ export function UsageByUserTable({ rows, lang }: { rows: UsageUserRow[]; lang: L
         r.handle ? (
           <UserLine handle={r.handle} size="md" className="min-w-0" />
         ) : (
-          <span className="text-[0.8125rem] text-muted">{t('admin.systemDeleted', lang)}</span>
+          <span className="text-body text-muted">{t('admin.systemDeleted', lang)}</span>
         ),
     }),
     numberColumn<UsageUserRow>({ id: 'calls', header: t('admin.calls2', lang), size: 112, value: (r) => r.calls, format: num }),
@@ -44,7 +44,7 @@ export function UsageByUserTable({ rows, lang }: { rows: UsageUserRow[]; lang: L
       accessorFn: (r) => r.costUsd,
       // Деньги полужирным — как в v1: это главная колонка таблицы.
       cell: ({ row }) => (
-        <span className="block text-right font-mono tabular-nums text-[0.8125rem] font-semibold text-ink">{money(row.original.costUsd)}</span>
+        <span className="block text-right font-mono tabular-nums text-body font-semibold text-ink">{money(row.original.costUsd)}</span>
       ),
     },
   ]

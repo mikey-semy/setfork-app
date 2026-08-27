@@ -13,6 +13,8 @@ import { Alert } from '@/shared/ui/Alert'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
+import { Checkbox } from '@/shared/ui/checkbox'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,16 +32,19 @@ export default async function EditCollectionPage({ params, searchParams }: { par
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('adminCollection', lang)}</h1>
       <div className="flex items-center justify-between">
-        <Link href="/admin/collections" className="text-[0.8125rem] text-ink-2 hover:text-ink">← {ru ? 'Все подборки' : 'All collections'}</Link>
-        <Link href={`/collections/${c.slug}`} className="inline-flex items-center gap-1.5 text-[0.8125rem] text-accent hover:underline">
+        <Link href="/admin/collections" className="text-body text-ink-2 hover:text-ink">← {ru ? 'Все подборки' : 'All collections'}</Link>
+        <Link href={`/collections/${c.slug}`} className="inline-flex items-center gap-1.5 text-body text-accent hover:underline">
           {ru ? 'Открыть' : 'View'} <ExternalLink size={13} />
         </Link>
       </div>
 
       {/* Метаданные */}
       <form action={updateCollection} className={cardClass({ pad: 'lg', className: 'flex flex-col gap-4' })}>
-        <input type="hidden" name="id" value={c.id} />
+        <Checkbox type="hidden" name="id" value={c.id} />
         <Field label={ru ? 'Название' : 'Title'}>
           <Input name="title" required defaultValue={tr(c.title, lang)} maxLength={120} />
         </Field>
@@ -48,10 +53,10 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         </Field>
         {/* Горизонтальный ряд (подпись слева от поля) — Field сюда не ложится, класс подписи инлайном. */}
         <div className="flex items-center gap-4">
-          <label className="text-[0.78125rem] font-semibold text-ink-2">{ru ? 'Акцент (hex)' : 'Accent (hex)'}</label>
-          <Input name="accent" defaultValue={c.accent ?? ''} placeholder="#2159d6" className="max-w-[8.75rem] font-mono" />
-          <label className="ml-auto inline-flex items-center gap-2 text-[0.8125rem] text-ink">
-            <input type="checkbox" name="published" defaultChecked={c.published} /> {ru ? 'Опубликовано' : 'Published'}
+          <label className="text-body-sm font-semibold text-ink-2">{ru ? 'Акцент (hex)' : 'Accent (hex)'}</label>
+          <Input name="accent" defaultValue={c.accent ?? ''} placeholder="#2159d6" className="max-w-field font-mono" />
+          <label className="ml-auto inline-flex items-center gap-2 text-body text-ink">
+            <Checkbox name="published" defaultChecked={c.published} /> {ru ? 'Опубликовано' : 'Published'}
           </label>
         </div>
         <div className={buttonClass({ variant: 'ghost', className: 'justify-end' })}>
@@ -61,16 +66,16 @@ export default async function EditCollectionPage({ params, searchParams }: { par
 
       {/* Обложка */}
       <SettingsSection title={ru ? 'Обложка' : 'Cover'}>
-        <div className="mb-3 h-[8.125rem] w-full overflow-hidden rounded-lg border border-border">
+        <div className="mb-3 h-32.5 w-full overflow-hidden rounded-lg border border-border">
           {c.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={c.coverUrl} alt="" className="h-full w-full object-cover" />
+            <SmartImage src={c.coverUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <AutoBanner seed={c.id} accent={c.accent} label={c.slug} height="h-full" />
           )}
         </div>
         <form action={setCollectionCover} className="flex items-center gap-2">
-          <input type="hidden" name="id" value={c.id} />
+          <Checkbox type="hidden" name="id" value={c.id} />
           <input type="file" name="file" accept="image/*" required className={buttonClass({ variant: 'ghost' })} />
           <button type="submit" className={buttonClass()}>
             <ImagePlus size={14} /> {ru ? 'Загрузить' : 'Upload'}
@@ -86,12 +91,12 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         {e === 'notfound' && <Alert variant="warn" className="mb-3">{ru ? 'Не найдено по этой ссылке.' : 'Nothing found for that reference.'}</Alert>}
 
         <form action={addCollectionItem} className="mb-3 flex flex-wrap items-center gap-2">
-          <input type="hidden" name="collectionId" value={c.id} />
+          <Checkbox type="hidden" name="collectionId" value={c.id} />
           <div className="inline-flex overflow-hidden rounded-md border border-border">
-            <label className="cursor-pointer px-3 py-2 text-[0.8125rem] text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
+            <label className="cursor-pointer px-3 py-2 text-body text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
               <input type="radio" name="kind" value="list" defaultChecked className="sr-only" /> {ru ? 'Список' : 'List'}
             </label>
-            <label className="cursor-pointer border-l border-border px-3 py-2 text-[0.8125rem] text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
+            <label className="cursor-pointer border-l border-border px-3 py-2 text-body text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
               <input type="radio" name="kind" value="catalog" className="sr-only" /> {ru ? 'Каталог' : 'Catalog'}
             </label>
           </div>
@@ -100,13 +105,13 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         </form>
 
         <div className="flex flex-col gap-1.5">
-          {c.items.length === 0 && <div className="text-[0.8125rem] text-muted">{ru ? 'Пусто.' : 'Empty.'}</div>}
+          {c.items.length === 0 && <div className="text-body text-muted">{ru ? 'Пусто.' : 'Empty.'}</div>}
           {c.items.map((it) => {
             const remove = removeCollectionItem.bind(null, it.itemId, c.id)
             return (
               <div key={it.itemId} className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2">
-                <span className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[0.6875rem] uppercase text-muted">{it.kind}</span>
-                <span className={`min-w-0 flex-1 truncate font-mono text-[0.78125rem] ${it.ok ? 'text-ink' : 'text-danger line-through'}`}>{it.label}</span>
+                <span className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-caption uppercase text-muted">{it.kind}</span>
+                <span className={`min-w-0 flex-1 truncate font-mono text-body-sm ${it.ok ? 'text-ink' : 'text-danger line-through'}`}>{it.label}</span>
                 <form action={remove}>
                   <button type="submit" aria-label="remove" className={buttonClass({ variant: 'danger', className: 'hover:text-danger' })}>
                     <X size={14} />

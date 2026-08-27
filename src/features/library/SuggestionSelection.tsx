@@ -1,11 +1,13 @@
 'use client'
 
 import { createContext, useContext, useState, useTransition, type ReactNode } from 'react'
-import { Check, Loader2, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 import type { Lang } from '@/shared/i18n'
 import { resolveChip, type CustomLabel } from '@/shared/lib/labels'
 import { bulkSuggestionAction } from './suggestion-meta-actions'
@@ -85,8 +87,8 @@ export function SuggestionSelection({
   return (
     <SelCtx.Provider value={{ sel, toggle, label: labels.selected }}>
       {sel.length > 0 && (
-        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-(--accent-soft) px-3 py-2">
-          <span className="text-[0.8125rem] font-semibold text-ink">
+        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-accent-soft px-3 py-2">
+          <span className="text-body font-semibold text-ink">
             {labels.selected}: {sel.length}
           </span>
           {/* Действия — вправо; на мобиле строка действий занимает всю ширину,
@@ -105,24 +107,19 @@ export function SuggestionSelection({
               onPick={(key) => run({ kind: 'milestone', milestoneId: key })}
             />
             <Button variant="ghost" disabled={pending} onClick={() => run({ kind: 'close' })}>
-              {pending ? <Loader2 size={14} className="animate-spin" /> : labels.close}
+              {pending ? <Spinner size="md" /> : labels.close}
             </Button>
             <Tooltip label={labels.clear}>
-              <button
-                type="button"
-                onClick={() => setSel([])}
-                aria-label={labels.clear}
-                className="grid size-11 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
-              >
+              <IconButton size="xl" variant="ghost" label={labels.clear} className="shrink-0 text-muted hover:text-ink" onClick={() => setSel([])}>
                 <X size={15} />
-              </button>
+              </IconButton>
             </Tooltip>
           </div>
         </div>
       )}
 
       {ids.length > 0 && (
-        <label className="mb-2 inline-flex h-11 cursor-pointer items-center gap-2 px-1 text-[0.78125rem] text-ink-2">
+        <label className="mb-2 inline-flex h-11 cursor-pointer items-center gap-2 px-1 text-body-sm text-ink-2">
           <Checkbox
             checked={sel.length === ids.length}
             onChange={() => setSel((s) => (s.length === ids.length ? [] : ids))}
@@ -157,7 +154,7 @@ function BulkMenu({
           {label}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[11.25rem]">
+      <DropdownMenuContent align="end" className="min-w-field-lg">
         <DropdownMenuLabel>{label}</DropdownMenuLabel>
         {items.map((it) => (
           <DropdownMenuItem key={it.key} onClick={() => onPick(it.key)} className="cursor-pointer">

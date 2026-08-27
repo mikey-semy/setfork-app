@@ -49,7 +49,7 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
             onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.8125rem] font-medium',
+              'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-body font-medium',
               active ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink',
             )}
           >
@@ -91,17 +91,17 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
       {/* Спейсер: резервирует место под фиксированную панель, чтобы контент не уезжал под неё. */}
       <div
         aria-hidden
-        className={cn('hidden shrink-0 transition-[width] duration-200 lg:block print:hidden', collapsed ? 'w-0' : 'w-[15rem]')}
+        className={cn('hidden shrink-0 transition-[width] dur-base lg:block print:hidden', collapsed ? 'w-0' : 'w-menu')}
       />
       <aside
         aria-hidden={collapsed}
         className={cn(
-          'fixed bottom-0 left-0 top-[3.3125rem] z-20 hidden overflow-hidden bg-surface transition-[width] duration-200 lg:block print:hidden',
-          collapsed ? 'w-0 border-r-0' : 'w-[15rem] border-r border-border',
+          'fixed bottom-0 left-0 top-[3.3125rem] z-20 hidden overflow-hidden bg-surface transition-[width] dur-base lg:block print:hidden',
+          collapsed ? 'w-0 border-r-0' : 'w-menu border-r border-border',
         )}
       >
         {!collapsed && (
-          <div className="flex h-full w-[15rem] flex-col px-2 py-2.5">
+          <div className="flex h-full w-menu flex-col px-2 py-2.5">
             <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
               {nav()}
               {lists()}
@@ -123,10 +123,12 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
       {/* Mobile: тот же сайдбар оверлеем (бургер в топ-баре) */}
       {mobileOpen && (
         <>
-          <div className="sf-overlay-in fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />
-          <aside className="animate-slide-in-left fixed left-0 top-0 z-50 flex h-full w-[17.5rem] max-w-[85vw] flex-col border-r border-border bg-surface p-3 shadow-xl lg:hidden">
+          {/* Затемнение — удобство мыши; для диктора его нет (aria-hidden), закрытие
+              с клавиатуры — Esc и крестик в шапке панели. */}
+          <div className="animate-sf-fade fixed inset-0 z-40 bg-black/40 lg:hidden" aria-hidden onClick={() => setMobileOpen(false)} />
+          <aside className="animate-slide-in-left fixed left-0 top-0 z-50 flex h-full w-panel max-w-[85vw] flex-col border-r border-border bg-surface p-3 shadow-xl lg:hidden">
             <div className="mb-3 flex items-center justify-between px-1">
-              <span className="font-logo text-[1.125rem] leading-none text-ink">SF</span>
+              <span className="font-logo text-page leading-none text-ink">SF</span>
               <button
                 type="button"
                 aria-label={t('menu', lang)}

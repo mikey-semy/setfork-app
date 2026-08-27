@@ -18,11 +18,11 @@ export function PeopleResults({ people, lang }: { people: PersonRow[]; lang: Lan
             <Avatar handle={p.handle} avatarUrl={p.avatarUrl} size={44} />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2">
-                {p.name && <span className="truncate text-[0.875rem] font-semibold text-ink">{p.name}</span>}
-                <span className="truncate text-[0.8125rem] text-ink-2">@{p.handle}</span>
+                {p.name && <span className="truncate text-body-lg font-semibold text-ink">{p.name}</span>}
+                <span className="truncate text-body text-ink-2">@{p.handle}</span>
               </div>
-              {p.bio && <p className="mt-0.5 line-clamp-2 text-[0.8125rem] text-ink-2">{p.bio}</p>}
-              <div className="mt-1.5 flex items-center gap-4 text-[0.78125rem] text-muted">
+              {p.bio && <p className="mt-0.5 line-clamp-2 text-body text-ink-2">{p.bio}</p>}
+              <div className="mt-1.5 flex items-center gap-4 text-body-sm text-muted">
                 <span className="inline-flex items-center gap-1">
                   <ListChecks size={13} /> {p.listsCount} {t('listsLabel', lang)}
                 </span>

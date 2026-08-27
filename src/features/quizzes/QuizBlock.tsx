@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, ChevronDown, ChevronUp, GraduationCap, Loader2, RotateCcw, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, GraduationCap, RotateCcw, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { submitQuiz } from './actions'
 import type { QuizState } from './queries'
@@ -9,6 +9,9 @@ import { Button } from '@/shared/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, matchRights, shuffleSort, quizKind, type QuizBlockContent } from '@/core'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
+import { Input } from '@/shared/ui/input'
+import { Textarea } from '@/shared/ui/textarea'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -198,7 +201,7 @@ export function QuizBlock({
       <div className="mb-2.5 flex items-center gap-2">
         <GraduationCap size={15} className="shrink-0 text-accent" />
         {/* Вопрос пишет автор списка, длина не ограничена — без переноса блок уносит страницу. */}
-        <span className="min-w-0 text-[0.875rem] font-semibold text-ink [overflow-wrap:anywhere]">{content.question || (ru ? 'Тест' : 'Quiz')}</span>
+        <span className="min-w-0 text-body-lg font-semibold text-ink [overflow-wrap:anywhere]">{content.question || (ru ? 'Тест' : 'Quiz')}</span>
       </div>
 
       {kind === 'choice' && (
@@ -214,7 +217,7 @@ export function QuizBlock({
                 disabled={checked || pending || readOnly}
                 onClick={() => toggle(o.id)}
                 // eslint-disable-next-line no-restricted-syntax -- карточка варианта ответа: высота от содержимого
-                className={`flex items-center gap-2.5 rounded-md border px-3 py-2 text-left text-[0.8125rem] transition-colors ${
+                className={`flex items-center gap-2.5 rounded-md border px-3 py-2 text-left text-body transition-colors ${
                   showRight ? 'border-ok bg-ok/10' : showWrong ? 'border-danger bg-danger/10' : sel ? 'border-accent' : 'border-border'
                 } ${checked ? 'cursor-default' : 'hover:border-border-strong'}`}
               >
@@ -235,8 +238,8 @@ export function QuizBlock({
       )}
 
       {(kind === 'text' || kind === 'number') && (
-        <input
-          type={kind === 'number' ? 'text' : 'text'}
+        <Input
+          type="text"
           inputMode={kind === 'number' ? 'decimal' : 'text'}
           disabled={checked || pending || readOnly}
           value={textInput}
@@ -248,22 +251,18 @@ export function QuizBlock({
             }
           }}
           placeholder={kind === 'number' ? (ru ? 'Ваш ответ (число)' : 'Your answer (number)') : ru ? 'Ваш ответ' : 'Your answer'}
-          className={`w-full rounded-md border px-3 py-2 text-[0.8125rem] text-ink outline-hidden ${
-            checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2 focus:border-border-strong'
-          }`}
+          className={checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : undefined}
         />
       )}
 
       {kind === 'code' && (
-        <textarea
+        <Textarea
           disabled={checked || pending || readOnly}
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           rows={4}
           placeholder={ru ? 'Ваш код' : 'Your code'}
-          className={`w-full resize-y rounded-md border px-3 py-2 font-mono text-[0.78125rem] text-ink outline-hidden ${
-            checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2 focus:border-border-strong'
-          }`}
+          className={`resize-y font-mono text-body-sm ${checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : ''}`}
         />
       )}
 
@@ -271,8 +270,8 @@ export function QuizBlock({
         <div className="flex flex-col gap-1.5">
           {/* key — сам элемент: список переупорядочивается, ключ с индексом «прыгал» бы при каждом сдвиге. */}
           {sortOrder.map((it2, i) => (
-            <div key={it2} className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[0.8125rem] ${checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2'}`}>
-              <span className="w-4 shrink-0 text-right font-mono text-[0.6875rem] text-muted">{i + 1}</span>
+            <div key={it2} className={`flex items-center gap-2 rounded-md border px-3 py-2 text-body ${checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2'}`}>
+              <span className="w-4 shrink-0 text-right font-mono text-caption text-muted">{i + 1}</span>
               <span className="min-w-0 flex-1 text-ink">{it2}</span>
               {!checked && (
                 <span className="flex shrink-0 flex-col">
@@ -286,20 +285,19 @@ export function QuizBlock({
       )}
 
       {kind === 'blank' && (
-        <p className={`text-[0.875rem] leading-8 text-ink ${checked ? (ok ? 'text-ok' : '') : ''}`}>
+        <p className={`text-body-lg leading-8 text-ink ${checked ? (ok ? 'text-ok' : '') : ''}`}>
           {blankParts(content.template ?? '').map((part, i) => (
             <span key={i}>
               {part}
               {i < nBlanks && (
-                <input
+                <Input
                   type="text"
+                  size="sm"
                   disabled={checked || pending || readOnly}
                   value={blankInputs[i] ?? ''}
                   onChange={(e) => setBlankInputs((xs) => xs.map((v, xi) => (xi === i ? e.target.value : v)))}
                   aria-label={`${ru ? 'Пропуск' : 'Blank'} ${i + 1}`}
-                  className={`mx-1 inline-block w-28 rounded-md border px-2 py-0.5 text-[0.8125rem] text-ink outline-hidden ${
-                    checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border-strong bg-surface-2 focus:border-accent'
-                  }`}
+                  className={`mx-1 inline-block w-28 ${checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : ''}`}
                 />
               )}
             </span>
@@ -313,7 +311,7 @@ export function QuizBlock({
             // Подсветка после проверки доступна только когда эталон у клиента (аноним).
             const rowGood = checked && content.pairs ? matchPick[i] === content.pairs[i]?.right : undefined
             return (
-              <div key={i} className="flex items-center gap-2 text-[0.8125rem]">
+              <div key={i} className="flex items-center gap-2 text-body">
                 <span className="min-w-0 flex-1 truncate text-ink">{left}</span>
                 <span className="shrink-0 text-muted">→</span>
                 <div className="w-[45%] shrink-0">
@@ -339,26 +337,26 @@ export function QuizBlock({
       <div className="mt-3 flex items-center gap-2">
         {readOnly ? (
           // Снимок прошлой версии: отвечать некуда — вместо кнопки честная подпись.
-          <span className="text-[0.78125rem] text-muted">{t('quizSnapshotReadOnly', lang)}</span>
+          <span className="text-body-sm text-muted">{t('quizSnapshotReadOnly', lang)}</span>
         ) : !checked ? (
           <Button variant="primary" disabled={!hasInput || pending || (clientMode && !clientHasAnswer)} onClick={check}>
-            {pending && <Loader2 size={13} className="animate-spin" />}
+            {pending && <Spinner size="sm" />}
             {ru ? 'Проверить' : 'Check'}
           </Button>
         ) : (
           <>
-            <span className={`inline-flex items-center gap-1.5 text-[0.8125rem] font-medium ${ok ? 'text-ok' : 'text-danger'}`}>
+            <span className={`inline-flex items-center gap-1.5 text-body font-medium ${ok ? 'text-ok' : 'text-danger'}`}>
               {ok ? <Check size={15} /> : <X size={15} />}
               {ok ? (ru ? 'Верно' : 'Correct') : ru ? 'Неверно' : 'Incorrect'}
             </span>
-            {!clientMode && attempts > 1 && <span className="text-[0.6875rem] text-muted">{ru ? `попытка ${attempts}` : `attempt ${attempts}`}</span>}
-            <button type="button" onClick={reset} className="ml-auto inline-flex items-center gap-1 text-[0.78125rem] text-muted hover:text-ink">
+            {!clientMode && attempts > 1 && <span className="text-caption text-muted">{ru ? `попытка ${attempts}` : `attempt ${attempts}`}</span>}
+            <button type="button" onClick={reset} className="ml-auto inline-flex items-center gap-1 text-body-sm text-muted hover:text-ink">
               <RotateCcw size={13} /> {ru ? 'Заново' : 'Retry'}
             </button>
           </>
         )}
         {!checked && (multi || (clientMode && !clientHasAnswer)) && (
-          <span className="text-[0.6875rem] text-muted">
+          <span className="text-caption text-muted">
             {clientMode && !clientHasAnswer ? (ru ? 'нет ответа для проверки' : 'no answer set') : ru ? 'выберите все верные' : 'select all correct'}
           </span>
         )}
@@ -366,16 +364,16 @@ export function QuizBlock({
 
       {/* Верный ответ (text/number) — когда ответ неверный. */}
       {checked && !ok && kind !== 'choice' && revealText && (
-        <p className="mt-2 text-[0.78125rem] text-ink-2">
+        <p className="mt-2 text-body-sm text-ink-2">
           {ru ? 'Верный ответ: ' : 'Correct answer: '}
           <span className="font-medium text-ink">{revealText}</span>
         </p>
       )}
 
-      {err && <p className="mt-2 text-[0.78125rem] text-danger">{err}</p>}
+      {err && <p className="mt-2 text-body-sm text-danger">{err}</p>}
 
       {checked && content.explain && (
-        <p className="mt-2.5 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.78125rem] leading-relaxed text-ink-2">{content.explain}</p>
+        <p className="mt-2.5 rounded-md border border-border bg-surface-2 px-3 py-2 text-body-sm leading-relaxed text-ink-2">{content.explain}</p>
       )}
     </div>
   )

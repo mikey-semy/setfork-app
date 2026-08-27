@@ -76,11 +76,11 @@ export default async function NotificationsPage({
               <div
                 key={n.id}
                 className={`flex items-start gap-3 rounded-lg border border-border px-3.5 py-3 ${
-                  n.read ? 'bg-surface' : 'bg-(--accent-soft)'
+                  n.read ? 'bg-surface' : 'bg-accent-soft'
                 }`}
               >
                 <Avatar handle={n.actorHandle ?? '?'} avatarUrl={n.actorAvatarUrl} size={30} />
-                <div className="min-w-0 flex-1 text-[0.8125rem] text-ink-2">
+                <div className="min-w-0 flex-1 text-body text-ink-2">
                   <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(NOTIF_VERB[n.type], lang)}
                   {isFollow ? null : href ? (
                     <>
@@ -93,7 +93,7 @@ export default async function NotificationsPage({
                     <> <span className="text-ink">{listTitle}</span></>
                   )}
                 </div>
-                <span className="shrink-0 font-mono text-[0.6875rem] text-muted">{fmt.format(new Date(n.createdAt))}</span>
+                <span className="shrink-0 font-mono text-caption text-muted">{fmt.format(new Date(n.createdAt))}</span>
               </div>
             )
           })}

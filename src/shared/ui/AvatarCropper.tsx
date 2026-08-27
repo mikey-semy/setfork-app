@@ -162,7 +162,7 @@ export function AvatarCropper({
           <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-white/60" />
         </div>
 
-        <label className="flex items-center gap-2 text-[0.78125rem] text-muted">
+        <label className="flex items-center gap-2 text-body-sm text-muted">
           <ZoomIn size={15} className="shrink-0" />
           <input
             type="range"
@@ -172,11 +172,11 @@ export function AvatarCropper({
             value={zoom}
             onChange={(e) => onZoom(Number(e.target.value))}
             aria-label={labels.zoom}
-            className="h-1 w-full cursor-pointer accent-(--accent)"
+            className="h-1 w-full cursor-pointer accent-accent"
           />
         </label>
 
-        {err && <p className="text-[0.78125rem] text-danger">{err}</p>}
+        {err && <p className="text-body-sm text-danger">{err}</p>}
       </div>
     </OverlayPanel>
   )

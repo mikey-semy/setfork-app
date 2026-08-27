@@ -16,7 +16,7 @@ import { resetTables } from '../../helpers/reset-db'
  * Требует живого ядра: публикация черновика идёт обычным путём записи, через git-коммит.
  */
 const CORE = process.env.SETFORK_CORE_ADDR
-const описание = CORE ? describe : describe.skip
+const description = CORE ? describe : describe.skip
 
 const { db, listDrafts, templates, users } = await import('@/shared/db')
 const { mcpCreateList } = await import('@/features/mcp/tools/lists/create')
@@ -41,7 +41,7 @@ const listRow = async (slug: string) => {
   return row
 }
 
-описание('update_list с publish:false', () => {
+description('update_list с publish:false', () => {
   beforeAll(async () => {
     await resetTables([templates, users])
     const [u] = await db.insert(users).values({ handle: HANDLE, email: 'holder@x.dev', name: 'H' }).returning({ id: users.id })

@@ -9,11 +9,13 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { TEXT } from '@/shared/ui/control'
+import { Badge } from '@/shared/ui/badge'
 import { fetchModels, prettyModelName } from '@/shared/ai/models'
 import { STATS_WINDOW_DAYS } from '@/shared/ai/model-stats'
 import { modelMeta } from '@/features/admin/model-enrich'
 import { contextText } from '@/features/admin/model-options'
 import type { OptionHolder, OptionMeta } from '@/features/admin/ModelSelect'
+import { cardClass } from '@/shared/ui/card-style'
 
 /**
  * СТРАНИЦА МОДЕЛЕЙ — единственное место, где видно ЦЕЛИКОМ: какая модель на какой роли, кто из
@@ -57,7 +59,6 @@ export default async function AdminModelsPage() {
     .sort((a, b) => (b[1].calls ?? 0) - (a[1].calls ?? 0))
 
   const dead = assignments.filter((a) => a.model && !catalog.has(a.model))
-  const card = 'rounded-lg border border-border bg-surface p-4'
   const capt = `${TEXT.caption} font-semibold uppercase tracking-wide text-muted`
 
   return (
@@ -100,7 +101,7 @@ export default async function AdminModelsPage() {
             const alive = !a.model || catalog.has(a.model)
             const opt = catalog.get(a.model)
             return (
-              <div key={`${a.holder.kind}-${a.holder.label}-${a.model}`} className={card}>
+              <div key={`${a.holder.kind}-${a.holder.label}-${a.model}`} className={cardClass()}>
                 <div className="flex min-w-0 items-center gap-2">
                   {a.holder.avatarUrl && (
                     <GnomeAvatar src={a.holder.avatarUrl} size={20} alt="" className="size-5 shrink-0 rounded-full" />
@@ -161,21 +162,23 @@ export default async function AdminModelsPage() {
           {rated.map(([id, m]) => {
             const opt = catalog.get(id)
             return (
-              <div key={id} className={card}>
+              <div key={id} className={cardClass()}>
                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
                   <span className={`min-w-0 ${TEXT.body} font-medium text-ink [overflow-wrap:anywhere]`}>{prettyModelName(id)}</span>
                   {opt?.family && (
-                    <span className={`shrink-0 rounded-full border border-border bg-surface-2 px-1.5 py-px ${TEXT.caption} text-muted`}>{opt.family}</span>
+                    <Badge variant="chip" className="shrink-0 px-1.5 py-px text-muted">
+                      {opt.family}
+                    </Badge>
                   )}
                   {m.quarantined && (
-                    <span className={`shrink-0 rounded-full border border-danger px-1.5 py-px ${TEXT.caption} text-danger`}>
+                    <Badge variant="danger" className="shrink-0 px-1.5 py-px">
                       {t('models.quarantined', lang)}
-                    </span>
+                    </Badge>
                   )}
                   {!opt && (
-                    <span className={`shrink-0 rounded-full border border-border px-1.5 py-px ${TEXT.caption} text-warn`}>
+                    <Badge variant="warn" className="shrink-0 px-1.5 py-px">
                       {t('models.notInCatalogShort', lang)}
-                    </span>
+                    </Badge>
                   )}
                 </div>
                 <div className={`mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 ${TEXT.caption} text-muted`}>
@@ -190,10 +193,10 @@ export default async function AdminModelsPage() {
                     <span className="flex flex-wrap items-center gap-1">
                       {m.holders?.map((h) => (
                         <Tooltip key={`${h.kind}-${h.label}`} label={`${h.label} — ${h.what}`}>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-1.5 py-px text-ink-2">
+                          <Badge variant="chip">
                             {h.avatarUrl && <GnomeAvatar src={h.avatarUrl} size={12} alt="" className="size-3 rounded-full" />}
                             {h.label}
-                          </span>
+                          </Badge>
                         </Tooltip>
                       ))}
                     </span>

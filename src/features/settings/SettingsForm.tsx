@@ -5,6 +5,7 @@ import { Plus, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import type { Social } from '@/shared/db/schema'
 import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -60,7 +61,7 @@ export function SettingsForm({
 
       {/* Форма аватара в профиле — круг (по умолчанию) или квадрат. */}
       <label className="flex items-center justify-between gap-3">
-        <span className="text-[0.8125rem] text-ink-2">{t('avatarSquareLabel', lang)}</span>
+        <span className="text-body text-ink-2">{t('avatarSquareLabel', lang)}</span>
         <Switch name="avatarSquare" checked={square} onCheckedChange={setSquare} />
       </label>
 
@@ -75,7 +76,11 @@ export function SettingsForm({
           maxLength={280}
           rows={2}
           placeholder={t('bioPh', lang)}
-          className="min-h-[2.4375rem] max-h-[5.0625rem] resize-y overflow-y-auto"
+          // Это не высота контрола, а ГРАНИЦЫ РОСТА поля с resize-y: сколько оно занимает
+          // в покое и докуда человек может его растянуть. Ступень шкалы задаёт первое и
+          // ничего не говорит про второе.
+          // eslint-disable-next-line no-restricted-syntax -- границы роста, не ступень
+          className="min-h-10 max-h-20.5 resize-y overflow-y-auto"
         />
       </Field>
 
@@ -95,7 +100,7 @@ export function SettingsForm({
           {rows.map((row, i) => (
             <div key={row._k} className="flex items-center gap-2">
               <Select value={row.type} onValueChange={(v) => setRow(i, { type: v })}>
-                <SelectTrigger id={i === 0 ? 'profile-socials' : undefined} className="w-[10rem] shrink-0">
+                <SelectTrigger id={i === 0 ? 'profile-socials' : undefined} className="w-field shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -114,21 +119,24 @@ export function SettingsForm({
                 onChange={(e) => setRow(i, { url: e.target.value })}
                 placeholder="https://…"
               />
-              <Button
+              {/* Ступень ряда: рядом стоят Select и Input по `md`, а кнопка была 42px —
+                  та самая волна разных высот в одном ряду (Ф18 трека ui-system). */}
+              <IconButton
                 type="button"
-                variant="ghost"
+                variant="outline"
+                size="md"
                 onClick={() => removeRow(i)}
-                aria-label="remove"
-                className="h-[2.625rem] w-[2.625rem] shrink-0 border border-border p-0 text-muted hover:bg-transparent hover:text-ink"
+                label={t('removeLabel', lang)}
+                className="text-muted hover:bg-transparent hover:text-ink"
               >
                 <X size={15} />
-              </Button>
+              </IconButton>
             </div>
           ))}
           <button
             type="button"
             onClick={addRow}
-            className="inline-flex w-fit items-center gap-1.5 text-[0.8125rem] font-medium text-accent hover:underline"
+            className="inline-flex w-fit items-center gap-1.5 text-body font-medium text-accent hover:underline"
           >
             <Plus size={14} /> {t('addSocial', lang)}
           </button>
@@ -138,15 +146,15 @@ export function SettingsForm({
       {/* Приватность профиля */}
       <div className="flex items-start justify-between gap-4 border-t border-border pt-4">
         <div className="min-w-0">
-          <div className="text-[0.8125rem] font-medium text-ink">{t('profilePrivateLabel', lang)}</div>
-          <p className="mt-0.5 max-w-[32.5rem] text-[0.78125rem] text-ink-2">{t('profilePrivateHint', lang)}</p>
+          <div className="text-body font-medium text-ink">{t('profilePrivateLabel', lang)}</div>
+          <p className="mt-0.5 max-w-column text-body-sm text-ink-2">{t('profilePrivateHint', lang)}</p>
         </div>
         <Switch name="profilePrivate" checked={priv} onCheckedChange={setPriv} />
       </div>
 
       <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-        {state?.ok && <span className="text-[0.8125rem] text-ok">{t('profileSaved', lang)}</span>}
-        {state?.error && <span className="text-[0.8125rem] text-danger">{state.error}</span>}
+        {state?.ok && <span className="text-body text-ok">{t('profileSaved', lang)}</span>}
+        {state?.error && <span className="text-body text-danger">{state.error}</span>}
         <Button type="submit" variant="primary" size="lg" disabled={pending} className="disabled:opacity-60">
           {t('saveChanges', lang)}
         </Button>

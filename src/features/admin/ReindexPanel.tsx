@@ -1,12 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Eraser, Loader2, Sparkles } from 'lucide-react'
+import { Eraser, Sparkles } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { getEmbedSpaceInfo, getReindexStatus, purgeEmbeddings, setEmbedTarget, startReindex } from './actions'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
+import { Badge } from '@/shared/ui/badge'
+import { Input } from '@/shared/ui/input'
 import { buttonClass } from '@/shared/ui/button-style'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
@@ -109,14 +112,12 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
     setMsg('error' in res ? res.error : t('admin.removedOrphaned', lang).replace('{n}', String(res.removed)))
   }
 
-  const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[0.8125rem] font-semibold disabled:opacity-60'
-
   return (
     // Та же читаемая ширина, что у карточек-секций /admin (const card на странице):
     // без кэпа панель растягивалась на весь экран и выбивалась из колонны секций.
-    <div className={cardClass({ className: 'w-full max-w-[53.75rem]' })}>
+    <div className={cardClass({ className: 'w-full max-w-wide' })}>
       <div className="mb-1 font-semibold text-ink">{t('admin.searchIndexEmbeddings', lang)}</div>
-      <p className="mb-3 text-[0.8125rem] text-ink-2">
+      <p className="mb-3 text-body text-ink-2">
         {t('admin.rebuildVectorIndexLists', lang)}
       </p>
 
@@ -125,32 +126,32 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
           <div className="flex flex-wrap items-center gap-3">
             {/* Мерность — крупным бейджем: в чём реально построен индекс */}
             <span className="inline-flex items-baseline gap-1 rounded-md bg-primary px-2.5 py-1.5 font-mono text-primary-fg">
-              <span className="text-[1.125rem] font-bold leading-none">{space.index.dim}</span>
-              <span className="text-[0.6875rem] uppercase opacity-80">{t('admin.dim', lang)}</span>
+              <span className="text-page font-bold leading-none">{space.index.dim}</span>
+              <span className="text-caption uppercase opacity-80">{t('admin.dim', lang)}</span>
             </span>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-2 text-[0.8125rem] font-medium text-ink">
+              <div className="flex flex-wrap items-center gap-x-2 text-body font-medium text-ink">
                 {t('admin.indexSpace', lang)}
-                <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[0.6875rem] font-semibold">
+                <Badge variant="chip">
                   {providerLabel(space.index.provider)}
-                </span>
+                </Badge>
                 <Tooltip label={space.index.docModel}>
-                  <span className="truncate font-mono text-[0.6875rem] text-ink-2">{space.index.docLabel}</span>
+                  <span className="truncate font-mono text-caption text-ink-2">{space.index.docLabel}</span>
                 </Tooltip>
               </div>
-              <div className="mt-0.5 text-[0.78125rem] text-muted">
+              <div className="mt-0.5 text-body-sm text-muted">
                 {space.vectorized}/{space.rows} {t('admin.rowsVectorized', lang)}
                 {space.index.at ? ` · ${t('admin.reindexed', lang)} ${new Date(space.index.at).toLocaleString()}` : ''}
               </div>
             </div>
           </div>
           {!space.inSync && (
-            <div className="mt-2 text-[0.78125rem] font-medium text-warn">
+            <div className="mt-2 text-body-sm font-medium text-warn">
               {t('admin.targetChanged', lang).replace('{p}', providerLabel(space.target.provider)).replace('{d}', String(space.target.dim))}
             </div>
           )}
           <div className="mt-2.5 flex items-center gap-2">
-            <label htmlFor="reindex-target" className="text-[0.78125rem] text-ink-2">{t('admin.target', lang)}</label>
+            <label htmlFor="reindex-target" className="text-body-sm text-ink-2">{t('admin.target', lang)}</label>
             <Select
               value={space.target.provider}
               disabled={switching || running}
@@ -162,7 +163,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
                 setSwitching(false)
               }}
             >
-              <SelectTrigger id="reindex-target" className="h-auto w-auto min-w-[11.875rem] px-2 py-1 text-[0.78125rem]">
+              <SelectTrigger id="reindex-target" className="h-auto w-auto min-w-field-lg px-2 py-1 text-body-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -173,35 +174,32 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
                 ))}
               </SelectContent>
             </Select>
-            {switching && <Loader2 size={13} className="animate-spin text-muted" />}
+            {switching && <Spinner size="sm" className="text-muted" />}
           </div>
           {/* Мерность — свойство ВЫБРАННОЙ МОДЕЛИ, поэтому у пунктов её нет (раньше там
               стояло вписанное руками «· 1536» при колонке 768). Здесь — измеренный факт
               для текущей цели, а пока не измерен — так и сказано. */}
-          <p className="mt-1.5 text-[0.78125rem] text-muted">
+          <p className="mt-1.5 text-body-sm text-muted">
             {targetDimText(space, lang)}
           </p>
         </div>
       )}
 
       <div className="mb-3">
-        <label htmlFor="reindex-spread" className="mb-1 block text-[0.78125rem] text-ink-2">{t('admin.spreadOverMin', lang)}</label>
-        <input
-          id="reindex-spread"
+        <label htmlFor="reindex-spread" className="mb-1 block text-body-sm text-ink-2">{t('admin.spreadOverMin', lang)}</label>
+        <Input id="reindex-spread"
           type="number"
           min={0}
           max={120}
           value={spread}
           disabled={running}
-          onChange={(e) => setSpread(Math.max(0, Math.min(120, Number(e.target.value) || 0)))}
-          className={buttonClass({ className: 'w-24 bg-surface-2 outline-hidden' })}
-        />
+          onChange={(e) => setSpread(Math.max(0, Math.min(120, Number(e.target.value) || 0)))} className="w-24" />
       </div>
 
-      {msg && <div className="mb-3 text-[0.78125rem] text-ink-2">{msg}</div>}
+      {msg && <div className="mb-3 text-body-sm text-ink-2">{msg}</div>}
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-[0.78125rem] text-muted">
+        <div className="flex items-center justify-between text-body-sm text-muted">
           <span>
             {stalled
               ? t('admin.interruptedRunAgain', lang)
@@ -235,8 +233,8 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
             return (
               <span
                 key={i}
-                className={`aspect-square w-full rounded-[2px] transition-colors ${
-                  filled ? 'animate-cell-pop bg-ok' : errored ? 'bg-danger' : 'bg-(--border)'
+                className={`aspect-square w-full rounded-xs transition-colors ${
+                  filled ? 'animate-cell-pop bg-ok' : errored ? 'bg-danger' : 'bg-border'
                 }`}
               />
             )
@@ -245,12 +243,12 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-4">
-        <button type="button" onClick={purge} disabled={purging || running} className={`${btn} border border-border text-ink hover:border-border-strong`}>
-          {purging ? <Loader2 size={14} className="animate-spin" /> : <Eraser size={14} />}
+        <button type="button" onClick={purge} disabled={purging || running} className={buttonClass({ variant: 'outline' })}>
+          {purging ? <Spinner size="md" /> : <Eraser size={14} />}
           {t('admin.purge', lang)}
         </button>
-        <button type="button" onClick={start} disabled={running || onCooldown || starting} className={`${btn} bg-primary text-primary-fg`}>
-          {running || starting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+        <button type="button" onClick={start} disabled={running || onCooldown || starting} className={buttonClass({ variant: 'primary' })}>
+          {running || starting ? <Spinner size="md" /> : <Sparkles size={14} />}
           {running
             ? t('admin.indexing', lang)
             : onCooldown

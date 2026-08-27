@@ -51,7 +51,7 @@ export default async function ComparePage({
   const toggle = (key: 'code' | 'list', icon: ReactNode, labelKey: 'viewCode' | 'viewList') => (
     <Link
       href={`${base}?from=${fromN}&to=${toN}&view=${key}`}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[0.78125rem] font-medium ${
+      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-body-sm font-medium ${
         view === key ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
       }`}
     >

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ImageUp, Loader2, Sparkles, X } from 'lucide-react'
+import { Check, ImageUp, Sparkles, X } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -13,6 +13,8 @@ import type { LandingContent, LandingCopy } from '@/shared/settings/landing'
 import { saveLanding, suggestSlogan, uploadLandingImage } from './landing-actions'
 import { t } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 type FieldKey = keyof Omit<LandingCopy, 'stats'>
 type Field = { key: FieldKey; label: string; max: number; area?: boolean; ai?: boolean }
@@ -66,7 +68,7 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
             key={l}
             type="button"
             onClick={() => setTab(l)}
-            className={cn('rounded px-3 py-1 text-[0.78125rem] font-semibold uppercase', tab === l ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink')}
+            className={cn('rounded px-3 py-1 text-body-sm font-semibold uppercase', tab === l ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink')}
           >
             {l}
           </button>
@@ -92,7 +94,7 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
 
       {/* Числа-статы (4 плитки) */}
       <div>
-        <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink-2">{t('admin.trustStats4', lang)}</div>
+        <div className="mb-1.5 text-body-sm font-semibold text-ink-2">{t('admin.trustStats4', lang)}</div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
           {copy.stats.map((s, i) => (
             // Обводка-группировка без фона: рамка тут разделяет пары полей, а не
@@ -107,11 +109,11 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
       </div>
 
       <div className="flex items-center gap-3">
-        <Button type="button" variant="primary" onClick={save} disabled={pending} className="px-4 py-2 text-[0.875rem]">
-          {pending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {t('common.save', lang)}
+        <Button type="button" variant="primary" onClick={save} disabled={pending} className="px-4 py-2 text-body-lg">
+          {pending ? <Spinner size="md" /> : <Check size={15} />} {t('common.save', lang)}
         </Button>
-        {saved && <span className="text-[0.8125rem] text-ok">{t('admin.saved', lang)}</span>}
-        {err && <span className="text-[0.8125rem] text-danger">{err}</span>}
+        {saved && <span className="text-body text-ok">{t('admin.saved', lang)}</span>}
+        {err && <span className="text-body text-danger">{err}</span>}
       </div>
     </div>
   )
@@ -148,18 +150,18 @@ function LimitedField({
         type="button"
         onClick={suggest}
         disabled={busy}
-        className="grid size-6 place-items-center rounded-md text-accent hover:bg-(--accent-soft) disabled:opacity-50"
+        className="grid size-6 place-items-center rounded-md text-accent hover:bg-accent-soft disabled:opacity-50"
       >
-        {busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+        {busy ? <Spinner size="sm" /> : <Sparkles size={13} />}
       </button>
     </Tooltip>
   )
 
   return (
     <label className={cn('flex flex-col gap-1', className)}>
-      <span className="flex items-center justify-between text-[0.78125rem] font-semibold text-ink-2">
+      <span className="flex items-center justify-between text-body-sm font-semibold text-ink-2">
         {field.label}
-        <span className={cn('font-mono text-[0.6875rem]', left < 0 ? 'text-danger' : 'text-muted')}>{left}</span>
+        <span className={cn('font-mono text-caption', left < 0 ? 'text-danger' : 'text-muted')}>{left}</span>
       </span>
       {field.area ? (
         <div className="relative">
@@ -201,7 +203,7 @@ function HeroImage({ initial, onRef, lang }: { initial?: string; onRef: (ref: st
 
   return (
     <div>
-      <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink-2">{t('admin.heroImage', lang)}</div>
+      <div className="mb-1.5 text-body-sm font-semibold text-ink-2">{t('admin.heroImage', lang)}</div>
       <div
         role="button"
         tabIndex={0}
@@ -212,29 +214,29 @@ function HeroImage({ initial, onRef, lang }: { initial?: string; onRef: (ref: st
         onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files?.[0]; if (f) void upload(f) }}
         className={cn(
           cardClass({ dashed: true, className: 'flex cursor-pointer items-center gap-4 transition-colors' }),
-          drag ? 'border-accent bg-(--accent-soft)' : 'border-border-strong hover:border-accent hover:bg-surface-2',
+          drag ? 'border-accent bg-accent-soft' : 'border-border-strong hover:border-accent hover:bg-surface-2',
         )}
       >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="" className="h-[4rem] w-[6.875rem] shrink-0 rounded-md border border-border object-cover" />
+          <SmartImage src={preview} alt="" className="h-16 w-27.5 shrink-0 rounded-md border border-border object-cover" />
         ) : (
-          <div className="grid h-[4rem] w-[6.875rem] shrink-0 place-items-center rounded-md bg-surface-2 text-muted">
+          <div className="grid h-16 w-27.5 shrink-0 place-items-center rounded-md bg-surface-2 text-muted">
             <ImageUp size={20} />
           </div>
         )}
-        <div className="min-w-0 text-[0.8125rem]">
+        <div className="min-w-0 text-body">
           <div className="flex items-center gap-1.5 font-medium text-ink">
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} className="text-ink-2" />}
+            {busy ? <Spinner size="md" /> : <ImageUp size={15} className="text-ink-2" />}
             {drag ? t('admin.dropUpload', lang) : t('admin.dragImageClick', lang)}
           </div>
-          <p className="mt-1 text-[0.78125rem] text-muted">{t('admin.pNGJpgWebpReplaces', lang)}</p>
+          <p className="mt-1 text-body-sm text-muted">{t('admin.pNGJpgWebpReplaces', lang)}</p>
           {preview && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setPreview(null); onRef('') }} className="mt-1 inline-flex items-center gap-1 text-[0.78125rem] text-ink-2 hover:text-danger">
+            <button type="button" onClick={(e) => { e.stopPropagation(); setPreview(null); onRef('') }} className="mt-1 inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-danger">
               <X size={12} /> {t('admin.resetDefault', lang)}
             </button>
           )}
-          {err && <p className="mt-1 text-[0.78125rem] text-danger">{err}</p>}
+          {err && <p className="mt-1 text-body-sm text-danger">{err}</p>}
         </div>
       </div>
       <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f) }} className="hidden" />

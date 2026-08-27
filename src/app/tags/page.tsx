@@ -30,7 +30,7 @@ export default async function TagsIndexPage() {
         {tags.length ? (
           <div className="flex flex-wrap gap-2">
             {tags.map((tg) => (
-              <TagChip key={tg.tag} slug={tg.tag} count={tg.count} className="px-3 py-1 text-[0.8125rem]" />
+              <TagChip key={tg.tag} slug={tg.tag} count={tg.count} className="px-3 py-1 text-body" />
             ))}
           </div>
         ) : (

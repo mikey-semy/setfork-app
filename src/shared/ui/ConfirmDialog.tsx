@@ -57,9 +57,9 @@ export function ConfirmDialog({
 
   const body = (
     <div className="flex flex-col gap-4">
-      {intro && <div className="text-[0.8125rem] leading-relaxed text-ink-2">{intro}</div>}
+      {intro && <div className="text-body leading-relaxed text-ink-2">{intro}</div>}
       {confirmPhrase && (
-        <div className="flex flex-col gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
+        <div className="flex flex-col gap-1.5 text-body-sm font-semibold text-ink-2">
           <span>{confirmHint}</span>
           {/* Фразу-подтверждение на мобиле выделить нельзя — даём отдельную строку
               с кнопкой «копировать» (горизонтальный скролл внутри бокса, не страницы). */}
@@ -75,7 +75,7 @@ export function ConfirmDialog({
           />
         </div>
       )}
-      {error && <div className="text-[0.8125rem] text-danger">{error}</div>}
+      {error && <div className="text-body text-danger">{error}</div>}
     </div>
   )
 

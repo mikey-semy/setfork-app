@@ -54,7 +54,7 @@ function Underline({ bar }: { bar: { left: number; width: number } | null }) {
   return (
     <span
       aria-hidden
-      className="absolute bottom-0 h-[2px] rounded-full bg-accent transition-all duration-200 ease-out"
+      className="absolute bottom-0 h-0.5 rounded-full bg-accent transition-all dur-base ease-out"
       style={{ left: bar.left, width: bar.width }}
     />
   )
@@ -123,7 +123,7 @@ function ScrollTabNav({
       <ScrollRow
         scrollerRef={ref}
         label={arrows}
-        className={`${PAGE_X} flex gap-1 text-[0.875rem] ${center ? 'justify-center-safe' : ''}`}
+        className={`${PAGE_X} flex gap-1 text-body-lg ${center ? 'justify-center-safe' : ''}`}
       >
         {children}
         <Underline bar={bar} />
@@ -224,7 +224,7 @@ function OverflowTabNav({
       <div className={`${PAGE_X} relative`}>
         <div
           ref={ref}
-          className={`relative flex w-full gap-1 overflow-hidden text-[0.875rem] ${center ? 'justify-center' : ''}`}
+          className={`relative flex w-full gap-1 overflow-hidden text-body-lg ${center ? 'justify-center' : ''}`}
         >
           {items.slice(0, fit)}
           {hiddenItems.length > 0 && <MoreTab items={hiddenItems} label={moreLabel} active={moreActive} />}
@@ -239,7 +239,7 @@ function OverflowTabNav({
           aria-hidden
           className="pointer-events-none invisible absolute inset-x-4 top-0 h-full overflow-hidden"
         >
-          <div ref={ghostRef} className="flex w-max gap-1 text-[0.875rem]">
+          <div ref={ghostRef} className="flex w-max gap-1 text-body-lg">
             {items}
             <span className={moreTabClass}>
               <MoreHorizontal size={18} />
@@ -283,7 +283,7 @@ function MoreTab({
             <Link href={it.props.href}>
               <span className={`flex-1 ${it.props.on ? 'font-semibold text-ink' : ''}`}>{it.props.label}</span>
               {it.props.count != null && it.props.count > 0 && (
-                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-surface-2 px-1.5 text-[0.6875rem] leading-none text-ink-2">
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-surface-2 px-1.5 text-caption leading-none text-ink-2">
                   {it.props.count}
                 </span>
               )}
@@ -324,7 +324,7 @@ export function TabItem({ href, on, icon, label, count }: TabItemProps) {
       {icon != null && <span className={`hidden sm:inline ${on ? 'text-ink' : 'text-muted'}`}>{icon}</span>}
       {label}
       {count != null && count > 0 && (
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-surface-2 px-1.5 text-[0.6875rem] leading-none text-ink-2">
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-surface-2 px-1.5 text-caption leading-none text-ink-2">
           {count}
         </span>
       )}

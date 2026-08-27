@@ -17,7 +17,7 @@ import { resetTables } from '../../helpers/reset-db'
  * Проверяется ОБЕ стороны тристейта: поставленная пометка и снятая.
  */
 const CORE = process.env.SETFORK_CORE_ADDR
-const описание = CORE ? describe : describe.skip
+const description = CORE ? describe : describe.skip
 
 const { db, steps, templates, templateVersions, users } = await import('@/shared/db')
 const { mcpCreateList } = await import('@/features/mcp/tools/lists/create')
@@ -35,7 +35,7 @@ const rowsOf = async (slug: string) => {
   return db.select({ n: steps.n, title: steps.title, command: steps.command, danger: steps.danger, needsHuman: steps.needsHuman }).from(steps).where(eq(steps.versionId, ver.id)).orderBy(asc(steps.n))
 }
 
-описание('линза 02 §5 · пометка автора против чужого патча', () => {
+description('линза 02 §5 · пометка автора против чужого патча', () => {
   beforeAll(async () => {
     await resetTables([templates, users])
     const [u] = await db.insert(users).values({ handle: 'carry', email: 'carry@x.dev', name: 'C' }).returning({ id: users.id })

@@ -16,7 +16,7 @@ import { resetTables } from '../../helpers/reset-db'
  */
 // Адрес ядра — тем же ключом, что в проде (SETFORK_CORE_ADDR), а не своим.
 const CORE = process.env.SETFORK_CORE_ADDR
-const описание = CORE ? describe : describe.skip
+const description = CORE ? describe : describe.skip
 
 const { db, steps, templates, templateVersions, users } = await import('@/shared/db')
 const { listWriteRemote } = await import('@/features/library/list-store.remote')
@@ -44,7 +44,7 @@ const step = (over: Record<string, unknown> = {}) => ({
   ...over,
 })
 
-описание('запись через ядро сохраняет идентичность и пометку', () => {
+description('запись через ядро сохраняет идентичность и пометку', () => {
   it('create: block_id и needs_human доезжают до БД', async () => {
     const bid = '11111111-2222-3333-4444-555555555555'
     const list = await listWriteRemote.create({

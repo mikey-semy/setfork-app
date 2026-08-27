@@ -60,7 +60,7 @@ export function PollBlock({
       <div className="mb-2.5 flex items-center gap-2">
         <BarChart3 size={15} className="shrink-0 text-accent" />
         {/* Вопрос пишет автор списка, длина не ограничена — без переноса блок уносит страницу. */}
-        <span className="min-w-0 text-[0.875rem] font-semibold text-ink [overflow-wrap:anywhere]">{content.question || (ru ? 'Опрос' : 'Poll')}</span>
+        <span className="min-w-0 text-body-lg font-semibold text-ink [overflow-wrap:anywhere]">{content.question || (ru ? 'Опрос' : 'Poll')}</span>
       </div>
       <div className="flex flex-col gap-1.5">
         {content.options.map((o) => {
@@ -74,25 +74,25 @@ export function PollBlock({
               disabled={!votable}
               onClick={() => votable && start(() => votePoll(templateId, bid, o.id))}
               // eslint-disable-next-line no-restricted-syntax -- карточка варианта опроса: высота от содержимого
-              className={`relative overflow-hidden rounded-md border px-3 py-2 text-left text-[0.8125rem] transition-colors ${
+              className={`relative overflow-hidden rounded-md border px-3 py-2 text-left text-body transition-colors ${
                 mine ? 'border-accent' : 'border-border'
               } ${votable ? 'hover:border-border-strong' : 'cursor-default'}`}
             >
               {showResults && (
-                <span className="absolute inset-y-0 left-0 bg-(--accent-soft)" style={{ width: `${pct}%` }} aria-hidden />
+                <span className="absolute inset-y-0 left-0 bg-accent-soft" style={{ width: `${pct}%` }} aria-hidden />
               )}
               <span className="relative flex items-center justify-between gap-2">
                 <span className="inline-flex min-w-0 items-center gap-1.5 text-ink">
                   {mine && <Check size={13} className="shrink-0 text-accent" />}
                   <span className="truncate">{o.text}</span>
                 </span>
-                {showResults && <span className="shrink-0 font-mono text-[0.78125rem] text-muted">{pct}% · {c}</span>}
+                {showResults && <span className="shrink-0 font-mono text-body-sm text-muted">{pct}% · {c}</span>}
               </span>
             </button>
           )
         })}
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] text-muted">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted">
         <span>
           {total} {ru ? 'голос.' : 'votes'}
         </span>
@@ -114,7 +114,7 @@ export function PollBlock({
       {histOpen && (
         <div className="mt-2.5 border-t border-border pt-2.5">
           {histPending || hist === null ? (
-            <p className="py-2 text-center text-[0.78125rem] text-muted">{ru ? 'Загрузка…' : 'Loading…'}</p>
+            <p className="py-2 text-center text-body-sm text-muted">{ru ? 'Загрузка…' : 'Loading…'}</p>
           ) : (
             <PollHistoryChart events={hist} options={content.options} lang={lang} />
           )}

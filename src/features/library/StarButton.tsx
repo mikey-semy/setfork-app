@@ -29,7 +29,7 @@ export function StarButton({
         onClick={onToggle}
         disabled={pending}
         aria-pressed={starred}
-        className={splitSegment({ className: `disabled:opacity-60 ${starred ? 'bg-(--accent-soft) text-warn' : 'text-ink'}` })}
+        className={splitSegment({ className: `disabled:opacity-60 ${starred ? 'bg-accent-soft text-warn' : 'text-ink'}` })}
       >
         <Star size={14} fill={starred ? 'currentColor' : 'none'} />
         {/* Мобила: только иконка — подпись прячем, как у соседних кнопок ряда. */}

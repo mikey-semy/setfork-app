@@ -10,9 +10,9 @@ export default async function NotFound() {
   return (
     <div className={`${PAGE} flex flex-1 flex-col items-center justify-center gap-4 text-center`}>
       <FileQuestion size={44} strokeWidth={1.5} className="text-muted" />
-      <div className="font-mono text-[0.8125rem] text-muted">404</div>
-      <h1 className="text-[1.25rem] font-bold text-ink">{t('pageNotFound', lang)}</h1>
-      <p className="text-[0.875rem] text-ink-2">{t('pageNotFoundText', lang)}</p>
+      <div className="font-mono text-body text-muted">404</div>
+      <h1 className="text-heading font-bold text-ink">{t('pageNotFound', lang)}</h1>
+      <p className="text-body-lg text-ink-2">{t('pageNotFoundText', lang)}</p>
       <div className="mt-2 flex gap-3">
         <Link
           href="/"

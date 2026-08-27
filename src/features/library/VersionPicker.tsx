@@ -31,7 +31,7 @@ export function VersionPicker({
 
   const picker = (value: number, onPick: (v: number) => void) => (
     <Select value={String(value)} onValueChange={(v) => onPick(Number(v))}>
-      <SelectTrigger className="w-[5.75rem] font-mono">
+      <SelectTrigger className="w-23 font-mono">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -46,7 +46,7 @@ export function VersionPicker({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[0.78125rem] text-muted">{fromLabel}</span>
+      <span className="text-body-sm text-muted">{fromLabel}</span>
       {picker(from, (v) => go(v, to))}
       <Tooltip label={swapLabel}>
         <button
@@ -58,7 +58,7 @@ export function VersionPicker({
           <ArrowLeftRight size={14} />
         </button>
       </Tooltip>
-      <span className="text-[0.78125rem] text-muted">{toLabel}</span>
+      <span className="text-body-sm text-muted">{toLabel}</span>
       {picker(to, (v) => go(from, v))}
     </div>
   )

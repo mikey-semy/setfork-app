@@ -11,7 +11,7 @@ export function QuizNumber({ quiz, set, lang }: QuizKindProps) {
     { caption: 'quiz.tolerancePm', aria: 'quiz.tolerance', ph: '0', width: 'w-24', value: quiz.tolerance, put: (tolerance) => set({ tolerance }) },
   ]
   return (
-    <div className="flex flex-wrap items-end gap-3 text-[0.78125rem]">
+    <div className="flex flex-wrap items-end gap-3 text-body-sm">
       {fields.map((f) => (
         <label key={f.aria} className="flex flex-col gap-1 text-ink-2">
           {t(f.caption, lang)}

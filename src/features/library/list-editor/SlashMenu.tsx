@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, type KeyboardEvent } from 'react'
-import { TOUCH_MIN_H } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import type { BlockType } from '../blocks'
 import { BLOCK_ICON, blockLabel, matchBlockTypes, slashQuery } from './block-meta'
 import { cardClass } from '@/shared/ui/card-style'
+import { MenuItem } from '@/shared/ui/MenuItem'
 
 /**
  * Слэш-меню: «/» в пустом текстовом блоке открывает список типов, выбор превращает
@@ -58,20 +58,19 @@ export function SlashMenu({ menu, lang }: { menu: ReturnType<typeof useSlashMenu
       {menu.options.map((type) => {
         const Icon = BLOCK_ICON[type]
         return (
-          <button
+          <MenuItem
             key={type}
-            type="button"
             role="option"
             aria-selected={type === menu.active}
             // Мышью выбор идёт по наведению, как в любом таком меню; на тач-экране
             // наведения нет, и первый же тап сразу выбирает.
             onMouseEnter={() => menu.highlight(type)}
             onClick={() => menu.pick(type)}
-            className={`flex w-full items-center gap-2 rounded-[0.3125rem] px-2 text-left text-[0.8125rem] ${TOUCH_MIN_H} ${type === menu.active ? 'bg-accent text-white' : 'text-ink-2 hover:text-ink'}`}
+            active={type === menu.active}
           >
             <Icon size={14} className="shrink-0" />
             {blockLabel(type, lang)}
-          </button>
+          </MenuItem>
         )
       })}
     </div>

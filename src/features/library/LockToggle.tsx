@@ -1,8 +1,9 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Loader2, Lock, Unlock } from 'lucide-react'
+import { Lock, Unlock } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { Spinner } from '@/shared/ui/Spinner'
 import { setSuggestionLocked } from './suggestion-meta-actions'
 
 /**
@@ -30,11 +31,11 @@ export function LockToggle({
         disabled={pending}
         onClick={() => start(async () => void (await setSuggestionLocked(suggestionId, !locked)))}
       >
-        {pending ? <Loader2 size={14} className="animate-spin" /> : locked ? <Unlock size={14} /> : <Lock size={14} />}
+        {pending ? <Spinner size="md" /> : locked ? <Unlock size={14} /> : <Lock size={14} />}
         {locked ? labels.unlock : labels.lock}
       </Button>
       {/* Подсказка только в запертом состоянии: в обычном она была бы шумом. */}
-      {locked && <p className="text-[0.6875rem] text-muted">{labels.hint}</p>}
+      {locked && <p className="text-caption text-muted">{labels.hint}</p>}
     </div>
   )
 }

@@ -13,8 +13,8 @@ export default async function AdminUiKitPage() {
   const lang = await getLang()
   return (
     <div className="min-w-0">
-      <h1 className="mb-1 text-[1rem] font-bold text-ink">UI Kit</h1>
-      <p className="mb-5 text-[0.8125rem] text-ink-2">
+      <h1 className="mb-1 text-title font-bold text-ink">UI Kit</h1>
+      <p className="mb-5 text-body text-ink-2">
         {t('admin.referenceSharedUiPrimitives', lang)}
       </p>
       <UiKitGallery lang={lang} />

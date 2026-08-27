@@ -1,10 +1,12 @@
 'use client'
 import { useRef, useState } from 'react'
-import { CheckCircle2, Loader2, PlugZap } from 'lucide-react'
+import { CheckCircle2, PlugZap } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/button'
+import { Spinner } from '@/shared/ui/Spinner'
 import { mirrorCheckAccess } from './mirror-actions'
+import { mirrorErrorText } from './mirror-error'
 
 /**
  * Ф2: «Проверить доступ» — узнать про неверный токен СЕЙЧАС, а не через сутки по
@@ -58,21 +60,17 @@ export function MirrorCheckButton({ templateId, lang }: { templateId: string; la
             const r = await mirrorCheckAccess(templateId)
             setResult({
               ok: r.ok,
-              // Текст ошибки приходит из ядра как есть (это вывод git без кредов) —
-              // он и есть самое полезное, что можно показать. Подменять его общим
-              // «не удалось» значило бы отобрать у владельца единственную подсказку.
-              text: r.ok
-                ? t('mirrorCheckOk', lang)
-                : r.error === 'not-configured'
-                  ? t('mirrorCheckNotConfigured', lang)
-                  : r.error,
+              // Известный КОД отказа переводится в текст на языке человека, всё
+              // остальное показывается как есть: там вывод git без кредов, и он
+              // полезнее любого нашего «не удалось» (см. mirror-error.ts).
+              text: r.ok ? t('mirrorCheckOk', lang) : mirrorErrorText(r.error, lang),
             })
           } finally {
             setBusy(false)
           }
         }}
       >
-        {busy ? <Loader2 size={15} className="animate-spin" /> : <PlugZap size={15} />}
+        {busy ? <Spinner size="md" /> : <PlugZap size={15} />}
         {/* На мобиле только иконка: рядом ещё две кнопки, и три подписи в ряд
             не помещаются в 360px. Название доступно через aria-label. */}
         <span className="hidden md:inline">{t('mirrorCheckAccess', lang)}</span>

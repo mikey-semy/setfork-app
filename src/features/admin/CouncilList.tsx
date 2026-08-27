@@ -63,10 +63,10 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
                 <Avatar handle={r.handle ?? r.id} avatarUrl={r.avatarUrl} size={28} />
                 <div className="min-w-0">
                   {/* Имя ведёт к настройкам этого специалиста — как список к своим. */}
-                  <Link href={`/admin/council/${r.id}`} className="block truncate text-[0.8125rem] font-medium text-ink hover:text-accent">
+                  <Link href={`/admin/council/${r.id}`} className="block truncate text-body font-medium text-ink hover:text-accent">
                     {r.name}
                   </Link>
-                  <div className="flex min-w-0 items-center gap-1.5 text-[0.6875rem] text-muted">
+                  <div className="flex min-w-0 items-center gap-1.5 text-caption text-muted">
                     {r.handle ? (
                       <Link href={`/${r.handle}`} className="truncate hover:text-ink-2">
                         @{r.handle}
@@ -88,7 +88,7 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
             size: 132,
             render: (r) => (
               <Tooltip label={r.domains.join(', ')}>
-                <span className={cn('block min-w-0 truncate text-[0.78125rem] text-ink-2', !r.enabled && 'opacity-60')}>
+                <span className={cn('block min-w-0 truncate text-body-sm text-ink-2', !r.enabled && 'opacity-60')}>
                   {r.profession || r.guild}
                 </span>
               </Tooltip>
@@ -100,7 +100,7 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
             size: 120,
             render: (r) => {
               const stage = stageLabel(r.lifecycle, lang)
-              return <span className={cn('text-[0.78125rem]', stage.cls, !r.enabled && 'opacity-60')}>{stage.text}</span>
+              return <span className={cn('text-body-sm', stage.cls, !r.enabled && 'opacity-60')}>{stage.text}</span>
             },
           }),
           numberColumn<CouncilRow>({ id: 'gens', header: t('admin.councils', lang), size: 104, value: (r) => r.gens }),
@@ -113,8 +113,8 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
           Кнопки только когда самогенерация включена: иначе обещали бы запрещённое настройками. */}
       {canAssign && (
         <div className={cardClass()}>
-          <div className="mb-1 text-[0.78125rem] font-semibold text-ink">{t('admin.assignList', lang)}</div>
-          <p className="mb-2.5 text-[0.6875rem] text-ink-2">
+          <div className="mb-1 text-body-sm font-semibold text-ink">{t('admin.assignList', lang)}</div>
+          <p className="mb-2.5 text-caption text-ink-2">
             {t('admin.theSpecialistPicksWhat', lang)}
           </p>
           <div className="flex flex-wrap gap-2">

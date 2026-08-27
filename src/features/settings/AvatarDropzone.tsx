@@ -7,6 +7,7 @@ import { AvatarCropper } from '@/shared/ui/AvatarCropper'
 import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 const ACCEPT = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 const MAX_BYTES = 2 * 1024 * 1024
@@ -116,23 +117,23 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
         className={cardClass({
           dashed: true,
           className: `flex cursor-pointer items-center gap-4 transition-colors ${
-            dragOver ? 'border-accent bg-(--accent-soft)' : 'border-border-strong hover:border-accent hover:bg-surface-2'
+            dragOver ? 'border-accent bg-accent-soft' : 'border-border-strong hover:border-accent hover:bg-surface-2'
           }`,
         })}
       >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="" className={`h-[4.5rem] w-[4.5rem] shrink-0 object-cover ${shapeCls}`} />
+          <SmartImage src={preview} alt="" className={`h-18 w-18 shrink-0 object-cover ${shapeCls}`} />
         ) : (
           <Avatar handle={handle} avatarUrl={removed ? null : avatarUrl} size={72} rounded={shapeCls} />
         )}
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[0.8125rem] font-medium text-ink">
+          <div className="flex items-center gap-2 text-body font-medium text-ink">
             <ImageUp size={16} className="text-ink-2" />
             {dragOver ? t('dropRelease', lang) : t('dropAvatar', lang)}
           </div>
-          <p className="mt-1 text-[0.78125rem] text-muted">{t('avatarHint', lang)}</p>
-          {error && <p className="mt-1 text-[0.78125rem] text-danger">{error}</p>}
+          <p className="mt-1 text-body-sm text-muted">{t('avatarHint', lang)}</p>
+          {error && <p className="mt-1 text-body-sm text-danger">{error}</p>}
           {preview && (
             <button
               type="button"
@@ -140,7 +141,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
                 e.stopPropagation()
                 clear()
               }}
-              className="mt-1.5 inline-flex items-center gap-1 text-[0.78125rem] text-ink-2 hover:text-ink"
+              className="mt-1.5 inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-ink"
             >
               <X size={12} /> {t('removePhoto', lang)}
             </button>
@@ -154,7 +155,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
                   e.stopPropagation()
                   setCropSrc(avatarUrl)
                 }}
-                className="inline-flex items-center gap-1 text-[0.78125rem] text-ink-2 hover:text-ink"
+                className="inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-ink"
               >
                 <Crop size={12} /> {t('edit', lang)}
               </button>
@@ -164,14 +165,14 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
                   e.stopPropagation()
                   setRemoved(true)
                 }}
-                className="inline-flex items-center gap-1 text-[0.78125rem] text-ink-2 hover:text-danger"
+                className="inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-danger"
               >
                 <X size={12} /> {t('removePhoto', lang)}
               </button>
             </div>
           )}
           {removed && (
-            <p className="mt-1.5 text-[0.78125rem] text-muted">
+            <p className="mt-1.5 text-body-sm text-muted">
               {t('avatarWillRemove', lang)}{' '}
               <button type="button" onClick={(e) => { e.stopPropagation(); setRemoved(false) }} className="text-ink-2 underline hover:text-ink">
                 {t('undo', lang)}

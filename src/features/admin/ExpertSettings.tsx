@@ -7,9 +7,9 @@
 // устаревшее значение не затирало свежую картинку, и т.д.).
 
 import { useState, useTransition } from 'react'
-import Link from 'next/link'
-import { BarChart3, Check, Loader2 } from 'lucide-react'
+import { BarChart3, Check } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Input } from '@/shared/ui/input'
@@ -22,6 +22,7 @@ import { ModelSelect, NONE, type Option } from './ModelSelect'
 import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } from './actions'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * Менеджер ростера совета: кто такие эксперты, как их зовут, чем они думают.
@@ -100,17 +101,17 @@ function AvatarPicker({
     <div className="relative shrink-0">
       <Tooltip label={t('admin.change', lang)}>
         <button type="button" onClick={() => setOpen((v) => !v)} className="relative block">
-          <GnomeAvatar src={src} size={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-(--accent)" />
+          <GnomeAvatar src={src} size={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-accent" />
           {busy && (
             <span className="absolute inset-0 grid place-items-center rounded-full bg-black/50">
-              <Loader2 size={16} className="animate-spin text-white" />
+              <Spinner size="lg" className="text-white" />
             </span>
           )}
         </button>
       </Tooltip>
       {open && (
-        <div className={cardClass({ pad: 'xs', className: 'absolute left-0 top-full z-20 mt-2 w-[14.5rem] shadow-card' })}>
-          <div className="grid max-h-[8.5rem] grid-cols-6 gap-1 overflow-y-auto">
+        <div className={cardClass({ pad: 'xs', className: 'absolute left-0 top-full z-20 mt-2 w-menu shadow-card' })}>
+          <div className="grid max-h-34 grid-cols-6 gap-1 overflow-y-auto">
             {gallery.map((g) => (
               <button
                 key={g}
@@ -119,14 +120,14 @@ function AvatarPicker({
                   void setExpertAvatar(id, g)
                   setOpen(false)
                 }}
-                className={`rounded-full ${!uploadedUrl && g === value ? 'ring-2 ring-(--accent)' : 'hover:ring-1 hover:ring-border-strong'}`}
+                className={`rounded-full ${!uploadedUrl && g === value ? 'ring-2 ring-accent' : 'hover:ring-1 hover:ring-border-strong'}`}
               >
                 <GnomeAvatar src={`/gnomes/${g}.webp`} size={32} className="size-8 rounded-full" />
               </button>
             ))}
           </div>
           <div className="mt-1.5 flex items-center gap-2 border-t border-border pt-1.5">
-            <label className="cursor-pointer rounded-md border border-border px-2 py-1 text-[0.6875rem] text-ink-2 hover:text-ink">
+            <label className="cursor-pointer rounded-md border border-border px-2 py-1 text-caption text-ink-2 hover:text-ink">
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif"
@@ -142,13 +143,13 @@ function AvatarPicker({
               <button
                 type="button"
                 onClick={() => void resetExpertAvatar(id)}
-                className="text-[0.6875rem] text-muted hover:text-ink"
+                className="text-caption text-muted hover:text-ink"
               >
                 {t('admin.reset2', lang)}
               </button>
             )}
           </div>
-          {err && <p className="mt-1 text-[0.6875rem] text-danger">{err}</p>}
+          {err && <p className="mt-1 text-caption text-danger">{err}</p>}
         </div>
       )}
     </div>
@@ -185,17 +186,17 @@ function ExpertCard({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOpt
       <div className="mb-3 flex items-center gap-2">
         <AvatarPicker id={e.id} value={e.avatarUploaded ? e.id : e.avatar || e.id} uploadedUrl={e.uploadedUrl} gallery={gallery} lang={lang} />
         <Tooltip label={t('admin.idFixedAvatarName', lang)}>
-          <code className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[0.6875rem] text-muted">
+          <code className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-caption text-muted">
             {e.id}
           </code>
         </Tooltip>
         <Tooltip label={t('admin.personalPageKpiKnowledge', lang)}>
-          <Link href={`/admin/council/${e.id}`} aria-label={t('admin.personalPage', lang)} className="grid h-6 w-6 place-items-center rounded-md text-muted hover:text-ink">
+          <IconButton href={`/admin/council/${e.id}`} size="xs" variant="ghost" label={t('admin.personalPage', lang)}>
             <BarChart3 size={13} />
-          </Link>
+          </IconButton>
         </Tooltip>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-[0.6875rem] text-muted">{t('admin.on2', lang)}</span>
+          <span className="text-caption text-muted">{t('admin.on2', lang)}</span>
           <Switch name="enabled" checked={enabled} onCheckedChange={setEnabled} />
         </div>
       </div>
@@ -254,11 +255,11 @@ function ExpertCard({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOpt
           </div>
 
           <Field label={t('admin.guildCodeQualityStandards', lang)}>
-            <Textarea name="code" defaultValue={e.code} rows={4} className="resize-y font-mono text-[0.78125rem] leading-[1.45]" />
+            <Textarea name="code" defaultValue={e.code} rows={4} className="resize-y font-mono text-body-sm leading-[1.45]" />
           </Field>
 
           <Field label={t('admin.queryLensAspectsHe', lang)}>
-            <Input name="lens" defaultValue={e.lens} className="font-mono text-[0.78125rem]" />
+            <Input name="lens" defaultValue={e.lens} className="font-mono text-body-sm" />
           </Field>
 
           <Field label={t('admin.instructionPersona', lang)}>
@@ -282,7 +283,7 @@ function ExpertCard({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOpt
             {/* Домены — те же теги по смыслу, поэтому тот же TagInput: чипы, автокомплит из реестра.
                 «Любая тема» отдельным тумблером, а не доменом «*»: normalize у TagInput вырезает
                 звёздочку, да и тумблер честнее магического символа. */}
-            <label className="mb-1.5 flex items-center gap-2 text-[0.78125rem] text-ink-2">
+            <label className="mb-1.5 flex items-center gap-2 text-body-sm text-ink-2">
               <Switch name="anyTopic" checked={anyTopic} onCheckedChange={setAnyTopic} />
               {t('admin.anyTopicGeneralist', lang)}
             </label>
@@ -294,12 +295,12 @@ function ExpertCard({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOpt
           </Field>
 
           <div className="flex items-center justify-between gap-3 pt-0.5">
-            <label className="flex items-center gap-2 text-[0.78125rem] text-ink-2">
+            <label className="flex items-center gap-2 text-body-sm text-ink-2">
               <Switch name="online" checked={online} onCheckedChange={setOnline} />
               {t('admin.webAccessOnlinePricier', lang)}
             </label>
             <Button type="submit" variant="primary" disabled={pending}>
-              {pending ? <Loader2 size={13} className="animate-spin" /> : saved ? <Check size={13} /> : null}
+              {pending ? <Spinner size="sm" /> : saved ? <Check size={13} /> : null}
               {saved ? t('admin.saved', lang) : t('common.save', lang)}
             </Button>
           </div>

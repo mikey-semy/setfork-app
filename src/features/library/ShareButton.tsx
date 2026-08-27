@@ -6,6 +6,7 @@ import { Check, Copy, Share2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 // Бренд-иконки (24×24, single-path, currentColor) — в lucide их нет.
 const P = (d: string) => (
@@ -102,7 +103,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
 
       <div className="mt-2 border-t border-border pt-2">
         {shareViaLabel && (
-          <div className="mb-1.5 px-1.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted">{shareViaLabel}</div>
+          <div className="mb-1.5 px-1.5 text-caption font-semibold uppercase tracking-wider text-muted">{shareViaLabel}</div>
         )}
         <div className="grid grid-cols-3 gap-1">
           {nets.map((n) => (
@@ -115,7 +116,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
               className={buttonClass({ variant: 'ghost', className: 'flex-col hover:bg-surface-2' })}
             >
               {ICON[n.name]}
-              <span className="text-[0.6875rem] leading-none">{n.name}</span>
+              <span className="text-caption leading-none">{n.name}</span>
             </a>
           ))}
         </div>
@@ -123,9 +124,8 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
 
       {qr && (
         <div className="mt-2 flex flex-col items-center border-t border-border pt-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qr} alt="QR" width={160} height={160} className="rounded-md bg-white p-1" />
-          <span className="mt-1.5 text-[0.6875rem] text-muted">{qrHint}</span>
+          <SmartImage src={qr} alt="QR" width={160} height={160} className="rounded-md bg-white p-1" />
+          <span className="mt-1.5 text-caption text-muted">{qrHint}</span>
         </div>
       )}
     </>
@@ -159,7 +159,7 @@ export function ShareButton({
         </button>
       </DropdownMenuTrigger>
       </Tooltip>
-      <DropdownMenuContent align="end" className="w-[15rem] p-3">
+      <DropdownMenuContent align="end" className="w-menu p-3">
         <ShareMenuItems path={path} title={title} ru={ru} label={label} copiedLabel={copiedLabel} copyLinkLabel={copyLinkLabel} shareViaLabel={shareViaLabel} qrHint={qrHint} />
       </DropdownMenuContent>
     </DropdownMenu>

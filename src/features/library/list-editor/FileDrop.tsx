@@ -1,8 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { ImageUp, Loader2, Paperclip, Video as VideoIcon } from 'lucide-react'
+import { ImageUp, Paperclip, Video as VideoIcon } from 'lucide-react'
 import { TEXT, TOUCH_MIN_H } from '@/shared/ui/control'
+import { Spinner } from '@/shared/ui/Spinner'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { ATTACH_MAX_BYTES, megabytes, VIDEO_MAX_BYTES } from '@/shared/media/limits'
 
@@ -32,6 +33,14 @@ export function FileDrop({ kind, uploading, onFile, lang }: { kind: DropKind; up
       role="button"
       tabIndex={0}
       onClick={() => ref.current?.click()}
+      // Зона объявлена кнопкой и получает фокус — значит обязана работать с клавиатуры:
+      // Enter и Пробел активируют нативную кнопку, и подделка должна вести себя так же.
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          ref.current?.click()
+        }
+      }}
       onDragOver={(e) => {
         e.preventDefault()
         setOver(true)
@@ -43,10 +52,10 @@ export function FileDrop({ kind, uploading, onFile, lang }: { kind: DropKind; up
         take(e.dataTransfer.files?.[0])
       }}
       className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 ${TEXT.bodySm} transition-colors ${TOUCH_MIN_H} ${
-        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
+        over ? 'border-accent bg-accent-soft text-accent' : 'border-border text-ink-2 hover:border-border-strong'
       }`}
     >
-      {uploading ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
+      {uploading ? <Spinner size="md" /> : <Icon size={14} />}
       {uploading ? t('editor.uploading', lang) : t(label, lang).replace('{n}', String(mb))}
       <input
         ref={ref}

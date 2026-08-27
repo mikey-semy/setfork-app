@@ -83,7 +83,7 @@ export function FailureNote({
   }
 
   return (
-    <div className="pl-[3.25rem]">
+    <div className="pl-13">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -98,7 +98,7 @@ export function FailureNote({
           {/* Служебное действие — в правом верхнем углу контейнера (мобильный стандарт),
               а не в потоке под текстом: при переносе строк оно уплывало бы в середину. */}
           <div className="flex items-center justify-between gap-2 border-b border-border py-1 pl-2.5 pr-1">
-            <span className="truncate text-[0.6875rem] uppercase tracking-wide text-muted">{t('generation.whatHappened', lang)}</span>
+            <span className="truncate text-caption uppercase tracking-wide text-muted">{t('generation.whatHappened', lang)}</span>
             {/* На узком — только иконка, но тач-цель полная (44px). Именно min-*, а не h/w:
                 высота у кнопки уже задана шкалой контролов, а минимум её честно перебивает
                 независимо от порядка классов. */}
@@ -114,7 +114,7 @@ export function FailureNote({
             </Button>
           </div>
           {/* Перенос вместо горизонтального скролла: длинный ответ модели не должен уносить страницу вбок. */}
-          <pre className="whitespace-pre-wrap px-2.5 py-2 font-mono text-[0.6875rem] leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">
+          <pre className="whitespace-pre-wrap px-2.5 py-2 font-mono text-caption leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">
             {report}
           </pre>
         </div>

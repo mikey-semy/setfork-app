@@ -94,10 +94,10 @@ export function ProfileLists({
       {tab === 'starred' && starFolders.length > 0 && (
         <div className="mb-6">
           <div className="mb-2 flex items-center justify-between">
-            <div className="text-[1rem] font-semibold text-ink">
-              {t('foldersLabel', lang)} <span className="font-mono text-[0.78125rem] text-muted">{starFolders.length}</span>
+            <div className="text-title font-semibold text-ink">
+              {t('foldersLabel', lang)} <span className="font-mono text-body-sm text-muted">{starFolders.length}</span>
             </div>
-            <div className="flex gap-1 text-[0.78125rem]">
+            <div className="flex gap-1 text-body-sm">
               {(['name', 'count'] as const).map((s) => (
                 <Link
                   key={s}
@@ -119,8 +119,8 @@ export function ProfileLists({
                   // eslint-disable-next-line no-restricted-syntax -- карточка папки, не контрол в ряду; padding задаёт содержательную область карточки.
                   className={`rounded-lg border px-4 py-3 ${on ? 'border-accent bg-accent/10' : 'border-border bg-surface hover:border-border-strong'}`}
                 >
-                  <div className="truncate text-[0.875rem] font-semibold text-ink">{f.name}</div>
-                  <div className="mt-1 font-mono text-[0.6875rem] text-muted">
+                  <div className="truncate text-body-lg font-semibold text-ink">{f.name}</div>
+                  <div className="mt-1 font-mono text-caption text-muted">
                     {/* Существительное СКЛОНЯЕТСЯ: словарное `lists` — это заголовок
                         «Списки», и рядом с числом он давал «5 списки», «1 списки». На
                         английском ошибка видна только при единице («1 lists»), поэтому и

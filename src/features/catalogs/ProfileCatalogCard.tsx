@@ -14,7 +14,7 @@ export function ProfileCatalogCard({ catalog, handle, lang }: { catalog: Catalog
         <FolderGit2 size={15} className="shrink-0 text-muted" />
         <span className="min-w-0 truncate font-semibold text-accent group-hover:underline">{tr(catalog.title, lang) || catalog.name}</span>
       </div>
-      <div className="mt-1 font-mono text-[0.6875rem] text-muted">
+      <div className="mt-1 font-mono text-caption text-muted">
         {catalog.listCount} {plural(catalog.listCount, 'lists', lang)}
       </div>
     </Link>

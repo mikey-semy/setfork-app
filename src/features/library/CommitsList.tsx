@@ -6,6 +6,7 @@ import { CopyButton } from '@/shared/ui/CopyButton'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { Badge } from '@/shared/ui/badge'
 import { t, type Lang } from '@/shared/i18n'
 
 /** Наш пользователь, опознанный по e-mail подписи коммита (может не найтись). */
@@ -46,7 +47,7 @@ export function CommitsList({
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
-      <div className="border-b border-border bg-surface-2 px-3.5 py-2 text-[0.78125rem] font-semibold text-ink-2">
+      <div className="border-b border-border bg-surface-2 px-3.5 py-2 text-body-sm font-semibold text-ink-2">
         {labels.count}: {commits.length}
       </div>
       <ul className="flex flex-col divide-y divide-border">
@@ -70,23 +71,23 @@ export function CommitsList({
                   {diffBase ? (
                     <Link
                       href={`${diffBase}${diffBase.includes('?') ? '&' : '?'}commit=${c.sha}`}
-                      className="min-w-0 flex-1 text-[0.8125rem] font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]"
+                      className="min-w-0 flex-1 text-body font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]"
                       title={rest || labels.diff}
                     >
                       {title || '—'}
                     </Link>
                   ) : (
                     <Tooltip label={rest || ''}>
-                      <span className="min-w-0 flex-1 text-[0.8125rem] font-semibold text-ink [overflow-wrap:anywhere]">{title || '—'}</span>
+                      <span className="min-w-0 flex-1 text-body font-semibold text-ink [overflow-wrap:anywhere]">{title || '—'}</span>
                     </Tooltip>
                   )}
                   {c.parents > 1 && (
-                    <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-accent">
+                    <Badge variant="accent" className="mt-0.5 shrink-0">
                       <GitMerge size={11} /> {labels.merge}
-                    </span>
+                    </Badge>
                   )}
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.78125rem] text-muted">
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-muted">
                   <span className="font-medium text-ink-2">{user?.name || user?.handle || c.authorName || c.authorEmail}</span>
                   <span>·</span>
                   <Tooltip label={c.at.toLocaleString(lang)}>
@@ -98,7 +99,7 @@ export function CommitsList({
                   и копируют) и вход в СНИМОК списка на этом коммите. Иконка с
                   тултипом, а не подпись: на мобиле текст сюда не влезает, а
                   тач-цель добирается невидимой зоной нажатия. */}
-              <span className="flex shrink-0 items-center gap-1.5 font-mono text-[0.78125rem] text-ink-2">
+              <span className="flex shrink-0 items-center gap-1.5 font-mono text-body-sm text-ink-2">
                 {c.sha.slice(0, 7)}
                 <CopyButton text={c.sha} lang={lang} />
                 {snapshotBase && (

@@ -50,19 +50,23 @@ export default async function GenerationPage({
     if (r.gens >= REP_MIN_GENS && r.accepted > 0) repBadges[who] = `✓ ${Math.round((r.accepted / r.gens) * 100)}%`
 
   return (
-    <GenerationChat
-      generationId={gen.id}
-      lang={lang}
-      candidates={gen.candidates}
-      status={gen.status}
-      messages={messages}
-      listKind={gen.listKind}
-      detail={gen.detail}
-      avatars={avatars}
-      gnomeNames={names}
-      repBadges={repBadges}
-      error={sp.e}
-      clarifyQuestions={clarifyQuestions}
-    />
+    <>
+      {/* Заголовок страницы для диктора: содержимое рисует компонент, видимого h1 нет. */}
+      <h1 className="sr-only">{t('draftBadge', lang)}</h1>
+      <GenerationChat
+        generationId={gen.id}
+        lang={lang}
+        candidates={gen.candidates}
+        status={gen.status}
+        messages={messages}
+        listKind={gen.listKind}
+        detail={gen.detail}
+        avatars={avatars}
+        gnomeNames={names}
+        repBadges={repBadges}
+        error={sp.e}
+        clarifyQuestions={clarifyQuestions}
+      />
+    </>
   )
 }

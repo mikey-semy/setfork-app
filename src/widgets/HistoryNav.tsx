@@ -31,7 +31,7 @@ export function HistoryNav({
     <Link
       href={href}
       aria-current={on ? 'page' : undefined}
-      className={`inline-flex ${CONTROL_H.md} shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[0.78125rem] font-medium ${
+      className={`inline-flex ${CONTROL_H.md} shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-body-sm font-medium ${
         on ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'
       }`}
     >

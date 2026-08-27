@@ -155,7 +155,7 @@ export function MarkdownEditor({
           autoFocus={autoFocus}
           onPaste={(e) => uploads.fromEvent(e.clipboardData.files, e)}
           onDrop={(e) => uploads.fromEvent(e.dataTransfer.files, e)}
-          className="w-full resize-y bg-surface px-3 py-2.5 text-[0.875rem] text-ink outline-hidden placeholder:text-muted"
+          className="w-full resize-y bg-surface px-3 py-2.5 text-body-lg text-ink outline-hidden placeholder:text-muted"
         />
 
         {mention.mention && mention.users.length > 0 && (
@@ -165,12 +165,12 @@ export function MarkdownEditor({
       </div>
 
       {tab === 'preview' && (
-        <div className="min-h-[5rem] px-3 py-2.5">
-          {value.trim() ? <Markdown>{value}</Markdown> : <p className="text-[0.8125rem] italic text-muted">{t('editor.nothingToPreview', lang)}</p>}
+        <div className="min-h-20 px-3 py-2.5">
+          {value.trim() ? <Markdown>{value}</Markdown> : <p className="text-body italic text-muted">{t('editor.nothingToPreview', lang)}</p>}
         </div>
       )}
 
-      <div className="flex items-center gap-2 border-t border-border bg-surface-2 px-3 py-1.5 text-[0.6875rem] text-muted">
+      <div className="flex items-center gap-2 border-t border-border bg-surface-2 px-3 py-1.5 text-caption text-muted">
         <span>{t('editor.markdownSupported', lang)}</span>
         <span className="text-border">·</span>
         <button type="button" onClick={() => fileInput.current?.click()} className="hover:text-ink">

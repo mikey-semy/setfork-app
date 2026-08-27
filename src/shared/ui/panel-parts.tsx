@@ -19,12 +19,15 @@ import { PANEL_HEAD, TEXT } from './control'
  */
 export function PanelHead({
   title,
+  titleId,
   onClose,
   closeLabel = 'Close',
   icon,
   actions,
 }: {
   title: ReactNode
+  /** id заголовка: по нему модальное окно объявляет диктору своё ИМЯ (aria-labelledby). */
+  titleId?: string
   /** Без обработчика крестика нет (окно закрывают иначе — кликом мимо). */
   onClose?: () => void
   closeLabel?: string
@@ -36,7 +39,9 @@ export function PanelHead({
   return (
     <div className={`flex shrink-0 items-center gap-2 border-b border-border ${PANEL_HEAD}`}>
       {icon && <span className="shrink-0 text-accent">{icon}</span>}
-      <div className={`min-w-0 flex-1 truncate font-semibold text-ink ${TEXT.body}`}>{title}</div>
+      <div id={titleId} className={`min-w-0 flex-1 truncate font-semibold text-ink ${TEXT.body}`}>
+        {title}
+      </div>
       {actions}
       {onClose && (
         // touch="hit": зона нажатия дорастает до 44px, а САМ крестик остаётся 28px.

@@ -20,7 +20,7 @@ export function ChecksList({ items, labels }: { items: CheckItem[]; labels: { bl
   const failed = items.filter((i) => i.status === 'fail').length
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[0.78125rem]">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-body-sm">
         {failed > 0 ? (
           <span className="inline-flex items-center gap-1.5 font-semibold text-danger">
             <X size={13} /> {labels.blocking}: {failed}
@@ -39,13 +39,13 @@ export function ChecksList({ items, labels }: { items: CheckItem[]; labels: { bl
             <li key={it.key} className="flex items-start gap-2.5 px-3.5 py-2.5">
               <Icon size={15} className={`mt-0.5 shrink-0 ${meta.cls}`} />
               <div className="min-w-0 flex-1">
-                <div className="text-[0.8125rem] text-ink">
+                <div className="text-body text-ink">
                   {it.title}
                   {/* Чужая проверка подписана автором: своё приложение считает само,
                       а это прислали снаружи — и видно, кем. */}
-                  {it.reportedBy && <span className="ml-1.5 text-[0.78125rem] text-muted">@{it.reportedBy}</span>}
+                  {it.reportedBy && <span className="ml-1.5 text-body-sm text-muted">@{it.reportedBy}</span>}
                 </div>
-                {it.detail && <div className="text-[0.78125rem] text-ink-2 [overflow-wrap:anywhere]">{it.detail}</div>}
+                {it.detail && <div className="text-body-sm text-ink-2 [overflow-wrap:anywhere]">{it.detail}</div>}
               </div>
               {it.url && (
                 <a
@@ -53,7 +53,6 @@ export function ChecksList({ items, labels }: { items: CheckItem[]; labels: { bl
                   target="_blank"
                   rel="noopener noreferrer nofollow"
                   aria-label={labels.details}
-                  title={labels.details}
                   className="ml-auto grid size-8 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
                 >
                   <ExternalLink size={14} />

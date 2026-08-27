@@ -14,6 +14,7 @@ import type { FeedSourceRow } from '@/features/admin/feed-queries'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Input } from '@/shared/ui/input'
 import { cardClass } from '@/shared/ui/card-style'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /**
  * ПОДПИСКИ НА ПОТОК — состав ровными столбцами, как состав специалистов.
@@ -45,7 +46,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           материал из неё никому не достанется. */}
       <form action={addFeedSource} className={cardClass({ className: 'flex flex-col gap-2 sm:flex-row sm:items-end' })}>
         <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{t('admin.feedAddress', lang)}</span>
+          <span className="text-caption uppercase tracking-wide text-muted">{t('admin.feedAddress', lang)}</span>
           <Input
             name="url"
             required
@@ -53,16 +54,16 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             placeholder="https://example.com/feed.xml"
           />
         </label>
-        <label className="flex min-w-0 flex-col gap-1 sm:w-[12.5rem]">
-          <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{t('admin.topic', lang)}</span>
+        <label className="flex min-w-0 flex-col gap-1 sm:w-field-lg">
+          <span className="text-caption uppercase tracking-wide text-muted">{t('admin.topic', lang)}</span>
           <Input
             name="tags"
             required
             placeholder="devops, ci"
           />
         </label>
-        <label className="flex flex-col gap-1 sm:w-[6rem]">
-          <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{t('admin.hours', lang)}</span>
+        <label className="flex flex-col gap-1 sm:w-24">
+          <span className="text-caption uppercase tracking-wide text-muted">{t('admin.hours', lang)}</span>
           <Input
             name="everyHours"
             type="number"
@@ -90,19 +91,22 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
               <div className={cn('min-w-0', !r.enabled && 'opacity-60')}>
                 <div className="flex min-w-0 items-center gap-2">
                   <Rss size={13} className={`shrink-0 ${r.lastError ? 'text-warn' : 'text-accent'}`} />
-                  <a
-                    href={r.url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="min-w-0 truncate text-[0.8125rem] text-ink hover:text-accent"
-                    title={r.url}
-                  >
+                  {/* Полный адрес — подсказкой: строка обрезана, а нативный title
+                      не работает на пальце. */}
+                  <Tooltip label={r.url}>
+                    <a
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="min-w-0 truncate text-body text-ink hover:text-accent"
+                    >
                     {r.title || r.url.replace(/^https?:\/\//, '')}
                   </a>
+                  </Tooltip>
                 </div>
                 {r.lastError && (
                   <Tooltip label={r.lastError}>
-                    <div className="mt-0.5 truncate text-[0.6875rem] text-warn">{r.lastError}</div>
+                    <div className="mt-0.5 truncate text-caption text-warn">{r.lastError}</div>
                   </Tooltip>
                 )}
               </div>
@@ -139,7 +143,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             cell: ({ row }) => (
               // Числа не приглушаем и у выключенных (как «Раз в»: ячейки numberColumn
               // рендерит фабрика) — правило единое: тускнеет описательное, не метрики.
-              <span className="block text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">
+              <span className="block text-right font-mono tabular-nums text-body-sm text-ink-2">
                 {row.original.items} / <span className={row.original.fresh ? 'text-ok' : ''}>{row.original.fresh}</span>
               </span>
             ),
@@ -150,44 +154,37 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             size: 148,
             render: (r) => (
               <div className="flex items-center justify-end gap-0.5">
-                <span className={cn('mr-1 hidden text-[0.6875rem] text-muted sm:inline', !r.enabled && 'opacity-60')}>
+                <span className={cn('mr-1 hidden text-caption text-muted sm:inline', !r.enabled && 'opacity-60')}>
                   {r.lastPulledAt ? timeAgo(r.lastPulledAt, lang) : '—'}
                 </span>
                 {/* Служебные действия — иконками в правом углу строки: на мобиле три подписи не
                     влезут, а иконка с подсказкой понятна и в 360px. */}
                 <form action={pullFeedNow}>
                   <input type="hidden" name="id" value={r.id} />
-                  <button
-                    type="submit"
-                    aria-label={t('admin.pullNow', lang)}
-                    title={t('admin.pullNow', lang)}
-                    className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-                  >
+                  <IconButton size="xl" variant="ghost" label={t('admin.pullNow', lang)} className="text-muted hover:bg-surface-2 hover:text-ink" type="submit"
+                    title={t('admin.pullNow', lang)}>
                     <RefreshCw size={15} />
-                  </button>
+                  </IconButton>
                 </form>
                 <form action={setFeedSourceEnabled}>
                   <input type="hidden" name="id" value={r.id} />
                   <input type="hidden" name="enabled" value={r.enabled ? 'false' : 'true'} />
-                  <button
+                  <IconButton
                     type="submit"
-                    aria-label={r.enabled ? t('admin.disable', lang) : t('admin.enable', lang)}
-                    title={r.enabled ? t('admin.disable', lang) : t('admin.enable', lang)}
-                    className={`grid size-11 place-items-center rounded-md hover:bg-surface-2 ${r.enabled ? 'text-ok' : 'text-muted'}`}
+                    size="xl"
+                    variant="ghost"
+                    label={r.enabled ? t('admin.disable', lang) : t('admin.enable', lang)}
+                    className={r.enabled ? 'text-ok' : 'text-muted'}
                   >
                     <Power size={15} />
-                  </button>
+                  </IconButton>
                 </form>
                 <form action={removeFeedSource}>
                   <input type="hidden" name="id" value={r.id} />
-                  <button
-                    type="submit"
-                    aria-label={t('admin.deleteCollectedItems', lang)}
-                    title={t('admin.deleteCollectedItems', lang)}
-                    className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-danger"
-                  >
+                  <IconButton size="xl" variant="ghost" label={t('admin.deleteCollectedItems', lang)} className="text-muted hover:bg-surface-2 hover:text-danger" type="submit"
+                    title={t('admin.deleteCollectedItems', lang)}>
                     <Trash2 size={15} />
-                  </button>
+                  </IconButton>
                 </form>
               </div>
             ),

@@ -1,12 +1,14 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Loader2, Monitor, Smartphone } from 'lucide-react'
+import { Monitor, Smartphone } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { UserSession } from './queries'
 import { revokeOtherSessions, revokeSession } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
+import { Badge } from '@/shared/ui/badge'
 
 export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang: Lang }) {
   const [pending, start] = useTransition()
@@ -28,22 +30,22 @@ export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang
         return (
         <div key={s.id} className="flex items-center gap-3 rounded-md border border-border bg-surface-2 px-3 py-2.5">
           <Icon size={18} className="shrink-0 text-ink-2" />
-          <div className="min-w-0 flex-1 text-[0.8125rem]">
+          <div className="min-w-0 flex-1 text-body">
             <div className="flex items-center gap-2 font-medium text-ink">
               {s.device}
               {s.current ? (
-                <span className="rounded-full bg-ok/15 px-2 py-0.5 text-[0.6875rem] font-semibold text-ok">
+                <Badge variant="ok">
                   {t('currentSession', lang)}
-                </span>
+                </Badge>
               ) : s.online ? (
                 <Tooltip label={t('onlineLabel', lang)}>
                   <span className="h-2 w-2 rounded-full bg-ok" />
                 </Tooltip>
               ) : stale ? (
-                <span className="rounded-full bg-surface px-2 py-0.5 text-[0.6875rem] font-semibold text-muted">{t('staleLabel', lang)}</span>
+                <Badge variant="soft">{t('staleLabel', lang)}</Badge>
               ) : null}
             </div>
-            <div className="text-[0.78125rem] text-muted">
+            <div className="text-body-sm text-muted">
               {/* Гео как «Seen in …» у GitHub; IP оставляем для точности. */}
               {s.geo ? `${s.geo} · ${s.ip ?? '—'}` : (s.ip ?? '—')} · {t('lastSeen', lang)} {fmt.format(new Date(s.lastSeenAt))} · {t('signedInLabel', lang)} {day.format(new Date(s.createdAt))}
             </div>
@@ -69,7 +71,7 @@ export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang
           disabled={pending}
           className={buttonClass({ variant: 'dangerSolid', className: 'mt-1 w-fit hover:bg-danger/5 disabled:opacity-60' })}
         >
-          {pending && <Loader2 size={14} className="animate-spin" />}
+          {pending && <Spinner size="md" />}
           {t('signOutOthers', lang)}
         </button>
       )}

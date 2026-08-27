@@ -40,11 +40,11 @@ export function SuggestionAside({
       <PageAside>
         <AsideCard title={t('reviewTitle', lang)}>
           {reviews.length === 0 ? (
-            <p className="text-[0.78125rem] text-muted">{t('reviewNobodyYet', lang)}</p>
+            <p className="text-body-sm text-muted">{t('reviewNobodyYet', lang)}</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {reviews.map((r) => (
-                <li key={r.id} className="flex items-center gap-2 text-[0.78125rem]">
+                <li key={r.id} className="flex items-center gap-2 text-body-sm">
                   <Avatar handle={r.reviewer.handle} avatarUrl={r.reviewer.avatarUrl} size={20} />
                   <span className="min-w-0 flex-1 truncate text-ink-2">{r.reviewer.name || r.reviewer.handle}</span>
                   <span className={r.verdict === 'approve' ? 'text-ok' : r.verdict === 'changes' ? 'text-danger' : 'text-muted'}>
@@ -146,7 +146,7 @@ export function SuggestionAside({
             {linkedIssues.length > 0 && (
               <ul className="mb-1.5 flex flex-col gap-1.5">
                 {linkedIssues.map((iss) => (
-                  <li key={iss.number} className="flex items-start gap-1.5 text-[0.78125rem]">
+                  <li key={iss.number} className="flex items-start gap-1.5 text-body-sm">
                     <Link href={`/${owner}/${slug}/issues/${iss.number}`} className="font-mono text-muted hover:text-accent">
                       #{iss.number}
                     </Link>

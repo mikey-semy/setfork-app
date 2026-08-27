@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronRight, RotateCw } from 'lucide-react'
+import { Check, RotateCw } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import type { GenMessage } from '@/shared/ai/generation-messages'
 import type { GenerationStatus } from './queries'
 import { LIST_KINDS, kindLabel, refineHint } from '@/shared/ai/list-kind'
+import { Chip } from '@/shared/ui/Chip'
 import { DETAIL_LEVELS, detailLabel, toDetail } from '@/shared/ai/detail-level'
 import { CouncilBubble } from './CouncilBubble'
 import { MAX_VARIANTS } from './limits'
@@ -19,6 +20,10 @@ import { ChatComposer } from '@/shared/ui/ChatComposer'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
 import { t } from '@/shared/i18n'
 import { PAGE } from '@/shared/ui/control'
+import { Field } from '@/shared/ui/Field'
+import { Input } from '@/shared/ui/input'
+import { buttonClass } from '@/shared/ui/button-style'
+import { DisclosureToggle } from '@/shared/ui/DisclosureToggle'
 
 /** Первая буква — заглавная: hint приходит от модели строчными, а это готовое сообщение. */
 const capFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -47,7 +52,7 @@ function ThinkingIndicator({ ru, slow, slowText }: { ru: boolean; slow: boolean;
   }, [slow])
   const text = slow ? slowText : THINKING_LINES[i][ru ? 1 : 0]
   return (
-    <div className="flex items-center gap-2 pl-1 text-[0.78125rem] text-muted">
+    <div className="flex items-center gap-2 pl-1 text-body-sm text-muted">
       <span className="inline-flex items-center gap-[0.1875rem]">
         {[0, 200, 400].map((d) => (
           <span key={d} className="size-[0.25rem] animate-pulse rounded-full bg-current opacity-60" style={{ animationDelay: `${d}ms` }} />
@@ -84,14 +89,15 @@ function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { mes
   const [open, setOpen] = useState(defaultOpen)
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 rounded-md py-0.5 text-[0.6875rem] text-muted hover:text-ink-2"
+      <DisclosureToggle
+        open={open}
+        onToggle={() => setOpen((v) => !v)}
+        label={t('generation.councilLines', lang).replace('{n}', String(messages.length))}
+        icon={12}
+        className="text-caption text-muted hover:text-ink-2"
       >
-        <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
         {t('generation.councilLines', lang).replace('{n}', String(messages.length))}
-      </button>
+      </DisclosureToggle>
       {open && (
         <ol className="mt-2 flex flex-col gap-3">
           {messages.map((m) => (
@@ -220,38 +226,32 @@ export function GenerationChat({ generationId, lang, candidates, status, message
           На узком — горизонтальный скролл, на sm+ — перенос строк: пилюли не должны уходить за экран. */}
       <div className="no-scrollbar -mx-4 mb-4 flex items-center gap-1.5 overflow-x-auto px-4 sm:-mx-6 sm:flex-wrap sm:overflow-x-visible sm:px-6">
         {LIST_KINDS.map((k) => (
-          <button
+          <Chip
             key={k}
-            type="button"
             onClick={() => k !== listKind && start(() => setGenerationKind(generationId, k))}
             disabled={working}
-            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[0.78125rem] transition-colors disabled:opacity-40 ${
-              k === listKind ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
-            }`}
+            selected={k === listKind}
           >
             {kindLabel(k, ru)}
-          </button>
+          </Chip>
         ))}
         <span className="mx-1 h-4 w-px shrink-0 bg-border" />
         {/* Объём — вторая ось рядом с типом: «слишком куце / слишком много» лечится одним
             кликом, новый вариант приходит в ленту, старые остаются для сравнения. */}
         {DETAIL_LEVELS.map((lv) => (
-          <button
+          <Chip
             key={lv}
-            type="button"
             onClick={() => lv !== detailNow && start(() => setGenerationDetail(generationId, lv))}
             disabled={working}
-            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[0.78125rem] transition-colors disabled:opacity-40 ${
-              lv === detailNow ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
-            }`}
+            selected={lv === detailNow}
           >
             {detailLabel(lv, ru)}
-          </button>
+          </Chip>
         ))}
       </div>
 
       {error && errText[error] && (
-        <div className="mb-3 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">{errText[error]}</div>
+        <div className="mb-3 rounded-md border border-warn/50 bg-surface px-3 py-2 text-body-sm text-warn">{errText[error]}</div>
       )}
 
       {/* Беседа. flex-1 — забирает всё свободное место, чтобы поле ввода ушло вниз окна. */}
@@ -270,7 +270,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               {said.map((m) => (
                 <div key={m.id} className="flex animate-fadein justify-end">
                   {/* Кап 640px: на широком контейнере пузырь на 85% превращался в строку во весь экран. */}
-                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[0.8125rem] leading-[1.5] text-primary-fg sm:max-w-[40rem]">
+                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-body leading-[1.5] text-primary-fg sm:max-w-prose">
                     {m.kind === 'again' ? t('generation.anotherVariant', lang) : m.text}
                   </div>
                 </div>
@@ -290,7 +290,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 <div id={`cand-${cand.id}`} className="animate-fadein">
                   {/* «Что поменялось ключевое» — берём у самого кандидата: реплики может не быть
                       (старые генерации), а вариант обязан быть виден всегда. */}
-                  {cand.summary && <div className="mb-1 pl-1 text-[0.6875rem] text-muted">{cand.summary}</div>}
+                  {cand.summary && <div className="mb-1 pl-1 text-caption text-muted">{cand.summary}</div>}
                   <CandidateCard cand={cand} selected={cand.id === selId} onSelect={() => setSelId(cand.id)} lang={lang} />
                   {/* Родословная (HQ §6): под карточкой, а не внутри — карточка сама <button>,
                       вложенные интерактивы в неё класть нельзя. */}
@@ -312,32 +312,28 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             <CouncilBubble who="reporter" name={t('common.reporter', lang)}>
               {t('generation.aCoupleDetailsList', lang)}
             </CouncilBubble>
-            <div className="mt-2 space-y-3 pl-[3.25rem]">
+            <div className="mt-2 space-y-3 pl-13">
               {/* Вопрос может нести быстрые варианты после «|»: «Какой стек? | Node.js | Docker».
                   Чип — ответ в один клик (кладёт значение в поле: можно уточнить руками). */}
               {(clarifyQuestions ?? []).map((raw, i) => {
                 const [q, ...opts] = raw.split('|').map((s) => s.trim()).filter(Boolean)
                 return (
                   <div key={i}>
-                    <label className="mb-1 block text-[0.78125rem] text-ink-2">{q}</label>
-                    <input
-                      value={answers[i] ?? ''}
-                      onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))}
-                      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
-                    />
+                    {/* Подпись стояла ОТДЕЛЬНЫМ <label> рядом с полем — без связки: глазами
+                        видно, диктору нечего сказать. Field оборачивает контрол в label сам. */}
+                    <Field label={q}>
+                      <Input
+                        value={answers[i] ?? ''}
+                        onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))}
+                        className="w-full"
+                      />
+                    </Field>
                     {opts.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
                         {opts.map((o) => (
-                          <button
-                            key={o}
-                            type="button"
-                            onClick={() => setAnswers((a) => ({ ...a, [i]: o }))}
-                            className={`rounded-full border px-3 py-1 text-[0.78125rem] transition-colors ${
-                              (answers[i] ?? '') === o ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
-                            }`}
-                          >
+                          <Chip key={o} onClick={() => setAnswers((a) => ({ ...a, [i]: o }))} selected={(answers[i] ?? '') === o}>
                             {o}
-                          </button>
+                          </Chip>
                         ))}
                       </div>
                     )}
@@ -355,7 +351,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                   )
                 }
                 disabled={pending}
-                className="rounded-md bg-primary px-3.5 py-2 text-[0.8125rem] font-semibold text-primary-fg disabled:opacity-50"
+                className={buttonClass({ variant: 'primary' })}
               >
                 {t('generation.send', lang)}
               </button>
@@ -375,33 +371,20 @@ export function GenerationChat({ generationId, lang, candidates, status, message
         {!working && (last || status === 'failed') && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             {last && (
-              <button
-                type="button"
-                disabled={!selId}
-                onClick={() => selId && start(() => acceptCandidate(generationId, selId))}
-                className="inline-flex items-center gap-1.5 rounded-full border border-(--accent)/60 bg-(--accent-soft) px-3 py-1.5 text-[0.78125rem] font-medium text-accent hover:opacity-90 disabled:opacity-40"
-              >
+              <Chip disabled={!selId} onClick={() => selId && start(() => acceptCandidate(generationId, selId))} selected className="font-medium">
                 <Check size={13} /> {t('generation.useOne', lang)}
-              </button>
+              </Chip>
             )}
             {candidates.length < MAX_VARIANTS && (
-              <button
-                type="button"
-                onClick={() => start(() => regenerateCandidate(generationId))}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[0.78125rem] text-ink-2 hover:border-border-strong hover:text-ink"
-              >
+              <Chip onClick={() => start(() => regenerateCandidate(generationId))}>
                 {/* Сравнивать нечего — значит это не «ещё вариант», а повтор того же запроса. */}
                 <RotateCw size={13} /> {last ? t('generation.anotherVariant', lang) : t('generation.tryAgain', lang)}
-              </button>
+              </Chip>
             )}
             {(last?.hint || '').trim() && (
-              <button
-                type="button"
-                onClick={() => setNote(capFirst(last.hint ?? ''))}
-                className="inline-flex max-w-[17.5rem] items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[0.78125rem] text-muted hover:border-border-strong hover:text-ink-2"
-              >
+              <Chip onClick={() => setNote(capFirst(last.hint ?? ''))} className="max-w-panel text-muted">
                 <span className="truncate">{capFirst(last.hint ?? '')}</span>
-              </button>
+              </Chip>
             )}
           </div>
         )}

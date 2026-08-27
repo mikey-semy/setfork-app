@@ -53,14 +53,14 @@ export default async function DiscussionsPage({
       <div className={PAGE}>
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1">
-            <Link href={base} className={`rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium ${!category ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}>
+            <Link href={base} className={`rounded-md px-2.5 py-1.5 text-body font-medium ${!category ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}>
               {ru ? 'Все' : 'All'}
             </Link>
             {DISCUSSION_CATEGORIES.map((c) => (
               <Link
                 key={c.key}
                 href={`${base}?category=${c.key}`}
-                className={`rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium ${category === c.key ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}
+                className={`rounded-md px-2.5 py-1.5 text-body font-medium ${category === c.key ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}
               >
                 {c.icon} {ru ? c.ru : c.en}
               </Link>
@@ -86,18 +86,18 @@ export default async function DiscussionsPage({
             {list.map((d) => (
               <div key={d.id} className="flex items-start gap-3 px-4 py-3">
                 <Tooltip label={categoryLabel(d.category, lang)}>
-                  <span className="mt-0.5 text-[1rem]">{categoryMeta(d.category).icon}</span>
+                  <span className="mt-0.5 text-title">{categoryMeta(d.category).icon}</span>
                 </Tooltip>
                 <div className="min-w-0 flex-1">
-                  <Link href={`${base}/${d.number}`} className="min-w-0 text-[0.875rem] font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]">
+                  <Link href={`${base}/${d.number}`} className="min-w-0 text-body-lg font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]">
                     {d.title}
                   </Link>
-                  <div className="mt-0.5 text-[0.78125rem] text-muted">
+                  <div className="mt-0.5 text-body-sm text-muted">
                     #{d.number} · {d.authorHandle} · {timeAgo(d.createdAt, lang)}
                   </div>
                 </div>
                 {d.commentCount > 0 && (
-                  <span className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-muted">
+                  <span className="mt-0.5 inline-flex items-center gap-1 text-body-sm text-muted">
                     <MessageSquare size={13} /> {d.commentCount}
                   </span>
                 )}

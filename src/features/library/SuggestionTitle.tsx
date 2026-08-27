@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { Pencil, Loader2 } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { editSuggestionNote } from './actions'
-import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
+import { Input } from '@/shared/ui/input'
 
 export interface TitleLabels {
   edit: string
@@ -50,19 +52,16 @@ export function SuggestionTitle({
   if (editing) {
     return (
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <input
-          value={draft}
+        <Input value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={labels.placeholder}
-          maxLength={300}
-          className={buttonClass({ className: 'min-w-0 flex-1 outline-hidden focus-visible:border-border-strong' })}
-        />
+          maxLength={300} className="min-w-0 flex-1" />
         {/* Действия — вправо, одной высотой (стандарт кнопок). */}
         <Button variant="ghost" onClick={() => setEditing(false)} disabled={pending}>
           {labels.cancel}
         </Button>
         <Button variant="primary" onClick={save} disabled={pending || !draft.trim()}>
-          {pending ? <Loader2 size={13} className="animate-spin" /> : labels.save}
+          {pending ? <Spinner size="sm" /> : labels.save}
         </Button>
       </div>
     )
@@ -70,22 +69,17 @@ export function SuggestionTitle({
 
   return (
     <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
-      <h1 className="min-w-0 text-[1.25rem] font-bold leading-tight text-ink [overflow-wrap:anywhere]">{note}</h1>
+      <h1 className="min-w-0 text-heading font-bold leading-tight text-ink [overflow-wrap:anywhere]">{note}</h1>
       {number != null && (
-        <Link href={path} className="text-[1.25rem] font-normal text-muted hover:text-accent">
+        <Link href={path} className="text-heading font-normal text-muted hover:text-accent">
           #{number}
         </Link>
       )}
       {canEdit && (
         <Tooltip label={labels.edit}>
-          <button
-            type="button"
-            aria-label={labels.edit}
-            onClick={() => setEditing(true)}
-            className="grid size-8 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-          >
+          <IconButton variant="ghost" label={labels.edit} className="text-muted hover:bg-surface-2 hover:text-ink" onClick={() => setEditing(true)}>
             <Pencil size={14} />
-          </button>
+          </IconButton>
         </Tooltip>
       )}
     </div>

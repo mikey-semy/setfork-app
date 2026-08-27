@@ -39,7 +39,7 @@ export default async function TagPage({
     <div className={PAGE}>
       <PageHeader
         icon={
-          <span className="grid size-10 place-items-center rounded-lg bg-(--accent-soft)">
+          <span className="grid size-10 place-items-center rounded-lg bg-accent-soft">
             <Tag size={20} />
           </span>
         }

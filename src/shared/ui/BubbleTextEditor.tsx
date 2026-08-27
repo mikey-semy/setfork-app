@@ -137,7 +137,7 @@ export function BubbleTextEditor({
         // относительно текста. Замер 09.08.2026: расхождение осей ровно 4px.
         className={`block w-full ${TEXT.body} leading-relaxed text-ink outline-hidden ${
           bare ? 'resize-none overflow-hidden bg-transparent' : 'rounded-md border border-border bg-surface-2 px-3 py-2 focus:border-border-strong'
-        } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[4.5rem] resize-y'} ${trailing ? 'pr-9' : ''} ${mono ? `font-mono ${TEXT.bodySm}` : ''} ${textareaClassName ?? ''}`}
+        } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-18 resize-y'} ${trailing ? 'pr-9' : ''} ${mono ? `font-mono ${TEXT.bodySm}` : ''} ${textareaClassName ?? ''}`}
       />
       {trailing && <div className="absolute right-1.5 top-1.5">{trailing}</div>}
 

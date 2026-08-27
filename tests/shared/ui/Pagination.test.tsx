@@ -157,12 +157,12 @@ describe('Pagination', () => {
       // сайте («каждое нажатие loading на долю секунды появляется»). Теперь ожидание
       // показывается гашением стрелок с задержкой, а словами — только скринридеру.
       const { rerender } = render(<Pagination page={2} totalPages={5} onPage={vi.fn()} compact lang="en" />)
-      expect(screen.getByText('2 / 5')).toHaveClass('min-w-[4.5rem]')
+      expect(screen.getByText('2 / 5')).toHaveClass('min-w-18')
 
       rerender(<Pagination page={2} totalPages={5} onPage={vi.fn()} compact busy lang="en" />)
       // Номер на месте, ширина по-прежнему зарезервирована: ряд отцентрован, и подпись,
       // меняясь в ширине, разъезжала бы обе стрелки под занесённым пальцем.
-      expect(screen.getByText('2 / 5')).toHaveClass('min-w-[4.5rem]')
+      expect(screen.getByText('2 / 5')).toHaveClass('min-w-18')
       // Слово живёт только в живой области — она скрыта от глаз.
       const loading = screen.getAllByText('Loading…')
       expect(loading).toHaveLength(1)

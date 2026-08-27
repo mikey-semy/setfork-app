@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { tr, type Lang } from '@/shared/i18n'
 import { ListStats } from '@/features/library/ListStats'
 import type { ListPageData } from './load'
+import { TagChip } from '@/shared/ui/TagChip'
 
 type Props = Pick<ListPageData, 'tpl' | 'base' | 'branches' | 'currentVersion' | 'watchers'> & {
   lang: Lang
@@ -23,20 +24,19 @@ export function ListAbout({ tpl, base, branches, currentVersion, watchers, lang,
       {/* Описание и теги пишет человек, длину тега никто не режет — без переноса
           один тег или «слово» в описании уносит страницу за край (мобила 390px). */}
       {desc && (
-        <p className={`text-[0.8125rem] text-ink-2 [overflow-wrap:anywhere] ${layout === 'row' ? 'leading-snug' : 'leading-relaxed'}`}>
+        <p className={`text-body text-ink-2 [overflow-wrap:anywhere] ${layout === 'row' ? 'leading-snug' : 'leading-relaxed'}`}>
           {desc}
         </p>
       )}
       {tpl.tags.length > 0 && (
         <div className={`flex flex-wrap gap-1.5 ${layout === 'row' ? 'mt-2' : ''}`}>
           {tpl.tags.map((tag) => (
-            <Link
+            <TagChip
               key={tag}
+              slug={tag}
               href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
-              className="min-w-0 rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[0.78125rem] font-medium text-accent [overflow-wrap:anywhere] hover:underline"
-            >
-              {tag}
-            </Link>
+              className="min-w-0 [overflow-wrap:anywhere]"
+            />
           ))}
         </div>
       )}

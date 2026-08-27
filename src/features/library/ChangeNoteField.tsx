@@ -1,12 +1,14 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { generateChangeNoteAction } from './actions/ai'
 import { buttonClass } from '@/shared/ui/button-style'
 import { TOUCH_HIT } from '@/shared/ui/control'
+import { Spinner } from '@/shared/ui/Spinner'
+import { Input } from '@/shared/ui/input'
 
 // Поле «Что изменили и почему» + кнопка генерации примечания из диффа версий
 // (как commit-message в Copilot). Читает текущие пункты из скрытого поля формы.
@@ -55,7 +57,7 @@ export function ChangeNoteField({
   return (
     <div className="mb-4">
       <div className="relative">
-        <input
+        <Input
           ref={ref}
           name="note"
           required={required}
@@ -73,9 +75,8 @@ export function ChangeNoteField({
           }}
           aria-invalid={invalid}
           placeholder={placeholder}
-          className={`w-full rounded-md border bg-surface-2 py-2.5 pl-3 pr-11 text-[0.875rem] text-ink outline-hidden ${
-            invalid ? 'border-danger focus:border-danger' : 'border-border focus:border-border-strong'
-          }`}
+          size="lg"
+          className={`pr-11 ${invalid ? 'border-danger focus:border-danger' : ''}`}
         />
         {/* Иконка-генерация внутри инпута справа, как commit-message в VSCode */}
         <Tooltip label={t('generateFromChanges', lang)}>
@@ -86,12 +87,12 @@ export function ChangeNoteField({
             aria-label={t('generateFromChanges', lang)}
             className={`${buttonClass({ variant: 'ghost', size: 'sm', className: `absolute right-1.5 top-1/2 size-7 -translate-y-1/2 p-0 ${TOUCH_HIT}` })} hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2`}
           >
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            {busy ? <Spinner size="md" /> : <Sparkles size={15} />}
           </button>
         </Tooltip>
       </div>
-      {invalid && <p className="mt-1 text-[0.78125rem] text-danger">{t('changeNoteRequired', lang)}</p>}
-      {err && <p className="mt-1 text-[0.78125rem] text-danger">{err}</p>}
+      {invalid && <p className="mt-1 text-body-sm text-danger">{t('changeNoteRequired', lang)}</p>}
+      {err && <p className="mt-1 text-body-sm text-danger">{err}</p>}
     </div>
   )
 }

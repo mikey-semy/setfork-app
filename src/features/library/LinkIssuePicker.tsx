@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, Plus, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 import { toggleClosingRef } from './suggestion-meta-actions'
 
 /**
@@ -44,7 +46,7 @@ export function LinkIssuePicker({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {linked.length === 0 && <p className="text-[0.78125rem] text-muted">{labels.empty}</p>}
+      {linked.length === 0 && <p className="text-body-sm text-muted">{labels.empty}</p>}
 
       {canEdit && (
         <Popover>
@@ -52,10 +54,10 @@ export function LinkIssuePicker({
             {/* Служебное действие — компактной кнопкой, тач-цель по высоте 38px
                 как у остальных кнопок панели. */}
             <Button variant="ghost" className="w-full justify-start px-2" disabled={pending}>
-              {pending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {labels.add}
+              {pending ? <Spinner size="md" /> : <Plus size={14} />} {labels.add}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[16.25rem] overflow-hidden p-0">
+          <PopoverContent align="start" className="w-panel overflow-hidden p-0">
             {/* Заголовок = тексту кнопки-триггера; крестика нет намеренно: Popover
                 (Radix) сам закрывается по Esc/клику мимо, а первым фокусируемым
                 элементом остаётся поле поиска — как было с Input. */}
@@ -64,7 +66,7 @@ export function LinkIssuePicker({
               search={{ value: q, onChange: setQ, placeholder: labels.filter, clearLabel: labels.clear }}
             >
               {shown.length === 0 ? (
-                <p className="px-2 py-3 text-[0.78125rem] text-muted">{labels.empty}</p>
+                <p className="px-2 py-3 text-body-sm text-muted">{labels.empty}</p>
               ) : (
                 shown.slice(0, 30).map((i) => (
                   <PickerRow
@@ -83,25 +85,20 @@ export function LinkIssuePicker({
       {canEdit && linked.length > 0 && (
         <div className="flex flex-col gap-1">
           {linked.map((n) => (
-            <div key={n} className="flex items-center gap-1.5 text-[0.78125rem]">
+            <div key={n} className="flex items-center gap-1.5 text-body-sm">
               <span className="font-mono text-muted">#{n}</span>
               <Tooltip label={labels.remove}>
-                <button
-                  type="button"
-                  onClick={() => toggle(n)}
-                  aria-label={labels.remove}
-                  disabled={pending}
-                  className="ml-auto grid size-9 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
-                >
+                <IconButton variant="ghost" label={labels.remove} className="ml-auto shrink-0 text-muted hover:text-ink" onClick={() => toggle(n)}
+                  disabled={pending}>
                   <X size={13} />
-                </button>
+                </IconButton>
               </Tooltip>
             </div>
           ))}
         </div>
       )}
 
-      <p className="text-[0.6875rem] text-muted">{labels.hint}</p>
+      <p className="text-caption text-muted">{labels.hint}</p>
     </div>
   )
 }

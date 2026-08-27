@@ -13,6 +13,7 @@ import { renderWikiLinks } from '@/shared/lib/wiki-links'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ListPageData } from './load'
 import { cardClass } from '@/shared/ui/card-style'
+import { badgeClass } from '@/shared/ui/badge'
 
 type Props = Pick<ListPageData, 'tpl' | 'base' | 'viewer' | 'readOnlyView' | 'isOwner' | 'digSteps' | 'stepImages' | 'mon'> & {
   step: ListPageData['steps'][number]
@@ -54,12 +55,12 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
         </span>
       )}
       <div className="flex gap-3">
-        <span className="mt-0.5 font-mono text-[0.8125rem] text-muted">{titleNum ?? number}</span>
+        <span className="mt-0.5 font-mono text-body text-muted">{titleNum ?? number}</span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 pr-7">
             {/* Заголовок шага пишет человек: слово без пробелов иначе уезжает
                 за правый край и тянет за собой страницу (мобила 390px). */}
-            <span className="min-w-0 text-[0.875rem] font-semibold text-ink [overflow-wrap:anywhere]">{titleText}</span>
+            <span className="min-w-0 text-body-lg font-semibold text-ink [overflow-wrap:anywhere]">{titleText}</span>
             <StepLevelBadge level={step.level} lang={lang} />
             {/* Разрушительный пункт виден ДО того, как его скопировали
                 в терминал, — на сайте, а не только в скрипте. */}
@@ -67,7 +68,7 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
           </div>
           {desc && <Markdown className="mt-1">{renderWikiLinks(desc)}</Markdown>}
           {why && (
-            <div className="mt-1.5 flex gap-1.5 text-[0.78125rem] text-ink-2">
+            <div className="mt-1.5 flex gap-1.5 text-body-sm text-ink-2">
               <Info size={13} className="mt-0.5 shrink-0 text-muted" />
               <span className="min-w-0 [overflow-wrap:anywhere]">
                 <span className="font-medium text-ink-2">{t('whyLabel', lang)}:</span> {why}
@@ -79,7 +80,7 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
               приглашение: реальный опыт доступен человеку, не модели.
               Приглашение ведёт в тот же поток правки, что и кнопка сверху. */}
           {step.needsHuman && (
-            <div className="mt-1.5 flex gap-1.5 rounded-md border border-dashed border-border bg-surface-2 px-2.5 py-2 text-[0.78125rem] text-ink-2">
+            <div className="mt-1.5 flex gap-1.5 rounded-md border border-dashed border-border bg-surface-2 px-2.5 py-2 text-body-sm text-ink-2">
               <UserRound size={13} className="mt-0.5 shrink-0 text-muted" />
               <span className="min-w-0 [overflow-wrap:anywhere]">
                 <span className="font-medium text-ink-2">{t('needsHumanLabel', lang)}:</span>{' '}
@@ -99,7 +100,7 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
             <SmartImage
               src={stepImages[step.id]}
               alt={t('screenshot', lang)}
-              className="mt-3 max-h-[26.25rem] w-auto rounded-lg border border-border"
+              className="mt-3 max-h-105 w-auto rounded-lg border border-border"
             />
           )}
           {step.command && (
@@ -120,14 +121,14 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
               {/* subtasks — критерии проверки шага (см. промпт генерации:
                   «verification checks»), а не под-шаги: подписываем и рисуем
                   чек-квадратами, иначе выглядят оторванным списком. */}
-              <div className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
+              <div className="mb-1 text-caption font-semibold uppercase tracking-wide text-muted">
                 {t('stepChecksLabel', lang)}
               </div>
               <ul className="flex flex-col gap-1.5">
                 {/* Ключ по тексту проверки, а не по индексу: при правке шага
                     список пересобирается, и индексные ключи путают строки. */}
                 {subs.map((label, i) => (
-                  <li key={`${label}#${i}`} className="flex gap-2 text-[0.8125rem] text-ink-2 [overflow-wrap:anywhere]">
+                  <li key={`${label}#${i}`} className="flex gap-2 text-body text-ink-2 [overflow-wrap:anywhere]">
                     <SquareCheckBig size={14} className="mt-0.5 shrink-0 text-muted" />
                     {label}
                   </li>
@@ -139,8 +140,11 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
             <div className="mt-3 flex flex-wrap gap-2">
               {refs.map((r) => {
                 // Подпись ссылки нередко и есть URL — без переноса чип уносит страницу.
-                const cls =
-                  'inline-flex min-w-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-accent [overflow-wrap:anywhere]'
+                const cls = badgeClass({
+                  variant: 'chip',
+                  shape: 'square',
+                  className: 'min-w-0 px-2.5 py-1 text-accent [overflow-wrap:anywhere]',
+                })
                 // Подписи может не быть (ссылку кладут одним url) — показываем домен.
                 const text = linkLabel(r.label, r.url)
                 return r.url ? (

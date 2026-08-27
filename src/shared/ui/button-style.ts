@@ -24,7 +24,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
   // Зелёная кнопка «Получить» была единственной рукописной кнопкой в ряду шапки
   // списка — и единственной, которая не добирала тач-цель. Стала вариантом, а не
   // осталась исключением: токен --ok-solid читается с белым текстом в обеих темах.
-  ok: 'bg-(--ok-solid) text-white hover:opacity-90',
+  ok: 'bg-ok-solid text-white hover:opacity-90',
 }
 
 // px у кнопок шире полей того же размера — тексту в кнопке нужен воздух.
@@ -33,6 +33,7 @@ const SIZES: Record<ButtonSize, string> = {
   sm: 'px-2.5 gap-1.5',
   md: 'px-3.5 gap-1.5',
   lg: 'px-4 gap-2',
+  xl: 'px-4 gap-2',
 }
 
 /**

@@ -73,8 +73,8 @@ export function FeedFilter({ lang, onChange }: { lang: Lang; onChange: (p: FeedP
         }
       >
               <div>
-                <div className="text-[0.78125rem] font-semibold text-ink">{ru ? 'События' : 'Events'}</div>
-                <p className="mb-2 text-[0.6875rem] text-muted">
+                <div className="text-body-sm font-semibold text-ink">{ru ? 'События' : 'Events'}</div>
+                <p className="mb-2 text-caption text-muted">
                   {ru ? 'Что показывать в ленте' : 'Activity you want to see on your feed'}
                 </p>
                 <div className="flex flex-col gap-1">

@@ -28,10 +28,10 @@ vi.mock('@/shared/settings/ai', async (orig) => ({ ...(await orig<Record<string,
 
 // Кошелёк: первый спрос — деньги есть, дальше кончились. Ровно так выглядит исчерпание
 // потолка на середине партии.
-const деньги = vi.hoisted(() => ({ осталось: 1 }))
+const money = vi.hoisted(() => ({ left: 1 }))
 vi.mock('@/shared/quota', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
-  globalBudgetOk: vi.fn(async () => деньги.осталось-- > 0),
+  globalBudgetOk: vi.fn(async () => money.left-- > 0),
 }))
 
 const { agentActions, db, templates, templateVersions, steps, suggestions, users } = await import('@/shared/db')
@@ -55,7 +55,7 @@ beforeEach(async () => {
   await resetTables([agentActions, suggestions, steps, templateVersions, templates, users])
   ai.calls = 0
   // Один спрос уходит на вход в проход, второй разрешает первый список, третий — уже нет.
-  деньги.осталось = 2
+  money.left = 2
   await seed()
 })
 

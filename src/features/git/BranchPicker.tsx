@@ -19,6 +19,8 @@ const ERR: Record<string, TKey> = {
   'not-found': 'branch.errNotFound',
   'protected': 'branch.errProtected',
   'out-of-sync': 'branch.errOutOfSync',
+  'gate-unavailable': 'branch.errGateUnavailable',
+  'gate-malformed': 'branch.errGateMalformed',
   'internal': 'branch.errInternal',
 }
 
@@ -103,15 +105,17 @@ export function BranchPicker({
       <Tooltip label={ru ? 'Ветки' : 'Branches'}>
         <Button onClick={() => setOpen((v) => !v)} aria-expanded={open}>
           <GitBranch size={13} className="text-muted" />
-          <span className="max-w-[8.75rem] truncate">{currentLabel}</span>
+          <span className="max-w-field truncate">{currentLabel}</span>
           <ChevronDown size={12} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
         </Button>
       </Tooltip>
       {open && (
         <>
-          {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). */}
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="sf-pop-in absolute left-0 top-full z-50 mt-1.5 w-[18.75rem] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+          {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). Для
+              диктора слоя нет (aria-hidden) — иначе он объявлял бы пустой элемент поверх
+              содержимого; с клавиатуры меню закрывает Esc. */}
+          <div className="fixed inset-0 z-40" aria-hidden onClick={() => setOpen(false)} />
+          <div className="animate-sf-pop absolute left-0 top-full z-50 mt-1.5 w-panel-lg max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-surface shadow-card">
             <PickerPanel
               title={t('switchBranch', lang)}
               onClose={() => setOpen(false)}
@@ -138,7 +142,7 @@ export function BranchPicker({
                         <Plus size={12} /> {t('create', lang)}
                       </Button>
                     </div>
-                    <p className="px-0.5 pt-1 text-[0.6875rem] text-muted">{err ?? (ru ? `от ${currentLabel}` : `from ${currentLabel}`)}</p>
+                    <p className="px-0.5 pt-1 text-caption text-muted">{err ?? (ru ? `от ${currentLabel}` : `from ${currentLabel}`)}</p>
                   </>
                 ) : null
               }
@@ -154,9 +158,9 @@ export function BranchPicker({
                   }}
                   right={
                     b.isDefault ? (
-                      <Badge className="px-1.5 text-[0.6875rem] font-normal">{t('branchDefault', lang)}</Badge>
+                      <Badge className="px-1.5 text-caption font-normal">{t('branchDefault', lang)}</Badge>
                     ) : (
-                      <span className="font-mono text-[0.6875rem] text-muted">
+                      <span className="font-mono text-caption text-muted">
                         +{b.ahead}/-{b.behind}
                       </span>
                     )
@@ -172,7 +176,7 @@ export function BranchPicker({
                   }
                 />
               ))}
-              {shown.length === 0 && <div className="px-2 py-3 text-[0.78125rem] text-muted">{t('nothingFound', lang)}</div>}
+              {shown.length === 0 && <div className="px-2 py-3 text-body-sm text-muted">{t('nothingFound', lang)}</div>}
             </PickerPanel>
           </div>
         </>

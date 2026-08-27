@@ -54,24 +54,24 @@ export function ProfileOverview({
           Заодно объясняет посетителю, почему правки к этим спискам идут от него. */}
       {agent && agent.tended.length > 0 && (
         <div className="mb-6 min-w-0">
-          <div className="mb-2 text-[0.78125rem] font-semibold text-ink-2">{t('list.tendsTheseLists', lang)}</div>
+          <div className="mb-2 text-body-sm font-semibold text-ink-2">{t('list.tendsTheseLists', lang)}</div>
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
             {agent.tended.map((it) => (
               <li key={`${it.handle}/${it.slug}`} className="min-w-0">
                 <Link href={`/${it.handle}/${it.slug}`} className="flex min-w-0 items-center gap-2 px-3 py-3 hover:bg-surface-2">
-                  <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-ink">{tr(it.title as LocaleText, lang) || it.slug}</span>
-                  <span className="hidden shrink-0 text-[0.6875rem] text-muted sm:inline">{it.handle}</span>
+                  <span className="min-w-0 flex-1 truncate text-body text-ink">{tr(it.title as LocaleText, lang) || it.slug}</span>
+                  <span className="hidden shrink-0 text-caption text-muted sm:inline">{it.handle}</span>
                 </Link>
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[0.6875rem] text-muted">{t('list.responsibilityZoneByDomain', lang)}</p>
+          <p className="mt-2 text-caption text-muted">{t('list.responsibilityZoneByDomain', lang)}</p>
         </div>
       )}
 
       {(pinned.length > 0 || (isOwner && ownLight.length > 0)) && (
         <div className="mb-6">
-          <div className="mb-2 flex items-center justify-between gap-2 text-[0.78125rem] font-semibold text-ink-2">
+          <div className="mb-2 flex items-center justify-between gap-2 text-body-sm font-semibold text-ink-2">
             <span className="inline-flex items-center gap-1.5">
               <Pin size={13} className="text-muted" /> {t('pinnedLabel', lang)}
             </span>
@@ -86,9 +86,9 @@ export function ProfileOverview({
                   href={`/${it.ownerHandle}/${it.slug}`}
                   className={cardClass({ pad: 'sm', className: 'group block transition-colors hover:border-border-strong' })}
                 >
-                  <div className="truncate text-[0.875rem] font-semibold text-accent group-hover:underline">{tr(it.title, lang)}</div>
-                  {desc && <p className="mt-1 line-clamp-2 text-[0.78125rem] leading-snug text-ink-2">{desc}</p>}
-                  <div className="mt-2 flex items-center gap-3 font-mono text-[0.6875rem] text-muted">
+                  <div className="truncate text-body-lg font-semibold text-accent group-hover:underline">{tr(it.title, lang)}</div>
+                  {desc && <p className="mt-1 line-clamp-2 text-body-sm leading-snug text-ink-2">{desc}</p>}
+                  <div className="mt-2 flex items-center gap-3 font-mono text-caption text-muted">
                     <span>★ {it.starsCount}</span>
                     <span>⑂ {it.forksCount}</span>
                   </div>
@@ -101,17 +101,17 @@ export function ProfileOverview({
 
       {completions.length > 0 && (
         <div className="mb-6">
-          <div className="mb-2 flex items-center gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
+          <div className="mb-2 flex items-center gap-1.5 text-body-sm font-semibold text-ink-2">
             <GraduationCap size={14} className="text-muted" /> {t('profile.completedCourses', lang)}
-            <span className="font-mono text-[0.6875rem] text-muted">{completions.length}</span>
+            <span className="font-mono text-caption text-muted">{completions.length}</span>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {completions.map((c) => (
               <div key={c.templateId} className="rounded-lg border border-border bg-surface px-3.5 py-3">
-                <Link href={`/${c.ownerHandle}/${c.slug}`} className="block truncate text-[0.875rem] font-semibold text-accent hover:underline">
+                <Link href={`/${c.ownerHandle}/${c.slug}`} className="block truncate text-body-lg font-semibold text-accent hover:underline">
                   {tr(c.title, lang)}
                 </Link>
-                <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[0.6875rem] text-muted">
+                <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-caption text-muted">
                   <span className="inline-flex items-center gap-1 text-ok">
                     <GraduationCap size={11} />{' '}
                     {dayMonthYear(c.completedAt, lang)}

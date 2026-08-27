@@ -90,7 +90,7 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
   /** Строка «Найдено: N» — сама по себе, без отступов: их расставляет обёртка ниже. */
   const found =
     total === undefined ? null : (
-      <div className="text-center text-[0.75rem] text-muted">
+      <div className="text-center text-caption-lg text-muted">
         {t('foundLabel', lang)}: <span className="tabular-nums text-ink-2">{total}</span>
       </div>
     )
@@ -285,7 +285,7 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
   // Ширина ЗАРЕЗЕРВИРОВАНА: ряд отцентрован, и подпись, меняясь в ширине, разъезжала бы
   // обе стрелки наружу — ровно в тот момент, когда палец уже занесён над одной из них.
   const position = (
-    <span className="min-w-[4.5rem] px-1 text-center font-mono text-[0.75rem] text-muted">
+    <span className="min-w-18 px-1 text-center font-mono text-caption-lg text-muted">
       {totalPages !== undefined ? `${page} / ${last}` : page}
     </span>
   )
@@ -314,7 +314,7 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
             {pageNumbers(page, last).map((p, i) =>
               p === 'gap' ? (
                 // Разрыв — не кнопка: это признак пропуска, нажимать в нём нечего.
-                <span key={`gap-${i}`} aria-hidden className="px-1 text-[0.8125rem] text-muted">
+                <span key={`gap-${i}`} aria-hidden className="px-1 text-body text-muted">
                   …
                 </span>
               ) : (

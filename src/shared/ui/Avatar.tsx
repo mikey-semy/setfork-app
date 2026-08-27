@@ -57,7 +57,7 @@ export function Avatar({
   return (
     <div
       style={{ width: size, height: size, padding: Math.round(size * 0.15) }}
-      className={`grid shrink-0 grid-cols-5 grid-rows-5 gap-px bg-(--border) ${rounded}`}
+      className={`grid shrink-0 grid-cols-5 grid-rows-5 gap-px bg-border ${rounded}`}
     >
       {cells.map((on, i) => (
         <span key={i} style={{ background: on ? color : 'transparent', borderRadius: 1 }} />

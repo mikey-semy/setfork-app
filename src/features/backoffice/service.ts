@@ -103,7 +103,7 @@ async function tellOwner(subject: string, body: string): Promise<{ sent: number;
  *
  * Приведено к форме дозора, а не к третьей своей: канон в проекте уже есть.
  */
-async function подтвердитьДоставку(loop: string, action: string, decision: Record<string, unknown>, policyVersion: number): Promise<void> {
+async function confirmDelivery(loop: string, action: string, decision: Record<string, unknown>, policyVersion: number): Promise<void> {
   await recordAgentAction({ loop, action, resultStatus: 'ok', decision: { ...decision, stage: 'delivered' }, policyVersion })
 }
 
@@ -178,7 +178,7 @@ export async function runFinanceSweep(): Promise<FinanceResult> {
     out.alerts++
     const delivery = await tellOwner(`SetFork: ${a.subject}`, `<p>${a.text}</p>${developmentDashboardLink()}`)
     out.sent += delivery.sent
-    if (delivery.sent) await подтвердитьДоставку('finance', 'money.alert', { kind: a.kind, sent: delivery.sent }, policy.policyVersion)
+    if (delivery.sent) await confirmDelivery('finance', 'money.alert', { kind: a.kind, sent: delivery.sent }, policy.policyVersion)
     // Не дошло — записываем ОТДЕЛЬНОЙ строкой без ключа: заявка уже занята, но факт «тревога
     // не доставлена» обязан быть виден, иначе журнал врал бы бодрым 'ok'.
     if (!delivery.sent) {
@@ -310,7 +310,7 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   const delivery = await tellOwner(`SetFork: день компании ${date}`, html)
   out.sent = delivery.sent
   out.skipped = delivery.skipped
-  if (delivery.sent) await подтвердитьДоставку('chronicle', 'day.report', { day: date, sent: delivery.sent }, policy.policyVersion)
+  if (delivery.sent) await confirmDelivery('chronicle', 'day.report', { day: date, sent: delivery.sent }, policy.policyVersion)
   if (!delivery.sent) {
     await recordAgentAction({
       loop: 'chronicle',
@@ -442,7 +442,7 @@ export async function runAiWatchSweep(): Promise<AiWatchResult> {
   // отдельной копией значило бы разъехаться при первой же правке — тем более что копии уже
   // расходились по `stage`, а по нему идёт отбор заявок. Замечание авто-ревью на fe#800 (P2).
   if (delivery.sent) {
-    await подтвердитьДоставку('aiwatch', action, { verdict: out.verdict, episode, calls }, policy.policyVersion)
+    await confirmDelivery('aiwatch', action, { verdict: out.verdict, episode, calls }, policy.policyVersion)
   }
   log.info('aiwatch sweep done', { ...out, failStreak: state.failStreak, attempt })
   return out

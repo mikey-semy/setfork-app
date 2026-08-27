@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, GitMerge, Loader2, Pencil, RefreshCw, Star, Trash2, X } from 'lucide-react'
+import { Check, GitMerge, Pencil, RefreshCw, Star, Trash2, X } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Badge } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -11,6 +11,8 @@ import { t, type Lang } from '@/shared/i18n'
 import type { TagRow } from './queries'
 import { deleteTag, mergeTags, refreshTagUsage, renameTag, setTagCurated } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 
 // Админ-реестр тегов: курирование, переименование, слияние, удаление, пересчёт usage.
 // Экшены (requireAdmin) — в ./actions; revalidatePath('/admin/tags') + router.refresh().
@@ -34,20 +36,20 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
   return (
     <div>
       <div className="mb-4 flex items-center gap-2">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('tags.filterTags', lang)} className="max-w-[17.5rem]" />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('tags.filterTags', lang)} className="max-w-panel" />
         <button
           type="button"
           onClick={() => run(() => refreshTagUsage())}
           disabled={pending}
           className={buttonClass({ className: 'ml-auto disabled:opacity-50' })}
         >
-          {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {t('tags.refreshUsage', lang)}
+          {pending ? <Spinner size="md" /> : <RefreshCw size={14} />} {t('tags.refreshUsage', lang)}
         </button>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-[0.8125rem]">
-          <thead className="bg-surface-2 text-[0.6875rem] uppercase tracking-wide text-muted">
+        <table className="w-full text-body">
+          <thead className="bg-surface-2 text-caption uppercase tracking-wide text-muted">
             <tr>
               <th className="px-3 py-2 text-left font-semibold">{t('tags.tag', lang)}</th>
               <th className="px-3 py-2 text-right font-semibold">usage</th>
@@ -69,26 +71,28 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
                         value={val}
                         onChange={(e) => setVal(e.target.value)}
                         placeholder={edit.mode === 'rename' ? t('tags.newSlug', lang) : t('tags.mergeInto', lang)}
-                        className="max-w-[12.5rem]"
+                        className="max-w-field-lg"
                       />
-                      <button
-                        type="button"
+                      <IconButton
+                        size="md"
+                        variant="primary"
+                        label={t('apply', lang)}
                         onClick={() => run(() => (edit.mode === 'rename' ? renameTag(tg.slug, val) : mergeTags(tg.slug, val)))}
                         disabled={pending || !val.trim()}
-                        className="grid size-7 place-items-center rounded-md bg-primary text-primary-fg disabled:opacity-50"
                       >
                         <Check size={14} />
-                      </button>
-                      <button
-                        type="button"
+                      </IconButton>
+                      <IconButton
+                        size="md"
+                        variant="outline"
+                        label={t('cancel', lang)}
                         onClick={() => {
                           setEdit(null)
                           setVal('')
                         }}
-                        className="grid size-7 place-items-center rounded-md border border-border text-ink-2"
                       >
                         <X size={14} />
-                      </button>
+                      </IconButton>
                     </div>
                   )}
                 </td>
@@ -129,7 +133,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-[0.78125rem] text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         {filtered.length} / {tags.length}
       </p>
       {confirmDialog}
@@ -137,16 +141,20 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
   )
 }
 
+/** Кнопка-значок строки таблицы. Была локальной копией IconButton — и, как всякая копия,
+ *  отстала: подпись жила только в тултипе, то есть у диктора кнопка молчала. */
 function IconBtn({ children, title, onClick, active, danger }: { children: React.ReactNode; title: string; onClick: () => void; active?: boolean; danger?: boolean }) {
   return (
     <Tooltip label={title}>
-      <button
-        type="button"
+      <IconButton
+        size="sm"
+        variant="outline"
+        label={title}
         onClick={onClick}
-        className={`grid size-7 place-items-center rounded-md border border-border hover:border-border-strong ${active ? 'text-accent' : danger ? 'text-ink-2 hover:text-danger' : 'text-ink-2 hover:text-ink'}`}
+        className={active ? 'text-accent' : danger ? 'text-ink-2 hover:text-danger' : 'text-ink-2 hover:text-ink'}
       >
         {children}
-      </button>
+      </IconButton>
     </Tooltip>
   )
 }

@@ -109,25 +109,25 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 <Icon size={16} className={`mt-0.5 shrink-0 ${m.cls}`} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <span className="text-[0.8125rem] font-semibold text-ink">{t(m.label, lang)}</span>
+                    <span className="text-body font-semibold text-ink">{t(m.label, lang)}</span>
                     {e.actorHandle ? (
-                      <Link href={`/${e.actorHandle}`} className="text-[0.8125rem] text-primary hover:underline">
+                      <Link href={`/${e.actorHandle}`} className="text-body text-primary hover:underline">
                         {e.actorHandle}
                       </Link>
                     ) : (
-                      <span className="text-[0.8125rem] text-muted">{t('audit.system', lang)}</span>
+                      <span className="text-body text-muted">{t('audit.system', lang)}</span>
                     )}
                     {e.targetType && e.targetId ? (
-                      <span className="font-mono text-[0.6875rem] text-muted">
+                      <span className="font-mono text-caption text-muted">
                         {e.targetType}:{e.targetId.slice(0, 8)}
                       </span>
                     ) : null}
                   </div>
-                  {details ? <div className="mt-0.5 truncate font-mono text-[0.6875rem] text-ink-2">{details}</div> : null}
+                  {details ? <div className="mt-0.5 truncate font-mono text-caption text-ink-2">{details}</div> : null}
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="text-[0.78125rem] tabular-nums text-ink-2">{fmt(e.createdAt, lang)}</div>
-                  {e.ip ? <div className="font-mono text-[0.6875rem] text-muted">{e.ip}</div> : null}
+                  <div className="text-body-sm tabular-nums text-ink-2">{fmt(e.createdAt, lang)}</div>
+                  {e.ip ? <div className="font-mono text-caption text-muted">{e.ip}</div> : null}
                 </div>
               </div>
             )

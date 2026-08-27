@@ -227,13 +227,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               { k: t('aiUsageCost', lang), v: '$' + usage.costUsd.toFixed(usage.costUsd < 1 ? 4 : 2) },
             ].map((x) => (
               <div key={x.k} className={cardClass({ tone: 'inset', pad: 'sm' })}>
-                <div className="text-[0.6875rem] uppercase tracking-wide text-muted">{x.k}</div>
-                <div className="mt-1 text-[1rem] font-bold text-ink">{x.v}</div>
+                <div className="text-caption uppercase tracking-wide text-muted">{x.k}</div>
+                <div className="mt-1 text-title font-bold text-ink">{x.v}</div>
               </div>
             ))}
           </div>
           {/* Квоты (мягкие лимиты; админ — без лимитов). */}
-          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 text-[0.8125rem]">
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 text-body">
             <div className="flex items-center justify-between">
               <span className="text-ink-2">{lang === 'ru' ? 'Списков' : 'Lists'}</span>
               <span className="font-mono text-ink">{lists.unlimited ? '∞' : `${lists.used} / ${lists.limit}`}</span>

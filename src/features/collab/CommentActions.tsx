@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MoreHorizontal, Link2, Copy, Quote, Pencil, Loader2 } from 'lucide-react'
+import { MoreHorizontal, Link2, Copy, Quote, Pencil } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
+import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,7 +89,7 @@ export function CommentActions({
             {labels.cancel}
           </Button>
           <Button variant="primary" onClick={save} disabled={pending || !draft.trim()}>
-            {pending ? <Loader2 size={13} className="animate-spin" /> : labels.save}
+            {pending ? <Spinner size="sm" /> : labels.save}
           </Button>
         </div>
       </div>
@@ -97,13 +99,9 @@ export function CommentActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={labels.more}
-          className="grid size-8 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-        >
+        <IconButton variant="ghost" label={labels.more} className="text-muted hover:bg-surface-2 hover:text-ink">
           <MoreHorizontal size={16} />
-        </button>
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => copy(`${window.location.origin}${path}${anchor}`)}>

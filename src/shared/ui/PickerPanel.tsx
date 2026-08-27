@@ -102,7 +102,7 @@ export function PickerRow({
     </>
   )
   // pointer-coarse:min-h-11 — на таче строка добирает тач-цель 44px, на десктопе список остаётся плотным.
-  const cls = `flex w-full items-center gap-2 rounded-md px-2 py-1.5 pointer-coarse:min-h-11 text-[0.8125rem] text-ink hover:bg-surface-2 disabled:opacity-60 ${
+  const cls = `flex w-full items-center gap-2 rounded-md px-2 py-1.5 pointer-coarse:min-h-11 text-body text-ink hover:bg-surface-2 disabled:opacity-60 ${
     selected ? 'bg-surface-2' : ''
   }`
 

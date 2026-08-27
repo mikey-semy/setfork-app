@@ -1,8 +1,9 @@
 'use client'
 
 import { useRef, type ReactNode } from 'react'
-import { ArrowUp, Loader2 } from 'lucide-react'
+import { ArrowUp } from 'lucide-react'
 import { Tooltip } from './Tooltip'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * Композер чата — ОБЩИЙ для всех чатов гномов (дом гномов, UI-часть): рамка-инпут,
@@ -74,7 +75,7 @@ export function ChatComposer({
           }}
           rows={1}
           placeholder={placeholder}
-          className="max-h-32 min-h-8 flex-1 resize-none bg-transparent px-2 py-[0.46875rem] text-[0.8125rem] leading-[1.55] text-ink outline-hidden placeholder:text-muted"
+          className="max-h-32 min-h-8 flex-1 resize-none bg-transparent px-2 py-2 text-body leading-[1.55] text-ink outline-hidden placeholder:text-muted"
         />
         <Tooltip label={sendTooltip ?? sendAriaLabel}>
           <button
@@ -84,7 +85,7 @@ export function ChatComposer({
             aria-label={sendAriaLabel}
             className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-primary-fg disabled:opacity-40"
           >
-            {pending ? <Loader2 size={16} className="animate-spin" /> : <ArrowUp size={17} />}
+            {pending ? <Spinner size="lg" /> : <ArrowUp size={17} />}
           </button>
         </Tooltip>
       </div>

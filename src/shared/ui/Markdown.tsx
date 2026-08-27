@@ -34,25 +34,32 @@ function codeOf(children: ReactNode): { code: string; name?: string } | null {
 export function Markdown({ children, className, refBase }: { children: string; className?: string; refBase?: string }) {
   if (!children?.trim()) return null
   return (
-    <div className={cn('text-[0.8125rem] leading-snug text-ink-2 [overflow-wrap:anywhere] [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
+    <div className={cn('text-body leading-snug text-ink-2 [overflow-wrap:anywhere] [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
       <ReactMarkdown
         remarkPlugins={refBase ? [remarkGfm, remarkIssueRefs(refBase)] : [remarkGfm]}
         components={{
+          // Содержимое ссылки приходит из разметки в `p.children`; правило видит только
+          // раскрытие пропов и считает ссылку пустой.
+          // eslint-disable-next-line jsx-a11y/anchor-has-content -- текст ссылки приходит из markdown
           a: (p) => <a {...p} target="_blank" rel="noreferrer" className="text-accent hover:underline" />,
+          // 0.9em ОТНОСИТЕЛЬНЫЙ: моноширинный код внутри абзаца обязан быть чуть мельче
+          // ТОГО ТЕКСТА, в котором стоит, а он бывает любой ступени. Ступень лестницы
+          // дала бы код крупнее абзаца.
+          // eslint-disable-next-line no-restricted-syntax -- относительный размер, не ступень
           code: (p) => <code {...p} className="rounded-md bg-surface-2 px-1 py-0.5 font-mono text-[0.9em] text-ink [overflow-wrap:anywhere]" />,
           pre: (p) => {
             const c = codeOf(p.children)
             if (c) return <CodeCard code={c.code} name={codeLabel(c.name, c.code)} />
             // Фолбэк: содержимое не удалось вынуть строкой (вложенная разметка) —
             // остаётся прежний <pre>, но с переносом, а не горизонтальным скроллом.
-            return <pre {...p} className="overflow-x-auto rounded-md border border-border bg-surface-2 p-2.5 font-mono text-[0.78125rem] text-ink" />
+            return <pre {...p} className="overflow-x-auto rounded-md border border-border bg-surface-2 p-2.5 font-mono text-body-sm text-ink" />
           },
           ul: (p) => <ul {...p} className="list-disc pl-5" />,
           ol: (p) => <ol {...p} className="list-decimal pl-5" />,
           strong: (p) => <strong {...p} className="font-semibold text-ink" />,
           del: (p) => <del {...p} className="text-muted" />,
-          h1: (p) => <div {...p} className="text-[1rem] font-semibold text-ink" />,
-          h2: (p) => <div {...p} className="text-[0.875rem] font-semibold text-ink" />,
+          h1: (p) => <div {...p} className="text-title font-semibold text-ink" />,
+          h2: (p) => <div {...p} className="text-body-lg font-semibold text-ink" />,
           h3: (p) => <div {...p} className="font-semibold text-ink" />,
           blockquote: (p) => <blockquote {...p} className="border-l-2 border-border pl-3 text-muted" />,
           input: (p) => <input {...p} disabled className="mr-1.5 align-middle accent-accent" />,
@@ -67,7 +74,7 @@ export function Markdown({ children, className, refBase }: { children: string; c
           // ниже содержимого, а горизонтально едет сам контейнер, не страница.
           table: (p) => (
             <div className="overflow-x-auto">
-              <table {...p} className="w-max min-w-full border-collapse text-[0.78125rem] [overflow-wrap:normal]" />
+              <table {...p} className="w-max min-w-full border-collapse text-body-sm [overflow-wrap:normal]" />
             </div>
           ),
           th: (p) => <th {...p} className="border border-border px-2 py-1 text-left font-semibold text-ink" />,

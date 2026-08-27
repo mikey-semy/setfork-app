@@ -22,7 +22,7 @@ export function DraftToggle({
   const [pending, start] = useTransition()
   return (
     <div className="mt-3 flex flex-col gap-2">
-      {draft && <p className="text-[0.78125rem] text-warn">{labels.hint}</p>}
+      {draft && <p className="text-body-sm text-warn">{labels.hint}</p>}
       <div>
         <Button
           size="md"

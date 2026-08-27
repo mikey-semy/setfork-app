@@ -2,11 +2,14 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { Check, GitFork, Loader2 } from 'lucide-react'
+import { Check, GitFork } from 'lucide-react'
 import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
 import { forkNameStatus, forkTemplate } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
+import { Input } from '@/shared/ui/input'
+import { Textarea } from '@/shared/ui/textarea'
 
 export interface ForkLabels {
   ownerLabel: string
@@ -63,28 +66,25 @@ export function ForkForm({
     <div className="flex flex-col gap-3.5">
       <div className="flex items-end gap-2">
         <Field label={labels.ownerLabel}>
-          <div className="rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[0.8125rem] text-ink-2">{viewerHandle}</div>
+          <div className="rounded-md border border-border bg-surface-2 px-2.5 py-2 text-body text-ink-2">{viewerHandle}</div>
         </Field>
-        <span className="pb-2 text-[0.875rem] text-muted">/</span>
+        <span className="pb-2 text-body-lg text-muted">/</span>
         <Field label={labels.nameLabel} className="min-w-0 flex-1">
-          <input
-            value={name}
+          <Input value={name}
             onChange={(e) => {
               setName(e.target.value)
               setStatus(null)
             }}
             spellCheck={false}
-            autoCapitalize="off"
-            className={buttonClass({ className: 'w-full font-mono outline-hidden focus:border-accent' })}
-          />
+            autoCapitalize="off" className="w-full font-mono" />
         </Field>
       </div>
 
       {/* Индикатор доступности (как «EcoPlay is available ✓» на GitHub). */}
-      <div className="-mt-1.5 min-h-[1rem] text-[0.78125rem]">
+      <div className="-mt-1.5 min-h-4 text-body-sm">
         {checking ? (
           <span className="inline-flex items-center gap-1 text-muted">
-            <Loader2 size={12} className="animate-spin" />
+            <Spinner size="xs" />
           </span>
         ) : status ? (
           status.available ? (
@@ -99,16 +99,16 @@ export function ForkForm({
         ) : null}
       </div>
 
-      <p className="-mt-2 text-[0.6875rem] leading-snug text-muted">{labels.nameHint}</p>
+      <p className="-mt-2 text-caption leading-snug text-muted">{labels.nameHint}</p>
 
       <Field label={labels.descLabel}>
-        <textarea
+        <Textarea
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
           rows={2}
           placeholder={labels.descPlaceholder}
           maxLength={350}
-          className={buttonClass({ className: 'w-full resize-none outline-hidden focus:border-accent' })}
+          className="resize-none"
         />
       </Field>
 
@@ -124,7 +124,7 @@ export function ForkForm({
           disabled={!canSubmit}
           className={buttonClass({ className: 'border-accent bg-accent text-white disabled:opacity-50' })}
         >
-          {submitting && <Loader2 size={14} className="animate-spin" />}
+          {submitting && <Spinner size="md" />}
           <GitFork size={14} /> {labels.create}
         </button>
       </div>

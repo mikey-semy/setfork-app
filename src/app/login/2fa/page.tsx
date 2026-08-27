@@ -17,11 +17,14 @@ export default async function TwoFaLoginPage() {
   const ru = lang === 'ru'
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-[23.75rem]">
-        <div className="mb-1 flex items-center gap-2 text-[1.125rem] font-bold text-ink">
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('twoFactorTitle', lang)}</h1>
+      <div className="w-full max-w-form">
+        <div className="mb-1 flex items-center gap-2 text-page font-bold text-ink">
           <ShieldCheck size={18} className="text-accent" /> {ru ? 'Подтверждение входа' : 'Two-factor authentication'}
         </div>
-        <p className="mb-5 text-[0.8125rem] text-ink-2">
+        <p className="mb-5 text-body text-ink-2">
           {ru
             ? 'Введи код из приложения-аутентификатора или один из recovery-кодов.'
             : 'Enter the code from your authenticator app, or one of your recovery codes.'}

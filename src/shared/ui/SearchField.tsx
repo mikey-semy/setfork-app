@@ -4,28 +4,23 @@ import { useRef } from 'react'
 import { Search, X } from 'lucide-react'
 import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, ICON_SIZE, TOUCH_MIN_H, type ControlSize } from './control'
 
-type Size = 'hero' | ControlSize
+type Size = ControlSize
 
-// xs..md — общая шкала контролов (control.ts): высота ряда совпадает с
-// Button/Input/Select. hero — поиск-герой главной, он СОЗНАТЕЛЬНО вне шкалы и
-// стоит на странице один, ни с чем в ряд не вставая.
+// Размеры БЕРУТСЯ ИЗ ШКАЛЫ, а не перечисляются здесь. До 26.08.2026 в этом файле
+// стояла собственная таблица с лишней ступенью `hero` (44px) — то есть рядом с
+// общей шкалой жила вторая, на одну ступень. Стоило это ровно того, чего и должно
+// было: ряд героя разъезжался (кнопка отправки 34px против поля 44px), а узда
+// молчала, потому что высота была записана произвольным значением.
 //
-// ⚠️ Ступени ШКАЛЫ поле обязано поддерживать ВСЕ до одной. Примитив, у которого
-// нет какой-то ступени, вынуждает ряд собираться из разных: рядом с кнопкой lg
-// такое поле встанет ступенькой, и «одна высота в ряду» перестанет работать
-// именно там, где её видно (замечание владельца 13.08.2026).
-//
-// Ступень называется `hero`, а НЕ `lg`: с 13.08.2026 в шкале есть свой `lg`
-// (40px), и одинаковое имя при разной высоте — ловушка того же рода, что и
-// разнобой, который эта шкала лечит.
-const SIZES: Record<Size, { box: string; text: string; icon: number; clear: number }> = {
-  // eslint-disable-next-line no-restricted-syntax -- hero = поиск главной, сознательно вне лестницы ролей (см. коммент выше)
-  hero: { box: 'h-[2.75rem] px-3.5', text: 'text-[0.9375rem]', icon: 16, clear: 16 },
-  lg: { box: `${CONTROL_H.lg} ${CONTROL_PX.lg}`, text: CONTROL_TEXT.lg, icon: ICON_SIZE.lg, clear: ICON_SIZE.lg },
-  md: { box: `${CONTROL_H.md} ${CONTROL_PX.md}`, text: CONTROL_TEXT.md, icon: ICON_SIZE.md, clear: ICON_SIZE.md },
-  sm: { box: `${CONTROL_H.sm} ${CONTROL_PX.sm}`, text: CONTROL_TEXT.sm, icon: ICON_SIZE.sm, clear: ICON_SIZE.sm },
-  xs: { box: `${CONTROL_H.xs} ${CONTROL_PX.xs}`, text: CONTROL_TEXT.xs, icon: ICON_SIZE.xs, clear: ICON_SIZE.xs },
-}
+// Теперь 44px — это ступень `xl` общей шкалы, и поле поддерживает ВСЕ ступени до
+// одной: примитив без какой-то ступени вынуждает ряд собираться из разных
+// (замечание владельца 13.08.2026).
+const SIZES: Record<Size, { box: string; text: string; icon: number; clear: number }> = Object.fromEntries(
+  (['xs', 'sm', 'md', 'lg', 'xl'] as const).map((s) => [
+    s,
+    { box: `${CONTROL_H[s]} ${CONTROL_PX[s]}`, text: CONTROL_TEXT[s], icon: ICON_SIZE[s], clear: ICON_SIZE[s] },
+  ]),
+) as Record<Size, { box: string; text: string; icon: number; clear: number }>
 
 export interface SearchFieldProps {
   value: string

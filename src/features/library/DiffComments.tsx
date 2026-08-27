@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MessageSquarePlus, Check, CircleDot, Loader2, Replace, RotateCcw, X } from 'lucide-react'
+import { MessageSquarePlus, Check, CircleDot, Replace, RotateCcw, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { Markdown } from '@/shared/ui/Markdown'
@@ -21,6 +21,9 @@ import type { BlockThread } from '@/features/comments/queries'
 import type { ThreadState } from '@/features/comments/state'
 import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
+import { Badge } from '@/shared/ui/badge'
+import { IconButton } from '@/shared/ui/IconButton'
 
 export interface DiffCommentLabels {
   add: string
@@ -139,14 +142,9 @@ export function DiffComments({
           наведению на строку, на мобиле видна всегда, с клавиатуры — по фокусу. */}
       {canComment && blockId && (
         <Tooltip label={labels.add}>
-          <button
-            type="button"
-            onClick={openComposer}
-            aria-label={labels.add}
-            className="absolute right-1.5 top-1 grid size-9 place-items-center rounded-md bg-surface/80 text-muted opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 hover:text-ink max-sm:opacity-100"
-          >
+          <IconButton variant="ghost" label={labels.add} className="absolute right-1.5 top-1 bg-surface/80 text-muted opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 hover:text-ink max-sm:opacity-100" onClick={openComposer}>
             <MessageSquarePlus size={15} />
-          </button>
+          </IconButton>
         </Tooltip>
       )}
 
@@ -177,12 +175,12 @@ export function DiffComments({
           {open && (
             <div className={cardClass({ pad: 'sm' })}>
               {quote && (
-                <div className="mb-2 border-l-2 border-accent/50 pl-2 text-[0.78125rem] text-ink-2">
+                <div className="mb-2 border-l-2 border-accent/50 pl-2 text-body-sm text-ink-2">
                   <span className="text-muted">{labels.onSelection}: </span>
                   <span className="[overflow-wrap:anywhere]">«{quote}»</span>
                 </div>
               )}
-              {!quote && !replyTo && <div className="mb-2 text-[0.78125rem] text-muted">{labels.onBlock}</div>}
+              {!quote && !replyTo && <div className="mb-2 text-body-sm text-muted">{labels.onBlock}</div>}
               {/* Общий редактор: тулбар, Write/Preview, @mention, вложения. */}
               <MarkdownEditor
                 name="body"
@@ -206,18 +204,13 @@ export function DiffComments({
                 </button>
               ) : (
                 <div className={cardClass({ tone: 'accent', pad: 'sm', className: 'mt-2' })}>
-                  <div className="mb-1.5 flex items-center gap-1.5 text-[0.78125rem] text-ink-2">
+                  <div className="mb-1.5 flex items-center gap-1.5 text-body-sm text-ink-2">
                     <Replace size={13} className="shrink-0 text-accent" />
                     <span className="min-w-0 truncate">{labels.suggestHint}</span>
                     <Tooltip label={labels.cancel}>
-                      <button
-                        type="button"
-                        onClick={() => setSuggest(null)}
-                        aria-label={labels.cancel}
-                        className="ml-auto grid size-9 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
-                      >
+                      <IconButton variant="ghost" label={labels.cancel} className="ml-auto shrink-0 text-muted hover:text-ink" onClick={() => setSuggest(null)}>
                         <X size={14} />
-                      </button>
+                      </IconButton>
                     </Tooltip>
                   </div>
                   <Textarea
@@ -225,7 +218,7 @@ export function DiffComments({
                     onChange={(e) => setSuggest(e.target.value)}
                     rows={3}
                     placeholder={labels.suggestPh}
-                    className="text-[0.8125rem]"
+                    className="text-body"
                   />
                 </div>
               )}
@@ -239,7 +232,7 @@ export function DiffComments({
                   {labels.startReview}
                 </Button>
                 <Button variant="primary" onClick={() => submit(false)} disabled={pending || !draft.trim()}>
-                  {pending ? <Loader2 size={13} className="animate-spin" /> : labels.send}
+                  {pending ? <Spinner size="sm" /> : labels.send}
                 </Button>
               </div>
             </div>
@@ -279,16 +272,16 @@ function ThreadCard({
       {/* Честное состояние якоря: перепривязан — с уверенностью; потерян — цитата
           из вмороженного снимка, зачёркнутая, но тред НА МЕСТЕ. */}
       {quote && (
-        <div className={`mb-1.5 border-l-2 pl-2 text-[0.78125rem] ${orphaned ? 'border-muted text-muted line-through' : 'border-accent/50 text-ink-2'}`}>
+        <div className={`mb-1.5 border-l-2 pl-2 text-body-sm ${orphaned ? 'border-muted text-muted line-through' : 'border-accent/50 text-ink-2'}`}>
           <span className="[overflow-wrap:anywhere]">«{quote}»</span>
         </div>
       )}
       {(orphaned || state.state === 'reanchored' || state.outdated) && (
-        <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[0.6875rem] text-muted">
+        <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-caption text-muted">
           {/* «Устарел» — отдельно от привязки: якорь может отлично находиться, а
               пункт вокруг него переписан, и спор ниже уже про другое. */}
           {state.outdated && (
-            <span className="rounded-full bg-warn/15 px-1.5 py-0.5 font-semibold text-warn">{labels.outdated}</span>
+            <Badge variant="warn">{labels.outdated}</Badge>
           )}
           {orphaned ? labels.orphanHint : state.state === 'reanchored' ? `${labels.stateReanchored} · ${state.confidence}%` : null}
         </div>
@@ -299,22 +292,22 @@ function ThreadCard({
           <div key={c.id} className="flex gap-2">
             <Avatar handle={c.author.handle} avatarUrl={c.author.avatarUrl} size={20} />
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline gap-x-2 text-[0.78125rem]">
+              <div className="flex flex-wrap items-baseline gap-x-2 text-body-sm">
                 <span className="font-semibold text-ink">{c.author.name || c.author.handle}</span>
                 <span className="text-muted">{timeAgo(c.createdAt, lang)}</span>
                 {/* Свой неотправленный черновик: видно только автору — говорим об этом
                     прямо, иначе он решит, что замечание уже прочитали. */}
                 {c.pending && (
-                  <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-warn">{labels.pendingBadge}</span>
+                  <Badge variant="warn">{labels.pendingBadge}</Badge>
                 )}
               </div>
-              <Markdown className="text-[0.8125rem]">{c.body}</Markdown>
+              <Markdown className="text-body">{c.body}</Markdown>
               {/* ПРЕДЛОЖЕННЫЙ ТЕКСТ — применяется кнопкой. Показываем как значение
                   поля (моноширинно, с переносом), а не как разметку: применится
                   ровно то, что видно. */}
               {c.suggestedText !== null && (
                 <div className="mt-1.5 overflow-hidden rounded-md border border-accent/40">
-                  <div className="flex items-center gap-1.5 border-b border-accent/30 bg-(--accent-soft) px-2 py-1 text-[0.6875rem] text-ink-2">
+                  <div className="flex items-center gap-1.5 border-b border-accent/30 bg-accent-soft px-2 py-1 text-caption text-ink-2">
                     <Replace size={12} className="shrink-0 text-accent" />
                     <span className="min-w-0 truncate">{labels.suggestLabel}</span>
                     {c.appliedAt ? (
@@ -325,16 +318,16 @@ function ThreadCard({
                       canApply && (
                         <Button
                           variant="ghost"
-                          className="ml-auto shrink-0 px-2 text-[0.78125rem]"
+                          className="ml-auto shrink-0 px-2 text-body-sm"
                           disabled={pending}
                           onClick={() => startTransition(async () => void (await applySuggestedEdit(c.id)))}
                         >
-                          {pending ? <Loader2 size={12} className="animate-spin" /> : labels.apply}
+                          {pending ? <Spinner size="xs" /> : labels.apply}
                         </Button>
                       )
                     )}
                   </div>
-                  <pre className="whitespace-pre-wrap break-words px-2 py-1.5 font-mono text-[0.78125rem] text-ink">
+                  <pre className="whitespace-pre-wrap break-words px-2 py-1.5 font-mono text-body-sm text-ink">
                     {c.suggestedText || '—'}
                   </pre>
                 </div>
@@ -369,7 +362,7 @@ function ThreadCard({
               disabled={pending}
               onClick={() => startTransition(async () => void (await setBlockThreadResolved(owner, slug, thread.id, true)))}
             >
-              {pending ? <Loader2 size={13} className="animate-spin" /> : <Check size={14} />}
+              {pending ? <Spinner size="sm" /> : <Check size={14} />}
             </Button>
           </Tooltip>
         </div>
@@ -393,7 +386,7 @@ function ResolvedRow({
 }) {
   const [pending, startTransition] = useTransition()
   return (
-    <div className="flex flex-wrap items-center gap-2 text-[0.78125rem] text-muted">
+    <div className="flex flex-wrap items-center gap-2 text-body-sm text-muted">
       <Check size={13} className="text-ok" />
       <span>
         {labels.resolved}: {resolved.length}

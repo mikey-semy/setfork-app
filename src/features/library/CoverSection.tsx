@@ -1,10 +1,13 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
-import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
+import { ImagePlus, Trash2 } from 'lucide-react'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
+import { ColorSwatch } from '@/shared/ui/ColorSwatch'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Spinner } from '@/shared/ui/Spinner'
+import { SmartImage } from '@/shared/ui/SmartImage'
 import type { Lang } from '@/shared/i18n'
 import { removeListCover, setListAccent, setListCover } from './cover-actions'
 
@@ -78,48 +81,45 @@ export function CoverSection({
             setOver(false)
             upload(e.dataTransfer.files?.[0])
           }}
-          className={`relative block h-[9.375rem] w-full overflow-hidden rounded-lg border-2 ${over ? 'border-accent' : 'border-dashed border-border'}`}
+          className={`relative block h-37.5 w-full overflow-hidden rounded-lg border-2 ${over ? 'border-accent' : 'border-dashed border-border'}`}
         >
           {cover ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} alt="" className="h-full w-full object-cover" />
+            <SmartImage src={cover} alt="" className="h-full w-full object-cover" />
           ) : (
             <AutoBanner seed={templateId} accent={accent} label={slug} height="h-full" />
           )}
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 bg-black/0 text-white opacity-0 transition-opacity hover:bg-black/35 hover:opacity-100">
-            {busy ? <Loader2 size={18} className="animate-spin" /> : <ImagePlus size={18} />}
+            {busy ? <Spinner size="lg" /> : <ImagePlus size={18} />}
           </span>
         </button>
       </Tooltip>
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => upload(e.target.files?.[0])} />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
-          <span className="mr-1 text-[0.78125rem] text-ink-2">{ru ? 'Акцент:' : 'Accent:'}</span>
+        {/* ⚠️ `flex-wrap` ОБЯЗАТЕЛЕН: на грубом указателе каждый кружок палитры дорастает
+            до тач-цели 44px (TOUCH_MIN_BOX), и пять кружков с подписью не помещаются в
+            360px — ряд распирал бы страницу горизонтально. Замечание авто-ревью по
+            fe#827: цель не должна выигрывать у мобильной ширины, они обе обязательны. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-body-sm text-ink-2">{ru ? 'Акцент:' : 'Accent:'}</span>
           {ACCENTS.map((a) => (
-            <button
+            <ColorSwatch
               key={a || 'default'}
-              type="button"
-              onClick={() => pickAccent(a)}
-              aria-label={a || 'default'}
-              style={a ? { backgroundColor: a } : undefined}
-              // inline-flex с центрированием — иначе `×` садится на БАЗОВУЮ ЛИНИЮ текста
-              // и падает к низу кружка: у кнопки по умолчанию текст выравнен по базовой
-              // линии, а не по центру бокса. Само собой это не исправляется ни размером
-              // шрифта, ни line-height — нужен именно флекс-центр.
-              className={`inline-flex h-5 w-5 items-center justify-center rounded-full border ${a ? '' : 'bg-surface-2'} ${accent === a ? 'ring-2 ring-offset-1 ring-(--accent)' : 'border-black/10'}`}
-            >
-              {!a && <span className="text-[0.6875rem] leading-none text-muted">×</span>}
-            </button>
+              color={a || null}
+              selected={accent === a}
+              label={a || 'default'}
+              onSelect={() => pickAccent(a)}
+            />
           ))}
         </div>
         {cover && (
-          <button type="button" onClick={clear} className="inline-flex items-center gap-1.5 text-[0.78125rem] text-muted hover:text-danger">
+          <button type="button" onClick={clear} className="inline-flex items-center gap-1.5 text-body-sm text-muted hover:text-danger">
             <Trash2 size={13} /> {ru ? 'Убрать обложку' : 'Remove cover'}
           </button>
         )}
       </div>
-      {err && <p className="mt-2 text-[0.78125rem] text-danger">{err}</p>}
+      {err && <p className="mt-2 text-body-sm text-danger">{err}</p>}
     </SettingsSection>
   )
 }

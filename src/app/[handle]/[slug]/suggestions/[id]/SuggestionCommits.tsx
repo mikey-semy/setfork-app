@@ -49,8 +49,8 @@ export function SuggestionCommits({ owner, slug, lang, data }: { owner: string; 
         >
           <ArrowLeft size={14} /> <span className="max-sm:hidden">{t('prAllCommits', lang)}</span>
         </Link>
-        <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold text-ink">{commitDiff.title}</span>
-        <span className="shrink-0 font-mono text-[0.78125rem] text-muted">{commitDiff.sha.slice(0, 7)}</span>
+        <span className="min-w-0 flex-1 truncate text-body font-semibold text-ink">{commitDiff.title}</span>
+        <span className="shrink-0 font-mono text-body-sm text-muted">{commitDiff.sha.slice(0, 7)}</span>
         <div className="ml-auto max-sm:w-full max-sm:justify-end">
           <DiffViewToggle path={path} commit={commitDiff.sha} tab="commits" view={view} labels={{ code: t('viewCode', lang), list: t('viewList', lang) }} />
         </div>

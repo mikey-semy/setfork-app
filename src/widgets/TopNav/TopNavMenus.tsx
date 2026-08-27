@@ -18,11 +18,11 @@ function AppearanceRows({ lang }: { lang: Lang }) {
   return (
     <>
       <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
-        <span className="text-[0.8125rem] text-ink-2">{t('theme', lang)}</span>
+        <span className="text-body text-ink-2">{t('theme', lang)}</span>
         <ThemeModeSwitch />
       </div>
       <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
-        <span className="text-[0.8125rem] text-ink-2">{t('language', lang)}</span>
+        <span className="text-body text-ink-2">{t('language', lang)}</span>
         <LangSwitch lang={lang} />
       </div>
     </>

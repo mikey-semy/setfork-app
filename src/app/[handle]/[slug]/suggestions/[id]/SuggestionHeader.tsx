@@ -53,12 +53,12 @@ export function SuggestionHeader({
       />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         {/* Крупнее рядового чипа (это главный статус страницы), но той же тихой палитры. */}
-        <Badge variant={statusVariant} className="px-3 py-1 text-[0.78125rem]">
+        <Badge variant={statusVariant} className="px-3 py-1 text-body-sm">
           <StatusIcon status={sug.status} isDraft={isDraft} /> {statusLabel}
         </Badge>
         {/* Объём правки в шапке — тот же индикатор, что в диффе и в коммитах. */}
         <DiffStat counts={summary} squares />
-        <span className="text-[0.8125rem] text-ink-2">
+        <span className="text-body text-ink-2">
           {t('proposedBy', lang)}{' '}
           <Link href={`/${sug.author.handle}`} className="font-semibold text-ink hover:text-accent">
             {sug.author.handle}
@@ -75,7 +75,7 @@ export function SuggestionHeader({
                     <Avatar key={c.handle} handle={c.handle} avatarUrl={c.avatarUrl} size={18} />
                   ))}
                   {coauthors.length > COAUTHORS_SHOWN && (
-                    <span className="font-mono text-[0.6875rem] text-muted">+{coauthors.length - COAUTHORS_SHOWN}</span>
+                    <span className="font-mono text-caption text-muted">+{coauthors.length - COAUTHORS_SHOWN}</span>
                   )}
                 </span>
               </Tooltip>
@@ -92,7 +92,7 @@ export function SuggestionHeader({
               </Link>{' '}
               →{' '}
               <Tooltip label={t('defaultBranchHint', lang)}>
-                <span className="font-mono text-[0.78125rem]">main</span>
+                <span className="font-mono text-body-sm">main</span>
               </Tooltip>
             </>
           ) : (

@@ -5,6 +5,7 @@ import { Copy } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import type { Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 const KINDS = ['stars', 'forks', 'runs', 'version'] as const
 
@@ -22,8 +23,8 @@ export function BadgesCard({ owner, slug, origin, lang }: { owner: string; slug:
 
   return (
     <div className={cardClass()}>
-      <div className="mb-1 text-[0.8125rem] font-semibold text-ink">{ru ? 'Бейджи' : 'Badges'}</div>
-      <p className="mb-3 text-[0.78125rem] text-muted">
+      <div className="mb-1 text-body font-semibold text-ink">{ru ? 'Бейджи' : 'Badges'}</div>
+      <p className="mb-3 text-body-sm text-muted">
         {ru ? 'Живой бейдж списка — вставь в README проекта, доки или блог.' : 'A live badge for this list — drop it in your project README, docs or blog.'}
       </p>
       <div className="flex flex-col gap-2">
@@ -33,8 +34,8 @@ export function BadgesCard({ owner, slug, origin, lang }: { owner: string; slug:
           return (
             <div key={kind} className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element -- внешний SVG-ассет по URL */}
-              <img src={url} alt={kind} height={20} className="h-5 shrink-0" />
-              <code className="min-w-0 flex-1 truncate rounded-md bg-surface-2 px-2 py-1 font-mono text-[0.6875rem] text-ink-2">{md}</code>
+              <SmartImage src={url} alt={kind} height={20} className="h-5 shrink-0" />
+              <code className="min-w-0 flex-1 truncate rounded-md bg-surface-2 px-2 py-1 font-mono text-caption text-ink-2">{md}</code>
               <Button variant="ghost" size="xs" className="shrink-0 p-1" onClick={() => copy(kind, md)} aria-label={ru ? 'Скопировать' : 'Copy'}>
                 <Copy size={12} /> {copied === kind ? (ru ? 'ок' : 'ok') : ''}
               </Button>

@@ -9,9 +9,9 @@ import { Avatar } from './Avatar'
 // (timeAgo/дата — на вызывающем: там язык и контекст).
 
 const SIZES = {
-  xs: { avatar: 18, text: 'text-[0.78125rem]' },
-  sm: { avatar: 22, text: 'text-[0.78125rem]' },
-  md: { avatar: 28, text: 'text-[0.8125rem]' },
+  xs: { avatar: 18, text: 'text-body-sm' },
+  sm: { avatar: 22, text: 'text-body-sm' },
+  md: { avatar: 28, text: 'text-body' },
 } as const
 
 export function UserLine({
@@ -34,7 +34,11 @@ export function UserLine({
   const s = SIZES[size]
   return (
     <span className={cn('inline-flex min-w-0 items-center gap-2', s.text, className)}>
-      <Link href={`/${handle}`} className="shrink-0">
+      {/* Аватар — ВТОРАЯ ссылка на тот же адрес, что и имя рядом. Читалке она не нужна
+          (диктор объявил бы «ссылка» без имени, а потом ту же ссылку с именем), и в обход
+          с клавиатуры тоже: имя рядом ведёт туда же. Прячем от обоих — приём для
+          дублирующей декоративной ссылки. */}
+      <Link href={`/${handle}`} className="shrink-0" aria-hidden tabIndex={-1}>
         <Avatar handle={handle} avatarUrl={avatarUrl} size={s.avatar} />
       </Link>
       {/* Имя не прячет уникальный handle (Codex по #615), и truncate режет

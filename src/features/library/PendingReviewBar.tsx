@@ -1,8 +1,9 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Loader2, Send } from 'lucide-react'
+import { Send } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * Панель незавершённого ревью: сколько замечаний накопил рецензент и кнопка
@@ -25,11 +26,11 @@ export function PendingReviewBar({
   if (count === 0) return null
   return (
     <div className="sticky bottom-3 z-10 mt-3 flex flex-wrap items-center gap-2.5 rounded-lg border border-warn/40 bg-surface px-3.5 py-2.5 shadow-lg">
-      <span className="text-[0.78125rem] font-semibold text-warn">
+      <span className="text-body-sm font-semibold text-warn">
         {labels.pending}: {count}
       </span>
       <Button variant="primary" size="md" disabled={busy} onClick={() => start(() => void action())} className="ml-auto">
-        {busy ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+        {busy ? <Spinner size="md" /> : <Send size={14} />}
         {labels.submit}
       </Button>
     </div>

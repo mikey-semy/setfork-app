@@ -16,9 +16,38 @@ export interface InputProps extends Omit<React.ComponentProps<'input'>, 'size'> 
    *  иначе у каждой свои отступы, и кнопка то накрывает текст, то съезжает по
    *  вертикали (так было у строки ссылки — жалоба владельца 09.08.2026). */
   trailing?: React.ReactNode
+  /** Приставка СЛЕВА, внутри рамки: `@` у ника, `/` у адреса, единица у числа.
+   *  Заведена 26.08.2026: три места (перенос списка, удаление списка, удаление
+   *  аккаунта) рисовали приставку сами — обёртка с рамкой, а внутри голый
+   *  `<input class="bg-transparent">`. Копии уже разошлись по отступам, и ни одна
+   *  не получала ни высоты из шкалы, ни фокуса примитива. */
+  leading?: React.ReactNode
+  /** Тон рамки при фокусе: опасное действие подсвечивается красным, а не акцентом. */
+  tone?: 'default' | 'danger'
 }
 
-export function Input({ size = 'md', className, trailing, ...props }: InputProps) {
+export function Input({ size = 'md', className, trailing, leading, tone = 'default', ...props }: InputProps) {
+  // С приставкой рамку держит ОБЁРТКА, а поле внутри становится прозрачным: иначе
+  // рамок будет две, вложенных одна в другую. Всё остальное — высота, кегль, отступы —
+  // по-прежнему из шкалы.
+  if (leading) {
+    return (
+      <div
+        className={cn(
+          'flex items-center gap-1.5',
+          FIELD_BOX,
+          CONTROL_H[size],
+          CONTROL_PX[size],
+          CONTROL_TEXT[size],
+          tone === 'danger' ? 'focus-within:border-danger' : 'focus-within:border-accent',
+          className,
+        )}
+      >
+        <span className="shrink-0 text-muted">{leading}</span>
+        <input className={cn('w-full min-w-0 bg-transparent outline-hidden placeholder:text-muted', CONTROL_TEXT[size])} {...props} />
+      </div>
+    )
+  }
   const field = (
     <input
       className={cn(
@@ -27,6 +56,7 @@ export function Input({ size = 'md', className, trailing, ...props }: InputProps
         CONTROL_H[size],
         CONTROL_PX[size],
         CONTROL_TEXT[size],
+        tone === 'danger' && 'focus-visible:border-danger focus-visible:ring-danger',
         // Место под кнопку: текст под неё не заезжает.
         trailing && 'pr-9',
         className,

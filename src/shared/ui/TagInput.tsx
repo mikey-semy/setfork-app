@@ -92,7 +92,7 @@ export function TagInput({
       {/* min-h по шкале md (control.ts): в ряду с Input/Button не проседает; растёт при переносе тегов. */}
       <div className="flex min-h-8 flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
         {tags.map((tag) => (
-          <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-[0.78125rem] font-medium text-ink">
+          <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-body-sm font-medium text-ink">
             {tag}
             <button
               type="button"
@@ -139,7 +139,7 @@ export function TagInput({
               }
             }}
             placeholder={tags.length === 0 ? 'docker' : ''}
-            className="min-w-[5.625rem] flex-1 bg-transparent px-1 py-0.5 text-[0.875rem] text-ink outline-hidden placeholder:text-muted"
+            className="min-w-22.5 flex-1 bg-transparent px-1 py-0.5 text-body-lg text-ink outline-hidden placeholder:text-muted"
           />
         )}
       </div>
@@ -155,7 +155,7 @@ export function TagInput({
                 }}
                 onMouseEnter={() => setHi(i)}
                 className={cn(
-                  'flex w-full items-center justify-between px-3 py-1.5 text-left text-[0.8125rem]',
+                  'flex w-full items-center justify-between px-3 py-1.5 text-left text-body',
                   i === hi ? 'bg-surface-2 text-ink' : 'text-ink-2',
                 )}
               >
@@ -167,13 +167,13 @@ export function TagInput({
                   )}
                   {s.slug}
                 </span>
-                <span className="font-mono text-[0.6875rem] text-muted">{s.usageCount}</span>
+                <span className="font-mono text-caption text-muted">{s.usageCount}</span>
               </button>
             </li>
           ))}
         </ul>
       )}
-      <p className="mt-1 text-[0.6875rem] text-muted">{t('ui.pickFromSuggestions', lang).replace('{n}', String(max))}</p>
+      <p className="mt-1 text-caption text-muted">{t('ui.pickFromSuggestions', lang).replace('{n}', String(max))}</p>
     </div>
   )
 }

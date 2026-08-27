@@ -5,6 +5,8 @@ import { Check } from 'lucide-react'
 import { ThemeModeSwitch } from '@/shared/ui/controls'
 import { t, type Lang } from '@/shared/i18n'
 import { saveAppearance } from './appearance-actions'
+import { cardClass } from '@/shared/ui/card-style'
+import { cn } from '@/shared/lib/cn'
 
 // Настройки внешнего вида (по образцу aep-fullstack):
 //   режим — next-themes (light/dark/system);
@@ -51,10 +53,14 @@ function applyAttr(attr: 'data-accent' | 'data-font' | 'data-scale', key: string
   }
 }
 
+/** Плитка выбора (акцент, масштаб, шрифт): рамка, фон и отступ — из шкалы карточек,
+ *  а не свои. Выбранная берёт тон `accent` — тот же, которым помечен выбор везде. */
 const pickCls = (on: boolean) =>
-  `flex items-center gap-2 rounded-md border px-3 py-2 text-[0.8125rem] text-ink transition-colors ${
-    on ? 'border-accent bg-(--accent-soft)' : 'border-border hover:border-border-strong'
-  }`
+  cardClass({
+    tone: on ? 'accent' : 'surface',
+    pad: 'sm',
+    className: cn('flex items-center gap-2 text-body text-ink transition-colors', !on && 'hover:border-border-strong'),
+  })
 
 export function AppearanceSettings({
   lang,
@@ -105,17 +111,17 @@ export function AppearanceSettings({
     void saveAppearance({ scale: v })
   }
 
-  if (!mounted) return <div className="h-[15rem]" /> // резерв места до гидрации
+  if (!mounted) return <div className="h-60" /> // резерв места до гидрации
 
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{ru ? 'Тема' : 'Theme'}</div>
+        <div className="mb-2 text-body-sm font-semibold text-ink">{ru ? 'Тема' : 'Theme'}</div>
         <ThemeModeSwitch labels lang={lang} />
       </div>
 
       <div>
-        <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{ru ? 'Акцентный цвет' : 'Accent color'}</div>
+        <div className="mb-2 text-body-sm font-semibold text-ink">{ru ? 'Акцентный цвет' : 'Accent color'}</div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {ACCENTS.map((a) => (
             <button
@@ -133,7 +139,7 @@ export function AppearanceSettings({
       </div>
 
       <div>
-        <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{t('uiScale', lang)}</div>
+        <div className="mb-2 text-body-sm font-semibold text-ink">{t('uiScale', lang)}</div>
         <div className="grid grid-cols-3 gap-2">
           {SCALES.map((s) => (
             <button key={s.value} type="button" onClick={() => pickScale(s.value)} className={pickCls(scale === s.value)}>
@@ -145,7 +151,7 @@ export function AppearanceSettings({
       </div>
 
       <div>
-        <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{ru ? 'Шрифт' : 'Font'}</div>
+        <div className="mb-2 text-body-sm font-semibold text-ink">{ru ? 'Шрифт' : 'Font'}</div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {FONTS.map((f) => (
             <button
@@ -160,7 +166,7 @@ export function AppearanceSettings({
             </button>
           ))}
         </div>
-        <p className="mt-2 text-[0.78125rem] text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           {ru
             ? 'Акцент и шрифт сохраняются в аккаунте и следуют за тобой между устройствами. Тема (светлая/тёмная) — в этом браузере.'
             : 'Accent and font are saved to your account and follow you across devices. Theme (light/dark) stays in this browser.'}

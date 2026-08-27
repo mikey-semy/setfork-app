@@ -2,7 +2,7 @@
 
 import { t, type Lang } from '@/shared/i18n'
 import { useRef, useState, useTransition } from 'react'
-import { ImagePlus, Loader2, X } from 'lucide-react'
+import { ImagePlus, X } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Alert } from '@/shared/ui/Alert'
@@ -12,6 +12,9 @@ import type { AchDisplayMap } from '@/features/profile/achievement-config'
 import { removeAchievementImage, setAchievementEnabled, uploadAchievementImage } from './achievement-actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
+import { Spinner } from '@/shared/ui/Spinner'
+import { IconButton } from '@/shared/ui/IconButton'
+import { SmartImage } from '@/shared/ui/SmartImage'
 
 /** Админ-панель достижений: вкл/выкл + своя картинка (drag-and-drop) на каждое. */
 export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; lang: Lang }) {
@@ -53,7 +56,7 @@ export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; l
       {ACHIEVEMENT_KEYS.map((key) => (
         <AchRow key={key} k={key} d={map[key]} lang={lang} pending={pending} onToggle={toggle} onUpload={upload} onClear={clearImage} />
       ))}
-      <p className="mt-1 text-[0.78125rem] text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         {ru
           ? 'Перетащи картинку на плитку или кликни по ней. Выключенное достижение не показывается ни на одном профиле.'
           : 'Drag an image onto a tile or click it. A disabled achievement is hidden on all profiles.'}
@@ -103,12 +106,12 @@ function AchRow({
           }}
           className={buttonClass({
             variant: 'ghost',
-            className: `relative size-11 shrink-0 overflow-hidden border p-0 ${over ? 'border-accent bg-(--accent-soft)' : 'border-dashed border-border'}`,
+            className: `relative size-11 shrink-0 overflow-hidden border p-0 ${over ? 'border-accent bg-accent-soft' : 'border-dashed border-border'}`,
           })}
         >
           {d.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={d.imageUrl} alt="" className="h-full w-full object-cover" />
+            <SmartImage src={d.imageUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <Icon size={20} className={meta.color} />
           )}
@@ -120,22 +123,23 @@ function AchRow({
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => onUpload(k, e.target.files?.[0])} />
 
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[0.8125rem] font-medium text-ink">{t(meta.label, lang)}</div>
-        <div className="font-mono text-[0.6875rem] text-muted">{k}</div>
+        <div className="truncate text-body font-medium text-ink">{t(meta.label, lang)}</div>
+        <div className="font-mono text-caption text-muted">{k}</div>
       </div>
 
       {d.imageUrl && (
         <Tooltip label={t('ach.resetImage', lang)}>
-          <button
-            type="button"
+          <IconButton
+            variant="danger"
+            label={t('ach.resetImage', lang)}
             onClick={() => onClear(k)}
-            className={buttonClass({ variant: 'danger', className: 'hover:bg-surface hover:text-danger' })}
+            className="hover:bg-surface hover:text-danger"
           >
             <X size={15} />
-          </button>
+          </IconButton>
         </Tooltip>
       )}
-      {pending && <Loader2 size={14} className="shrink-0 animate-spin text-muted" />}
+      {pending && <Spinner size="md" className="text-muted" />}
       <Switch checked={d.enabled} onCheckedChange={(v) => onToggle(k, v)} />
     </div>
   )

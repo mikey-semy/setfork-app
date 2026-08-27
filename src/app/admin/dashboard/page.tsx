@@ -57,7 +57,7 @@ export default async function AdminDashboardPage() {
         title={t('admin.dashboard', lang)}
         subtitle={t('admin.liveMonitoringTrafficGenerations', lang)}
         actions={
-          <Link href="/admin/usage" className="text-[0.8125rem] text-accent hover:underline">
+          <Link href="/admin/usage" className="text-body text-accent hover:underline">
             {t('admin.detailedUsage', lang)}
           </Link>
         }
@@ -68,15 +68,15 @@ export default async function AdminDashboardPage() {
 
       {/* Тренды за 14 дней */}
       <div className="flex flex-col gap-3">
-        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">
+        <h2 className="text-body font-semibold uppercase tracking-wide text-ink-2">
           {t('admin.trends14Days', lang)}
         </h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {charts.map((c) => (
             <div key={c.title} className={cardClass()}>
               <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-[0.78125rem] font-medium text-ink-2">{c.title}</span>
-                <span className="font-mono text-[0.8125rem] font-semibold text-ink">{c.total}</span>
+                <span className="text-body-sm font-medium text-ink-2">{c.title}</span>
+                <span className="font-mono text-body font-semibold text-ink">{c.total}</span>
               </div>
               <TrendChart points={c.points} color={c.color} labels={xLabels} height={90} />
             </div>
@@ -86,7 +86,7 @@ export default async function AdminDashboardPage() {
 
       {/* Инбокс — очереди, требующие действия */}
       <div className="flex flex-col gap-3">
-        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{t('admin.inbox', lang)}</h2>
+        <h2 className="text-body font-semibold uppercase tracking-wide text-ink-2">{t('admin.inbox', lang)}</h2>
         <div className="grid grid-cols-3 gap-3">
           {inbox.map((i) => (
             <StatTile key={i.href} href={i.href} label={i.label} value={num(i.value)} tone={i.value > 0 ? 'accent' : 'ink'} />

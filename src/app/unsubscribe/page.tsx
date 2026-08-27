@@ -22,11 +22,14 @@ export default async function UnsubscribePage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[26.25rem] text-center' })}>
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('unsubscribe.title', lang)}</h1>
+      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-note text-center' })}>
         {state === 'confirm' ? (
           <>
-            <div className="text-[1rem] font-bold text-ink">{t('unsubscribe.confirm', lang)}</div>
-            <p className="mt-1 text-[0.8125rem] text-ink-2">{t('unsubscribe.confirmHint', lang)}</p>
+            <div className="text-title font-bold text-ink">{t('unsubscribe.confirm', lang)}</div>
+            <p className="mt-1 text-body text-ink-2">{t('unsubscribe.confirmHint', lang)}</p>
             <form action={unsubscribeAction} className="mt-4">
               <input type="hidden" name="token" value={token} />
               <Button type="submit" className="w-full">
@@ -39,11 +42,11 @@ export default async function UnsubscribePage({
             <div className="mb-2 flex justify-center">
               {state === 'done' ? <CheckCircle2 size={22} className="text-ok" /> : <XCircle size={22} className="text-danger" />}
             </div>
-            <div className="text-[1rem] font-bold text-ink">{t(state === 'done' ? 'unsubscribe.done' : 'unsubscribe.failed', lang)}</div>
-            <p className="mt-1 text-[0.8125rem] text-ink-2">{t(state === 'done' ? 'unsubscribe.doneHint' : 'unsubscribe.failedHint', lang)}</p>
+            <div className="text-title font-bold text-ink">{t(state === 'done' ? 'unsubscribe.done' : 'unsubscribe.failed', lang)}</div>
+            <p className="mt-1 text-body text-ink-2">{t(state === 'done' ? 'unsubscribe.doneHint' : 'unsubscribe.failedHint', lang)}</p>
           </>
         )}
-        <Link href="/settings" className="mt-4 inline-block text-[0.8125rem] font-semibold text-accent hover:underline">
+        <Link href="/settings" className="mt-4 inline-block text-body font-semibold text-accent hover:underline">
           {t('unsubscribe.toSettings', lang)}
         </Link>
       </div>

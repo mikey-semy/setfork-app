@@ -97,16 +97,16 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
         {improve.length > 0 && (
           <div className={cardClass({ pad: 'sm', className: 'mb-4' })}>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
+              <span className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-ink-2">
                 <Sparkles size={14} className="text-accent" /> {lang === 'ru' ? 'Что улучшить' : 'What to improve'}
               </span>
-              <Link href="/improve" className="text-[0.78125rem] text-accent hover:underline">{lang === 'ru' ? 'все' : 'all'}</Link>
+              <Link href="/improve" className="text-body-sm text-accent hover:underline">{lang === 'ru' ? 'все' : 'all'}</Link>
             </div>
             <ul className="flex flex-col gap-1.5">
               {improve.map((it) => (
-                <li key={it.id} className="flex items-center justify-between gap-2 text-[0.8125rem]">
+                <li key={it.id} className="flex items-center justify-between gap-2 text-body">
                   <Link href={`/${it.ownerHandle}/${it.slug}`} className="min-w-0 truncate text-accent hover:underline">{tr(it.title, lang)}</Link>
-                  <span className="shrink-0 font-mono text-[0.6875rem] text-muted">
+                  <span className="shrink-0 font-mono text-caption text-muted">
                     {it.openSuggestions > 0 && <span className="text-accent">⑂{it.openSuggestions} </span>}
                     {it.openIssues > 0 && <span className="text-warn">◍{it.openIssues}</span>}
                   </span>

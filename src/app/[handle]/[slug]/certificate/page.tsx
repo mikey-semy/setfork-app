@@ -40,7 +40,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
     <>
       <div className={PAGE_NARROW}>
         {!session ? (
-          <p className="text-[0.875rem] text-ink-2">
+          <p className="text-body-lg text-ink-2">
             {t('certLoginPrompt', lang)}{' '}
             <Link href={`/login?next=${encodeURIComponent(`${base}/certificate`)}`} className="text-accent hover:underline">
               {t('certLogin', lang)}
@@ -48,8 +48,8 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
           </p>
         ) : !completion ? (
           <div className={cardClass({ pad: 'lg', className: 'text-center' })}>
-            <p className="text-[0.875rem] text-ink-2">{t('certNotCompleted', lang)}</p>
-            <Link href={base} className="mt-3 inline-block text-[0.8125rem] text-accent hover:underline">
+            <p className="text-body-lg text-ink-2">{t('certNotCompleted', lang)}</p>
+            <Link href={base} className="mt-3 inline-block text-body text-accent hover:underline">
               {t('certBackToCourse', lang)}
             </Link>
           </div>
@@ -60,41 +60,40 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
             <div className="w-full overflow-hidden rounded-xl border-2 border-ok/50 bg-surface p-8 text-center shadow-card sm:p-12">
               <div className="mx-auto flex flex-col items-center gap-1 border-b border-border pb-6">
                 <Award size={40} className="text-ok" />
-                <div className="mt-2 font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-muted">
+                <div className="mt-2 font-mono text-caption uppercase tracking-[0.2em] text-muted">
                   {t('certHeading', lang)}
                 </div>
               </div>
-              <p className="mt-6 text-[0.8125rem] text-muted">{t('certThisCertifies', lang)}</p>
-              <p className="mt-1 text-[1.625rem] font-bold tracking-tight text-ink">{learner}</p>
-              <p className="mt-4 text-[0.8125rem] text-muted">{t('certHasCompleted', lang)}</p>
-              <p className="mt-1 text-[1.25rem] font-semibold text-ink">{title}</p>
-              <div className="mt-8 flex items-center justify-center gap-8 text-[0.78125rem] text-ink-2">
+              <p className="mt-6 text-body text-muted">{t('certThisCertifies', lang)}</p>
+              <p className="mt-1 text-display-lg font-bold tracking-tight text-ink">{learner}</p>
+              <p className="mt-4 text-body text-muted">{t('certHasCompleted', lang)}</p>
+              <p className="mt-1 text-heading font-semibold text-ink">{title}</p>
+              <div className="mt-8 flex items-center justify-center gap-8 text-body-sm text-ink-2">
                 <div className="flex flex-col">
-                  <span className="font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-muted">{t('certDate', lang)}</span>
-                  {/* eslint-disable-next-line no-restricted-syntax -- код локали для формата даты, не UI-строка */}
+                  <span className="font-mono text-caption uppercase tracking-[0.14em] text-muted">{t('certDate', lang)}</span>
                   <span className="mt-0.5 font-medium text-ink">{completion.completedAt.toLocaleDateString(ru ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-muted">{t('certVersion', lang)}</span>
+                  <span className="font-mono text-caption uppercase tracking-[0.14em] text-muted">{t('certVersion', lang)}</span>
                   <span className="mt-0.5 font-medium text-ink">v{completion.version}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-muted">{t('certIssuedBy', lang)}</span>
+                  <span className="font-mono text-caption uppercase tracking-[0.14em] text-muted">{t('certIssuedBy', lang)}</span>
                   <span className="mt-0.5 font-medium text-ink">{issuer}</span>
                 </div>
               </div>
               {/* Документ, выданный до появления снимка: факты взяты из текущих данных,
                   и честнее это назвать, чем выдавать их за зафиксированные тогда. */}
               {restored && (
-                <div className="mt-4 text-[0.6875rem] text-muted print:hidden">
+                <div className="mt-4 text-caption text-muted print:hidden">
                   {t('certRestoredNote', lang)}
                 </div>
               )}
-              <div className="mt-8 font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-muted">SetFork · {SITE_HOST}/{owner}/{slug}</div>
+              <div className="mt-8 font-mono text-caption uppercase tracking-[0.18em] text-muted">SetFork · {SITE_HOST}/{owner}/{slug}</div>
             </div>
             <div className="flex items-center gap-3 print:hidden">
               <CertificatePrintButton label={t('certPrintPdf', lang)} />
-              <Link href={base} className="text-[0.8125rem] text-accent hover:underline">
+              <Link href={base} className="text-body text-accent hover:underline">
                 {t('certBackToCourse', lang)}
               </Link>
             </div>

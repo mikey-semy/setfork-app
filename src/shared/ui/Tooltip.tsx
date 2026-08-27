@@ -38,7 +38,7 @@ export function TooltipProvider({ children, delay = 250 }: { children: React.Rea
  * над ней всплыл символ; держишь — висит; отпустил — исчез. Здесь так же: подсказка
  * появляется по касанию, живёт, пока палец на кнопке, и уходит с отпусканием.
  *
- * Появление плавное — `sf-pop-in` из моушен-системы (мягкий подъём с лёгким масштабом),
+ * Появление плавное — `animate-sf-pop` из моушен-системы (мягкий подъём с лёгким масштабом),
  * а не мгновенная подстановка: резкое появление у самого пальца читается как рывок.
  *
  * Мышь и клавиатура работают как раньше: там `onOpenChange` от Radix, задержки провайдера
@@ -103,10 +103,10 @@ export function Tooltip({
           side={side}
           sideOffset={6}
           collisionPadding={8}
-          className="sf-pop-in z-60 max-w-[15rem] rounded-md border border-border bg-surface px-2 py-1 text-[0.6875rem] leading-snug text-ink shadow-card"
+          className="animate-sf-pop z-60 max-w-menu rounded-md border border-border bg-surface px-2 py-1 text-caption leading-snug text-ink shadow-card"
         >
           {label}
-          <TooltipPrimitive.Arrow className="fill-(--surface)" width={10} height={5} />
+          <TooltipPrimitive.Arrow className="fill-surface" width={10} height={5} />
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

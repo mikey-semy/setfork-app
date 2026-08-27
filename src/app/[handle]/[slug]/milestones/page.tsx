@@ -14,6 +14,7 @@ import { deleteMilestone, toggleMilestoneClosed } from '@/features/milestones/ac
 import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Badge } from '@/shared/ui/badge'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -49,14 +50,14 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold text-white ${m.closed ? 'bg-accent' : 'bg-ok'}`}>
+                        <Badge variant={m.closed ? 'accentSolid' : 'okSolid'} className="px-2.5">
                           {m.closed ? <CircleCheck size={12} /> : <CircleDot size={12} />}
                           {m.closed ? t('closedLabel', lang) : t('openLabel', lang)}
-                        </span>
-                        <span className="min-w-0 text-[1rem] font-semibold text-ink [overflow-wrap:anywhere]">{m.title}</span>
+                        </Badge>
+                        <span className="min-w-0 text-title font-semibold text-ink [overflow-wrap:anywhere]">{m.title}</span>
                       </div>
                       {m.dueOn && (
-                        <div className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-muted">
+                        <div className="mt-0.5 inline-flex items-center gap-1 text-body-sm text-muted">
                           <Calendar size={12} /> {t('milestoneDue', lang)} {fmt.format(new Date(m.dueOn))}
                         </div>
                       )}
@@ -81,7 +82,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
                     <div className="h-2 overflow-hidden rounded-full bg-surface-2">
                       <div className="h-full rounded-full bg-ok transition-all" style={{ width: `${pct}%` }} />
                     </div>
-                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[0.78125rem] text-muted">
+                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-body-sm text-muted">
                       <span className="font-semibold text-ink-2">{pct}%</span>
                       <span className="inline-flex items-center gap-1">
                         <CircleDot size={12} /> {m.openCount} {t('openLabel', lang).toLowerCase()}

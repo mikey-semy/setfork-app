@@ -42,6 +42,8 @@ import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
+import { buttonClass } from '@/shared/ui/button-style'
+import { UserLine } from '@/shared/ui/UserLine'
 
 // OpenRouter возвращает отрицательную цену (-1/токен) у авто-роутеров — она «плавающая».
 // Общая с серверным экшеном смены провайдера (model-options): две копии этой логики
@@ -175,18 +177,24 @@ export default async function AdminPage() {
           title={
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-ok" />
-              {T.online} <span className="font-mono text-[0.78125rem] text-muted">{online.length}</span>
+              {T.online} <span className="font-mono text-body-sm text-muted">{online.length}</span>
             </span>
           }
         >
           {online.length === 0 ? (
-            <p className="text-[0.8125rem] text-muted">{ru ? 'Никого онлайн.' : 'No one online.'}</p>
+            <p className="text-body text-muted">{ru ? 'Никого онлайн.' : 'No one online.'}</p>
           ) : (
             <div className="flex flex-wrap gap-3">
+              {/* Пилюля «кто сейчас на сайте»: форма — общий рецепт кнопки, содержимое —
+                  общая строка человека. Раньше и то и другое рисовалось здесь руками, и
+                  аватар с ником расходились с такими же строками на других экранах. */}
               {online.map((u) => (
-                <Link key={u.userId} href={`/${u.handle}`} className="flex items-center gap-2 rounded-full border border-border bg-surface-2 py-1 pl-1 pr-3 hover:border-border-strong">
-                  <Avatar handle={u.handle} avatarUrl={u.avatarUrl} size={24} />
-                  <span className="text-[0.8125rem] text-ink">{u.handle}</span>
+                <Link
+                  key={u.userId}
+                  href={`/${u.handle}`}
+                  className={buttonClass({ variant: 'outline', className: 'rounded-full pl-1' })}
+                >
+                  <UserLine handle={u.handle} avatarUrl={u.avatarUrl} size="sm" />
                 </Link>
               ))}
             </div>
@@ -201,7 +209,7 @@ export default async function AdminPage() {
                в узкой колонке настроек они не помещались. Здесь только вход. */
             <Link
               href="/admin/council"
-              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[0.8125rem] text-ink-2 hover:text-ink"
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-body text-ink-2 hover:text-ink"
             >
               <Bot size={14} /> {t('admin.councilHallExpertsInstructions', lang)}
             </Link>
@@ -371,6 +379,11 @@ export default async function AdminPage() {
   // Дублировать название и объяснять внутреннее устройство ради занятого экрана незачем;
   // то же правило, что и в настройках списка: секции сами себя называют, навигация — в меню.
   return (
-    <AdminShell sections={sections} lang={lang} groups={[...adminNavGroups(lang), adminSettingsGroup(lang, sections.map((x) => x.id))]} />
+    <>
+      {/* Заголовок страницы для диктора: у этой страницы всё содержимое рисует компонент,
+          видимого h1 нет, а без него человек не поймёт, куда попал. */}
+      <h1 className="sr-only">{t('adminTitle', lang)}</h1>
+      <AdminShell sections={sections} lang={lang} groups={[...adminNavGroups(lang), adminSettingsGroup(lang, sections.map((x) => x.id))]} />
+    </>
   )
 }

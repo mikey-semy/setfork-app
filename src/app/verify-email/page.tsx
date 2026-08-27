@@ -36,11 +36,14 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-[26.25rem] text-center' })}>
+      {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
+          но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
+      <h1 className="sr-only">{t('verifyEmailTitle', lang)}</h1>
+      <div className={cardClass({ pad: 'lg', className: 'w-full max-w-note text-center' })}>
         <div className="mb-2 flex justify-center">{M.icon}</div>
-        <div className="text-[1rem] font-bold text-ink">{M.title}</div>
-        <p className="mt-1 text-[0.8125rem] text-ink-2">{M.sub}</p>
-        <Link href="/" className="mt-4 inline-block text-[0.8125rem] font-semibold text-accent hover:underline">
+        <div className="text-title font-bold text-ink">{M.title}</div>
+        <p className="mt-1 text-body text-ink-2">{M.sub}</p>
+        <Link href="/" className="mt-4 inline-block text-body font-semibold text-accent hover:underline">
           {ru ? '← на главную' : '← back home'}
         </Link>
       </div>

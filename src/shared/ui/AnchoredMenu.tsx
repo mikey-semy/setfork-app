@@ -37,11 +37,13 @@ export function AnchoredMenu({
       {button(() => setOpen((o) => !o), open)}
       {open && (
         <>
-          {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). */}
-          <div className="fixed inset-0 z-10" onClick={close} />
+          {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). Диктору
+              он не нужен и не должен попадаться на пути: aria-hidden убирает его из дерева
+              доступности, клавиатурный путь закрытия — Esc. */}
+          <div className="fixed inset-0 z-10" aria-hidden onClick={close} />
           <div
             style={{ width }}
-            className={`sf-pop-in absolute z-20 mt-1 max-w-[calc(100vw-24px)] overflow-hidden rounded-md border border-border bg-surface shadow-lg ${align === 'right' ? 'right-0' : 'left-0'} ${className}`}
+            className={`animate-sf-pop absolute z-20 mt-1 max-w-[calc(100vw-24px)] overflow-hidden rounded-md border border-border bg-surface shadow-lg ${align === 'right' ? 'right-0' : 'left-0'} ${className}`}
           >
             {children(close)}
           </div>

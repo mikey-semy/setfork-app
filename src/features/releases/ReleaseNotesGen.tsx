@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import type { Lang } from '@/shared/i18n'
 import { generateReleaseNotes } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Spinner } from '@/shared/ui/Spinner'
 
 /**
  * Поле заметок релиза с автогенерацией: кнопка «Сгенерировать из изменений»
@@ -53,14 +54,14 @@ export function ReleaseNotesGen({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[0.78125rem] font-semibold text-ink">{labels.notes}</span>
+        <span className="text-body-sm font-semibold text-ink">{labels.notes}</span>
         <button
           type="button"
           onClick={generate}
           disabled={busy}
           className={buttonClass({ className: 'disabled:opacity-50' })}
         >
-          {busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} className="text-accent" />}
+          {busy ? <Spinner size="sm" /> : <Sparkles size={13} className="text-accent" />}
           {labels.generate}
         </button>
       </div>
@@ -74,7 +75,7 @@ export function ReleaseNotesGen({
         lang={lang}
         refScope={{ owner, slug }}
       />
-      {hint && <p className="text-[0.78125rem] text-muted">{hint}</p>}
+      {hint && <p className="text-body-sm text-muted">{hint}</p>}
     </div>
   )
 }

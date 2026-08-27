@@ -6,7 +6,9 @@ import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, TEXT } from '@/shared/ui/control'
 import { SearchField } from '@/shared/ui/SearchField'
+import { Badge } from '@/shared/ui/badge'
 import { t, type Lang } from '@/shared/i18n'
+import { MenuItem } from '@/shared/ui/MenuItem'
 
 /** Значение-пустышка для «нет модели». */
 export const NONE = '__none__'
@@ -334,12 +336,12 @@ function OptionBody({ o, lang }: { o: Option; lang: Lang }) {
       <span className="flex min-w-0 items-center gap-1.5">
         <span className={`min-w-0 truncate ${TEXT.bodySm}`}>{o.label ?? o.id}</span>
         {o.family && (
-          <span className={`shrink-0 rounded-full border border-border bg-surface-2 px-1.5 py-px ${TEXT.caption} text-muted`}>{o.family}</span>
+          <Badge variant="chip" className="shrink-0 px-1.5 py-px text-muted">{o.family}</Badge>
         )}
         {o.missing && (
-          <span className={`shrink-0 rounded-full border border-warn px-1.5 py-px ${TEXT.caption} text-warn`}>
+          <Badge variant="warn" className="shrink-0 px-1.5 py-px">
             {t('models.notInCatalogShort', lang)}
-          </span>
+          </Badge>
         )}
         {o.price && <span className={`ml-auto shrink-0 pl-2 tabular-nums ${TEXT.caption} ${o.priceClass ?? ''}`}>{o.price}</span>}
       </span>
@@ -385,7 +387,7 @@ function OptionBody({ o, lang }: { o: Option; lang: Lang }) {
                     {h.avatarUrl ? (
                       <GnomeAvatar src={h.avatarUrl} size={16} alt={h.label} className="size-4 rounded-full" />
                     ) : (
-                      <span className="rounded-full border border-border bg-surface-2 px-1.5 py-px text-ink-2">{h.label}</span>
+                      <Badge variant="chip">{h.label}</Badge>
                     )}
                   </span>
                 </Tooltip>
@@ -412,23 +414,14 @@ function Row({
   onClick: () => void
   onMouseEnter?: () => void
 }) {
-  // min-h-11 = 44px: строка списка — тач-цель, на мобиле в неё целятся пальцем.
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      // eslint-disable-next-line no-restricted-syntax -- строка выпадающего списка: 44px — высота ПУНКТА, не кнопки
-      className={`relative flex min-h-11 w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-left ${TEXT.body} text-ink ${
-        highlighted ? 'bg-(--accent-soft) text-accent' : ''
-      }`}
-    >
+    <MenuItem onClick={onClick} onMouseEnter={onMouseEnter} active={highlighted} className={`relative select-none rounded-sm pl-8 pr-3 ${highlighted ? 'bg-accent-soft text-accent' : ''}`}>
       {selected && (
         <span className="absolute left-2.5 flex h-3.5 w-3.5 items-center justify-center">
           <Check size={14} />
         </span>
       )}
       {children}
-    </button>
+    </MenuItem>
   )
 }

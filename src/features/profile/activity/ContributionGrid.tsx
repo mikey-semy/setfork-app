@@ -87,10 +87,10 @@ export function ContributionGrid({
     <div className="relative inline-flex flex-col gap-1 p-0.5" style={{ direction: 'ltr' }} ref={gridRef}>
       {/* key по дню: новая клетка = новая подсказка, и переворот вниз считается заново. */}
       {tip && <DayTip key={tip.text} anchor={tip} />}
-      {/* Строка месяцев ровно h-[0.8125rem] (= spacer колонки дней), текст прижат вниз к клеткам. */}
-      <div className="flex h-[0.8125rem] items-end gap-[0.1875rem] text-[0.6875rem] leading-none text-muted">
+      {/* Строка месяцев ровно h-3.5 (= spacer колонки дней), текст прижат вниз к клеткам. */}
+      <div className="flex h-3.5 items-end gap-[0.1875rem] text-caption leading-none text-muted">
         {calendar.months.map((m, i) => (
-          <div key={i} className="w-[0.6875rem] whitespace-nowrap">
+          <div key={i} className="w-3 whitespace-nowrap">
             {m ?? ''}
           </div>
         ))}
@@ -100,12 +100,12 @@ export function ContributionGrid({
           <div key={wi} className="flex flex-col gap-[0.1875rem]">
             {week.map((cell, di) =>
               cell.blank ? (
-                <div key={di} className="h-[0.6875rem] w-[0.6875rem]" />
+                <div key={di} className="h-3 w-3" />
               ) : cell.count === 0 ? (
                 // День без вкладов фильтровать нечем: подсказку показываем, кнопкой не делаем.
                 <div
                   key={di}
-                  className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] transition-opacity duration-(--dur-base) ${LEVEL[0]} ${selected ? 'opacity-30' : 'opacity-100'}`}
+                  className={`h-3 w-3 rounded-xs transition-opacity duration-(--dur-base) ${LEVEL[0]} ${selected ? 'opacity-30' : 'opacity-100'}`}
                   onMouseEnter={(e) => showTip(e.currentTarget, cell)}
                   onMouseLeave={() => setTip(null)}
                 />
@@ -132,7 +132,7 @@ export function ContributionGrid({
                   // уходят в фон — видно, какой срез сейчас показывает лента.
                   // Кольцо БЕЗ offset: с зазором оно у крайних клеток вылезало за
                   // окно прокрутки и срезалось. Место под сами 2px даёт p-0.5 сетки.
-                  className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] touch-manipulation transition-[opacity,box-shadow] duration-(--dur-base) ${LEVEL[level(cell.count, calendar.scale)]} ${
+                  className={`h-3 w-3 rounded-xs touch-manipulation transition-[opacity,box-shadow] duration-(--dur-base) ${LEVEL[level(cell.count, calendar.scale)]} ${
                     selected === cell.date ? 'opacity-100 ring-2 ring-accent' : selected ? 'opacity-30 hover:opacity-60' : 'opacity-100'
                   }`}
                 />

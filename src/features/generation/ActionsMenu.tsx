@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Plus, RotateCw } from 'lucide-react'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { IconButton } from '@/shared/ui/IconButton'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import { MAX_VARIANTS } from './limits'
 import { t } from '@/shared/i18n'
+import { MenuItem } from '@/shared/ui/MenuItem'
 
 /**
  * Меню действий у поля ввода (фидбек владельца): «Использовать этот» и «Ещё
@@ -66,74 +68,62 @@ export function ActionsMenu({
           disabled-кнопка «нажимаю и ничего» ставила в тупик — теперь до первого варианта
           меню честно объясняет, что появится здесь. Тултип — shadcn, не браузерный title. */}
       <Tooltip label={t('generation.variantActions', lang)}>
-        <button
-          type="button"
-          aria-haspopup="menu"
+        <IconButton variant="ghost" label={t('generation.variantActions', lang)} className="rounded-full text-muted hover:bg-surface-2 hover:text-ink" aria-haspopup="menu"
           aria-expanded={open}
-          aria-label={t('generation.variantActions', lang)}
-          onClick={() => setOpen((v) => !v)}
-          className="grid size-9 place-items-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-ink"
-        >
+          onClick={() => setOpen((v) => !v)}>
           <Plus size={18} className={`transition-transform ${open ? 'rotate-45' : ''}`} />
-        </button>
+        </IconButton>
       </Tooltip>
 
       {open && candidates.length === 0 && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[16.25rem] rounded-md border border-border bg-surface px-3 py-2.5 text-[0.78125rem] leading-relaxed text-muted shadow-card">
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-panel rounded-md border border-border bg-surface px-3 py-2.5 text-body-sm leading-relaxed text-muted shadow-card">
           {t('generation.variantActionsWillAppear', lang)}
         </div>
       )}
 
       {open && candidates.length > 0 && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[18.75rem] overflow-hidden rounded-md border border-border bg-surface shadow-card">
-          <button
-            type="button"
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-panel-lg overflow-hidden rounded-md border border-border bg-surface shadow-card">
+          <MenuItem
             disabled={!canAccept}
             onClick={() => {
               setOpen(false)
               onAccept()
             }}
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[0.8125rem] font-semibold text-ink hover:bg-surface-2 disabled:opacity-40"
+            className="font-semibold text-ink"
           >
             <Check size={14} className="shrink-0 text-accent" />
             <span className="min-w-0">
               {t('generation.useOne', lang)}
-              {selected && <span className="block truncate text-[0.6875rem] font-normal text-muted">{selected.title}</span>}
+              {selected && <span className="block truncate text-caption font-normal text-muted">{selected.title}</span>}
             </span>
-          </button>
-          <button
-            type="button"
+          </MenuItem>
+          <MenuItem
             disabled={!canRegen}
             onClick={() => {
               setOpen(false)
               onRegen()
             }}
-            className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-[0.8125rem] text-ink-2 hover:bg-surface-2 hover:text-ink disabled:opacity-40"
+            className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-body text-ink-2 hover:bg-surface-2 hover:text-ink disabled:opacity-40"
           >
             <RotateCw size={14} className="shrink-0" />
             {t('generation.anotherVariant', lang)}{' '}
-            <span className="ml-auto text-[0.6875rem] tabular-nums text-muted">
+            <span className="ml-auto text-caption tabular-nums text-muted">
               {candidates.length}/{MAX_VARIANTS}
             </span>
-          </button>
+          </MenuItem>
           {candidates.length > 1 && (
             <div className="border-t border-border">
-              <div className="px-3 pb-1 pt-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
+              <div className="px-3 pb-1 pt-2 text-caption font-semibold uppercase tracking-wide text-muted">
                 {t('generation.variants', lang)}
               </div>
               {candidates.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => jump(c)}
-                  className={`flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-surface-2 ${c.id === selId ? 'bg-surface-2' : ''}`}
-                >
-                  <span className="mt-px shrink-0 text-[0.6875rem] tabular-nums text-muted">{c.idx}</span>
+                <MenuItem key={c.id} onClick={() => jump(c)} active={c.id === selId} className="items-start">
+                  <span className="mt-px shrink-0 text-caption tabular-nums text-muted">{c.idx}</span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[0.78125rem] text-ink">{c.title}</span>
-                    {c.summary && <span className="mt-0.5 block truncate text-[0.6875rem] text-muted">{c.summary}</span>}
+                    <span className="block truncate text-body-sm text-ink">{c.title}</span>
+                    {c.summary && <span className="mt-0.5 block truncate text-caption text-muted">{c.summary}</span>}
                   </span>
-                </button>
+                </MenuItem>
               ))}
             </div>
           )}

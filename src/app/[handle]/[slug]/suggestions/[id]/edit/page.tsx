@@ -58,7 +58,7 @@ export default async function EditSuggestionPage({
 
   return (
     <div className={PAGE_NARROW}>
-      <Link href={path} className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
+      <Link href={path} className="mb-4 inline-flex items-center gap-2 text-body text-ink-2 hover:text-ink">
         <ArrowLeft size={15} />
         {/* Длинный заголовок не должен разносить строку — усечение, а не перенос. */}
         <span className="min-w-0 truncate">

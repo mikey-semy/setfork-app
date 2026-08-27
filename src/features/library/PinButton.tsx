@@ -38,7 +38,7 @@ export function PinButton({
       // На мобиле подписи нет — кнопка становится квадратом 36×36, как остальные
       // иконочные кнопки шапки (владелец: «сделай их примерно одинаковой ширины»).
       className={buttonClass({
-        className: `max-sm:size-8 max-sm:px-0 ${opt ? 'border-accent bg-(--accent-soft) text-accent hover:border-accent' : ''}`,
+        className: `max-sm:size-8 max-sm:px-0 ${opt ? 'border-accent bg-accent-soft text-accent hover:border-accent' : ''}`,
       })}
     >
       {opt ? <PinOff size={14} /> : <Pin size={14} />}

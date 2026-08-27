@@ -52,7 +52,7 @@ export function SuggestionConversation({
             не шапка на всех вкладках: в «Проверках» и «Изменениях» она мешала. */}
         {sug.note && (
           <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface">
-            <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[0.78125rem] text-ink-2">
+            <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-body-sm text-ink-2">
               <Avatar handle={sug.author.handle} avatarUrl={sug.author.avatarUrl} size={22} />
               <span className="font-semibold text-ink">{sug.author.handle}</span>
             </div>
@@ -78,9 +78,9 @@ export function SuggestionConversation({
             closed: t('tlClosed', lang),
           }}
         />
-        <h2 className="mt-6 mb-3 text-[0.875rem] font-bold text-ink">{t('discussionHeading', lang)}</h2>
+        <h2 className="mt-6 mb-3 text-body-lg font-bold text-ink">{t('discussionHeading', lang)}</h2>
         {comments.length === 0 ? (
-          <p className="mb-3 text-[0.8125rem] text-muted">{t('noCommentsYet', lang)}</p>
+          <p className="mb-3 text-body text-muted">{t('noCommentsYet', lang)}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {comments.map((c) => (
@@ -143,7 +143,7 @@ export function SuggestionConversation({
             конфликте: как раз тогда обновление чаще всего и решает дело. */}
         {branchBehind && sug.status === 'open' && !branchMissing && (
           <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3.5 py-2.5">
-            <span className="text-[0.78125rem] text-ink-2">{t('prBranchBehind', lang)}</span>
+            <span className="text-body-sm text-ink-2">{t('prBranchBehind', lang)}</span>
             <form action={updateBranchFromMain.bind(null, sug.id)} className="ml-auto">
               <SubmitButton variant="outline">
                 <RefreshCw size={14} /> {t('prUpdateBranch', lang)}
@@ -227,7 +227,7 @@ export function SuggestionConversation({
             </form>
           </div>
         ) : (
-          <div className="mt-4 rounded-lg border border-border bg-surface px-4 py-3 text-[0.8125rem] text-ink-2">
+          <div className="mt-4 rounded-lg border border-border bg-surface px-4 py-3 text-body text-ink-2">
             <Link href={`/login?next=${path}`} className="font-semibold text-accent hover:underline">
               {t('signInToComment', lang)}
             </Link>

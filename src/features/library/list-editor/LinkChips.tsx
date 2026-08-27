@@ -39,8 +39,8 @@ export function LinkChips({
       chip={(r) => (
         <>
           <Link2 size={iconSizeFor('xs')} className="shrink-0 text-muted" />
-          <span className="max-w-[10rem] truncate">{r.label || linkHost(r.url)}</span>
-          {r.label && r.url ? <span className="max-w-[8rem] truncate font-mono text-muted">{linkHost(r.url)}</span> : null}
+          <span className="max-w-field truncate">{r.label || linkHost(r.url)}</span>
+          {r.label && r.url ? <span className="max-w-field-sm truncate font-mono text-muted">{linkHost(r.url)}</span> : null}
         </>
       )}
       addButton={(open) => <AddLink onClick={open}>{t('editor.addLinkWord', lang)}</AddLink>}
