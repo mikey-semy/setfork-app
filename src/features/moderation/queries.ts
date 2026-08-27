@@ -1,6 +1,7 @@
 import 'server-only'
-import { desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
+import { likeContains } from '@/shared/db/like'
 import type { LocaleText } from '@/shared/i18n'
 
 export type ModFilter = 'all' | 'pending' | 'flagged' | 'hidden' | 'sample'
@@ -21,7 +22,7 @@ export interface ModItem {
 }
 
 /** Список публикаций для модерации (админ видит всё). */
-export async function getModerationList(filter: ModFilter = 'all', limit = 200): Promise<ModItem[]> {
+export async function getModerationList(filter: ModFilter = 'all', limit = 200, q = ''): Promise<ModItem[]> {
   const base = db
     .select({
       id: templates.id,
@@ -56,10 +57,25 @@ export async function getModerationList(filter: ModFilter = 'all', limit = 200):
     desc(templates.starsCount),
     desc(templates.createdAt),
   ]
-  const rows =
-    filter === 'all'
-      ? await base.orderBy(desc(templates.createdAt)).limit(limit)
-      : await base.where(eq(templates.moderation, filter)).orderBy(...prio).limit(limit)
+  // Поиск по адресу и названию. Очередь отдаёт до 200 строк, и без него найти
+  // конкретный список в ней можно было только глазами, прокруткой.
+  //
+  // Ищем и по НИКУ АВТОРА тоже: в модерации разбирают не только «этот список», но и
+  // «всё, что принёс вот этот автор», — а это самый частый вопрос при разборе спама.
+  // `likeContains`, а не шаблон руками: `%` и `_` — подстановочные знаки, и `?q=%`
+  // вернул бы ВСЮ очередь, а `?q=_b` находил бы «ab». Сторож этого правила поймал меня
+  // здесь на первом же прогоне — ровно то, ради чего он и заведён.
+  const like = q.trim() ? likeContains(q) : null
+  const search = like
+    ? sql`(${templates.slug} ilike ${like} or ${users.handle} ilike ${like} or ${templates.title}::text ilike ${like})`
+    : undefined
+
+  const where =
+    filter === 'all' ? search : search ? and(eq(templates.moderation, filter), search) : eq(templates.moderation, filter)
+
+  const rows = where
+    ? await base.where(where).orderBy(...(filter === 'all' ? [desc(templates.createdAt)] : prio)).limit(limit)
+    : await base.orderBy(desc(templates.createdAt)).limit(limit)
   return rows as ModItem[]
 }
 

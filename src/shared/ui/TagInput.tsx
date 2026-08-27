@@ -90,7 +90,16 @@ export function TagInput({
     <div ref={boxRef} className="relative">
       <input type="hidden" name={name} value={tags.join(' ')} />
       {/* min-h по шкале md (control.ts): в ряду с Input/Button не проседает; растёт при переносе тегов. */}
-      <div className="flex min-h-8 flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
+      {/* `py-1`, а не `py-1.5`: отступ не должен ВЫТАЛКИВАТЬ поле за ступень шкалы.
+          Чип внутри — Badge с `py-0.5` и кеглем body-sm, это около 21.5px; с прежними
+          двенадцатью пикселями отступа поле выходило на ~33.5px, тогда как Input и
+          Select рядом ровно 32. Разница в полтора пикселя не читается как «другая
+          высота», а читается как «ряд неровный», и владелец назвал это прямо: инпуты и
+          селекты должны быть как у тегов.
+          Теперь высоту в покое задаёт `min-h-8`, то есть та же ступень, что у соседей, а
+          отступ лишь не даёт чипам липнуть к рамке. Рост при переносе чипов на вторую
+          строку сохраняется — он и есть смысл этого поля. */}
+      <div className="flex min-h-8 flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1 focus-within:border-border-strong">
         {tags.map((tag) => (
           <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-body-sm font-medium text-ink">
             {tag}
