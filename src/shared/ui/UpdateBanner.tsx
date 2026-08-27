@@ -60,7 +60,7 @@ export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {
     <div
       role="alert"
       style={gap ? { bottom: gap + 16 } : undefined}
-      className="fixed bottom-4 left-1/2 z-50 flex w-[min(92vw,400px)] -translate-x-1/2 animate-fadein items-start gap-3 border border-border border-l-2 border-l-warn bg-surface px-4 py-3 shadow-card"
+      className="fixed bottom-4 left-1/2 z-50 flex w-panel-xl cap-viewport -translate-x-1/2 animate-fadein items-start gap-3 border border-border border-l-2 border-l-warn bg-surface px-4 py-3 shadow-card"
     >
       <TriangleAlert size={18} className="mt-0.5 shrink-0 text-warn" />
       <div className="min-w-0 flex-1">

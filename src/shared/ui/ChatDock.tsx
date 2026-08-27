@@ -90,7 +90,7 @@ export function ChatDock({
     <div
       data-sticky-input
       style={gap ? { bottom: gap + 16, maxHeight: Math.round(visibleHeight * 0.7) } : undefined}
-      className={`fixed right-4 bottom-4 flex max-h-[70dvh] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card ${LAYER.modal}`}
+      className={`fixed right-4 bottom-4 flex cap-screen w-panel-xl cap-viewport flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card ${LAYER.modal}`}
     >
       <PanelHead
         icon={icon}

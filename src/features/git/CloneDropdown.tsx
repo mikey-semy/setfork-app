@@ -80,7 +80,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
           не выше доступной, иначе низ вкладки «Запуск» обрезался без прокрутки. */}
       <PopoverContent
         align="end"
-        className="w-[min(22rem,calc(100vw-1.5rem))] max-h-(--radix-popover-content-available-height) overflow-y-auto p-0"
+        className="w-panel-xl cap-viewport max-h-(--radix-popover-content-available-height) overflow-y-auto p-0"
       >
         {/* ui-parity-ok: вкладки ВНУТРИ панели с aria-controls и стрелками — TabNav это ряд ссылок-разделов, другая роль */}
         <div className="flex gap-2 border-b border-border p-1.5" role="tablist" aria-label={t('cloneMenuLabel', lang)}>

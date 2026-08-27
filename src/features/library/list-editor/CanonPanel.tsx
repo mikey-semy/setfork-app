@@ -126,7 +126,7 @@ export function CanonPanel({
       ) : (
         // Целый файл, а не поле команды: окно во весь экран по высоте, прокрутка
         // внутри — иначе на телефоне видно шесть строк из сотни.
-        <CodeEditor value={text} onChange={setText} ariaLabel={t('canon.editorLabel', lang)} maxHeightClass="max-h-[65vh]" />
+        <CodeEditor value={text} onChange={setText} ariaLabel={t('canon.editorLabel', lang)} maxHeightClass="cap-screen" />
       )}
 
       {issues.length > 0 && (

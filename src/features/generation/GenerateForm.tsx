@@ -104,7 +104,7 @@ export function GenerateForm({
   const noticeTone = { warn: 'border-warn/50 text-warn', danger: 'border-border text-danger', upsell: 'border-accent/40 text-ink-2' }
 
   return (
-    <div className={cn('relative flex min-h-[calc(100dvh-53px)] flex-col overflow-hidden px-4 py-4 sm:px-6', launching ? 'justify-end' : 'justify-center')}>
+    <div className={cn('relative flex min-h-below-topbar flex-col overflow-hidden px-4 py-4 sm:px-6', launching ? 'justify-end' : 'justify-center')}>
       {/* Уведомления (нет ключа / ошибки) и лоадер — absolute сверху: не влияют на центровку поля. */}
       {notice && !launching && (
         <div className="pointer-events-none absolute inset-x-4 top-4 z-10 sm:inset-x-6">

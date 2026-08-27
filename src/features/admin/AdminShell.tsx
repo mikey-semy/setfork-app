@@ -74,7 +74,7 @@ export function AdminShell({ groups, sections, lang }: { groups: AdminNavGroup[]
             </div>
           ))
         )}
-        {visible.length > 1 && <div aria-hidden className="h-[45vh]" />}
+        {visible.length > 1 && <div aria-hidden className="h-scroll-tail" />}
       </div>
     </div>
   )

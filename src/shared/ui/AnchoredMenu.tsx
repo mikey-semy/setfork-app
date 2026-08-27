@@ -48,7 +48,7 @@ export function AnchoredMenu({
               на слоях, а на порядке в разметке: подложка объявлена раньше меню. */}
           <div
             style={{ width }}
-            className={`animate-sf-pop absolute ${LAYER.dropdown} mt-1 max-w-[calc(100vw-24px)] overflow-hidden rounded-md border border-border bg-surface shadow-lg ${align === 'right' ? 'right-0' : 'left-0'} ${className}`}
+            className={`animate-sf-pop absolute ${LAYER.dropdown} mt-1 cap-viewport overflow-hidden rounded-md border border-border bg-surface shadow-lg ${align === 'right' ? 'right-0' : 'left-0'} ${className}`}
           >
             {children(close)}
           </div>

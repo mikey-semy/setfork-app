@@ -253,7 +253,7 @@ export function ModelSelect({
               />
             </div>
 
-            <div className="max-h-[60vh] overflow-y-auto overscroll-contain p-1 sm:max-h-96">
+            <div className="cap-screen overflow-y-auto overscroll-contain p-1 sm:max-h-96">
               {allowEmpty && !query && (
                 <Row selected={value === ''} highlighted={false} onClick={() => pick('')}>
                   <span className="text-ink-2">—</span>

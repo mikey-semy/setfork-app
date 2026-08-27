@@ -92,7 +92,7 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
           ))
         )}
         {/* Спейсер: чтобы последние секции могли доскроллиться до линии активации. */}
-        {visible.length > 1 && <div aria-hidden className="h-[45vh]" />}
+        {visible.length > 1 && <div aria-hidden className="h-scroll-tail" />}
       </div>
     </div>
   )

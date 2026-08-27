@@ -187,7 +187,7 @@ function DismissButton({
           <ShieldOff size={14} />
         </IconButton>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-3">
+      <PopoverContent className="w-panel-lg cap-viewport p-3">
         <div className="mb-2 text-body-sm font-medium text-ink">{labels.dismiss}</div>
         <Textarea
           value={reason}

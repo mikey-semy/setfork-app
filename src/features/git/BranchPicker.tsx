@@ -114,7 +114,7 @@ export function BranchPicker({
         <>
           {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). */}
           <Backdrop onClose={() => setOpen(false)} />
-          <div className="animate-sf-pop absolute left-0 top-full z-50 mt-1.5 w-panel-lg max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+          <div className="animate-sf-pop absolute left-0 top-full z-50 mt-1.5 w-panel-lg cap-viewport overflow-hidden rounded-lg border border-border bg-surface shadow-card">
             <PickerPanel
               title={t('switchBranch', lang)}
               onClose={() => setOpen(false)}
