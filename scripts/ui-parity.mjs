@@ -34,6 +34,25 @@ const ROLES = [
     match: ({ cls }) => cls.includes('animate-spin'),
   },
   {
+    key: 'сегмент переключателя',
+    primitive: 'SegmentedControl + Segment',
+    hint: 'активный сегмент красят вручную (bg-primary text-primary-fg) — обойма и пилюля каждый раз свои',
+    /**
+     * Ищем ПРИЗНАК РОЛИ, а не тег. Роль размазана по двум тегам (`button` и `Link`) и по
+     * двум слоям, поэтому правило «самопал среди кнопок» пропускало её целиком: восемь
+     * обойм жили в коде и счётчик показывал ноль. Признак же один и ни на что другое не
+     * похож — активный сегмент это `bg-primary` вместе с `text-primary-fg`.
+     *
+     * `buttonClass()` (главная кнопка формы) даёт ту же пару, но приходит рецептом —
+     * и потому снимается тем же `recipe()`, что и везде.
+     *
+     * ⚠️ Пары классов МАЛО: тем же цветом красят бейдж мерности индекса и пузырь реплики
+     * пользователя — фирменная плашка, а не выбор. Первый прогон поймал ровно их двоих.
+     * Отличает сегмент УСЛОВИЕ: активная ветка тернарника. Плашка красится всегда.
+     */
+    match: ({ attrs, local }) => !recipe(attrs, local) && SEGMENT_ACTIVE.test(attrs),
+  },
+  {
     key: 'кнопка',
     primitive: 'Button / IconButton / SubmitButton / buttonClass',
     hint: 'рукописный <button> с оформлением: свой фон, рамка, скругление или отступы',
@@ -281,6 +300,9 @@ const excusedLines = (src) => {
   })
   return out
 }
+
+/** Активный сегмент: пара цветов ВНУТРИ ветки условия — `active ? 'bg-primary text-primary-fg' : …` */
+const SEGMENT_ACTIVE = /\?\s*['"`][^'"`]*\bbg-primary\b[^'"`]*\btext-primary-fg\b/
 
 const SHARED_RECIPE = /\b(buttonClass|cardClass|badgeClass|splitSegment)\(/
 

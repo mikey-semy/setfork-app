@@ -61,7 +61,7 @@ export function SuggestionFiles({
             <Pencil size={14} /> {t('prEdit', lang)}
           </Link>
         )}
-        <DiffViewToggle path={path} tab="files" view={view} labels={{ code: t('viewCode', lang), list: t('viewList', lang) }} />
+        <DiffViewToggle path={path} tab="files" view={view} labels={{ code: t('viewCode', lang), list: t('viewList', lang), group: t('viewMode', lang) }} />
       </div>
 
       {view === 'code' ? (

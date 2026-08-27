@@ -16,7 +16,6 @@
  "кнопка-невидимка": {
   "src/app/global-error.tsx": 1,
   "src/features/admin/ExpertSettings.tsx": 1,
-  "src/features/admin/LandingEditor.tsx": 1,
   "src/features/generation/GenerationChat.tsx": 1,
   "src/features/library/list-editor/BlockInserter.tsx": 1,
   "src/features/library/ListActionsMenu.tsx": 1,
@@ -30,6 +29,7 @@
  "поле без имени": {},
  "радиус числом": {},
  "рецепт в константе файла": {},
+ "сегмент переключателя": {},
  "слой поверх": {
   "src/features/git/BranchPicker.tsx": 1,
   "src/widgets/Sidebar.tsx": 1

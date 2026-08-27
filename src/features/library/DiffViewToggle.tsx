@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Code2, List } from 'lucide-react'
 import { CONTROL_H } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
+import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
 
 /**
  * Переключатель вида диффа «код / список» — ОДИН на сравнение версий и на правку.
@@ -24,7 +25,7 @@ export function DiffViewToggle({
   /** Показываемый коммит (вкладка «коммиты»): переключение вида его не теряет. */
   commit?: string
   view: 'code' | 'list'
-  labels: { code: string; list: string }
+  labels: { code: string; list: string; group: string }
 }) {
   // Параметры собираем ОДНИМ местом, а не дописываем к готовой строке. Раньше сюда
   // приходил путь, где уже стояли `?tab=commits&commit=<sha>`, и хвост `?tab=…`
@@ -39,20 +40,14 @@ export function DiffViewToggle({
     return `${path}?${qs.toString()}`
   }
   const item = (v: 'code' | 'list', icon: React.ReactNode, label: string) => (
-    <Link
-      href={href(v)}
-      aria-current={v === view ? 'page' : undefined}
-      className={`inline-flex ${CONTROL_H.md} items-center gap-1.5 rounded-md px-2.5 text-body-sm font-medium ${
-        v === view ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
-      }`}
-    >
+    <Segment active={v === view} href={href(v)}>
       {icon} {label}
-    </Link>
+    </Segment>
   )
   return (
-    <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'flex items-center gap-1' })}>
+    <SegmentedControl label={labels.group} size="md">
       {item('code', <Code2 size={14} />, labels.code)}
       {item('list', <List size={14} />, labels.list)}
-    </div>
+    </SegmentedControl>
   )
 }

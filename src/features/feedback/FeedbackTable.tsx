@@ -9,6 +9,7 @@ import type { FeedbackFilter, FeedbackItem } from './queries'
 import { cardClass } from '@/shared/ui/card-style'
 import { Badge } from '@/shared/ui/badge'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
 
 const CAT_LABEL = {
   bug: 'fbCatBug',
@@ -89,15 +90,9 @@ export function FeedbackTable({
     <div>
       <div className="mb-4 flex gap-1.5">
         {tabs.map((tab) => (
-          <Link
-            key={tab.key}
-            href={tab.key === 'all' ? '/admin/feedback' : `/admin/feedback?filter=${tab.key}`}
-            className={`rounded-md px-3 py-1.5 text-body-sm font-semibold ${
-              filter === tab.key ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
-            }`}
-          >
+          <Segment key={tab.key} active={filter === tab.key} href={tab.key === 'all' ? '/admin/feedback' : `/admin/feedback?filter=${tab.key}`}>
             {tab.label} <span className="opacity-70">{counts[tab.key]}</span>
-          </Link>
+          </Segment>
         ))}
       </div>
       {items.length === 0 ? (

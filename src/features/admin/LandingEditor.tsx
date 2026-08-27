@@ -17,6 +17,7 @@ import { Spinner } from '@/shared/ui/Spinner'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { TextButton } from '@/shared/ui/TextButton'
 import { IconButton } from '@/shared/ui/IconButton'
+import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
 
 type FieldKey = keyof Omit<LandingCopy, 'stats'>
 type Field = { key: FieldKey; label: string; max: number; area?: boolean; ai?: boolean }
@@ -64,18 +65,13 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
   return (
     <div className="flex flex-col gap-5">
       {/* Язык контента */}
-      <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'flex w-fit items-center gap-1' })}>
+      <SegmentedControl label={t('admin.contentLang', lang)}>
         {(['ru', 'en'] as const).map((l) => (
-          <button
-            key={l}
-            type="button"
-            onClick={() => setTab(l)}
-            className={cn('rounded px-3 py-1 text-body-sm font-semibold uppercase', tab === l ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink')}
-          >
+          <Segment key={l} active={tab === l} onClick={() => setTab(l)} className="uppercase">
             {l}
-          </button>
+          </Segment>
         ))}
-      </div>
+      </SegmentedControl>
 
       {/* Картинка hero — drag-and-drop (переиспользуем медиа-пайплайн) */}
       <HeroImage initial={heroPreview} lang={lang} onRef={(ref) => setC((p) => ({ ...p, heroImage: ref }))} />

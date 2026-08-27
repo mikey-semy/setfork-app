@@ -16,6 +16,7 @@ import { rowsToCmp } from '@/features/library/diff'
 import { CodeDiff, ListDiff } from '@/features/library/DiffViews'
 import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
+import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
 
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -49,14 +50,9 @@ export default async function ComparePage({
 
   const base = `/${owner}/${slug}/compare`
   const toggle = (key: 'code' | 'list', icon: ReactNode, labelKey: 'viewCode' | 'viewList') => (
-    <Link
-      href={`${base}?from=${fromN}&to=${toN}&view=${key}`}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-body-sm font-medium ${
-        view === key ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
-      }`}
-    >
+    <Segment active={view === key} href={`${base}?from=${fromN}&to=${toN}&view=${key}`}>
       {icon} {t(labelKey, lang)}
-    </Link>
+    </Segment>
   )
 
   return (

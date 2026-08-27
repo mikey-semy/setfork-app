@@ -22,6 +22,7 @@ import { Input } from '@/shared/ui/input'
 import { SearchField } from '@/shared/ui/SearchField'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { SideNav } from '@/shared/ui/SideNav'
+import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
 import { Spinner } from '@/shared/ui/Spinner'
 import { TextButton } from '@/shared/ui/TextButton'
 import { Switch } from '@/shared/ui/switch'
@@ -141,6 +142,27 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
               <span>{CONTROL_TEXT[s]}</span>
             </div>
           ))}
+        </div>
+      </Section>
+
+      <Section title={t('admin.segmented', lang)} hint={t('admin.segmentedHint', lang)}>
+        <div className="flex flex-wrap items-center gap-4">
+          <SegmentedControl label="xs" size="xs">
+            <Segment active>xs</Segment>
+            <Segment active={false}>второй</Segment>
+          </SegmentedControl>
+          <SegmentedControl label="sm">
+            <Segment active>sm</Segment>
+            <Segment active={false}>второй</Segment>
+          </SegmentedControl>
+          <SegmentedControl label="pill" size="xs" shape="pill">
+            <Segment active className="uppercase">
+              ru
+            </Segment>
+            <Segment active={false} className="uppercase">
+              en
+            </Segment>
+          </SegmentedControl>
         </div>
       </Section>
 

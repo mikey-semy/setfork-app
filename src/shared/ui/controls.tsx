@@ -4,8 +4,9 @@ import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Monitor, Moon, Sun } from 'lucide-react'
-import { LOCALES, type Lang } from '@/shared/i18n'
+import { LOCALES, t, type Lang } from '@/shared/i18n'
 import { Tooltip } from './Tooltip'
+import { Segment, SegmentedControl } from './SegmentedControl'
 
 export function LangSwitch({ lang }: { lang: Lang }) {
   const router = useRouter()
@@ -15,21 +16,13 @@ export function LangSwitch({ lang }: { lang: Lang }) {
     router.refresh()
   }
   return (
-    <span className="inline-flex gap-0.5 rounded-full border border-border bg-surface-2 p-0.5">
+    <SegmentedControl label={t('language', lang)} size="xs" shape="pill">
       {LOCALES.map((l) => (
-        <button
-          key={l}
-          type="button"
-          onClick={() => set(l)}
-          // eslint-disable-next-line no-restricted-syntax -- сегмент переключателя, а не кнопка в ряду
-          className={`cursor-pointer rounded-full px-2.5 py-1 text-caption font-semibold uppercase transition-colors ${
-            lang === l ? 'bg-primary text-primary-fg' : 'text-ink-2'
-          }`}
-        >
+        <Segment key={l} active={lang === l} onClick={() => set(l)} className="uppercase">
           {l}
-        </button>
+        </Segment>
       ))}
-    </span>
+    </SegmentedControl>
   )
 }
 
@@ -57,32 +50,27 @@ export function ThemeModeSwitch({ labels = false, lang }: { labels?: boolean; la
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
-  const ru = lang === 'ru'
+  // Язык нужен обоим видам переключателя, а приходит он пропом только из настроек:
+  // в дропдауне аватарки подписи живут в подсказках, и там язык знает вызывающий.
+  const l: Lang = lang ?? 'en'
   const modes = [
-    { value: 'light', label: ru ? 'Светлая' : 'Light', icon: Sun },
-    { value: 'dark', label: ru ? 'Тёмная' : 'Dark', icon: Moon },
-    { value: 'system', label: ru ? 'Как в системе' : 'System', icon: Monitor },
+    { value: 'light', label: t('lightMode', l), icon: Sun },
+    { value: 'dark', label: t('darkMode', l), icon: Moon },
+    { value: 'system', label: t('systemMode', l), icon: Monitor },
   ] as const
   const current = mounted ? theme : undefined
 
   if (!labels) {
     return (
-      <span className="inline-flex gap-0.5 rounded-full border border-border bg-surface-2 p-0.5">
+      <SegmentedControl label={t('theme', l)} size="xs" shape="pill">
         {modes.map(({ value, label, icon: Icon }) => (
           <Tooltip key={value} label={label}>
-            <button
-              type="button"
-              aria-label={label}
-              onClick={() => setTheme(value)}
-              className={`grid h-6 w-6 place-items-center rounded-full transition-colors ${
-                current === value ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
-              }`}
-            >
+            <Segment active={current === value} aria-label={label} onClick={() => setTheme(value)} className="px-1.5">
               <Icon size={13} />
-            </button>
+            </Segment>
           </Tooltip>
         ))}
-      </span>
+      </SegmentedControl>
     )
   }
   return (

@@ -9,6 +9,7 @@ import { setReportStatus } from './actions'
 import type { ReportFilter, ReportItem } from './queries'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
 
 const REASON_LABEL = {
   illegal: 'rpReasonIllegal',
@@ -101,15 +102,9 @@ export function ReportsTable({
     <div>
       <div className="mb-4 flex flex-wrap gap-1.5">
         {tabs.map((tab) => (
-          <Link
-            key={tab.key}
-            href={tab.key === 'all' ? '/admin/reports' : `/admin/reports?filter=${tab.key}`}
-            className={`rounded-md px-3 py-1.5 text-body-sm font-semibold ${
-              filter === tab.key ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
-            }`}
-          >
+          <Segment key={tab.key} active={filter === tab.key} href={tab.key === 'all' ? '/admin/reports' : `/admin/reports?filter=${tab.key}`}>
             {tab.label} <span className="opacity-70">{counts[tab.key]}</span>
-          </Link>
+          </Segment>
         ))}
       </div>
       {items.length === 0 ? (
