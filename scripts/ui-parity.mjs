@@ -127,10 +127,23 @@ const ROLES = [
     match: ({ tag, attrs }) => isHost(tag) && tag !== 'iframe' && tag !== 'svg' && hasAttr(attrs, 'title'),
   },
   {
-    key: 'кликабельный не-контрол',
-    primitive: 'button / IconButton (или role + обработка клавиш)',
-    hint: 'onClick на div/span/li/tr: с клавиатуры недостижимо, читалка не объявляет',
-    match: ({ tag, attrs }) => ['div', 'span', 'li', 'tr', 'td', 'p'].includes(tag) && hasAttr(attrs, 'onClick'),
+    key: 'клик на не-контроле без клавиатуры',
+    primitive: 'button / IconButton — или role + tabIndex + onKeyDown, как требует WAI-ARIA',
+    hint: 'onClick на div/span, до которого нельзя добраться с клавиатуры',
+    // ⚠️ Само по себе `onClick` на `div` — НЕ нарушение. Дропзона и выбираемая карточка
+    // не могут быть <button>: внутри них живут свои кнопки, и нативная кнопка их бы
+    // проглотила. Признанный путь для таких — role + tabIndex + обработка Enter/Пробела,
+    // и он у нас применён верно в пяти местах из шести. Считать их долгом значило бы
+    // гнать людей ломать рабочее (тот же K41, четвёртый раз за день).
+    //
+    // Нарушение — это клик БЕЗ клавиатурного пути. Ровно его и ищем.
+    // `aria-hidden` тоже снимает вопрос: подложка «клик мимо» диктору не видна, а
+    // клавиатурный путь закрытия — Esc.
+    match: ({ tag, attrs }) =>
+      ['div', 'span', 'li', 'tr', 'td', 'p'].includes(tag) &&
+      hasAttr(attrs, 'onClick') &&
+      !/(?:^|\s)aria-hidden(?![\w-])/.test(attrs) &&
+      !(hasAttr(attrs, 'role') && hasAttr(attrs, 'tabIndex') && hasAttr(attrs, 'onKeyDown')),
   },
 ]
 

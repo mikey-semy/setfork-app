@@ -5,6 +5,8 @@ import { Check } from 'lucide-react'
 import { ThemeModeSwitch } from '@/shared/ui/controls'
 import { t, type Lang } from '@/shared/i18n'
 import { saveAppearance } from './appearance-actions'
+import { cardClass } from '@/shared/ui/card-style'
+import { cn } from '@/shared/lib/cn'
 
 // Настройки внешнего вида (по образцу aep-fullstack):
 //   режим — next-themes (light/dark/system);
@@ -51,10 +53,14 @@ function applyAttr(attr: 'data-accent' | 'data-font' | 'data-scale', key: string
   }
 }
 
+/** Плитка выбора (акцент, масштаб, шрифт): рамка, фон и отступ — из шкалы карточек,
+ *  а не свои. Выбранная берёт тон `accent` — тот же, которым помечен выбор везде. */
 const pickCls = (on: boolean) =>
-  `flex items-center gap-2 rounded-md border px-3 py-2 text-body text-ink transition-colors ${
-    on ? 'border-accent bg-accent-soft' : 'border-border hover:border-border-strong'
-  }`
+  cardClass({
+    tone: on ? 'accent' : 'surface',
+    pad: 'sm',
+    className: cn('flex items-center gap-2 text-body text-ink transition-colors', !on && 'hover:border-border-strong'),
+  })
 
 export function AppearanceSettings({
   lang,

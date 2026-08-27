@@ -10,6 +10,7 @@ import { DiffComments, type DiffCommentLabels, type RowThread } from './DiffComm
 import { ViewedToggle } from './ViewedToggle'
 import { blockFingerprint, isStaleMark } from './viewed-fingerprint'
 import { cardClass } from '@/shared/ui/card-style'
+import { badgeClass } from '@/shared/ui/badge'
 
 // Два вида диффа версий — ОДИН источник правды для сравнения версий И для правки
 // (PR). Раньше «код»/«список» жили локальными функциями внутри страницы
@@ -183,7 +184,7 @@ export function ListDiff({
               {e.status !== 'removed' && e.refs && e.refs.length > 0 && (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {e.refs.map((r, k) => {
-                    const cls = 'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-caption'
+                    const cls = badgeClass({ variant: 'chip', shape: 'square', className: 'font-normal' })
                     // Ссылка без URL — не делаем «#»-якорь на верх страницы, показываем как текст.
                     return r.url ? (
                       <a key={k} href={safeHref(r.url) || undefined} target="_blank" rel="noreferrer" className={`${cls} text-accent hover:underline`}>

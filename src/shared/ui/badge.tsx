@@ -33,6 +33,11 @@ export type BadgeVariant =
 
 export type BadgeSize = 'sm' | 'md'
 
+/** Форма пилюли. `square` — та же метка, но со скруглением карточки: так рисуют
+ *  ссылку-источник у шага и в диффе (два файла держали для неё одинаковый рецепт
+ *  константой). Пилюля круглая по умолчанию: метка статуса чаще именно такая. */
+export type BadgeShape = 'pill' | 'square'
+
 const VARIANTS: Record<BadgeVariant, string> = {
   outline: 'border border-border text-muted',
   chip: 'border border-border bg-surface-2 text-ink-2',
@@ -54,16 +59,34 @@ const SIZES: Record<BadgeSize, string> = {
   md: 'px-2.5 text-body-sm',
 }
 
+/**
+ * Вид метки ОТДЕЛЬНО от самой метки — как `buttonClass` у кнопки.
+ *
+ * Нужен там, где метку носит не `<span>`: ссылка-источник у шага списка и в диффе.
+ * Пока такой формы не было, оба места держали рецепт локальной константой — и это
+ * ровно тот случай, когда примитив есть, а воспользоваться им нечем.
+ */
+export function badgeClass({
+  variant = 'outline',
+  size = 'sm',
+  shape = 'pill',
+  className,
+}: { variant?: BadgeVariant; size?: BadgeSize; shape?: BadgeShape; className?: string } = {}): string {
+  return cn(
+    'inline-flex items-center gap-1 py-0.5 font-semibold',
+    shape === 'pill' ? 'rounded-full' : 'rounded-md',
+    SIZES[size],
+    VARIANTS[variant],
+    className,
+  )
+}
+
 export function Badge({
   variant = 'outline',
   size = 'sm',
+  shape = 'pill',
   className,
   ...props
-}: React.HTMLAttributes<HTMLSpanElement> & { variant?: BadgeVariant; size?: BadgeSize }) {
-  return (
-    <span
-      className={cn('inline-flex items-center gap-1 rounded-full py-0.5 font-semibold', SIZES[size], VARIANTS[variant], className)}
-      {...props}
-    />
-  )
+}: React.HTMLAttributes<HTMLSpanElement> & { variant?: BadgeVariant; size?: BadgeSize; shape?: BadgeShape }) {
+  return <span className={badgeClass({ variant, size, shape, className })} {...props} />
 }

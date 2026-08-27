@@ -13,6 +13,7 @@ import { renderWikiLinks } from '@/shared/lib/wiki-links'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ListPageData } from './load'
 import { cardClass } from '@/shared/ui/card-style'
+import { badgeClass } from '@/shared/ui/badge'
 
 type Props = Pick<ListPageData, 'tpl' | 'base' | 'viewer' | 'readOnlyView' | 'isOwner' | 'digSteps' | 'stepImages' | 'mon'> & {
   step: ListPageData['steps'][number]
@@ -139,8 +140,11 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
             <div className="mt-3 flex flex-wrap gap-2">
               {refs.map((r) => {
                 // Подпись ссылки нередко и есть URL — без переноса чип уносит страницу.
-                const cls =
-                  'inline-flex min-w-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-caption text-accent [overflow-wrap:anywhere]'
+                const cls = badgeClass({
+                  variant: 'chip',
+                  shape: 'square',
+                  className: 'min-w-0 px-2.5 py-1 text-accent [overflow-wrap:anywhere]',
+                })
                 // Подписи может не быть (ссылку кладут одним url) — показываем домен.
                 const text = linkLabel(r.label, r.url)
                 return r.url ? (

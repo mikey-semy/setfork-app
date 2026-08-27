@@ -67,7 +67,9 @@ function SizeTag({ children }: { children: React.ReactNode }) {
 /** Живое демо классов появления: перезапуск перемонтированием по ключу. */
 function MotionDemo({ lang }: { lang: Lang }) {
   const [run, setRun] = useState(0)
-  const box = 'rounded-md border border-border bg-surface-2 px-3 py-2 text-body text-ink'
+  // Подложка ДЕМО, а не роль интерфейса: три одинаковых прямоугольника нужны только
+  // затем, чтобы на них было видно движение. Своего примитива у такого нет и не надо.
+  const box = cardClass({ tone: 'inset', pad: 'sm', className: 'text-body text-ink' })
   return (
     <div className="flex flex-col gap-3">
       <div key={run} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
