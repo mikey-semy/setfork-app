@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PANEL_PAD } from './control'
 import { PanelFoot, PanelHead } from './panel-parts'
+import { BACKDROP_DIM } from './Backdrop'
 
 // Единая модальная панель-оверлей для всех центр-портальных пикеров
 // (эмодзи, папки, пины, фильтр, assignee/label/milestone, мобильный поиск).
@@ -107,7 +108,7 @@ export function OverlayPanel({
           удобство мыши; у клавиатуры для этого есть Esc, он обрабатывается выше.
           Отключать линт не пришлось: правила jsx-a11y пропускают aria-hidden сами —
           скрытый от диктора элемент не обязан быть достижим с клавиатуры. */}
-      <div className="animate-sf-fade absolute inset-0 bg-black/30" aria-hidden onClick={onClose} />
+      <div className={`animate-sf-fade absolute inset-0 ${BACKDROP_DIM}`} aria-hidden onClick={onClose} />
       <div
         ref={panelRef}
         role="dialog"

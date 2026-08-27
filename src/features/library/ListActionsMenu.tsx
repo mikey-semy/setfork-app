@@ -6,13 +6,13 @@ import { useRouter } from 'next/navigation'
 import { Languages, MoreHorizontal, Pencil, Rocket, type LucideIcon } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { buttonClass } from '@/shared/ui/button-style'
 import { LANG_META, t, type Lang } from '@/shared/i18n'
 import { toast } from '@/shared/ui/toast'
 // Прямые модули, а не фасад './actions': бочка тянет в клиентский бандл все
 // экшены библиотеки разом (react-doctor/no-barrel-import).
 import { publishList } from './actions/versions'
 import { translateList } from './actions/ai'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /**
  * Вторичные действия панели списка: правка, перевод, публикация черновика.
@@ -114,7 +114,6 @@ export function ListActionsMenu({
 
   const editHref = isOwner ? `${base}/edit` : `${base}/suggest`
   const editLabel = isOwner ? t('edit', lang) : t('suggestEdit', lang)
-  const btn = buttonClass({ className: 'shrink-0 p-0 size-8' })
 
   // Пункты СПИСКОМ, а не лесенкой условий в разметке: новое действие = новая строка,
   // а решение «меню или одна кнопка» считается по длине и не переписывается заново.
@@ -135,9 +134,9 @@ export function ListActionsMenu({
   if (actions.length === 1) {
     return (
       <Tooltip label={editLabel}>
-        <Link href={editHref} aria-label={editLabel} className={btn}>
+        <IconButton size="md" href={editHref} label={editLabel}>
           <Pencil size={16} />
-        </Link>
+        </IconButton>
       </Tooltip>
     )
   }
@@ -148,7 +147,7 @@ export function ListActionsMenu({
           обычное «Ещё действия». Само меню остаётся единственным явным сообщением. */}
       <Tooltip label={hintPhase ? publishHintLabel : t('library.moreActions', lang)}>
         <DropdownMenuTrigger asChild>
-          <button type="button" aria-label={hintPhase ? publishHintLabel : t('library.moreActions', lang)} className={`relative ${btn}`}>
+          <IconButton size="md" label={hintPhase ? publishHintLabel : t('library.moreActions', lang)} className="relative">
             <MoreHorizontal size={16} />
             {/* Открытие меню = пользователь «заглянул»: точка лопается и навсегда
                 запоминается просмотренной для этого списка. */}
@@ -159,7 +158,7 @@ export function ListActionsMenu({
                 className={`absolute right-0.5 top-0.5 size-1.5 rounded-full bg-warn ${hintPhase === 'popping' ? 'animate-sf-hint-burst' : ''}`}
               />
             )}
-          </button>
+          </IconButton>
         </DropdownMenuTrigger>
       </Tooltip>
       <DropdownMenuContent align="end">

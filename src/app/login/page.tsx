@@ -10,6 +10,7 @@ import { LoginForm } from "@/features/auth/AuthForms";
 import { PasskeyLoginButton } from "@/features/auth/PasskeyLoginButton";
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from "@/shared/ui/button-style"
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 export async function generateMetadata() {
   const lang = await getLang();
@@ -71,10 +72,10 @@ export default async function LoginPage({
           </Link>
         </div>
 
-        <div className="my-5 flex items-center gap-3 text-caption uppercase tracking-wider text-muted">
+        <SectionLabel className="my-5 flex items-center gap-3">
           <span className="h-px flex-1 bg-border" /> {t("orSep", lang)}{" "}
           <span className="h-px flex-1 bg-border" />
-        </div>
+        </SectionLabel>
 
         <div className="mb-3">
           <PasskeyLoginButton lang={lang} />

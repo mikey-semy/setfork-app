@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { count } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { agentActions, db } from '@/shared/db'
 import { hasActions, stallReport } from '@/shared/agents/stall'
@@ -9,18 +9,47 @@ import { resetTables } from '../../helpers/reset-db'
 // НЕ прогресс, но и не поломка; прогресс — только то, после чего библиотека стала другой.
 // Спутать их значит либо бить тревогу зря, либо не заметить настоящий холостой ход.
 
+/** Опора времени — фиксированная и в прошлом: порядок не должен зависеть от часов машины. */
+const BASE = Date.UTC(2026, 0, 1)
+
+/** Номер вставки в пределах теста: он и задаёт время. */
+let tick = 0
+
 beforeAll(async () => {
   await resetTables([agentActions])
 })
 
 beforeEach(async () => {
   await db.delete(agentActions)
+  tick = 0
+  // Подготовка УТВЕРЖДАЕТ свой результат. Без этого оборванное соединение к базе —
+  // а на общих раннерах это бывает — даёт молча непочищенную таблицу, и красным приходит
+  // утверждение про бизнес-логику («ожидал 0 прогресса, получил 1») вместо правды
+  // («не удалось подготовить состояние»). Отличить окружение от дефекта по такому
+  // сообщению нельзя, и час уходит на гадание по load average.
+  const [{ n }] = await db.select({ n: count() }).from(agentActions)
+  expect(n, 'подготовка теста не удалась: таблица agent_actions не очистилась').toBe(0)
 })
 
+/**
+ * ⚠️ Время задаётся ЯВНО и по счётчику, а НЕ пересчитывается из `ctid`.
+ *
+ * Прежний приём — `update … set occurred_at = now() + (ctid::text::point)[1] * interval
+ * '1 millisecond'` — неверен по построению. `ctid` это ФИЗИЧЕСКОЕ место строки, пара
+ * «страница, смещение», и вторая координата — смещение ВНУТРИ страницы. Каждый `UPDATE`
+ * переписывает строку на новое место, поэтому после десятка вызовов смещения растут; а как
+ * только таблица перестаёт помещаться в одну восьмикилобайтную страницу, отсчёт на новой
+ * странице начинается заново — и строка, вставленная ПЕРВОЙ, получает время БОЛЬШЕ, чем
+ * вставленная последней. Порядок «по вставке» ломается тем вернее, чем больше строк и чем
+ * больше мёртвых версий оставили соседние тесты.
+ *
+ * Так падал тест «окно ограничено» (13 вставок, 13 обновлений ВСЕЙ таблицы):
+ * `expected { seen: 6, progress: 1 } to match { progress: 0 }` — давний прогресс оказывался
+ * среди шести свежих. Выглядело как протечка между тестами и списывалось на нагрузку.
+ */
 const act = async (action: string, status: 'ok' | 'skipped' | 'error' | 'dry-run' = 'ok', loop = 'gardener') => {
-  await db.insert(agentActions).values({ loop, action, resultStatus: status })
-  // Раздвигаем во времени: порядок внутри такта иначе не определён.
-  await db.execute(sql`update ${agentActions} set occurred_at = now() + (ctid::text::point)[1] * interval '1 millisecond'`)
+  tick += 1
+  await db.insert(agentActions).values({ loop, action, resultStatus: status, occurredAt: new Date(BASE + tick * 1000) })
 }
 
 describe('холостой ход', () => {

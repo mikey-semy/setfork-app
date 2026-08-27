@@ -7,6 +7,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
+import { Button } from '@/shared/ui/button'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 // Бренд-иконки (24×24, single-path, currentColor) — в lucide их нет.
 const P = (d: string) => (
@@ -103,7 +105,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
 
       <div className="mt-2 border-t border-border pt-2">
         {shareViaLabel && (
-          <div className="mb-1.5 px-1.5 text-caption font-semibold uppercase tracking-wider text-muted">{shareViaLabel}</div>
+          <SectionLabel className="mb-1.5 px-1.5">{shareViaLabel}</SectionLabel>
         )}
         <div className="grid grid-cols-3 gap-1">
           {nets.map((n) => (
@@ -137,7 +139,6 @@ export function ShareButton({
   path,
   title = '',
   ru = false,
-  className,
   label,
   copiedLabel,
   copyLinkLabel,
@@ -148,15 +149,22 @@ export function ShareButton({
   title?: string
   /** Порядок соцсетей под аудиторию локали (ru: VK/TG/OK первыми). */
   ru?: boolean
-  className?: string
 } & ShareLabels) {
   return (
     <DropdownMenu>
       <Tooltip label={label}>
       <DropdownMenuTrigger asChild>
-        <button type="button" className={className} aria-label={label || 'Share'}>
+        {/* Вид решает САМА кнопка, а не вызывающий: на телефоне квадрат со значком,
+            от sm — значок с подписью. Раньше этот рецепт приезжал пропом className, и
+            подпись для диктора падала на английское 'Share' в русском интерфейсе. */}
+        {/* Меняется только ШИРИНА: на телефоне квадрат под значок, от sm — авто под
+            подпись. Высоту не трогаем вовсе, она приходит из ступени md. Прошлая
+            редакция писала `size-8 sm:size-auto`, а `size-auto` снимает ОБЕ стороны —
+            на десктопе кнопка схлопывалась до высоты строки и выпадала из ряда
+            32-пиксельных контролов шапки. Найдено авто-ревью. */}
+        <Button size="md" aria-label={label} className="w-8 p-0 sm:w-auto sm:px-3.5">
           <Share2 size={15} /> {label && <span className="hidden sm:inline">{label}</span>}
-        </button>
+        </Button>
       </DropdownMenuTrigger>
       </Tooltip>
       <DropdownMenuContent align="end" className="w-menu p-3">

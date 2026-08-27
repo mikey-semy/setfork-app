@@ -7,6 +7,7 @@ import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Button } from '@/shared/ui/button'
 import { updatePins } from '@/features/library/actions'
 import { t, type Lang } from '@/shared/i18n'
+import { TextButton } from '@/shared/ui/TextButton'
 
 const MAX_PINS = 6
 
@@ -41,13 +42,9 @@ export function PinsPicker({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-accent"
-      >
+      <TextButton tone="accent" onClick={() => setOpen(true)} className="gap-1">
         <Pencil size={11} /> {ru ? 'Настроить' : 'Customize your pins'}
-      </button>
+      </TextButton>
       {/* Шапка одна — у PickerPanel (title со счётчиком); OverlayPanel остаётся
           без title, иначе получилось бы два заголовка. */}
       {/* bare: см. StarFolderMenu — поля задаёт выбиралка, линии идут от края до края. */}

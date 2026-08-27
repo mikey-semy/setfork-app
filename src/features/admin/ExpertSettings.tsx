@@ -23,6 +23,7 @@ import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } fr
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { TextButton } from '@/shared/ui/TextButton'
 
 /**
  * Менеджер ростера совета: кто такие эксперты, как их зовут, чем они думают.
@@ -100,6 +101,7 @@ function AvatarPicker({
   return (
     <div className="relative shrink-0">
       <Tooltip label={t('admin.change', lang)}>
+        {/* ui-parity-ok: аватар как открывалка — сам круг и есть вид, рамка и отступ кнопки его бы обрезали */}
         <button type="button" onClick={() => setOpen((v) => !v)} className="relative block">
           <GnomeAvatar src={src} size={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-accent" />
           {busy && (
@@ -113,6 +115,7 @@ function AvatarPicker({
         <div className={cardClass({ pad: 'xs', className: 'absolute left-0 top-full z-20 mt-2 w-menu shadow-card' })}>
           <div className="grid max-h-34 grid-cols-6 gap-1 overflow-y-auto">
             {gallery.map((g) => (
+              // ui-parity-ok: выбор аватара — круг подсвечивается кольцом, рамка и отступ карточки его бы раздули
               <button
                 key={g}
                 type="button"
@@ -140,13 +143,9 @@ function AvatarPicker({
               {t('admin.uploadOwn', lang)}
             </label>
             {uploadedUrl && (
-              <button
-                type="button"
-                onClick={() => void resetExpertAvatar(id)}
-                className="text-caption text-muted hover:text-ink"
-              >
+              <TextButton size="caption" onClick={() => void resetExpertAvatar(id)}>
                 {t('admin.reset2', lang)}
-              </button>
+              </TextButton>
             )}
           </div>
           {err && <p className="mt-1 text-caption text-danger">{err}</p>}

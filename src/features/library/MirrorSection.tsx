@@ -117,7 +117,7 @@ export function MirrorSection({
         // flex-wrap: на 360px три кнопки в ряд не помещаются, и перенос обязан
         // быть предусмотрен, а не случиться. Результат проверки — своей строкой
         // на всю ширину (Alert внутри кнопки-компонента).
-        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-4">
           {/* Проверка доступа рядом с синхронизацией, но своей кнопкой: она
               ничего не пушит и не трогает статус — путать их нельзя. */}
           <MirrorCheckButton templateId={templateId} lang={lang} />

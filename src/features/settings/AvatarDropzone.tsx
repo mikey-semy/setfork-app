@@ -8,6 +8,7 @@ import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
+import { TextButton } from '@/shared/ui/TextButton'
 
 const ACCEPT = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 const MAX_BYTES = 2 * 1024 * 1024
@@ -135,48 +136,46 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
           <p className="mt-1 text-body-sm text-muted">{t('avatarHint', lang)}</p>
           {error && <p className="mt-1 text-body-sm text-danger">{error}</p>}
           {preview && (
-            <button
-              type="button"
+            <TextButton
               onClick={(e) => {
                 e.stopPropagation()
                 clear()
               }}
-              className="mt-1.5 inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-ink"
+              className="mt-1.5 gap-1"
             >
               <X size={12} /> {t('removePhoto', lang)}
-            </button>
+            </TextButton>
           )}
           {/* Действия над УЖЕ загруженным аватаром (когда нет нового файла): кадрировать / убрать. */}
           {!preview && avatarUrl && !removed && (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <button
-                type="button"
+              <TextButton
                 onClick={(e) => {
                   e.stopPropagation()
                   setCropSrc(avatarUrl)
                 }}
-                className="inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-ink"
+                className="gap-1"
               >
                 <Crop size={12} /> {t('edit', lang)}
-              </button>
-              <button
-                type="button"
+              </TextButton>
+              <TextButton
+                tone="danger"
                 onClick={(e) => {
                   e.stopPropagation()
                   setRemoved(true)
                 }}
-                className="inline-flex items-center gap-1 text-body-sm text-ink-2 hover:text-danger"
+                className="gap-1"
               >
                 <X size={12} /> {t('removePhoto', lang)}
-              </button>
+              </TextButton>
             </div>
           )}
           {removed && (
             <p className="mt-1.5 text-body-sm text-muted">
               {t('avatarWillRemove', lang)}{' '}
-              <button type="button" onClick={(e) => { e.stopPropagation(); setRemoved(false) }} className="text-ink-2 underline hover:text-ink">
+              <TextButton touch="none" onClick={(e) => { e.stopPropagation(); setRemoved(false) }} className="underline">
                 {t('undo', lang)}
-              </button>
+              </TextButton>
             </p>
           )}
         </div>

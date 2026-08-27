@@ -61,7 +61,7 @@ export function DevLoopsTable({ rows, lang }: { rows: LoopRow[]; lang: Lang }) {
       size: 112,
       render: (r) => (
         // flex-wrap: в карточной мобиле «Сбросить» + «Пустить» стоят в половине ширины карточки.
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {r.circuitTripped && (
             <form action={resetLoopCircuit}>
               <input type="hidden" name="type" value={r.type} />

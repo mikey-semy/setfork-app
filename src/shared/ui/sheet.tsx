@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { iconSizeFor, LAYER } from './control'
 import { IconButton } from './IconButton'
+import { BACKDROP_DIM } from './Backdrop'
 
 /**
  * Боковая панель (shadcn Sheet поверх Radix Dialog): выезжает с края экрана и
@@ -55,7 +56,7 @@ function SheetContent({
     <>
       <SheetPrimitive.Overlay
         forceMount={keep}
-        className={cn('fixed inset-0 bg-black/50 backdrop-blur-[1px] data-[state=closed]:hidden', LAYER.overlay)}
+        className={cn('fixed inset-0 backdrop-blur-[1px] data-[state=closed]:hidden', BACKDROP_DIM, LAYER.overlay)}
       />
       <SheetPrimitive.Content
         forceMount={keep}

@@ -23,6 +23,7 @@ import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Textarea } from '@/shared/ui/textarea'
+import { Alert } from '@/shared/ui/Alert'
 
 export interface RunStepVM {
   id: string
@@ -231,15 +232,18 @@ export function RunView({
           бы сертификат, который страница выдачи честно не даёт. Отмеченные шаги здесь
           только выбирают формулировку — завершено сейчас или уже было раньше. */}
       {certificateHref && completed && (
-        <div className="mb-5 flex items-center gap-3 rounded-lg border border-ok/40 bg-ok/10 px-4 py-3">
-          <GraduationCap size={18} className="shrink-0 text-ok" />
-          <span className="min-w-0 flex-1 text-body font-medium text-ink">
-            {total > 0 && done === total && blockedCount === 0 ? t('courseAllStepsDone', lang) : t('courseCompletedEarlier', lang)}
-          </span>
-          <Link href={certificateHref} className={buttonClass({ className: 'border-ok/40 text-ok hover:bg-ok/15' })}>
-            <Award size={14} /> {t('courseCertificate', lang)}
-          </Link>
-        </div>
+        <Alert
+          variant="ok"
+          icon={GraduationCap}
+          className="mb-5 text-ink"
+          action={
+            <Link href={certificateHref} className={buttonClass({ className: 'border-ok/40 text-ok hover:bg-ok/15' })}>
+              <Award size={14} /> {t('courseCertificate', lang)}
+            </Link>
+          }
+        >
+          {total > 0 && done === total && blockedCount === 0 ? t('courseAllStepsDone', lang) : t('courseCompletedEarlier', lang)}
+        </Alert>
       )}
 
       {/* Шаги */}
@@ -274,10 +278,10 @@ export function RunView({
           return (
             <div
               key={s.id}
-              // eslint-disable-next-line no-restricted-syntax -- цвет рамки меняется по состоянию шага прогона
-              className={`relative rounded-lg border p-4 transition-colors ${
-                s.blocked ? 'border-danger/40 bg-danger/5' : s.done ? 'border-ok/40 bg-ok/5' : 'border-border bg-surface'
-              }`}
+              className={cardClass({
+                tone: s.blocked ? 'danger' : s.done ? 'ok' : 'surface',
+                className: 'relative transition-colors',
+              })}
             >
               {/* Служебные иконки — правый верхний угол (mobile-ui: absolute, без текста, тултипы):
                   «Шаг не получается» (красная) + «кирка» (dig-чат «в шахту»). */}
@@ -299,10 +303,17 @@ export function RunView({
 
               {/* Шапка: чекбокс (верх-лево) + номер + заголовок + уровень. pr — под угловые иконки. */}
               <div className="flex items-start gap-2.5 pr-14">
+                {/* Это ФЛАЖОК, а не кнопка: диктор обязан сказать «отмечено / не отмечено», иначе
+                    человек слышит «кнопка check» и не узнаёт состояние шага. Роль ставим руками —
+                    вид тут крупная иконка на всю тач-цель, нативный флажок так не рисуется.
+                    Подпись была английским литералом ('check'/'uncheck') в русском интерфейсе.
+                    ui-parity-ok: флажок шага — крупный значок на всю тач-цель, нативным input не рисуется */}
                 <button
                   type="button"
+                  role="checkbox"
+                  aria-checked={s.done}
                   onClick={() => toggle(i)}
-                  aria-label={s.done ? 'uncheck' : 'check'}
+                  aria-label={t(s.done ? 'runStepUncheck' : 'runStepCheck', lang)}
                   className={`grid size-8 shrink-0 place-items-center ${s.done ? 'text-ok' : 'text-muted hover:text-ink'}`}
                 >
                   {s.done ? <SquareCheckBig size={20} /> : <Square size={20} />}
@@ -337,7 +348,15 @@ export function RunView({
                       const checked = s.subtasksDone.includes(idx)
                       return (
                         <li key={idx}>
-                          <button type="button" onClick={() => toggleSub(i, idx)} className="flex items-start gap-2 text-left text-body text-ink-2">
+                          {/* Подпункт — тот же флажок: имя ему даёт собственный текст, не хватало только состояния.
+                              ui-parity-ok: флажок подпункта, значок и текст в одной строке — нативным input не рисуется */}
+                          <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={checked}
+                            onClick={() => toggleSub(i, idx)}
+                            className="flex items-start gap-2 text-left text-body text-ink-2"
+                          >
                             <span className={`mt-0.5 shrink-0 ${checked ? 'text-ok' : 'text-muted'}`}>{checked ? <Check size={14} /> : <Square size={14} />}</span>
                             <span className={`min-w-0 [overflow-wrap:anywhere] ${checked ? 'line-through opacity-70' : ''}`}>{sub}</span>
                           </button>

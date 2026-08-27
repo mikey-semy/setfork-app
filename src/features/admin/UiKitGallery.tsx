@@ -22,7 +22,10 @@ import { Input } from '@/shared/ui/input'
 import { SearchField } from '@/shared/ui/SearchField'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { SideNav } from '@/shared/ui/SideNav'
+import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
+import { TextButton } from '@/shared/ui/TextButton'
 import { Switch } from '@/shared/ui/switch'
 import { TagInput } from '@/shared/ui/TagInput'
 import { Textarea } from '@/shared/ui/textarea'
@@ -93,7 +96,7 @@ function RowCheck({ size, lang }: { size: ControlSize; lang: Lang }) {
   return (
     <div className="flex items-center gap-2">
       <SizeTag>{size}</SizeTag>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
         <Button size={size} variant="primary">
           {t('common.save', lang)}
         </Button>
@@ -143,6 +146,67 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         </div>
       </Section>
 
+      <Section title={t('admin.alertAction', lang)} hint={t('admin.alertActionHint', lang)}>
+        <Alert variant="accent" action={<Button size="sm">Действие</Button>}>
+          Полоса контекста: «вы смотрите ветку», «версия v3, только чтение».
+        </Alert>
+        <Alert variant="warn" action={<TextButton tone="accent">Ссылкой</TextButton>}>
+          Тот же блок с тихим действием вместо кнопки.
+        </Alert>
+      </Section>
+
+      <Section title={t('admin.simpleTable', lang)} hint={t('admin.simpleTableHint', lang)}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Колонка</TableHead>
+              <TableHead className="text-right">Число</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>Строка</TableCell>
+              <TableCell className="text-right font-mono">42</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Ещё строка</TableCell>
+              <TableCell className="text-right font-mono">7</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </Section>
+
+      <Section title={t('admin.segmented', lang)} hint={t('admin.segmentedHint', lang)}>
+        <div className="flex flex-wrap items-center gap-4">
+          <SegmentedControl label="xs" size="xs">
+            <Segment active>xs</Segment>
+            <Segment active={false}>второй</Segment>
+          </SegmentedControl>
+          <SegmentedControl label="sm">
+            <Segment active>sm</Segment>
+            <Segment active={false}>второй</Segment>
+          </SegmentedControl>
+          <SegmentedControl label="pill" size="xs" shape="pill">
+            <Segment active className="uppercase">
+              ru
+            </Segment>
+            <Segment active={false} className="uppercase">
+              en
+            </Segment>
+          </SegmentedControl>
+        </div>
+      </Section>
+
+      <Section title={t('admin.textActions', lang)} hint={t('admin.textActionsHint', lang)}>
+        <div className="flex flex-wrap items-center gap-4">
+          <TextButton tone="accent">accent</TextButton>
+          <TextButton>muted</TextButton>
+          <TextButton tone="danger">danger</TextButton>
+          <TextButton size="caption">caption</TextButton>
+          <TextButton size="md">md</TextButton>
+        </div>
+      </Section>
+
       <Section
         title={t('admin.buttons', lang)}
         hint={t('admin.variantsSizesButtonText', lang)}
@@ -150,7 +214,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         {SIZES.map((size) => (
           <div key={size} className="flex items-center gap-2">
             <SizeTag>{size}</SizeTag>
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
               {BUTTON_VARIANTS.map((v) => (
                 <Button key={v} size={size} variant={v}>
                   {v}

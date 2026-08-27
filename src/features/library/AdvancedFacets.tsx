@@ -9,6 +9,7 @@ import { buildSearchQuery, parseSearchQuery, type ParsedQuery } from './search-q
 import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
 import { MenuItem } from '@/shared/ui/MenuItem'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * Боковые фасеты в стиле GitHub: клик-переключатели (Type/Verified/Tags) дописывают
@@ -77,7 +78,7 @@ export function AdvancedFacets({
 
       {/* Тип списка — аналог фасета «Languages» */}
       <div className="mb-4">
-        <div className="mb-1 px-2 text-caption font-semibold uppercase tracking-wider text-muted">{t('filterType', lang)}</div>
+        <SectionLabel className="mb-1 px-2">{t('filterType', lang)}</SectionLabel>
         <div className="flex flex-col gap-0.5">
           <MenuItem onClick={() => setType(undefined)} active={!parsed.type}>
             <Layers size={14} className="shrink-0 text-muted" /> {t('filterAllTypes', lang)}
@@ -132,7 +133,7 @@ export function AdvancedFacets({
 
       {/* Advanced: клик вставляет квалификатор в поле поиска в шапке (как «+» на GitHub) */}
       <div className="mt-5 border-t border-border pt-3">
-        <div className="mb-1 px-2 text-caption font-semibold uppercase tracking-wider text-muted">{t('advancedFilters', lang)}</div>
+        <SectionLabel className="mb-1 px-2">{t('advancedFilters', lang)}</SectionLabel>
         <div className="flex flex-col gap-0.5">
           <MenuItem onClick={() => insertQualifier('by:')}>
             <Plus size={13} className="shrink-0 text-muted" /> {t('filterAuthor', lang)}

@@ -134,9 +134,15 @@ export function BubbleToolbar({
           <div className="absolute right-0 top-full z-40 mt-1 flex w-max max-w-field-lg flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-1 shadow-lg">
             {hidden.map((tool) => (
               <Tooltip key={tool.t} label={tool.t}>
+                {/* touch="grow": плотная сетка значков с зазором 2px. Зона в 44px вокруг
+                    28-пиксельной кнопки накрывает соседнюю СТРОКУ меню целиком. Разредить
+                    сетку значит перестать быть панелью инструментов, поэтому на грубом
+                    указателе растут сами кнопки — ровно то, чего требуют HIG и Material
+                    от тулбара. */}
                 <IconButton
                   size="sm"
                   variant="ghost"
+                  touch="grow"
                   label={tool.t}
                   onClick={() => {
                     tool.run()

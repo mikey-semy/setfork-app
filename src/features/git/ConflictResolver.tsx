@@ -6,6 +6,7 @@ import { Badge } from '@/shared/ui/badge'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import type { Lang } from '@/shared/i18n'
 import type { MetaConflict, StepConflict, TwStep, Choice } from './three-way'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 // UI разрешения конфликтов branch-PR (A4): по каждому конфликтному шагу и
 // meta-полю пользователь выбирает ours (main) или theirs (ветка). Выбор
@@ -42,6 +43,7 @@ function Side({
   return (
     <button
       type="button"
+      // ui-parity-ok: сторона конфликта — рамка и фон означают ВЫБОР, а внутри своя шапка с полосой
       onClick={onSelect}
       className={`min-w-0 flex-1 rounded-md border text-left transition-colors ${
         selected ? (tone === 'ours' ? 'border-accent bg-accent-soft' : 'border-ok bg-ok/10') : 'border-border bg-surface hover:border-border-strong'
@@ -49,7 +51,7 @@ function Side({
     >
       <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5">
         <span className={`h-2 w-2 rounded-full ${selected ? (tone === 'ours' ? 'bg-accent' : 'bg-ok') : 'bg-border'}`} />
-        <span className="text-caption font-semibold uppercase tracking-wide text-muted">{label}</span>
+        <SectionLabel as="span">{label}</SectionLabel>
       </div>
       {children}
     </button>
@@ -95,9 +97,9 @@ export function ConflictResolver({
       <div className="flex flex-col gap-3 px-3.5 py-3">
         {metaConflicts.map((m) => (
           <div key={m.field}>
-            <div className="mb-1 text-caption font-semibold uppercase tracking-widest text-muted">
+            <SectionLabel className="mb-1">
               {ru ? 'поле' : 'field'}: {m.field}
-            </div>
+            </SectionLabel>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Side label={oursLabel} tone="ours" selected={metaChoices[m.field] === 'ours'} onSelect={() => setMetaChoices((c) => ({ ...c, [m.field]: 'ours' }))}>
                 <div className="px-3 py-2 text-body-sm text-ink-2">{JSON.stringify(m.ours)}</div>
@@ -111,13 +113,13 @@ export function ConflictResolver({
 
         {conflicts.map((c) => (
           <div key={c.key}>
-            <div className="mb-1 text-caption font-semibold uppercase tracking-widest text-muted">
+            <SectionLabel className="mb-1">
               {c.kind === 'modified'
                 ? ru ? 'изменён в обеих' : 'modified in both'
                 : c.kind === 'delete-ours'
                   ? ru ? 'удалён в main · изменён в ветке' : 'deleted in main · modified in branch'
                   : ru ? 'изменён в main · удалён в ветке' : 'modified in main · deleted in branch'}
-            </div>
+            </SectionLabel>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Side label={oursLabel} tone="ours" selected={stepChoices[c.key] === 'ours'} onSelect={() => setStepChoices((ch) => ({ ...ch, [c.key]: 'ours' }))}>
                 <StepCard s={c.ours} deleted={ru ? '(шаг удалён)' : '(step deleted)'} ru={ru} />

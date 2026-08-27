@@ -7,6 +7,7 @@ import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { iconSizeFor, TEXT, TOUCH_MIN_H } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
+import { TextButton } from '@/shared/ui/TextButton'
 
 /**
  * Детали строк редактора: варианты опроса, принимаемые ответы, пары, элементы порядка,
@@ -50,9 +51,9 @@ export function SettingRow({ label, children }: { label: ReactNode; children: Re
 export function AddLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
     // Вид ссылки, цель — кнопки: пальцем в 19px строки текста не попадают.
-    <button type="button" onClick={onClick} className={`inline-flex items-center text-accent hover:underline ${TOUCH_MIN_H}`}>
+    <TextButton tone="accent" onClick={onClick}>
       + {children}
-    </button>
+    </TextButton>
   )
 }
 

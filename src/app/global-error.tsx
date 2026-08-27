@@ -32,6 +32,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
           <p style={{ margin: 0, fontSize: 14, color: '#6b6b66' }}>
             An unexpected error occurred. / Произошла непредвиденная ошибка.
           </p>
+          {/* ui-parity-ok: аварийная страница рисуется без CSS проекта — упал корневой layout, globals.css мог не приехать */}
           <button
             type="button"
             onClick={() => window.location.reload()}

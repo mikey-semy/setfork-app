@@ -10,6 +10,7 @@ import { SearchField } from '@/shared/ui/SearchField'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/features/library/list-visibility'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 // Единый модуль «панель списков» (правило: переиспользуем и сложные модули).
 // Используется дашбордом (Your lists) и drawer'ом (Top lists) — части
@@ -287,7 +288,7 @@ export function ListsPanel({
 
   const header =
     headerStyle === 'mono' ? (
-      <span className="text-caption font-semibold uppercase tracking-[0.07em] text-muted">{title}</span>
+      <SectionLabel as="span">{title}</SectionLabel>
     ) : (
       <span className="text-body-sm font-semibold text-muted">{title}</span>
     )

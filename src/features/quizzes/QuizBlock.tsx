@@ -12,6 +12,8 @@ import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
+import { IconButton } from '@/shared/ui/IconButton'
+import { TextButton } from '@/shared/ui/TextButton'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -213,6 +215,7 @@ export function QuizBlock({
             return (
               <button
                 key={o.id}
+                // ui-parity-ok: вариант ответа — рамка и фон меняются по итогу проверки, у карточки такой роли нет
                 type="button"
                 disabled={checked || pending || readOnly}
                 onClick={() => toggle(o.id)}
@@ -270,13 +273,31 @@ export function QuizBlock({
         <div className="flex flex-col gap-1.5">
           {/* key — сам элемент: список переупорядочивается, ключ с индексом «прыгал» бы при каждом сдвиге. */}
           {sortOrder.map((it2, i) => (
-            <div key={it2} className={`flex items-center gap-2 rounded-md border px-3 py-2 text-body ${checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2'}`}>
+            <div
+              key={it2}
+              className={cardClass({
+                tone: checked ? (ok ? 'ok' : 'danger') : 'inset',
+                pad: 'sm',
+                className: 'flex items-center gap-2 text-body',
+              })}
+            >
               <span className="w-4 shrink-0 text-right font-mono text-caption text-muted">{i + 1}</span>
               <span className="min-w-0 flex-1 text-ink">{it2}</span>
               {!checked && (
                 <span className="flex shrink-0 flex-col">
-                  <button type="button" onClick={() => moveSort(i, -1)} disabled={i === 0 || readOnly} className="text-muted hover:text-ink disabled:opacity-20" aria-label="up"><ChevronUp size={14} /></button>
-                  <button type="button" onClick={() => moveSort(i, 1)} disabled={i === sortOrder.length - 1 || readOnly} className="text-muted hover:text-ink disabled:opacity-20" aria-label="down"><ChevronDown size={14} /></button>
+                  {/* Подписи из словаря: были английские литералы `up`/`down`, то есть
+                      русский диктор читал их по буквам посреди русской фразы.
+                      touch="grow" — обязательно: стрелки стоят В СТОЛБИК, а дефолтный
+                      `hit` растит зону нажатия вверх-вниз БЕЗ резерва места. Две кнопки
+                      по 24px тогда перекрываются зонами примерно на 20px, и тап у
+                      границы двигает пункт В ДРУГУЮ СТОРОНУ. Тот же приём и по той же
+                      причине — в редакторе (QuizSort). Найдено авто-ревью. */}
+                  <IconButton size="xs" variant="ghost" touch="grow" onClick={() => moveSort(i, -1)} disabled={i === 0 || readOnly} label={t('editor.moveUp', lang)} className="text-muted hover:text-ink disabled:opacity-20">
+                    <ChevronUp size={14} />
+                  </IconButton>
+                  <IconButton size="xs" variant="ghost" touch="grow" onClick={() => moveSort(i, 1)} disabled={i === sortOrder.length - 1 || readOnly} label={t('editor.moveDown', lang)} className="text-muted hover:text-ink disabled:opacity-20">
+                    <ChevronDown size={14} />
+                  </IconButton>
                 </span>
               )}
             </div>
@@ -350,9 +371,9 @@ export function QuizBlock({
               {ok ? (ru ? 'Верно' : 'Correct') : ru ? 'Неверно' : 'Incorrect'}
             </span>
             {!clientMode && attempts > 1 && <span className="text-caption text-muted">{ru ? `попытка ${attempts}` : `attempt ${attempts}`}</span>}
-            <button type="button" onClick={reset} className="ml-auto inline-flex items-center gap-1 text-body-sm text-muted hover:text-ink">
+            <TextButton onClick={reset} className="ml-auto gap-1">
               <RotateCcw size={13} /> {ru ? 'Заново' : 'Retry'}
-            </button>
+            </TextButton>
           </>
         )}
         {!checked && (multi || (clientMode && !clientHasAnswer)) && (

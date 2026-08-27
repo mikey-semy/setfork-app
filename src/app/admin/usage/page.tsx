@@ -11,6 +11,8 @@ import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { isQuarantined, modelHealth, QUARANTINE_WINDOW_MS } from '@/shared/ai/health'
 import { prettyModelName } from '@/shared/ai/models'
 import { cardClass } from '@/shared/ui/card-style'
+import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 const WINDOWS = [
   { days: 1, en: '24h', ru: '24ч' },
@@ -64,19 +66,13 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
         title={t('admin.draftUsage', lang)}
         subtitle={t('admin.whoConsumedWhatTokens', lang)}
         actions={
-          <div className={cardClass({ tone: 'inset', pad: 'xs', className: 'flex gap-1' })}>
+          <SegmentedControl label={t('admin.period', lang)}>
             {WINDOWS.map((w) => (
-              <Link
-                key={w.days}
-                href={`/admin/usage?w=${w.days}`}
-                className={`rounded px-2.5 py-1 text-body-sm font-medium ${
-                  w.days === days ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
-                }`}
-              >
+              <Segment key={w.days} active={w.days === days} href={`/admin/usage?w=${w.days}`}>
                 {tr({ en: w.en, ru: w.ru }, lang)}
-              </Link>
+              </Segment>
             ))}
-          </div>
+          </SegmentedControl>
         }
       />
 
@@ -93,25 +89,25 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
             {credits && (
               <div>
-                <div className="text-caption uppercase tracking-wide text-muted">
+                <SectionLabel>
                   {t('admin.openRouterBalance', lang)}
-                </div>
+                </SectionLabel>
                 <div className="mt-1 text-heading font-bold text-ink">{money(credits.remaining)}</div>
               </div>
             )}
             {avgPerGen != null && (
               <div>
-                <div className="text-caption uppercase tracking-wide text-muted">
+                <SectionLabel>
                   {t('admin.avgGeneration', lang)}
-                </div>
+                </SectionLabel>
                 <div className="mt-1 text-heading font-bold text-ink">{money(avgPerGen)}</div>
               </div>
             )}
             {runwayGens != null && (
               <div>
-                <div className="text-caption uppercase tracking-wide text-muted">
+                <SectionLabel>
                   {t('admin.balanceAffords', lang)}
-                </div>
+                </SectionLabel>
                 <div className="mt-1 text-heading font-bold text-accent">
                   ≈ {num(runwayGens)} {t('admin.generations', lang)}
                 </div>

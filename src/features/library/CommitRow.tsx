@@ -109,6 +109,7 @@ export function CommitRow({
     <div id={`v${version}`} className="relative scroll-mt-24 rounded-lg border border-border bg-surface transition-colors hover:border-border-strong">
       {/* Узел-точка на ветви (акцент — текущая версия). */}
       <span aria-hidden className={`absolute -left-5 top-[1.3125rem] size-2 rounded-full ${isCurrent ? 'bg-accent' : 'bg-muted'}`} />
+      {/* ui-parity-ok: строка истории версий целиком раскрывашка — высота от содержимого, вида у неё нет */}
       <button
         type="button"
         onClick={toggle}

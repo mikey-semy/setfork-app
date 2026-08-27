@@ -112,6 +112,7 @@ export function ContributionGrid({
               ) : (
                 <button
                   key={di}
+                  // ui-parity-ok: клетка календаря активности — 10px квадрат в сетке, любой отступ ломает шаг сетки
                   type="button"
                   data-date={cell.date}
                   aria-label={dayLabel(cell, lang)}

@@ -142,7 +142,7 @@ export function ReviewPanel({
             <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={labels.placeholder} rows={3} className="resize-y" />
             {/* Ряд вердиктов: одна высота, к правому краю (thumb-зона). На мобиле
                 подписи короткие — иконка + одно-два слова. */}
-            <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+            <div className="mt-2 flex flex-wrap items-center justify-end gap-3">
               <Button variant="ghost" disabled={pending} onClick={() => send('comment')}>
                 <MessageSquare size={13} /> {labels.commentOnly}
               </Button>
@@ -187,7 +187,7 @@ function DismissButton({
           <ShieldOff size={14} />
         </IconButton>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-3">
+      <PopoverContent className="w-panel-lg cap-viewport p-3">
         <div className="mb-2 text-body-sm font-medium text-ink">{labels.dismiss}</div>
         <Textarea
           value={reason}

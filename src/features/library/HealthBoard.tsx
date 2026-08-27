@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ListHealth } from './health'
 import { cardClass } from '@/shared/ui/card-style'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * Панель здоровья списков (HQ §11): светофор «где болит прямо сейчас».
@@ -21,7 +22,7 @@ export function HealthBoard({ items, lang, ownerHandle }: { items: ListHealth[];
   return (
     <div className={cardClass({ className: 'mb-5' })}>
       <div className="mb-2 flex items-baseline gap-2">
-        <span className="text-body-sm font-semibold uppercase tracking-wide text-muted">{t('library.listHealth', lang)}</span>
+        <SectionLabel as="span" size="bodySm">{t('library.listHealth', lang)}</SectionLabel>
         <span className="text-caption text-muted">
           {attention.length === 0
             ? t('library.allCalm', lang)

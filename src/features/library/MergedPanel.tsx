@@ -70,7 +70,7 @@ export function MergedPanel({
 
   const tone = accepted ? 'border-accent/50 bg-accent/10' : 'border-border bg-surface-2'
   return (
-    <div className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3.5 py-3 ${tone}`}>
+    <div className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-3 rounded-lg border px-3.5 py-3 ${tone}`}>
       <span className={accepted ? 'text-accent' : 'text-muted'}>{accepted ? <GitMerge size={18} /> : <X size={18} />}</span>
       <div className="min-w-0 flex-1">
         <div className="text-body font-semibold text-ink">{accepted ? labels.merged : labels.closed}</div>

@@ -112,6 +112,11 @@ export function AdminNav({
     .filter((g) => g.items.length > 0)
 
   return (
+    // Смещение и высота бокового меню админки НЕ сводятся к --h-topbar: над ним стоит
+    // ещё и полоса разделов, и её высота здесь угадана числом (73px отступ, 89px
+    // вычет) — три разных представления об одной шапке живут в коде рядом. Разбор
+    // липких смещений отдельным заходом: без открытой страницы правку не проверить.
+    // eslint-disable-next-line no-restricted-syntax -- смещение под ДВЕ шапки, разбирается отдельно
     <aside className="shrink-0 md:sticky md:top-[4.5625rem] md:h-[calc(100vh-89px)] md:w-menu md:overflow-y-auto md:pb-6">
       <SideNav
         mobileLabel={t('adminNavLabel', lang)}

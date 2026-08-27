@@ -15,6 +15,7 @@ import { deleteListAction, setListArchived, setListFrozen, setListVisibility } f
 import { renameList, type RenameResult } from './actions/rename'
 import { publishList } from './actions/versions'
 import { Input } from '@/shared/ui/input'
+import { TextButton } from '@/shared/ui/TextButton'
 
 // Опасная зона списка (аналог GitHub Danger Zone): опасные действия собраны
 // в одном месте, каждое — через модалку. Удаление подтверждается вводом
@@ -239,29 +240,30 @@ export function ListSettingsDanger({
           </label>
           {/* Подставить адрес из названия — тем же slugify, что и при создании, поэтому
               человек видит ровно то, что получится, и может поправить руками. */}
-          <button
-            type="button"
+          <TextButton
+            tone="accent"
             onClick={() => {
               if (slugInput.current) slugInput.current.value = slugify(title)
             }}
-            className="self-start text-body-sm text-accent hover:underline"
+            className="self-start"
           >
             {t('renameSuggest', lang)}
-          </button>
+          </TextButton>
           {rnState?.error && (
             <div className="flex flex-wrap items-center gap-2 text-body text-danger">
               {rnState.error}
               {/* Занято — но вот свободный похожий: клик подставляет его в поле. */}
               {rnState.suggestion && (
-                <button
-                  type="button"
+                <TextButton
+                  tone="accent"
+                  touch="none"
                   onClick={() => {
                     if (slugInput.current) slugInput.current.value = rnState.suggestion!
                   }}
-                  className="font-mono text-accent hover:underline"
+                  className="font-mono"
                 >
                   {handle}/{rnState.suggestion}
-                </button>
+                </TextButton>
               )}
             </div>
           )}

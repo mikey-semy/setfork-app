@@ -51,7 +51,7 @@ export function SuggestionTitle({
 
   if (editing) {
     return (
-      <div className="mb-2 flex flex-wrap items-center gap-2">
+      <div className="mb-2 flex flex-wrap items-center gap-3">
         <Input value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={labels.placeholder}

@@ -15,6 +15,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { Input } from '@/shared/ui/input'
 import { cardClass } from '@/shared/ui/card-style'
 import { IconButton } from '@/shared/ui/IconButton'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * ПОДПИСКИ НА ПОТОК — состав ровными столбцами, как состав специалистов.
@@ -46,7 +47,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           материал из неё никому не достанется. */}
       <form action={addFeedSource} className={cardClass({ className: 'flex flex-col gap-2 sm:flex-row sm:items-end' })}>
         <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-caption uppercase tracking-wide text-muted">{t('admin.feedAddress', lang)}</span>
+          <SectionLabel as="span">{t('admin.feedAddress', lang)}</SectionLabel>
           <Input
             name="url"
             required
@@ -55,7 +56,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           />
         </label>
         <label className="flex min-w-0 flex-col gap-1 sm:w-field-lg">
-          <span className="text-caption uppercase tracking-wide text-muted">{t('admin.topic', lang)}</span>
+          <SectionLabel as="span">{t('admin.topic', lang)}</SectionLabel>
           <Input
             name="tags"
             required
@@ -63,7 +64,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           />
         </label>
         <label className="flex flex-col gap-1 sm:w-24">
-          <span className="text-caption uppercase tracking-wide text-muted">{t('admin.hours', lang)}</span>
+          <SectionLabel as="span">{t('admin.hours', lang)}</SectionLabel>
           <Input
             name="everyHours"
             type="number"

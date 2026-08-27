@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { t, tr, type Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { getCompanyDay, getDevelopmentMetrics, UNAVAILABLE, type NaReason } from '@/features/admin/development-queries'
 import { currentAgenda } from '@/features/partners/service'
 import { agendaLabel, type AgendaKind } from '@/shared/agents/agenda'
@@ -16,6 +16,8 @@ import { TagChip } from '@/shared/ui/TagChip'
 import { AUTONOMOUS_LOOPS, allLoopPolicies } from '@/shared/agents/policy'
 import { stallReports } from '@/shared/agents/stall'
 import { cardClass } from '@/shared/ui/card-style'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * Дашборд РАЗВИТИЯ (Ф-D0) — компания гномов, видимая сверху: куда движемся, а не
@@ -125,9 +127,9 @@ export default async function AdminDevelopmentPage() {
         {/* ПОЧЕМУ не прошло планку — «не прошло» без причины это та же vanity-метрика. */}
         {today.holdReasons.length > 0 && (
           <div className={cardClass({ pad: 'sm' })}>
-            <div className="mb-2 text-caption font-semibold uppercase tracking-wide text-muted">
+            <SectionLabel className="mb-2">
               {t('admin.whyListsDidNot', lang)}
-            </div>
+            </SectionLabel>
             <ul className="flex flex-col gap-1.5">
               {today.holdReasons.map((r) => (
                 <li key={r.reason} className="flex min-w-0 items-start justify-between gap-3 text-body-sm text-ink-2">
@@ -145,22 +147,23 @@ export default async function AdminDevelopmentPage() {
             {t('admin.nothingTodayLoopsOff', lang)}
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full min-w-note text-body-sm">
-              <tbody>
-                {today.events.map((e, i) => (
-                  <tr key={i} className="border-b border-border last:border-0">
-                    <td className="whitespace-nowrap px-3 py-2 font-mono text-muted">
-                      {new Intl.DateTimeFormat('ru', { hour: '2-digit', minute: '2-digit' }).format(e.at)}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-ink-2">{e.action}</td>
-                    <td className="px-3 py-2 text-ink-2 [overflow-wrap:anywhere]">{e.ref || '—'}</td>
-                    <td className="hidden px-3 py-2 text-muted [overflow-wrap:anywhere] sm:table-cell">{e.note}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table className="min-w-note">
+            <TableBody>
+              {/* Ключ — время события плюс действие: лента дня отсортирована и
+                  фильтруется, а по индексу React переиспользовал бы строку под ЧУЖОЕ
+                  событие. Найдено React Doctor. */}
+              {today.events.map((e) => (
+                <TableRow key={`${e.at.getTime()}:${e.action}:${e.ref ?? ''}`}>
+                  <TableCell className="whitespace-nowrap font-mono text-muted">
+                    {new Intl.DateTimeFormat('ru', { hour: '2-digit', minute: '2-digit' }).format(e.at)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">{e.action}</TableCell>
+                  <TableCell className="[overflow-wrap:anywhere]">{e.ref || '—'}</TableCell>
+                  <TableCell className="hidden text-muted [overflow-wrap:anywhere] sm:table-cell">{e.note}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </section>
 
@@ -174,30 +177,28 @@ export default async function AdminDevelopmentPage() {
         {cards.length === 0 ? (
           <p className="text-body-sm text-muted">{t('admin.noDataYet', lang)}</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full min-w-column text-body-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-muted">
-                  <th className="px-3 py-2 font-medium">{t('admin.specialist', lang)}</th>
-                  <th className="px-3 py-2 font-medium">{t('admin.craft', lang)}</th>
-                  <th className="px-3 py-2 font-medium">{t('admin.acceptance', lang)}</th>
-                  <th className="px-3 py-2 font-medium">{t('admin.facetsDelivered', lang)}</th>
-                  <th className="px-3 py-2 font-medium">{t('admin.verdict', lang)}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cards.slice(0, 14).map((c) => (
-                  <tr key={`${c.gnomeId}:${c.domain}`} className="border-b border-border last:border-0">
-                    <td className="px-3 py-2 text-ink-2">{c.gnomeId}</td>
-                    <td className="px-3 py-2 text-ink-2 [overflow-wrap:anywhere]">{c.domain}</td>
-                    <td className="px-3 py-2 font-mono text-ink-2">{c.card.acceptance == null ? '—' : pct(c.card.acceptance)}</td>
-                    <td className="px-3 py-2 font-mono text-ink-2">{c.card.facetDelivery == null ? '—' : pct(c.card.facetDelivery)}</td>
-                    <td className="px-3 py-2 text-muted [overflow-wrap:anywhere]">{c.card.why}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table className="min-w-column">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('admin.specialist', lang)}</TableHead>
+                <TableHead>{t('admin.craft', lang)}</TableHead>
+                <TableHead>{t('admin.acceptance', lang)}</TableHead>
+                <TableHead>{t('admin.facetsDelivered', lang)}</TableHead>
+                <TableHead>{t('admin.verdict', lang)}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cards.slice(0, 14).map((c) => (
+                <TableRow key={`${c.gnomeId}:${c.domain}`}>
+                  <TableCell>{c.gnomeId}</TableCell>
+                  <TableCell className="[overflow-wrap:anywhere]">{c.domain}</TableCell>
+                  <TableCell className="font-mono">{c.card.acceptance == null ? '—' : pct(c.card.acceptance)}</TableCell>
+                  <TableCell className="font-mono">{c.card.facetDelivery == null ? '—' : pct(c.card.facetDelivery)}</TableCell>
+                  <TableCell className="text-muted [overflow-wrap:anywhere]">{c.card.why}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </section>
 
@@ -373,13 +374,13 @@ export default async function AdminDevelopmentPage() {
                 {t('admin.acceptanceCountsEveryDrafter', lang)}
               </span>
             </div>
-            <div className="grid min-w-column grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-caption uppercase tracking-wide text-muted">
+            <SectionLabel className="grid min-w-column grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5">
               <span>{t('admin.specialist', lang)}</span>
               <span className="text-right">{t('admin.rank', lang)}</span>
               <span className="text-right">{t('admin.councils', lang)}</span>
               <span className="text-right">{t('admin.accepted', lang)}</span>
               <span className="text-right">{t('admin.share', lang)}</span>
-            </div>
+            </SectionLabel>
             {m.gnomes.map((g) => (
               <Link
                 key={g.id}

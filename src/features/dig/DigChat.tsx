@@ -200,15 +200,16 @@ function ThankButton({ who, thanked, onThank, lang }: { who: string; thanked: bo
   void who
   return (
     <Tooltip label={thanked ? t('dig.thanked', lang) : t('dig.sayThanks', lang)}>
-      <button
-        type="button"
-        aria-label={t('dig.sayThanks', lang)}
+      <IconButton
+        size="xs"
+        variant="ghost"
+        label={t('dig.sayThanks', lang)}
         onClick={onThank}
         disabled={thanked}
         className={thanked ? 'text-accent' : 'text-muted transition-colors hover:text-accent'}
       >
         <Heart size={13} className={thanked ? 'fill-current' : ''} />
-      </button>
+      </IconButton>
     </Tooltip>
   )
 }

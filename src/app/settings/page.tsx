@@ -31,6 +31,7 @@ import { SessionsList } from '@/features/sessions/SessionsList'
 import { PAGE_X } from '@/shared/ui/control'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { cardClass } from '@/shared/ui/card-style'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -227,7 +228,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               { k: t('aiUsageCost', lang), v: '$' + usage.costUsd.toFixed(usage.costUsd < 1 ? 4 : 2) },
             ].map((x) => (
               <div key={x.k} className={cardClass({ tone: 'inset', pad: 'sm' })}>
-                <div className="text-caption uppercase tracking-wide text-muted">{x.k}</div>
+                <SectionLabel>{x.k}</SectionLabel>
                 <div className="mt-1 text-title font-bold text-ink">{x.v}</div>
               </div>
             ))}

@@ -9,6 +9,7 @@ import type { GenerationCandidate } from '@/shared/db'
 import { MAX_VARIANTS } from './limits'
 import { t } from '@/shared/i18n'
 import { MenuItem } from '@/shared/ui/MenuItem'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * Меню действий у поля ввода (фидбек владельца): «Использовать этот» и «Ещё
@@ -113,9 +114,9 @@ export function ActionsMenu({
           </MenuItem>
           {candidates.length > 1 && (
             <div className="border-t border-border">
-              <div className="px-3 pb-1 pt-2 text-caption font-semibold uppercase tracking-wide text-muted">
+              <SectionLabel className="px-3 pb-1 pt-2">
                 {t('generation.variants', lang)}
-              </div>
+              </SectionLabel>
               {candidates.map((c) => (
                 <MenuItem key={c.id} onClick={() => jump(c)} active={c.id === selId} className="items-start">
                   <span className="mt-px shrink-0 text-caption tabular-nums text-muted">{c.idx}</span>

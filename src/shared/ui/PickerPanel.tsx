@@ -35,8 +35,12 @@ export function PickerPanel({
   footer?: ReactNode
   closeLabel?: string
 }) {
+  // Не cap-screen: список выбора не должен растягиваться на весь высокий экран — 420px
+  // это примерно десять строк, дальше читать глазами всё равно нельзя, а панель начинает
+  // выглядеть страницей. Предел по экрану идёт вторым слагаемым, в dvh.
   return (
-    <div className="flex max-h-[min(420px,70vh)] flex-col">
+    // eslint-disable-next-line no-restricted-syntax -- предел ДВОЙНОЙ: своя высота и экран
+    <div className="flex max-h-[min(26.25rem,70dvh)] flex-col">
       <PanelHead title={title} onClose={onClose} closeLabel={closeLabel} />
       {search && (
         <div className="shrink-0 border-b border-border p-2">

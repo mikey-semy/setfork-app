@@ -15,6 +15,7 @@ import { PAGE } from '@/shared/ui/control'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { isPubliclyVisible } from '@/core'
 import { cardClass } from '@/shared/ui/card-style'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -62,9 +63,9 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           {stats.map(({ icon: Icon, label, v }) => (
             <div key={label} className={cardClass()}>
-              <div className="flex items-center gap-1.5 text-caption uppercase tracking-wide text-muted">
+              <SectionLabel className="flex items-center gap-1.5">
                 <Icon size={12} /> {label}
-              </div>
+              </SectionLabel>
               <div className="mt-1 text-heading font-bold tabular-nums text-ink">{v}</div>
             </div>
           ))}

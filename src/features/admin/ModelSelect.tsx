@@ -9,6 +9,7 @@ import { SearchField } from '@/shared/ui/SearchField'
 import { Badge } from '@/shared/ui/badge'
 import { t, type Lang } from '@/shared/i18n'
 import { MenuItem } from '@/shared/ui/MenuItem'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /** Значение-пустышка для «нет модели». */
 export const NONE = '__none__'
@@ -223,6 +224,7 @@ export function ModelSelect({
         <button
           type="button"
           id={id}
+          // ui-parity-ok: открывалка своего списка — вид поля из шкалы (CONTROL_H/PX/TEXT), примитива под комбобокс с поиском нет
           onClick={() => setOpen((v) => !v)}
           className={`flex ${CONTROL_H.md} w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-2 ${CONTROL_PX.md} ${CONTROL_TEXT.md} outline-hidden focus:border-border-strong`}
         >
@@ -251,7 +253,7 @@ export function ModelSelect({
               />
             </div>
 
-            <div className="max-h-[60vh] overflow-y-auto overscroll-contain p-1 sm:max-h-96">
+            <div className="cap-screen overflow-y-auto overscroll-contain p-1 sm:max-h-96">
               {allowEmpty && !query && (
                 <Row selected={value === ''} highlighted={false} onClick={() => pick('')}>
                   <span className="text-ink-2">—</span>
@@ -303,14 +305,15 @@ export function ModelSelect({
             <span key={v} className={`inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 py-1 pl-1.5 pr-1 ${TEXT.caption} text-ink-2`}>
               <span className={`grid size-4 shrink-0 place-items-center rounded-md bg-surface ${TEXT.caption} tabular-nums text-muted`}>{i + 1}</span>
               <span>{labelOf(v)}</span>
-              <button
-                type="button"
-                aria-label={t('modelSelect.remove', lang).replace('{m}', labelOf(v))}
+              <IconButton
+                size="xs"
+                variant="ghost"
+                label={t('modelSelect.remove', lang).replace('{m}', labelOf(v))}
                 onClick={() => pick(v)}
-                className="grid size-4 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
+                className="text-muted"
               >
                 <X size={12} />
-              </button>
+              </IconButton>
             </span>
           ))}
         </div>

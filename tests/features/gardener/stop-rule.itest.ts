@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { count, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { agentActions, db, templates, users } from '@/shared/db'
 import { alreadyForked, stablePasses } from '@/features/gardener/service'
@@ -23,15 +23,34 @@ beforeAll(async () => {
   otherId = o.id
 })
 
+/** Опора времени — фиксированная и в прошлом: порядок не должен зависеть от часов машины. */
+const BASE = Date.UTC(2026, 0, 1)
+
+/** Номер вставки в пределах теста: он и задаёт время. */
+let tick = 0
+
 beforeEach(async () => {
   await db.delete(agentActions)
   await db.delete(templates).where(sql`${templates.forkedFromId} is not null`)
+  tick = 0
+  // Подготовка утверждает свой результат: иначе оборванное соединение к базе даёт молча
+  // непочищенный журнал, и красным приходит утверждение про правило остановки вместо
+  // правды «не удалось подготовить состояние».
+  const [{ n }] = await db.select({ n: count() }).from(agentActions)
+  expect(n, 'подготовка теста не удалась: журнал agent_actions не очистился').toBe(0)
 })
 
+/**
+ * ⚠️ Время задаётся ЯВНО, а не пересчитывается из `ctid` — тот приём неверен по построению.
+ * `ctid` это физическое место строки, и каждый `UPDATE` переписывает её на новое; как только
+ * таблица занимает больше одной страницы, отсчёт смещений начинается заново, и порядок «по
+ * вставке» ломается. Подробный разбор — в `tests/shared/agents/stall.itest.ts`, где тот же
+ * приём ронял проверку окна в CI и выглядел протечкой между тестами.
+ */
+const nextAt = () => new Date(BASE + (tick += 1) * 1000)
+
 const act = async (action: string, templateId = tplId) => {
-  await db.insert(agentActions).values({ loop: 'gardener', action, resultStatus: 'skipped', signal: { templateId } })
-  // Журнал упорядочен по occurred_at: раздвигаем записи, иначе порядок внутри такта не определён.
-  await db.execute(sql`update ${agentActions} set occurred_at = now() + (ctid::text::point)[1] * interval '1 millisecond'`)
+  await db.insert(agentActions).values({ loop: 'gardener', action, resultStatus: 'skipped', signal: { templateId }, occurredAt: nextAt() })
 }
 
 describe('правило остановки', () => {
@@ -57,8 +76,7 @@ describe('правило остановки', () => {
   // расхождение форком откладывается.
   it('сухой прогон историю не обнуляет: наблюдение не меняет наблюдаемое', async () => {
     await act('list.stable')
-    await db.insert(agentActions).values({ loop: 'gardener', action: 'list.suggest', resultStatus: 'dry-run', signal: { templateId: tplId } })
-    await db.execute(sql`update ${agentActions} set occurred_at = now() + (ctid::text::point)[1] * interval '1 millisecond'`)
+    await db.insert(agentActions).values({ loop: 'gardener', action: 'list.suggest', resultStatus: 'dry-run', signal: { templateId: tplId }, occurredAt: nextAt() })
     await act('list.stable')
     expect(await stablePasses(tplId)).toBe(2)
   })

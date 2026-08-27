@@ -16,8 +16,15 @@ import { describe, expect, it } from 'vitest'
  *  • шкала контролов — строгий ноль (исключения названы поимённо внутри счётчика);
  *  • самопал ролей — храповик: расти нельзя, уменьшаться можно.
  *
- * Храповик, а не ноль, потому что долг реальный: 344 места переоткрывают роль руками,
- * и одним заходом это не чинится. Смысл гейта — чтобы 345-го не появилось.
+ * Храповик стоял, пока долг был реальный: 344 места переоткрывали роль руками, и одним
+ * заходом это не чинилось. 27.08.2026 долг дошёл до НУЛЯ, и храповик уступил место
+ * строгому нулю — по тому же правилу, что и шкала контролов. Разница принципиальная:
+ * храповик разрешает жить с долгом, ноль требует ответа на каждое новое место.
+ *
+ * Ответов ровно два, и оба явные: либо взять примитив, либо поставить над местом
+ * `ui-parity-ok: <причина>` — причина обязательна и не короче 20 знаков. Отметки едут в
+ * тот же слепок отдельной строкой и остаются под храповиком: отметка снимает место с
+ * долга, то есть обязана быть видна в дифференциале, а не появляться молча.
  */
 
 const run = (script: string, args: string[] = []) => {
@@ -31,6 +38,9 @@ const run = (script: string, args: string[] = []) => {
 
 type Baseline = Record<string, Record<string, number>>
 
+/** Ключ слепка, под которым едут места, снятые отметкой «разобрано и законно». */
+const MARKED = 'разобрано и законно'
+
 describe('единство интерфейса', () => {
   it('высота контрола приходит из шкалы (scripts/ui-sizes.mjs)', () => {
     const { code, out } = run('scripts/ui-sizes.mjs')
@@ -38,26 +48,44 @@ describe('единство интерфейса', () => {
     expect(code, out).toBe(0)
   })
 
-  it('роль не переоткрывается руками сверх слепка (scripts/ui-parity.mjs)', () => {
+  it('роль не переоткрывается руками: строгий ноль (scripts/ui-parity.mjs)', () => {
     const { out } = run('scripts/ui-parity.mjs', ['--json'])
     const now = JSON.parse(out) as Baseline
-    const base = JSON.parse(readFileSync('ui-parity-baseline.json', 'utf8')) as Baseline
+
+    const debt: string[] = []
+    for (const [role, files] of Object.entries(now)) {
+      if (role === MARKED) continue
+      for (const [file, count] of Object.entries(files)) debt.push(`${role}: ${file} ×${count}`)
+    }
+
+    expect(
+      debt,
+      `Роль нарисована руками там, где для неё есть общий модуль (см. вывод node scripts/ui-parity.mjs).\n` +
+        `${debt.join('\n')}\n\n` +
+        `Ответов два:\n` +
+        `  • взять примитив из src/shared/ui (счётчик называет его рядом с ролью);\n` +
+        `  • если примитив тут не годится — сказать это ВСЛУХ над местом:\n` +
+        `      // ui-parity-ok: <чем эта роль отличается, не короче 20 знаков>\n` +
+        `    и обновить слепок: node scripts/ui-parity.mjs --json > ui-parity-baseline.json\n` +
+        `Если модуля под роль правда нет — заведи его в src/shared/ui и назови в счётчике.`,
+    ).toEqual([])
+  })
+
+  it('отметок «законно» не прибавилось молча', () => {
+    const { out } = run('scripts/ui-parity.mjs', ['--json'])
+    const now = (JSON.parse(out) as Baseline)[MARKED] ?? {}
+    const base = (JSON.parse(readFileSync('ui-parity-baseline.json', 'utf8')) as Baseline)[MARKED] ?? {}
 
     const grew: string[] = []
-    for (const [role, files] of Object.entries(now)) {
-      for (const [file, count] of Object.entries(files)) {
-        const was = base[role]?.[file] ?? 0
-        if (count > was) grew.push(`${role}: ${file} — было ${was}, стало ${count}`)
-      }
+    for (const [file, count] of Object.entries(now)) {
+      const was = base[file] ?? 0
+      if (count > was) grew.push(`${file} — было ${was}, стало ${count}`)
     }
 
     expect(
       grew,
-      `Роль нарисована руками там, где для неё есть общий модуль (см. вывод node scripts/ui-parity.mjs).\n` +
-        `${grew.join('\n')}\n\n` +
-        `Если модуля под роль правда нет — заведи его в src/shared/ui и назови в счётчике.\n` +
-        `Если место законное и это доказано — обнови слепок ОСОЗНАННО:\n` +
-        `  node scripts/ui-parity.mjs --json > ui-parity-baseline.json`,
+      `Новая отметка ui-parity-ok. Она снимает место с долга, поэтому обязана быть видна\n` +
+        `в дифференциале как осознанный шаг:\n  node scripts/ui-parity.mjs --json > ui-parity-baseline.json\n${grew.join('\n')}`,
     ).toEqual([])
   })
 

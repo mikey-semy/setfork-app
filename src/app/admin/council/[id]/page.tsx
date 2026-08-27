@@ -16,6 +16,7 @@ import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Badge } from '@/shared/ui/badge'
 import { cardClass } from '@/shared/ui/card-style'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * СТРАНИЦА СПЕЦИАЛИСТА (админу): его развитие И его настройки — в одном месте.
@@ -77,9 +78,9 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   // карточка с длинным текстом распирала бы колонку даже при grid-cols-1.
   const kpiCell = (icon: ReactNode, label: string, value: string, sub?: string) => (
     <div className={cardClass({ className: 'min-w-0' })}>
-      <div className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-muted">
+      <SectionLabel className="flex items-center gap-1.5">
         {icon} {label}
-      </div>
+      </SectionLabel>
       <div className="mt-1.5 text-stat font-bold text-ink">{value}</div>
       {sub && <div className="mt-0.5 text-body-sm text-ink-2">{sub}</div>}
     </div>
@@ -161,25 +162,25 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
 
       <div className="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className={cardClass({ className: 'min-w-0' })}>
-          <div className="mb-2 text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.personaWorkingFrame', lang)}</div>
+          <SectionLabel className="mb-2">{t('admin.personaWorkingFrame', lang)}</SectionLabel>
           <p className="whitespace-pre-wrap text-body leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{e.persona}</p>
           {e.code && (
             <>
-              <div className="mb-2 mt-4 text-caption font-semibold uppercase tracking-wide text-muted">{t('common.guildCode', lang)}</div>
+              <SectionLabel className="mb-2 mt-4">{t('common.guildCode', lang)}</SectionLabel>
               {/* Людям — на их языке; агентам всегда едет EN `code`. */}
               <p className="whitespace-pre-wrap font-mono text-body-sm leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{(ru ? e.codeRu : '') || e.code}</p>
             </>
           )}
           {e.memory && (
             <>
-              <div className="mb-2 mt-4 text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.craftMemoryAutoDistilled', lang)}</div>
+              <SectionLabel className="mb-2 mt-4">{t('admin.craftMemoryAutoDistilled', lang)}</SectionLabel>
               <p className="whitespace-pre-wrap text-body-sm leading-[1.55] text-ink-2 [overflow-wrap:anywhere]">{e.memory}</p>
             </>
           )}
 
         </div>
         <div className={cardClass({ className: 'min-w-0' })}>
-          <div className="mb-2 text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.recentCouncils', lang)}</div>
+          <SectionLabel className="mb-2">{t('admin.recentCouncils', lang)}</SectionLabel>
           {kpi.recent.length === 0 ? (
             <p className="text-body text-muted">{t('admin.hasNotBeenSummoned', lang)}</p>
           ) : (
@@ -205,7 +206,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           строкой в селекте: непонятно, что она делает, чего стоит и что будет, если оставить пусто. */}
       <div className={cardClass({ className: 'min-w-0 mb-5' })}>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="text-caption font-semibold uppercase tracking-wide text-muted">{t('admin.thinksWith', lang)}</span>
+          <SectionLabel as="span">{t('admin.thinksWith', lang)}</SectionLabel>
           <Link href="/admin/models" className="ml-auto inline-flex min-h-11 items-center gap-1 text-body-sm text-ink-2 hover:text-accent">
             <Cpu size={13} /> {t('admin.allModels', lang)}
           </Link>
@@ -249,7 +250,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
       {/* НАСТРОЙКИ — здесь, а не в общем зале: у списка настройки на странице списка, у
           специалиста на его странице. Одна форма на одного, а не стена из двадцати. */}
       <div className="mt-5">
-        <div className="mb-2 text-body font-semibold uppercase tracking-wide text-ink-2">{t('admin.settings', lang)}</div>
+        <SectionLabel as="h2" size="body" className="mb-2">{t('admin.settings', lang)}</SectionLabel>
         <ExpertSettings e={{ ...e, uploadedUrl: e.avatarUploaded ? avatars[e.id] : undefined }} modelOptions={modelOptions} gallery={gallery} lang={lang} />
       </div>
     </div>

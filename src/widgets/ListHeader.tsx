@@ -26,7 +26,7 @@ import { humanModerationReason } from '@/features/moderation/reason'
 import { ListTabs } from './ListTabs'
 import { ShowOnListRoot } from './ShowOnListRoot'
 import { PAGE_X } from '@/shared/ui/control'
-import { buttonClass } from '@/shared/ui/button-style'
+import { TextButton } from '@/shared/ui/TextButton'
 
 /** Общая шапка страницы списка (= «репозиторий»): owner/name, действия, вкладки.
  *  Живёт в персистентном [handle]/[slug]/layout.tsx — не перемонтируется между
@@ -215,7 +215,6 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               copyLinkLabel={t('copyLink', lang)}
               shareViaLabel={t('shareVia', lang)}
               qrHint={t('qrHint', lang)}
-              className={buttonClass({ className: 'size-8 p-0 sm:size-auto sm:h-8 sm:px-3.5' })}
             />
             {/* Use (клон) и Edit/Suggest переехали в область списка (version-bar) — как
                 зелёная Code и карандаш у GitHub живут в контенте, не в шапке. */}
@@ -245,9 +244,9 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                     }}
                     className="inline"
                   >
-                    <button type="submit" className="font-medium underline underline-offset-2 hover:opacity-80">
+                    <TextButton type="submit" tone="accent" touch="none" className="font-medium underline underline-offset-2">
                       {t('requestReview', lang)}
-                    </button>
+                    </TextButton>
                   </form>
                 )}
               </span>

@@ -9,6 +9,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedSourceList } from '@/features/admin/FeedSourceList'
 import { feedSourceRows, recentFeedItems } from '@/features/admin/feed-queries'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
  * ПОДПИСКИ НА ПОТОК (админу): откуда компания узнаёт, что произошло.
@@ -50,7 +51,7 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
 
       {/* ЧТО ПРИШЛО. Доказательство, что поток живой; заодно видно, что уже пошло в работу. */}
       <div className="min-w-0">
-        <div className="mb-2 text-body font-semibold uppercase tracking-wide text-ink-2">{t('admin.latestMaterial', lang)}</div>
+        <SectionLabel as="h2" size="body" className="mb-2">{t('admin.latestMaterial', lang)}</SectionLabel>
         <div className="divide-y divide-border rounded-lg border border-border bg-surface">
           {items.length === 0 && <EmptyState variant="inline" hint={t('admin.nothingCollectedYet', lang)} />}
           {items.map((it) => (
