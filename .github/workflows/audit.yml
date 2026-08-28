@@ -89,11 +89,35 @@ jobs:
       # узнать адрес (так и было 28.08.2026). Значение остаётся скрытым: --redact
       # заменяет его на REDACTED и в отчёте тоже, поэтому в лог попадают правило,
       # файл, строка и коммит — ровно то, что нужно, и ничего сверх.
+      # ДИАПАЗОН. На предложении сканируются коммиты, которые оно ДОБАВЛЯЕТ, а не вся
+      # история: раннер свой, рабочая копия переиспользуется между прогонами, и в .git
+      # остаются рефы чужих веток. Скан «протекал» — предложение краснело из-за находки
+      # в СОСЕДНЕЙ ветке, которой в нём нет (так и было 28.08.2026: #829 покраснел из-за
+      # коммита из #830, и числа коммитов расходились: 1136 против 1094). Полная история
+      # при этом не остаётся без присмотра: на push в master диапазон пуст и скан идёт
+      # целиком, то есть попадание чего угодно в master по-прежнему ловится.
+      - name: диапазон скана
+        id: range
+        run: |
+          opts=""
+          # Сузить можно ТОЛЬКО если база достоверно известна. Не вышло достать её —
+          # сканируем всё: лишняя работа безопаснее пропущенного секрета.
+          if [ -n "${GITHUB_BASE_REF:-}" ] && git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF"; then
+            base="$(git rev-parse FETCH_HEAD)"
+            # Под `set -e` проверка пишется через if: голое `cmd && x=y` уронило бы
+            # шаг там, где задумано мягкое «не вышло — сканируем всё».
+            if git cat-file -e "$base^{commit}" 2>/dev/null; then opts="--log-opts=$base..HEAD"; fi
+          fi
+          echo "opts=$opts" >> "$GITHUB_OUTPUT"
+          echo "диапазон: ${opts:-вся история}"
       - name: gitleaks (secret scan)
+        env:
+          RANGE: ${{ steps.range.outputs.opts }}
         run: |
           docker rm -f "gl-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true
           docker create --name "gl-${GITHUB_RUN_ID}" zricethezav/gitleaks:latest \
             detect --source=/repo --config=/repo/.gitleaks.toml --redact --exit-code 1 \
+            ${RANGE} \
             --report-format json --report-path /tmp/gitleaks.json
           docker cp . "gl-${GITHUB_RUN_ID}:/repo"
           docker start -a "gl-${GITHUB_RUN_ID}" && code=0 || code=$?
