@@ -35,7 +35,24 @@ import { ownerHandle } from './shared'
  */
 
 // ── Создание списка ───────────────────────────────────────────────────
-export async function createTemplate(formData: FormData): Promise<void> {
+
+/**
+ * Отказ рождения списка — ЗНАЧЕНИЕ, а не переход на адрес с `?e=`.
+ *
+ * Форма `/new` — это редактор блоков: название, описание, теги и все пункты. Переход
+ * начинал новый GET, и человек терял ВСЁ введённое, а не только повод для отказа. Цена
+ * ошибки «адрес занят» была «набери список заново» (указано авто-ревью #829).
+ *
+ * Возврат значения этого не делает: страница не перерисовывается с нуля, состояние
+ * редактора остаётся, а сообщение показывается над формой.
+ */
+export type NewListRefusal =
+  | { kind: 'slug_taken'; slug: string }
+  | { kind: 'blocked'; reason: string; step: number }
+  | { kind: 'list_quota'; limit: number }
+  | { kind: 'no_title' }
+
+export async function createTemplate(_prev: NewListRefusal | null, formData: FormData): Promise<NewListRefusal | null> {
   const session = await requireSession()
   const lang = await getLang()
   const title = String(formData.get('title') ?? '').trim()
@@ -45,9 +62,13 @@ export async function createTemplate(formData: FormData): Promise<void> {
   const ordered = formData.get('ordered') !== 'unordered'
   const gated = formData.get('gated') === 'on'
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
-  if (!title) return
+  // Пустое название раньше просто НИЧЕГО не делало: человек жал «Создать» и не получал
+  // ни списка, ни объяснения. `required` в разметке прикрывает обычный путь, но не
+  // отправку без JS и не одни пробелы в поле.
+  if (!title) return { kind: 'no_title' }
   // Квота на число списков (мягкая защита от абьюза; админ без лимита).
-  if (!(await listQuota(session.userId, session.handle)).ok) redirect('/new?e=list_quota')
+  const quota = await listQuota(session.userId, session.handle)
+  if (!quota.ok) return { kind: 'list_quota', limit: quota.limit }
 
   let slug = slugify(title)
   const owned = await db
@@ -75,13 +96,13 @@ export async function createTemplate(formData: FormData): Promise<void> {
       steps: toStepInput(proposed),
     })
   } catch (e) {
-    if (e instanceof DestructiveCommandError) redirect(`/new?blocked=${e.reason}&step=${e.stepIndex}`)
+    if (e instanceof DestructiveCommandError) return { kind: 'blocked', reason: e.reason, step: e.stepIndex }
     // Адрес занят: возвращаем человека в форму с названной причиной, а не роняем в
     // страницу ошибки Next. До 27.08.2026 сюда попадал ЛЮБОЙ отказ ядра и уходил в
     // `throw` — вертикаль «собрать список» показала, что причина, которую ядро честно
     // шлёт трейлером, на этом пути не читалась никем. Занятый адрес — самый частый из
     // отказов рождения и единственный, который человек может исправить сам.
-    if (e instanceof ListWriteError && e.code === 'exists') redirect(`/new?e=slug_taken&slug=${encodeURIComponent(slug)}`)
+    if (e instanceof ListWriteError && e.code === 'exists') return { kind: 'slug_taken', slug }
     throw e
   }
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate

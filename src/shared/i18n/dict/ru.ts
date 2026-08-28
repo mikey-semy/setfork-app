@@ -58,6 +58,7 @@ export const ru: Record<DictKey, string> = {
   listCreate: 'Создать список',
   listItems: 'Пункты',
   listTitlePh: 'Название списка',
+  listTitleRequired: 'Название нужно указать — без него список не создать.',
   listTitleRequiredMark: 'Обязательное поле',
   listDescPh: 'Коротко, о чём список',
   listQuotaReached: 'Достигнут лимит списков ({n}). Удали ненужные, чтобы создать новый.',

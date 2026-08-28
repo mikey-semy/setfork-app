@@ -4,17 +4,16 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
-import { Alert } from '@/shared/ui/Alert'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
-import { createTemplate } from '@/features/library/actions'
+import { NewListForm } from '@/features/library/NewListForm'
+import { DESTRUCTIVE_REASONS } from '@/core/domain/destructive-command'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
 import { GatedToggle, ListTypeToggle, VisibilityToggle } from '@/features/library/ListFormToggles'
 import { ListSettingsSheet } from '@/features/library/ListSettingsSheet'
 import { TagsAndCatalogFields } from '@/features/library/TagsAndCatalogFields'
 import { getCatalogTagProfiles } from '@/features/catalogs/queries'
-import { listQuota } from '@/shared/quota'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { Asterisk } from 'lucide-react'
 
@@ -23,51 +22,35 @@ export async function generateMetadata() {
   return { title: t('newList', lang) }
 }
 
-export default async function NewListPage({ searchParams }: { searchParams: Promise<{ e?: string; blocked?: string; step?: string; slug?: string }> }) {
-  const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
+// Параметров адреса у страницы больше НЕТ: отказы приходят значением из действия, а
+// `?e=`/`?blocked=` только уносили введённое.
+export default async function NewListPage() {
+  const [lang, session] = await Promise.all([getLang(), getSession()])
   if (!session) redirect('/login')
-  const quotaHit = sp.e === 'list_quota'
   // Полки владельца с тегами их жильцов: из них форма подскажет, куда положить новый список.
-  const [q, catalogs] = await Promise.all([
-    quotaHit ? listQuota(session.userId, session.handle) : Promise.resolve(null),
-    getCatalogTagProfiles(session.userId, lang),
-  ])
+  const catalogs = await getCatalogTagProfiles(session.userId, lang)
+
+  // Отказы приходят ЗНАЧЕНИЕМ из действия, а не адресом `?e=`: переход начинал новый GET
+  // и уносил всё набранное — название, описание, теги и пункты редактора. Поэтому здесь
+  // остаются только тексты, а показывает их форма.
+  const texts = {
+    slugTakenTitle: t('slugTakenTitle', lang),
+    slugTakenBody: t('slugTakenBody', lang),
+    blockedTitle: t('destructiveBlockedTitle', lang),
+    blockedBody: t('destructiveBlockedBody', lang),
+    blockedReasons: Object.fromEntries(
+      DESTRUCTIVE_REASONS.map((r) => [r, t(`destructive.${r}` as Parameters<typeof t>[0], lang)]),
+    ),
+    quotaReached: t('listQuotaReached', lang),
+    noTitle: t('listTitleRequired', lang),
+  }
 
   return (
     <div className={PAGE_NARROW}>
       <FloatingBack href={'/my-lists'} label={t('myLists', lang)} />
-      <form action={createTemplate}>
+      <NewListForm texts={texts}>
         {/* Название страницы уже стоит в шапке приложения. */}
         <PageHeader hideTitle title={t('newList', lang)} />
-
-        {/* Отказ стража исполняемых команд: причина словами и номер шага — иначе
-            кнопка «Создать» выглядит сломанной. */}
-        {/* Адрес занят. Текст ядра на этом отказе — `already exists`, четырнадцать
-            символов, не говорящие даже о том, ЧТО занято. Человеку нужно другое: что
-            именно занято, кем это можно исправить и одним ли действием. */}
-        {sp.e === 'slug_taken' && (
-          <Alert variant="danger" className="mb-5">
-            <span className="block font-semibold">{t('slugTakenTitle', lang)}</span>
-            <span className="block">{t('slugTakenBody', lang).replace('{slug}', sp.slug ?? '')}</span>
-          </Alert>
-        )}
-
-        {sp.blocked && (
-          <Alert variant="danger" className="mb-5">
-            <span className="block font-semibold">{t('destructiveBlockedTitle', lang)}</span>
-            <span className="block">
-              {t('destructiveBlockedBody', lang)
-                .replace('{n}', sp.step ?? '?')
-                .replace('{reason}', t(`destructive.${sp.blocked}` as Parameters<typeof t>[0], lang))}
-            </span>
-          </Alert>
-        )}
-
-        {quotaHit && q && (
-          <Alert variant="warn" className="mb-5">
-            {t('listQuotaReached', lang).replace('{n}', String(q.limit))}
-          </Alert>
-        )}
 
         {/* На экране — только название и пункты. Остальные свойства (описание, теги,
             тип, видимость, курс) заполняют один раз, а места занимали столько же,
@@ -148,7 +131,7 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
         <div data-sticky-input className="fixed right-5 bottom-5 z-40 print:hidden">
           <SubmitButton className="shadow-card">{t('listCreate', lang)}</SubmitButton>
         </div>
-      </form>
+      </NewListForm>
     </div>
   )
 }
