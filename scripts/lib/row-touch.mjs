@@ -24,14 +24,22 @@ import { SRC, walkFiles, rel, tags, classesOf, attr, hasAttr } from './ui-scan.m
  */
 
 /** Контролы, у которых политика тач-цели вообще есть. */
-const CONTROL = /^(Button|IconButton|SubmitButton|SearchField|Input|Select|SelectTrigger|TagInput|Segment)$/
+// SearchForm — обёртка над SearchField (GET-форма поиска); в ряду это тот же контрол,
+// и без него ряд на странице обсуждений содержал 'один контрол' и не проверялся вовсе.
+const CONTROL = /^(Button|IconButton|SubmitButton|SearchField|SearchForm|Input|Select|SelectTrigger|TagInput|Segment)$/
 
 /** Растёт ли контрол на грубом указателе. */
-const policyOf = (attrs) => {
-  const t = attr(attrs, 'touch')
-  if (!t) return null // дефолт — вопрос примитива, не ряда
-  return t === 'grow' ? 'grow' : 'fixed'
-}
+// Дефолт у ВСЕХ примитивов — «не растём»: решение по полям записано в control.ts от
+// 13.08, кнопки добирают цель зоной. Поэтому явный `grow` рядом с чем угодно другим —
+// уже разнобой, даже если сосед политику не объявлял. Раньше проверка сравнивала
+// только явные и потому пропустила ряд на странице обсуждений: кнопка «Новое
+// обсуждение» просила `grow`, поле поиска молчало — и после смены умолчания поля
+// кнопка стала ВЫШЕ соседа (P2 авто-ревью #830).
+const policyOf = (attrs) =>
+  attr(attrs, 'touch') === 'grow' || /buttonClass\(\{[^})]*touch:\s*'grow'/.test(attrs) ? 'grow' : 'fixed'
+
+/** Контрол ли это: примитив по имени ЛИБО что угодно, одетое в buttonClass. */
+const isControl = (el) => CONTROL.test(el.tag) || /buttonClass\(/.test(el.attrs)
 
 export function mixedTouchRows() {
   const out = []
@@ -52,13 +60,13 @@ export function mixedTouchRows() {
         const c = classesOf(e.attrs)
         // Вложенный контейнер переориентирует ряд — дальше уже не наши дети.
         if (/(^|\s)flex-col(\s|$)/.test(c) || /(^|\s)grid(\s|$)/.test(c)) break
-        if (CONTROL.test(e.tag) && hasAttr(e.attrs, 'touch')) kids.push(e)
+        if (isControl(e)) kids.push(e)
       }
       if (kids.length < 2) continue
 
       const policies = new Set(kids.map((k) => policyOf(k.attrs)))
       if (policies.size > 1) {
-        out.push({ path: rel(file), line: row.line, tags: kids.map((k) => `${k.tag}:${attr(k.attrs, 'touch')}`) })
+        out.push({ path: rel(file), line: row.line, tags: kids.map((k) => `${k.tag}:${policyOf(k.attrs)}`) })
       }
     }
   }

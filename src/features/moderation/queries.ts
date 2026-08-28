@@ -41,22 +41,6 @@ export async function getModerationList(filter: ModFilter = 'all', limit = 200, 
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
 
-  // Выборочный контроль автомата (spot-check): случайные живые списки —
-  // ловим ложные одобрения, меряем качество авто-проверки.
-  if (filter === 'sample') {
-    const rows = await base
-      .where(sql`${templates.moderation} = 'active' and ${templates.visibility} = 'public' and ${templates.status} = 'published'`)
-      .orderBy(sql`random()`)
-      .limit(10)
-    return rows as ModItem[]
-  }
-  // Очередь: апелляции наверх, затем тяжесть (S1/S3/S4/S9, спам, «ИИ не уверен»), затем охват.
-  const prio = [
-    sql`${templates.appealedAt} is null`,
-    desc(templates.moderationSeverity),
-    desc(templates.starsCount),
-    desc(templates.createdAt),
-  ]
   // Поиск по адресу и названию. Очередь отдаёт до 200 строк, и без него найти
   // конкретный список в ней можно было только глазами, прокруткой.
   //
@@ -70,6 +54,26 @@ export async function getModerationList(filter: ModFilter = 'all', limit = 200, 
     ? sql`(${templates.slug} ilike ${like} or ${users.handle} ilike ${like} or ${templates.title}::text ilike ${like})`
     : undefined
 
+  // Выборочный контроль автомата (spot-check): случайные живые списки —
+  // ловим ложные одобрения, меряем качество авто-проверки.
+  if (filter === 'sample') {
+    // Поиск действует и здесь. Поле ввода видно на всех вкладках, а вкладка, где оно
+    // молча ни на что не влияет, — обман: человек ищет список и получает десять
+    // случайных, ничего об этом не узнав (P2 авто-ревью #830).
+    const live = sql`${templates.moderation} = 'active' and ${templates.visibility} = 'public' and ${templates.status} = 'published'`
+    const rows = await base
+      .where(search ? and(live, search) : live)
+      .orderBy(sql`random()`)
+      .limit(10)
+    return rows as ModItem[]
+  }
+  // Очередь: апелляции наверх, затем тяжесть (S1/S3/S4/S9, спам, «ИИ не уверен»), затем охват.
+  const prio = [
+    sql`${templates.appealedAt} is null`,
+    desc(templates.moderationSeverity),
+    desc(templates.starsCount),
+    desc(templates.createdAt),
+  ]
   const where =
     filter === 'all' ? search : search ? and(eq(templates.moderation, filter), search) : eq(templates.moderation, filter)
 
