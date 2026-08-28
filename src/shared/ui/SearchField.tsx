@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { Search, X } from 'lucide-react'
-import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, ICON_SIZE, TOUCH_MIN_H, type ControlSize } from './control'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, ICON_SIZE, TOUCH_HIT, TOUCH_MIN_H, type ControlSize } from './control'
 
 type Size = ControlSize
 
@@ -32,8 +32,21 @@ export interface SearchFieldProps {
   size?: Size
   /** 'box' — своя рамка (по умолчанию); 'bare' — без рамки, для вложения в готовый контейнер. */
   variant?: 'box' | 'bare'
-  /** grow — видимая рамка добирает 44px на touch; fixed — сохраняет ступень
-   *  шкалы, когда поле стоит в одном ряду с компактными Select/Button. */
+  /**
+   * grow — видимая рамка добирает 44px на грубом указателе; fixed — держит ступень шкалы.
+   *
+   * ⚠️ ДЕФОЛТ `fixed` с 27.08.2026, и это возврат к решению, которое уже было принято.
+   * В `FIELD_BOX` (control.ts) записано дословно: «роста до 44 на сенсоре здесь НЕТ (снят
+   * 13.08.2026): поле в ряду с кнопкой обязано совпасть с ней по высоте, а кнопка на
+   * сенсоре остаётся 32px». Input, Select и TagInput этому следуют — SearchField
+   * единственный сохранил рост и потому единственный разъезжался с соседями.
+   *
+   * Как это выглядело: владелец видел кнопку ниже поиска в ТРЁХ разных местах (страница
+   * предложений, обсуждения, шапка), а в шапке рост поля ещё и раздувал полосу с 53 до
+   * 65px. Проп `fixed` существовал, и в его же описании был назван этот самый случай, —
+   * но передавать его должен был каждый вызывающий, и ни один не передал. Правило,
+   * которое надо помнить на каждом вызове, не работает: оно обязано быть дефолтом.
+   */
   touch?: 'grow' | 'fixed'
   /** Имя для нативной отправки формы (GET). */
   name?: string
@@ -67,7 +80,7 @@ export function SearchField({
   clearLabel = 'Clear',
   size = 'md',
   variant = 'box',
-  touch = 'grow',
+  touch = 'fixed',
   name,
   autoFocus,
   overlay,
@@ -121,7 +134,12 @@ export function SearchField({
           aria-label={clearLabel}
           onMouseDown={(e) => e.preventDefault()}
           onClick={clear}
-          className="grid shrink-0 place-items-center rounded-md text-muted outline-hidden hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong"
+          /* Зона нажатия обязательна: сам крестик 14x14, и пальцем в него не попасть —
+             живой замер 28.08.2026 на 390px нашёл его самой мелкой целью приложения.
+             Растить видимый значок нельзя: он стоит ВНУТРИ поля и раздул бы его выше
+             ступени шкалы, а поле обязано совпадать по высоте с кнопкой рядом. Значит
+             зона, а не размер, — ровно тот случай, под который TOUCH_HIT и заведён. */
+          className={`grid shrink-0 place-items-center rounded-md text-muted outline-hidden hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong ${TOUCH_HIT}`}
         >
           <X size={s.clear} />
         </button>

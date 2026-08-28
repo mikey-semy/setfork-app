@@ -16,6 +16,7 @@ import { DISCUSSION_CATEGORIES, categoryLabel, categoryMeta } from '@/features/d
 import { PAGE } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
 import { buttonClass } from '@/shared/ui/button-style'
+import { SearchForm } from '@/shared/ui/SearchForm'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -27,7 +28,7 @@ export default async function DiscussionsPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ category?: string; page?: string }>
+  searchParams: Promise<{ category?: string; page?: string; q?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const ru = lang === 'ru'
@@ -40,10 +41,15 @@ export default async function DiscussionsPage({
   const category = sp.category && DISCUSSION_CATEGORIES.some((c) => c.key === sp.category) ? sp.category : undefined
   // Счёт идёт по ТОМУ ЖЕ отбору, что и выдача, иначе листалка нарисует несуществующие
   // страницы.
-  const total = await countDiscussions(meta.id, { category })
+  // Поиск по названию. Запрос это УМЕЛ с самого начала (`discussionConds` разбирает
+  // `opts.q` и уже экранирует шаблон через likeContains) — страница просто не передавала
+  // параметр и не рисовала поле. Владелец назвал это как «поиск отсутствует», и так и было:
+  // возможность лежала готовой на слой ниже.
+  const q = (sp.q ?? '').trim()
+  const total = await countDiscussions(meta.id, { category, q })
   const totalPages = pageCount(total)
   const page = pageFromParam(sp.page, totalPages)
-  const list = await getDiscussions(meta.id, { category }, pageWindow(page))
+  const list = await getDiscussions(meta.id, { category, q }, pageWindow(page))
   const base = `/${owner}/${slug}/discussions`
 
   const newLabel = ru ? 'Новое обсуждение' : 'New discussion'
@@ -51,7 +57,19 @@ export default async function DiscussionsPage({
   return (
     <>
       <div className={PAGE}>
-        <div className="mb-3 flex items-center justify-between gap-2">
+        {/* Ряд «поиск + создать» — тот же, что на Предложениях: одна поверхность у двух
+            разделов списка не может выглядеть по-разному. Фильтр раздела едет скрытым
+            полем, иначе поиск сбрасывал бы выбранную категорию. */}
+        <div className="mb-3 flex items-center gap-2">
+          <form action={base} method="get" className="min-w-0 flex-1">
+            {category && <input type="hidden" name="category" value={category} />}
+            <SearchForm initial={q} placeholder={t('discussionSearchPh', lang)} />
+          </form>
+        </div>
+
+        {/* Фильтры В ПАНЕЛИ, как на Предложениях: голый ряд ссылок читался как часть
+            содержимого, а не как управление отбором. */}
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2">
           <div className="flex flex-wrap items-center gap-1">
             <Link href={base} className={`rounded-md px-2.5 py-1.5 text-body font-medium ${!category ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}>
               {ru ? 'Все' : 'All'}

@@ -10,9 +10,13 @@ import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { toast } from '@/shared/ui/toast'
 import type { ModFilter, ModItem } from './queries'
-import { aiModerate, setModeration, setVerified } from './actions'
+import { aiModerate, approveMany, setModeration, setVerified } from './actions'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Alert } from '@/shared/ui/Alert'
+import { Button } from '@/shared/ui/button'
+import { Checkbox } from '@/shared/ui/checkbox'
+import { SearchForm } from '@/shared/ui/SearchForm'
 
 function StatusBadge({ s, lang }: { s: ModItem['moderation']; lang: Lang }) {
   if (s === 'hidden') return <Badge variant="danger">{t('hiddenLabel', lang)}</Badge>
@@ -25,15 +29,34 @@ export function ModerationTable({
   items,
   counts,
   filter,
+  q,
   lang,
 }: {
   items: ModItem[]
   counts: { pending: number; flagged: number; hidden: number }
   filter: ModFilter
+  q: string
   lang: Lang
 }) {
   const [pending, start] = useTransition()
   const [busy, setBusy] = useState<string | null>(null)
+  /** Выбранные строки. Очередь отдаёт до двухсот, и одобрять их по одному — это столько
+   *  же нажатий, сколько строк. */
+  // Множество, а не массив: очередь отдаёт до 200 строк, и `sel.includes(...)` в каждой
+  // из них — это перебор всего выбранного на КАЖДУЮ строку при каждом перерисовывании
+  // (при «выбрать всё» — 200×200 сравнений). У множества проверка постоянная, а код не
+  // длиннее. Указано react-doctor.
+  const [sel, setSel] = useState<ReadonlySet<string>>(new Set())
+  const toggle = (id: string) =>
+    setSel((s) => {
+      const next = new Set(s)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+  /** Одобрить можно только то, что ещё не одобрено: показывать «одобрить» над активными
+   *  значит обещать действие, которое ничего не изменит. */
+  const approvable = new Set(items.filter((it) => it.moderation !== 'active').map((it) => it.id))
+  const selApprovable = [...sel].filter((id) => approvable.has(id))
 
   const tabs: { key: ModFilter; label: string; n?: number }[] = [
     { key: 'all', label: t('filterAll', lang) },
@@ -72,12 +95,58 @@ export function ModerationTable({
         </TabNav>
       </div>
 
+      {/* Поиск по адресу, названию и НИКУ АВТОРА: в модерации разбирают не только «этот
+          список», но и «всё, что принёс вот этот автор». Форма нативная (GET), фильтр
+          едет скрытым полем — иначе поиск сбрасывал бы выбранную вкладку. */}
+      <form action="/admin/moderation" method="get" className="mb-3 flex items-center gap-2">
+        {filter !== 'all' && <input type="hidden" name="filter" value={filter} />}
+        <div className="min-w-0 flex-1">
+          <SearchForm initial={q} placeholder={t('moderationSearchPh', lang)} />
+        </div>
+      </form>
+
+      {/* Панель массового действия — только когда есть что одобрять. Пустая панель над
+          списком это шум: она обещает действие и ничего не делает. */}
+      {selApprovable.length > 0 && (
+        <Alert
+          variant="accent"
+          className="mb-3"
+          action={
+            <Button
+              variant="primary"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  const res = await approveMany(selApprovable)
+                  setSel(new Set())
+                  if ('error' in res) toast.error(res.error)
+                  else toast.success(t('moderationApprovedN', lang).replace('{n}', String(res.ok)))
+                })
+              }
+            >
+              {pending ? <Spinner size="md" /> : <Check size={14} />} {t('approveAction', lang)}
+            </Button>
+          }
+        >
+          {t('moderationSelected', lang).replace('{n}', String(selApprovable.length))}
+        </Alert>
+      )}
+
       <div className="flex flex-col gap-2">
         {items.length === 0 && <EmptyState variant="inline" hint={t('nothingFound', lang)} />}
         {items.map((it) => {
           const hidden = it.moderation === 'hidden'
           return (
             <div key={it.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-3.5 py-3">
+              {/* Флажок только у того, что можно одобрить: у активного списка выбор ничего
+                  не даёт, и пустой флажок рядом с ним обещал бы действие. */}
+              {it.moderation !== 'active' && (
+                <Checkbox
+                  checked={sel.has(it.id)}
+                  onChange={() => toggle(it.id)}
+                  aria-label={`${t('bulk.select', lang)}: ${it.ownerHandle}/${it.slug}`}
+                />
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link href={`/${it.ownerHandle}/${it.slug}`} className="truncate font-mono text-body text-accent hover:underline">

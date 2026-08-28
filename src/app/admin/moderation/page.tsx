@@ -10,16 +10,16 @@ export async function generateMetadata() {
   return { title: t('moderation', lang) }
 }
 
-export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
+export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ filter?: string; q?: string }> }) {
   await requireAdmin()
-  const [{ filter: f }, lang] = await Promise.all([searchParams, getLang()])
+  const [{ filter: f, q }, lang] = await Promise.all([searchParams, getLang()])
   const filter: ModFilter = f === 'pending' || f === 'flagged' || f === 'hidden' || f === 'sample' ? f : 'all'
-  const [items, counts] = await Promise.all([getModerationList(filter), getModerationCounts()])
+  const [items, counts] = await Promise.all([getModerationList(filter, 200, q ?? ''), getModerationCounts()])
 
   return (
     <div className="min-w-0">
       <PageHeader title={t('moderation', lang)} subtitle={t('moderationIntro', lang)} />
-      <ModerationTable items={items} counts={counts} filter={filter} lang={lang} />
+      <ModerationTable items={items} counts={counts} filter={filter} q={q ?? ''} lang={lang} />
     </div>
   )
 }

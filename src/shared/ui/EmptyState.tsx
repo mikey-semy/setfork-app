@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { cn } from '@/shared/lib/cn'
 import { CONTROL_H, CONTROL_TEXT } from './control'
+import { buttonClass } from './button-style'
 
 /** Единый пустой/нейтральный экран: иконка + заголовок + подсказка + опц. кнопка.
  *
@@ -46,11 +47,11 @@ export function EmptyState({
       {action && (
         <Link
           href={action.href}
-          className={cn(
-            'mt-1 inline-flex items-center rounded-md bg-primary px-3.5 font-semibold text-primary-fg',
-            CONTROL_H.md,
-            CONTROL_TEXT.md,
-          )}
+          /* Через buttonClass, а не своим набором классов. Рецепт был собран руками и
+             потому не получил ЗОНУ НАЖАТИЯ: живой замер 28.08.2026 на 390px показал цель
+             81x32 — пальцем в неё попадают мимо. Вид не меняется: те же ступень, отступ и
+             тон, только приходят они оттуда же, откуда у всех кнопок. */
+          className={buttonClass({ variant: 'primary', className: 'mt-1' })}
         >
           {action.label}
         </Link>

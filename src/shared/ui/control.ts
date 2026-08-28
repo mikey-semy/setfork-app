@@ -207,9 +207,29 @@ export const TOUCH_MIN_BOX = 'pointer-coarse:min-h-11 pointer-coarse:min-w-11'
  *
  *  Место в потоке НЕ занимает. Годится там, где соседние цели стоят по
  *  ГОРИЗОНТАЛИ (шапка): зона растёт вверх и вниз, в пустоту, никому не мешая.
- *  Стоящим в столбик нужен `TOUCH_HIT_ROW`. */
-export const TOUCH_HIT =
-  "pointer-coarse:relative pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:top-1/2 pointer-coarse:before:h-11 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']"
+ *  Стоящим в столбик нужен `TOUCH_HIT_ROW`.
+ *
+ *  ⚠️ Разбито на ДВЕ части, и это не косметика. Псевдоэлементу нужен позиционированный
+ *  предок — раньше его давал `pointer-coarse:relative` прямо здесь. Но если кнопку
+ *  позиционировал ВЫЗЫВАЮЩИЙ (`absolute`), то на грубом указателе `relative` его
+ *  перебивал: свойство одно (`position`), `pointer-coarse:` идёт вариантом, и
+ *  tailwind-merge такую пару не сводит — в разметке остаются оба, и вариант побеждает.
+ *
+ *  Найдено 28.08.2026 живым замером в браузере и оказалось причиной сразу ДВУХ жалоб
+ *  владельца, которые я до того считал разными:
+ *   • крестик в панели настроек уезжал ВНИЗ под все поля — выпадал из `absolute` в поток;
+ *   • веер вставки блоков «разъезжался», а «плюс» уходил к правому краю: девять кнопок
+ *     типа выпадали из `absolute` в поток, обойма становилась 404px при экране 390, и
+ *     «плюс», будучи последним ребёнком, оказывался за краем экрана.
+ *  На мыши ни одно из двух не воспроизводится вовсе — `pointer-coarse:` там не действует,
+ *  поэтому ни глазами, ни статическим счётчиком это увидеть было нельзя.
+ *
+ *  Теперь `relative` добавляет `buttonClass` — и только когда вызывающий не позиционировал
+ *  элемент сам. Уже `absolute`? Он и так позиционирован, зоне этого достаточно. */
+export const TOUCH_HIT_ZONE =
+  "pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:top-1/2 pointer-coarse:before:h-11 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']"
+
+export const TOUCH_HIT = `pointer-coarse:relative ${TOUCH_HIT_ZONE}`
 
 /** То же, но с РЕЗЕРВОМ места под зону — для целей, стоящих в столбик.
  *

@@ -44,7 +44,7 @@ export default async function AdminCollectionsPage() {
         </Button>
       </form>
 
-      <div className="divide-y divide-border rounded-lg border border-border bg-surface">
+      <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
         {list.length === 0 && <EmptyState variant="inline" hint={ru ? 'Подборок пока нет.' : 'No collections yet.'} />}
         {list.map((c) => (
           <Link key={c.id} href={`/admin/collections/${c.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">

@@ -40,6 +40,30 @@ export type AuditAction =
   | 'auth.identity-link'
   | 'auth.identity-unlink'
 
+/**
+ * IP из заголовков запроса — или null, если запроса нет.
+ *
+ * ⚠️ Именно try/catch, а не `headers().catch(...)`. Вне области запроса (фоновая
+ * задача, приём git-push, инструмент MCP, тест) отказ приходит ДВУМЯ разными
+ * способами: иногда отклонённым промисом, а иногда синхронным броском — до того, как
+ * промис вообще появится. `.catch` покрывает только первый; во втором исключение
+ * улетало в общий перехват и отменяло ЗАПИСЬ ЦЕЛИКОМ, то есть журнал молча терял
+ * событие ровно там, где человека рядом нет и заметить некому.
+ *
+ * Найдено 28.08.2026 тестом массового одобрения. Сначала я записал причину как «бросает
+ * синхронно» — и мутация это опровергла: в чистом окружении сработал бы и `.catch`.
+ * Верно более слабое и более полезное: способ отказа НЕ ГАРАНТИРОВАН, поэтому ловить
+ * надо оба.
+ */
+async function requestIp(): Promise<string | null> {
+  try {
+    const h = await headers()
+    return (h.get('x-forwarded-for') ?? '').split(',')[0].trim() || null
+  } catch {
+    return null
+  }
+}
+
 export async function recordAudit(
   action: AuditAction,
   opts: {
@@ -51,12 +75,7 @@ export async function recordAudit(
   } = {},
 ): Promise<void> {
   try {
-    let ip = opts.ip
-    if (ip === undefined) {
-      // headers() доступен только в request-контексте (server actions / route handlers).
-      const h = await headers().catch(() => null)
-      ip = h ? (h.get('x-forwarded-for') ?? '').split(',')[0].trim() || null : null
-    }
+    const ip = opts.ip === undefined ? await requestIp() : opts.ip
     await db.insert(auditLog).values({
       actorId: opts.actorId ?? null,
       action,
@@ -67,5 +86,38 @@ export async function recordAudit(
     })
   } catch (e) {
     captureError(e, { where: 'recordAudit', action })
+  }
+}
+
+/**
+ * Аудит ПАЧКИ однотипных действий — одной вставкой.
+ *
+ * Массовое одобрение в модерации писало журнал по строке на список, и каждая строка
+ * заново спрашивала заголовки запроса ради IP. На двух сотнях списков это две сотни
+ * последовательных вставок там, где хватает одной (указано react-doctor). IP и время
+ * у пачки общие по смыслу: это одно нажатие одного человека.
+ *
+ * Пустой список — не запись: вставка без строк упала бы, а «ничего не произошло» и
+ * журналировать нечего.
+ */
+export async function recordAuditMany(
+  action: AuditAction,
+  rows: { actorId?: string | null; targetType?: string; targetId?: string; meta?: Record<string, unknown> }[],
+): Promise<void> {
+  if (rows.length === 0) return
+  try {
+    const ip = await requestIp()
+    await db.insert(auditLog).values(
+      rows.map((r) => ({
+        actorId: r.actorId ?? null,
+        action,
+        targetType: r.targetType ?? null,
+        targetId: r.targetId ?? null,
+        meta: r.meta ?? {},
+        ip,
+      })),
+    )
+  } catch (e) {
+    captureError(e, { where: 'recordAuditMany', action })
   }
 }

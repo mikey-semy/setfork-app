@@ -72,11 +72,28 @@ function SheetContent({
         {...props}
       >
         {children}
-        <SheetPrimitive.Close asChild className="absolute top-3 right-3">
-          <IconButton variant="ghost" label={closeLabel}>
-            <X size={iconSizeFor()} />
-          </IconButton>
-        </SheetPrimitive.Close>
+        {/*
+         * ⚠️ Позиционирование на ОБЁРТКЕ, а не на самой кнопке.
+         *
+         * Было `<SheetPrimitive.Close asChild className="absolute top-3 right-3">`. При
+         * `asChild` Radix склеивает классы СТРОКОЙ: свои первыми, детские вторыми, — и
+         * tailwind-merge тут не участвует. А `buttonClass` подмешивает тач-зону `TOUCH_HIT`,
+         * в которой есть `pointer-coarse:relative`. На грубом указателе этот `relative`
+         * оказывался ПОЗЖЕ `absolute` и побеждал: кнопка выпадала из абсолютного
+         * позиционирования в обычный поток — то есть уезжала в самый низ панели, под все
+         * поля. Владелец так это и увидел: «крестик закрытия вообще внизу под всеми
+         * элементами». На мыши дефект не проявлялся вовсе.
+         *
+         * Обёртка разводит две роли: она позиционирует, кнопка остаётся кнопкой со своей
+         * тач-зоной. Ни один класс другого больше не перебивает.
+         */}
+        <div className="absolute right-3 top-3">
+          <SheetPrimitive.Close asChild>
+            <IconButton variant="ghost" label={closeLabel}>
+              <X size={iconSizeFor()} />
+            </IconButton>
+          </SheetPrimitive.Close>
+        </div>
       </SheetPrimitive.Content>
     </>,
   )

@@ -55,7 +55,7 @@ export function ProfileOverview({
       {agent && agent.tended.length > 0 && (
         <div className="mb-6 min-w-0">
           <div className="mb-2 text-body-sm font-semibold text-ink-2">{t('list.tendsTheseLists', lang)}</div>
-          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
             {agent.tended.map((it) => (
               <li key={`${it.handle}/${it.slug}`} className="min-w-0">
                 <Link href={`/${it.handle}/${it.slug}`} className="flex min-w-0 items-center gap-2 px-3 py-3 hover:bg-surface-2">

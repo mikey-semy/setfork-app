@@ -7,6 +7,7 @@ import { Monitor, Moon, Sun } from 'lucide-react'
 import { LOCALES, t, type Lang } from '@/shared/i18n'
 import { Tooltip } from './Tooltip'
 import { Segment, SegmentedControl } from './SegmentedControl'
+import { TOUCH_HIT } from './control'
 
 export function LangSwitch({ lang }: { lang: Lang }) {
   const router = useRouter()
@@ -80,8 +81,13 @@ export function ThemeModeSwitch({ labels = false, lang }: { labels?: boolean; la
           key={value}
           type="button"
           onClick={() => setTheme(value)}
+          // Зона нажатия: карточка 38px высотой, а пальцу нужно 44 (живой замер 28.08.2026
+          // на 390px нашёл эти три среди самых мелких целей). Растить нельзя — высоту тут
+          // задаёт содержимое, и рост развалил бы ряд; значит зона. Она выступает на 3px
+          // сверху и снизу, а зазор ряда 8px, так что соседние строки при переносе не
+          // перекрываются — тот же расчёт, что держит узда stacked-hit.
           // eslint-disable-next-line no-restricted-syntax -- карточка варианта выбора: высота от содержимого, а не от шкалы
-          className={`flex items-center gap-2 rounded-md border px-3 py-2 text-body text-ink transition-colors ${
+          className={`flex items-center gap-2 rounded-md border px-3 py-2 text-body text-ink transition-colors ${TOUCH_HIT} ${
             current === value ? 'border-accent bg-accent-soft' : 'border-border hover:border-border-strong'
           }`}
         >

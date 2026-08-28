@@ -157,6 +157,9 @@ export function BubbleToolbar({
               <IconButton
                 size="sm"
                 variant="ghost"
+                // Та же политика, что у значков выше: кнопка стоит в ТОЙ ЖЕ плотной
+                // сетке с зазором 2px, где невидимая зона накрыла бы соседнюю строку.
+                touch="grow"
                 label={L('упомянуть', 'mention')}
                 onClick={() => {
                   onMention()
@@ -170,6 +173,9 @@ export function BubbleToolbar({
               <IconButton
                 size="sm"
                 variant="ghost"
+                // Та же политика, что у значков выше: кнопка стоит в ТОЙ ЖЕ плотной
+                // сетке с зазором 2px, где невидимая зона накрыла бы соседнюю строку.
+                touch="grow"
                 label={L('эмодзи', 'emoji')}
                 onClick={() => {
                   setMoreOpen(false)

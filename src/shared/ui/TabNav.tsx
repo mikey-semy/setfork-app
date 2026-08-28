@@ -6,7 +6,7 @@ import { MoreHorizontal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './dropdown-menu'
 import { Tooltip } from './Tooltip'
 import { ScrollRow } from './ScrollRow'
-import { PAGE_X } from './control'
+import { PAGE_X, TOUCH_HIT } from './control'
 
 // Единый таб-бар под шапкой (GitHub-стиль) — ОДИН источник правды для профиля,
 // страницы списка, Explore и любых будущих разделов. Активная вкладка подчёркнута
@@ -144,8 +144,11 @@ function flattenTabs(children: ReactNode): ReactElement<TabItemProps>[] {
 // общие: по ним же меряется её ширина в невидимом ряду-призраке.
 // ml-auto прижимает её к ПРАВОМУ краю ряда (как More у GitHub), а не лепит к
 // последней влезшей вкладке — иначе она читается как ещё одна вкладка.
+// Зона нажатия: ряд вкладок 41px, пальцу нужно 44 (живой замер 28.08.2026). Рост
+// запрещён — высоту ряда задаёт полоска активной вкладки, и лишние 3px сдвинули бы
+// её от содержимого. Ряд ГОРИЗОНТАЛЬНЫЙ, зона растёт вверх-вниз в пустоту.
 const moreTabClass =
-  'ml-auto inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap px-3 py-2.5 min-w-11'
+  `ml-auto inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap px-3 py-2.5 min-w-11 ${TOUCH_HIT}`
 
 function OverflowTabNav({
   children,
@@ -314,7 +317,11 @@ export function TabItem({ href, on, icon, label, count }: TabItemProps) {
       // как несколько одинаковых ссылок подряд: «где я» не отвечал никто. `aria-current`
       // — штатный ответ на этот вопрос, и он же у листалки на номере текущей страницы.
       aria-current={on ? 'page' : undefined}
-      className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-2.5 ${
+      // Та же зона, что у «…»: обе части ряда обязаны быть одной целью, иначе палец
+      // попадает в одну вкладку и мимо соседней. Замер показал только «…» — вкладку
+      // он не увидел, потому что у неё нет ни рамки, ни фона; это промах инструмента,
+      // а не разница между ними, и он исправлен там же (scripts/probe/touch-sweep.mjs).
+      className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-2.5 ${TOUCH_HIT} ${
         on ? 'font-semibold text-ink' : 'font-medium text-ink-2 hover:text-ink'
       }`}
     >

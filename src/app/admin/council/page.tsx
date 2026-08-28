@@ -17,6 +17,7 @@ import { Signature, Sparkles, UserPlus } from 'lucide-react'
 import type { Option } from '@/features/admin/ModelSelect'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
+import { Alert } from '@/shared/ui/Alert'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -33,7 +34,7 @@ export async function generateMetadata() {
  * Заголовка на странице нет: он живёт в шапке (TopNav, ключ councilHall) — как у остальных
  * разделов. Подзаголовков в проекте нет вовсе.
  */
-export default async function CouncilPage({ searchParams }: { searchParams: Promise<{ hire?: string; selfgen?: string }> }) {
+export default async function CouncilPage({ searchParams }: { searchParams: Promise<{ hire?: string; selfgen?: string; accounts?: string; made?: string; left?: string }> }) {
   await requireAdmin()
   const [lang, settings, apiKey, sp] = await Promise.all([getLang(), getAiSettings(), getApiKey(), searchParams])
   const ru = lang === 'ru'
@@ -122,6 +123,17 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
       {/* Аккаунты уровня пользователя: специалист ведёт свои списки, комментирует и
           предлагает правки наравне с людьми (ADR-0004 — помечен как служебный). Кнопка
           ЯВНАЯ: аккаунт публичен (профиль, авторство), побочным эффектом его не заводят. */}
+      {/* Часть аккаунтов не завелась. Раньше отказ уходил в консоль сервера
+          (`ensureGnomeUser` ловит ошибку и возвращает null, чтобы совет работал и без
+          аккаунтов), а человек видел ту же страницу с тем же числом и решал, что кнопка
+          сломана. Она и была сломана, но по другой причине — и узнать об этом было
+          неоткуда. Теперь итог называется числом. */}
+      {sp.accounts === 'partial' && (
+        <Alert variant="warn" className="mb-4">
+          {t('admin.accountsPartial', lang).replace('{made}', sp.made ?? '0').replace('{left}', sp.left ?? '0')}
+        </Alert>
+      )}
+
       {noAccounts > 0 && (
         <div className={cardClass({ className: 'mb-4 flex flex-wrap items-center justify-between gap-3' })}>
           <div className="min-w-0">

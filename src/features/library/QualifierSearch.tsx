@@ -73,6 +73,7 @@ export function QualifierSearch({
   scope,
   autoFocus,
   size = 'md',
+  touch = 'grow',
   hint,
   containerClassName = 'w-full',
 }: {
@@ -82,6 +83,10 @@ export function QualifierSearch({
   scope?: string | null
   autoFocus?: boolean
   size?: 'md' | 'sm'
+  /** Как поле добирает тач-цель. `fixed` обязателен там, где высоту ряда задаёт НЕ поле
+   *  (шапка): дефолтный `grow` растит его до 44px на грубом указателе, а соседние кнопки
+   *  остаются на своей ступени — ряд разъезжается, а полоса раздувается. */
+  touch?: 'grow' | 'fixed'
   hint?: React.ReactNode
   containerClassName?: string
 }) {
@@ -246,6 +251,7 @@ export function QualifierSearch({
         <SearchField
           ref={inputRef}
           size={size}
+          touch={touch}
           hint={hint}
           autoFocus={autoFocus}
           value={value}

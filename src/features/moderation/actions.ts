@@ -1,11 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
 import { getAdmin } from '@/shared/auth/admin'
 import { moderateContent } from '@/shared/ai/moderate'
-import { recordAudit } from '@/shared/audit'
+import { recordAudit, recordAuditMany } from '@/shared/audit'
 import { requireSession } from '@/shared/auth/session'
 import { categorySeverity } from './automation'
 import { buildListText, verdictReason } from './moderate-list'
@@ -41,6 +41,52 @@ export async function setModeration(
   revalidatePath('/admin/moderation')
   revalidatePath('/explore')
   return { ok: true }
+}
+
+/**
+ * Одобрить ПАЧКУ списков разом.
+ *
+ * Очередь отдаёт до двухсот строк, и после волны самогенерации в ней оказываются
+ * десятки однотипных черновиков. Одобрять их по одному — это столько же нажатий,
+ * сколько строк, и владелец назвал это прямо: «одобрить массово невозможно».
+ *
+ * ⚠️ Одобрение ОДНИМ запросом, а не циклом по строкам. Цикл дал бы частичный результат
+ * при обрыве: часть одобрена, часть нет, и что именно — неизвестно ни человеку, ни
+ * журналу. Здесь `in (…)` — либо все, либо ни одной.
+ *
+ * Запись в журнал по каждой строке остаётся поимённой: аудит должен уметь ответить «кто
+ * и когда одобрил ВОТ ЭТОТ список», а запись «одобрено 40 штук» на такой вопрос не
+ * отвечает.
+ */
+export async function approveMany(ids: string[]): Promise<{ ok: number } | { error: string }> {
+  const admin = await getAdmin()
+  if (!admin) return { error: 'Доступ запрещён.' }
+  const clean = [...new Set(ids.filter(Boolean))]
+  if (!clean.length) return { ok: 0 }
+
+  const done = await db
+    .update(templates)
+    // Те же поля, что у одиночного одобрения: расхождение здесь означало бы, что
+    // «одобрить» пачкой и поштучно — разные действия, а человек ждёт одного.
+    .set({ moderation: 'active', moderationReason: null, moderationSeverity: 0, appealedAt: null })
+    .where(inArray(templates.id, clean))
+    .returning({ id: templates.id })
+
+  // Одной вставкой, а не по строке в цикле: пачка — это одно нажатие одного человека,
+  // и журналу незачем спрашивать заголовки запроса заново на каждый список.
+  await recordAuditMany(
+    'list.moderate',
+    done.map((r) => ({
+      actorId: admin.userId,
+      targetType: 'list',
+      targetId: r.id,
+      meta: { moderation: 'active', bulk: true },
+    })),
+  )
+
+  revalidatePath('/admin/moderation')
+  revalidatePath('/explore')
+  return { ok: done.length }
 }
 
 /** Проверить список ИИ вручную (админ); при опасности — flagged + причина. */

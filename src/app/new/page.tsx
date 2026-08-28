@@ -16,6 +16,7 @@ import { TagsAndCatalogFields } from '@/features/library/TagsAndCatalogFields'
 import { getCatalogTagProfiles } from '@/features/catalogs/queries'
 import { listQuota } from '@/shared/quota'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { Asterisk } from 'lucide-react'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -70,7 +71,36 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
           initialItems={[]}
           lang={lang}
           aiRefine={{ title: '', desc: '', tags: [] }}
-          headerField={<Input name="title" required placeholder={t('listTitlePh', lang)} aria-label={t('listTitle', lang)} />}
+          headerField={
+            /*
+             * Три правки одного поля, все по обходу владельца 27.08.2026.
+             *
+             * `size="lg"` — ступень СОСЕДЕЙ. Поля пунктов ниже это BubbleTextEditor с
+             * `px-3 py-2`, то есть около 40px; заголовок стоял на `md` (32px) и выглядел
+             * ниже всего, что под ним. Ряд задаёт не он, а блок пункта.
+             *
+             * Подсказка говорит О ПОЛЕ. Было «Деплой на VPS» — это ПРИМЕР значения, и
+             * человек читает его как уже введённый текст либо как указание писать про
+             * деплой. Пример уместен там, где формат неочевиден (адрес, тег), а у названия
+             * формата нет.
+             *
+             * Обязательность ВИДНА. Атрибут `required` был, а глазу не говорил ничего —
+             * при том что прямо под полем уровень пункта свою обязательность показывает
+             * знаком. Звёздочка — второй признак к атрибуту, не замена ему.
+             */
+            <Input
+              name="title"
+              required
+              size="lg"
+              placeholder={t('listTitlePh', lang)}
+              aria-label={t('listTitle', lang)}
+              trailing={
+                <span aria-label={t('listTitleRequiredMark', lang)} role="img" className="text-danger">
+                  <Asterisk size={13} />
+                </span>
+              }
+            />
+          }
           headerRight={
           <ListSettingsSheet lang={lang}>
             <Field label={t('listDesc', lang)}>

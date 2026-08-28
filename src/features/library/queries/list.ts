@@ -317,6 +317,10 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       ownerHandle: users.handle,
       ownerName: users.name,
       ownerAvatarUrl: users.avatarUrl,
+      // Нужно правилу видимости: черновик служебного аккаунта админ обязан открыть,
+      // черновик человека — нет. Поле едет вместе с метой, а не спрашивается отдельно:
+      // иначе каждый вызывающий обязан вспомнить про этот шаг, и один из них забудет.
+      ownerIsAgent: sql<boolean>`${users.accountType} = 'agent'`,
       slug: templates.slug,
       title: templates.title,
       desc: templates.desc,
@@ -407,7 +411,17 @@ export async function getTemplateDetail(ownerHandle: string, slug: string) {
       })
     : []
 
-  return { tpl, currentVersion, steps: stepRows }
+  // Признак агента едет и ОТСЮДА, не только из меты (getListMeta). Правило видимости
+  // читает его у объекта списка, а страница списка, экспорт и /data.json ходят через
+  // эту функцию — без поля админ не открыл бы черновик гнома ровно там, где его и
+  // открывают. Указано авто-ревью на #830; мой же комментарий у меты предупреждал,
+  // что «один из вызывающих забудет», и забыл я сам.
+  // Признак агента едет и ОТСЮДА, не только из меты (getListMeta). Правило видимости
+  // читает его у объекта списка, а страница списка, экспорт и /data.json ходят через
+  // эту функцию — без поля админ не открыл бы черновик гнома ровно там, где его и
+  // открывают. Указано авто-ревью на #830; мой же комментарий у меты предупреждал,
+  // что «один из вызывающих забудет», и забыл я сам.
+  return { tpl: { ...tpl, ownerIsAgent: tpl.owner.accountType === 'agent' }, currentVersion, steps: stepRows }
 }
 
 

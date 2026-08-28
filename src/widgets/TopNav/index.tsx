@@ -15,6 +15,7 @@ import { TopNavCrumb } from './TopNavCrumb'
 import { CreateMenu, GuestMenu, UserMenu } from './TopNavMenus'
 import { pageTitleKey } from './page-title'
 import { useCrumb } from './use-crumb'
+import { TOUCH_HIT } from '@/shared/ui/control'
 
 // Убираем дефолтный аутлайн (Radix возвращает фокус на триггер после закрытия — из-за
 // этого «залипало» выделение); кольцо оставляем только для клавиатуры.
@@ -57,7 +58,12 @@ export function TopNav({
           <Menu size={21} strokeWidth={2.75} />
         </IconButton>
         {/* Имя начинается с видимого «SF» (WCAG 2.5.3 label-in-name): голый "SetFork" его не содержал. */}
-        <Link href="/" className="font-logo text-page leading-none text-ink" aria-label="SF — SetFork">
+        {/* Цель «домой» была 23x18 — самая мелкая постоянная цель приложения, и стоит она
+            на КАЖДОЙ странице (живой замер 28.08.2026). Рост запрещён: высоту полосы
+            задаёт не логотип, и 44px раздули бы шапку с 53 до 65px — та же ошибка, что
+            была у поиска. Поэтому зона по вертикали и отступ по горизонтали: видимая
+            надпись прежняя, цель становится 39x44. */}
+        <Link href="/" className={`font-logo text-page leading-none text-ink px-2 ${TOUCH_HIT}`} aria-label="SF — SetFork">
           SF
         </Link>
       </div>
@@ -79,6 +85,13 @@ export function TopNav({
                 lang={lang}
                 initial=""
                 size="md"
+                /* Высоту шапки задаёт НЕ поиск: она собрана из py-2.5 вокруг контрола
+                   ступени md и равна 53px (токен --h-topbar). Дефолтный `grow` растит
+                   поле до 44px на грубом указателе — полоса стала бы 65px, а соседние
+                   кнопка «плюс» и колокольчик остались бы 32px, и ряд разъезжается.
+                   Ровно тот случай, под который заведён проп `fixed`, и ровно то, что
+                   владелец видел как «кнопка не по высоте поиска». */
+                touch="fixed"
                 containerClassName="w-menu xl:w-panel-lg"
                 hint={<kbd className="hidden rounded-md border border-border px-1.5 text-caption font-medium leading-[1.125rem] text-muted lg:inline">/</kbd>}
               />

@@ -111,3 +111,42 @@ describe('canWriteToFeature', () => {
     expect(isFeatureEnabled(withFeatures({ visibility: 'private' }), 'issues')).toBe(true)
   })
 })
+
+describe('черновик и админ', () => {
+  const draft = (extra: Partial<Parameters<typeof canViewList>[0]> = {}) =>
+    ({ visibility: 'public', status: 'draft', moderation: 'active', ...extra }) as Parameters<typeof canViewList>[0]
+  const admin = { isOwner: false, isAdmin: true }
+  const stranger = { isOwner: false, isAdmin: false }
+
+  it('черновик ЧЕЛОВЕКА админу закрыт — это личная запись, а не работа компании', () => {
+    expect(canViewList(draft(), admin)).toBe(false)
+    expect(canViewList(draft(), stranger)).toBe(false)
+    expect(canViewList(draft(), { isOwner: true })).toBe(true)
+  })
+
+  it('черновик СЛУЖЕБНОГО аккаунта админу открыт: иначе его не видит никто', () => {
+    // Гном в браузер не заходит, а для всех остальных черновик закрыт. До 27.08.2026
+    // это значило, что петля самогенерации производит контент, который нельзя ни
+    // увидеть, ни опубликовать руками: всё, что придержал шлюз готовности, оставалось
+    // невидимым навсегда. Найдено владельцем рассуждением, а не по симптому.
+    expect(canViewList(draft({ ownerIsAgent: true }), admin)).toBe(true)
+    // Не-админу служебный черновик по-прежнему закрыт: право даёт разбор, а не публичность.
+    expect(canViewList(draft({ ownerIsAgent: true }), stranger)).toBe(false)
+  })
+
+  it('черновик ПОД МОДЕРАЦИЕЙ админу открыт: очередь зовёт его разобрать', () => {
+    // Очередь отбирает по состоянию модерации, не глядя на статус, поэтому черновик с
+    // `pending` в неё попадает. Раньше по ссылке приходил 404 — очередь звала разобрать
+    // то, что сама же не давала открыть («ни одну статью открыть невозможно»).
+    expect(canViewList(draft({ moderation: 'pending' }), admin)).toBe(true)
+    expect(canViewList(draft({ moderation: 'hidden' }), admin)).toBe(true)
+    expect(canViewList(draft({ moderation: 'pending' }), stranger)).toBe(false)
+  })
+
+  it('ПРИВАТНОСТЬ не расширена ни одним из двух случаев', () => {
+    // Правило про приватное стоит раньше и отдельно: ни служебный автор, ни очередь
+    // модерации не открывают админу приватный список.
+    expect(canViewList(draft({ visibility: 'private', ownerIsAgent: true }), admin)).toBe(false)
+    expect(canViewList(draft({ visibility: 'private', moderation: 'pending' }), admin)).toBe(false)
+  })
+})
