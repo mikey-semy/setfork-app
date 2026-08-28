@@ -39,9 +39,9 @@ export function NewListForm({
     noTitle: string
   }
 }) {
-  const [refusal, action] = useActionState<NewListRefusal | null, FormData>(createTemplate, null)
+  const [refusal, action, pending] = useActionState<NewListRefusal | null, FormData>(createTemplate, null)
   // Набранное переживает отказ: форма React сбрасывает неуправляемые поля сама.
-  const { formRef, onSubmit } = useKeepFormValues(refusal !== null)
+  const { formRef, onSubmit } = useKeepFormValues(refusal !== null, pending)
 
   return (
     <form ref={formRef} onSubmit={onSubmit} action={action}>

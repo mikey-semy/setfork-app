@@ -21,9 +21,9 @@ export function NewDiscussionForm({
   emptyText: string
   className?: string
 }) {
-  const [refusal, action] = useActionState<DiscussionRefusal | null, FormData>(createDiscussion, null)
+  const [refusal, action, pending] = useActionState<DiscussionRefusal | null, FormData>(createDiscussion, null)
   // Набранное переживает отказ: форма React сбрасывает неуправляемые поля сама.
-  const { formRef, onSubmit } = useKeepFormValues(refusal === 'empty')
+  const { formRef, onSubmit } = useKeepFormValues(refusal === 'empty', pending)
 
   return (
     <form ref={formRef} onSubmit={onSubmit} action={action} className={className}>

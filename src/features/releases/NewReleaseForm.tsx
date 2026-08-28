@@ -28,12 +28,12 @@ export function NewReleaseForm({
   texts: Record<ReleaseRefusal, string>
   className?: string
 }) {
-  const [refusal, action] = useActionState<ReleaseRefusal | null, FormData>(
+  const [refusal, action, pending] = useActionState<ReleaseRefusal | null, FormData>(
     createRelease.bind(null, templateId),
     null,
   )
   // Набранное переживает отказ: форма React сбрасывает неуправляемые поля сама.
-  const { formRef, onSubmit } = useKeepFormValues(refusal !== null)
+  const { formRef, onSubmit } = useKeepFormValues(refusal !== null, pending)
 
   return (
     <form ref={formRef} onSubmit={onSubmit} action={action} className={className}>
