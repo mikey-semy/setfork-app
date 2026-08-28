@@ -9,6 +9,7 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
+import { breadcrumbList, creativeWork, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { PAGE, STACK } from '@/shared/ui/control'
 import { ListAbout } from './ListAbout'
 import { ListAdNotices } from './ListAdNotices'
@@ -84,10 +85,45 @@ export default async function ListPage({
 }) {
   const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const loaded = await loadListPage({ owner, slug, sp, lang })
-  const { tpl, currentVersion, viewer, isOwner, readOnlyView, mon, digGnomes, quizBids, quizPassed, completion, base } = loaded
+  const { tpl, currentVersion, steps, viewer, isOwner, readOnlyView, mon, digGnomes, quizBids, quizPassed, completion, base } = loaded
+
+  // Структурные данные — только у публично видимой страницы: у черновика их быть
+  // не должно ровно потому же, почему его нет в карте сайта.
+  const indexable = tpl.status === 'published' && tpl.visibility === 'public' && tpl.moderation === 'active'
+  const path = `/${owner}/${slug}`
 
   return (
     <>
+      {indexable ? (
+        <>
+          <JsonLd
+            data={creativeWork({
+              name: tr(tpl.title, lang),
+              description: tr(tpl.desc, lang) || undefined,
+              path,
+              authorName: tpl.owner.name || owner,
+              authorPath: `/${owner}`,
+              datePublished: tpl.createdAt,
+              dateModified: tpl.updatedAt,
+              tags: tpl.tags,
+              // Как ниже в печатной шапке: показанная версия может быть не текущей,
+              // а на некоторых путях её нет вовсе.
+              version: currentVersion?.version ?? tpl.currentVersion,
+            })}
+          />
+          <JsonLd data={breadcrumbList([{ name: owner, path: `/${owner}` }, { name: tr(tpl.title, lang) || slug, path }])} />
+          {/* Шаги отдаём списком: это то, ЧТО здесь исполняется, и единственная
+              часть страницы, ради которой машина сюда приходит. Потолок в 25 —
+              чтобы разметка не раздувалась на курсах в сотню уроков. */}
+          <JsonLd
+            data={itemList(
+              tr(tpl.title, lang) || slug,
+              steps.slice(0, 25).map((s) => ({ name: tr(s.title, lang) || `${s.n}` })),
+            )}
+          />
+        </>
+      ) : null}
+
       {/* Просмотр: владелец себя не накручивает, сервер дополнительно дедупит. */}
       {!isOwner && mon.viewTracking && <ViewBeacon templateId={tpl.id} />}
       {viewer && !readOnlyView && <DigChatHost gnomes={digGnomes} lang={lang} />}

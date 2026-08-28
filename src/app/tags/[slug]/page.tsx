@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
+import { breadcrumbList, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { plural, t } from '@/shared/i18n'
+import { plural, t, tr } from '@/shared/i18n'
 import { countLists, getFeed } from '@/features/library/queries'
 import { getTag } from '@/features/tags/queries'
 import { FeedList } from '@/features/library/FeedList'
@@ -50,6 +51,19 @@ export default async function TagPage({
 
   return (
     <div className={PAGE}>
+      {/* Страница тега для машины — это перечень: что здесь лежит и куда ведёт.
+          Только первая страница: вторая и дальше — тот же перечень со сдвигом. */}
+      {page === 1 && items.length > 0 ? (
+        <>
+          <JsonLd
+            data={itemList(
+              `#${slug}`,
+              items.map((it) => ({ name: tr(it.title, lang) || it.slug, path: `/${it.ownerHandle}/${it.slug}` })),
+            )}
+          />
+          <JsonLd data={breadcrumbList([{ name: 'Tags', path: '/tags' }, { name: `#${slug}`, path: `/tags/${encodeURIComponent(slug)}` }])} />
+        </>
+      ) : null}
       <PageHeader
         icon={
           <span className="grid size-10 place-items-center rounded-lg bg-accent-soft">

@@ -3,6 +3,7 @@
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
 import type { Metadata } from 'next'
+import { breadcrumbList, JsonLd, profilePage } from '@/shared/seo/jsonld'
 import { BookOpen, FolderGit2, ListChecks, Star, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
@@ -56,10 +57,17 @@ export default async function ProfilePage({
 }) {
   const [{ handle }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const loaded = await loadProfilePage({ handle, sp, lang })
-  const { tab, isPeopleTab, isOwner, counts, followCounts, catalogs, people, quotaHit } = loaded
+  const { tab, isPeopleTab, isOwner, counts, followCounts, catalogs, people, quotaHit, user } = loaded
 
   return (
     <div className="w-full">
+      {/* Приватный профиль машине не объясняется — как и поисковику (см. generateMetadata). */}
+      {user && !user.profilePrivate ? (
+        <>
+          <JsonLd data={profilePage({ name: user.name || handle, handle, description: user.bio ?? undefined })} />
+          <JsonLd data={breadcrumbList([{ name: handle, path: `/${handle}` }])} />
+        </>
+      ) : null}
       {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,
           но без h1 человек не найдёт, где он оказался (WCAG 2.4.6, обход по заголовкам). */}
       <h1 className="sr-only">{handle}</h1>
