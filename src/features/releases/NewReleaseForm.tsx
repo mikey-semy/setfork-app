@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import type { ReactNode } from 'react'
 import { createRelease, type ReleaseRefusal } from './actions'
 import { Alert } from '@/shared/ui/Alert'
+import { useKeepFormValues } from '@/shared/ui/keep-form-values'
 
 /**
  * Форма выпуска релиза: отказ показывается НА МЕСТЕ, введённое остаётся.
@@ -31,9 +32,11 @@ export function NewReleaseForm({
     createRelease.bind(null, templateId),
     null,
   )
+  // Набранное переживает отказ: форма React сбрасывает неуправляемые поля сама.
+  const { formRef, onSubmit } = useKeepFormValues(refusal !== null)
 
   return (
-    <form action={action} className={className}>
+    <form ref={formRef} onSubmit={onSubmit} action={action} className={className}>
       {refusal && (
         <Alert variant="danger" className="mb-4">
           {texts[refusal]}

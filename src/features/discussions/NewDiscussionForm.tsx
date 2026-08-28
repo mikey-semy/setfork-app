@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import type { ReactNode } from 'react'
 import { createDiscussion, type DiscussionRefusal } from './actions'
 import { Alert } from '@/shared/ui/Alert'
+import { useKeepFormValues } from '@/shared/ui/keep-form-values'
 
 /**
  * Форма нового обсуждения: отказ на месте, набранный текст остаётся.
@@ -21,9 +22,11 @@ export function NewDiscussionForm({
   className?: string
 }) {
   const [refusal, action] = useActionState<DiscussionRefusal | null, FormData>(createDiscussion, null)
+  // Набранное переживает отказ: форма React сбрасывает неуправляемые поля сама.
+  const { formRef, onSubmit } = useKeepFormValues(refusal === 'empty')
 
   return (
-    <form action={action} className={className}>
+    <form ref={formRef} onSubmit={onSubmit} action={action} className={className}>
       {refusal === 'empty' && (
         <Alert variant="danger" className="mb-3">
           {emptyText}

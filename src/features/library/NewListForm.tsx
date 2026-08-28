@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import type { ReactNode } from 'react'
 import { createTemplate, type NewListRefusal } from '@/features/library/actions'
 import { Alert } from '@/shared/ui/Alert'
+import { useKeepFormValues } from '@/shared/ui/keep-form-values'
 
 /**
  * Форма создания списка: отказ показывается НА МЕСТЕ, введённое остаётся.
@@ -39,9 +40,11 @@ export function NewListForm({
   }
 }) {
   const [refusal, action] = useActionState<NewListRefusal | null, FormData>(createTemplate, null)
+  // Набранное переживает отказ: форма React сбрасывает неуправляемые поля сама.
+  const { formRef, onSubmit } = useKeepFormValues(refusal !== null)
 
   return (
-    <form action={action}>
+    <form ref={formRef} onSubmit={onSubmit} action={action}>
       {refusal?.kind === 'slug_taken' && (
         <Alert variant="danger" className="mb-5">
           <span className="block font-semibold">{texts.slugTakenTitle}</span>
