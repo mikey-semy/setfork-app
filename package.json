@@ -8,7 +8,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "fix:dangling-forks": "tsx scripts/fix-dangling-forks.ts",
     "ui:parity": "node scripts/ui-parity.mjs",
     "ui:sizes": "node scripts/ui-sizes.mjs",
     "ui:drift": "node scripts/ui-drift.mjs",

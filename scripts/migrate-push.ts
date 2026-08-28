@@ -110,7 +110,36 @@ async function dbSchema(pool: Pool): Promise<Schema> {
   return out
 }
 
-async function main() {
+/**
+ * ВИСЯЧИЕ ССЫЛКИ на источник форка — обнуляются ПЕРЕД внешним ключом.
+ *
+ * Пока ключа не было, удаление списка-источника оставляло у форка ссылку в никуда;
+ * на проде такие строки уже есть, и ADD FOREIGN KEY на них падает. Шаг стоит внутри
+ * прод-миграции, а не отдельной командой: команду надо не забыть, а забытая команда
+ * означает вставший деплой — ровно это указало авто-ревью на предложении #829.
+ *
+ * Отдельной функцией, чтобы её мог позвать тест: SQL против живых данных проверяется
+ * только на живой БД, а main() целиком в тест не затащить.
+ */
+export async function clearDanglingForks(pool: Pool): Promise<number> {
+  const WHERE = `t.forked_from_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM templates p WHERE p.id = t.forked_from_id)`
+  const orphan = await pool.query<{ slug: string; parent: string }>(
+    `SELECT t.slug, t.forked_from_id AS parent FROM templates t WHERE ${WHERE}`,
+  )
+  if (!orphan.rowCount) return 0
+  // Поимённо: правятся живые данные, и по логу деплоя должно быть видно, ЧТО именно
+  // изменилось, а не только сколько строк.
+  for (const r of orphan.rows) console.log(`[preflight] ${r.slug}: источник ${r.parent} не существует`)
+  const { rowCount } = await pool.query(`UPDATE templates t SET forked_from_id = NULL WHERE ${WHERE}`)
+  // Как и у дублей форков: снимается СВЯЗЬ с источником, сам список остаётся жить —
+  // человек мог уже внести в него правки, и потерянная связь честнее потерянного
+  // содержимого.
+  console.log(`[preflight] отвязано от исчезнувшего источника: ${rowCount}`)
+  return rowCount ?? 0
+}
+
+export async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
   // Бутстрап вне схемы (линза 07): расширения — ДО push (vector нужен самой
@@ -131,6 +160,8 @@ async function main() {
       if (code !== '42710' && code !== '42P07') throw e
     }
   }
+
+  await clearDanglingForks(pool)
 
   // Уникальный индекс на СУЩЕСТВУЮЩИХ данных: если инвариант нарушался до его
   // появления, дубликаты уже лежат в таблице, и CREATE UNIQUE INDEX не пройдёт — а
@@ -252,7 +283,9 @@ async function main() {
   console.log(`[migrate] push применён, схема сверена целиком: ${expected.size} таблиц`)
 }
 
-main().catch((e) => {
-  console.error('[migrate] ошибка:', e)
-  process.exit(1)
-})
+// main НЕ запускается отсюда: файл стал модулем, из которого тест зовёт
+// clearDanglingForks, а импорт не должен применять схему к той базе, что оказалась
+// в DATABASE_URL. Точка входа — scripts/migrate-push-run.ts, и она зовёт main
+// БЕЗУСЛОВНО. Проверка «запущен ли напрямую» тут была бы хуже: сломайся она (иное
+// имя файла, иной способ запуска) — контейнер миграции завершился бы успешно, не
+// сделав ничего, а это самый дорогой вид отказа.
