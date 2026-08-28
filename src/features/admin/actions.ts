@@ -533,8 +533,12 @@ export async function setExpertAvatar(id: string, builtin: string): Promise<void
  */
 export async function createGnomeAccounts(): Promise<void> {
   await requireAdmin()
-  const { ensureGnomeUsers } = await import('@/shared/ai/gnome-account')
-  const { getRosterAll } = await import('@/shared/ai/roster')
+  // Оба ввоза сразу: друг от друга они не зависят, а последовательные `await` заставляли
+  // человека ждать две загрузки подряд вместо одной (указано react-doctor).
+  const [{ ensureGnomeUsers }, { getRosterAll }] = await Promise.all([
+    import('@/shared/ai/gnome-account'),
+    import('@/shared/ai/roster'),
+  ])
 
   // ⚠️ `getRosterAll`, а НЕ `getRoster`. Счётчик над кнопкой считает по всему составу
   // (страница зовёт getRosterAll), а кнопка обрабатывала только СОВЕТ — getRoster

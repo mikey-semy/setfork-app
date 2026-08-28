@@ -42,12 +42,21 @@ export function ModerationTable({
   const [busy, setBusy] = useState<string | null>(null)
   /** Выбранные строки. Очередь отдаёт до двухсот, и одобрять их по одному — это столько
    *  же нажатий, сколько строк. */
-  const [sel, setSel] = useState<string[]>([])
-  const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
+  // Множество, а не массив: очередь отдаёт до 200 строк, и `sel.includes(...)` в каждой
+  // из них — это перебор всего выбранного на КАЖДУЮ строку при каждом перерисовывании
+  // (при «выбрать всё» — 200×200 сравнений). У множества проверка постоянная, а код не
+  // длиннее. Указано react-doctor.
+  const [sel, setSel] = useState<ReadonlySet<string>>(new Set())
+  const toggle = (id: string) =>
+    setSel((s) => {
+      const next = new Set(s)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
   /** Одобрить можно только то, что ещё не одобрено: показывать «одобрить» над активными
    *  значит обещать действие, которое ничего не изменит. */
-  const approvable = items.filter((it) => it.moderation !== 'active').map((it) => it.id)
-  const selApprovable = sel.filter((id) => approvable.includes(id))
+  const approvable = new Set(items.filter((it) => it.moderation !== 'active').map((it) => it.id))
+  const selApprovable = [...sel].filter((id) => approvable.has(id))
 
   const tabs: { key: ModFilter; label: string; n?: number }[] = [
     { key: 'all', label: t('filterAll', lang) },
@@ -109,7 +118,7 @@ export function ModerationTable({
               onClick={() =>
                 start(async () => {
                   const res = await approveMany(selApprovable)
-                  setSel([])
+                  setSel(new Set())
                   if ('error' in res) toast.error(res.error)
                   else toast.success(t('moderationApprovedN', lang).replace('{n}', String(res.ok)))
                 })
@@ -133,7 +142,7 @@ export function ModerationTable({
                   не даёт, и пустой флажок рядом с ним обещал бы действие. */}
               {it.moderation !== 'active' && (
                 <Checkbox
-                  checked={sel.includes(it.id)}
+                  checked={sel.has(it.id)}
                   onChange={() => toggle(it.id)}
                   aria-label={`${t('bulk.select', lang)}: ${it.ownerHandle}/${it.slug}`}
                 />

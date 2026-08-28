@@ -5,7 +5,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
 import { getAdmin } from '@/shared/auth/admin'
 import { moderateContent } from '@/shared/ai/moderate'
-import { recordAudit } from '@/shared/audit'
+import { recordAudit, recordAuditMany } from '@/shared/audit'
 import { requireSession } from '@/shared/auth/session'
 import { categorySeverity } from './automation'
 import { buildListText, verdictReason } from './moderate-list'
@@ -72,14 +72,17 @@ export async function approveMany(ids: string[]): Promise<{ ok: number } | { err
     .where(inArray(templates.id, clean))
     .returning({ id: templates.id })
 
-  for (const r of done) {
-    await recordAudit('list.moderate', {
+  // Одной вставкой, а не по строке в цикле: пачка — это одно нажатие одного человека,
+  // и журналу незачем спрашивать заголовки запроса заново на каждый список.
+  await recordAuditMany(
+    'list.moderate',
+    done.map((r) => ({
       actorId: admin.userId,
       targetType: 'list',
       targetId: r.id,
       meta: { moderation: 'active', bulk: true },
-    })
-  }
+    })),
+  )
 
   revalidatePath('/admin/moderation')
   revalidatePath('/explore')
