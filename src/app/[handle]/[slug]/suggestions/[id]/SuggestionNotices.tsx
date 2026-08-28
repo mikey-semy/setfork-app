@@ -25,8 +25,9 @@ export function SuggestionNotices({ owner, slug, lang, data }: { owner: string; 
           revertOf={sug.status === 'accepted' && canMerge && sug.mergedVersion ? sug.id : null}
           accepted={sug.status === 'accepted'}
           mergedVersion={sug.mergedVersion}
-          // Ветка есть, версии нет: ядро слило, но проекция не легла — молчать нельзя.
-          notProjected={sug.status === 'accepted' && !!sug.branchRef && !sug.mergedVersion}
+          // Ветка есть, версии нет — причина неизвестна (не спроецировано ИЛИ старее
+          // отметки), но сказать об этом надо: иначе «принято» без объяснения.
+          versionUnknown={sug.status === 'accepted' && !!sug.branchRef && !sug.mergedVersion}
           labels={{
             merged: t('prMerged', lang),
             closed: t('prClosed', lang),
@@ -35,7 +36,7 @@ export function SuggestionNotices({ owner, slug, lang, data }: { owner: string; 
             branchDeleted: t('prBranchDeleted', lang),
             deleteFailed: t('prDeleteFailed', lang),
             revert: t('prRevert', lang),
-            notProjected: t('prMergedNotProjected', lang),
+            versionUnknown: t('prMergedVersionUnknown', lang),
             revertBlocked: t('prRevertBlocked', lang),
           }}
         />
@@ -51,10 +52,16 @@ export function SuggestionNotices({ owner, slug, lang, data }: { owner: string; 
           </Link>
         </Alert>
       ) : null}
-      {sug.revertedBy?.number ? (
+      {/* Статус отката ЗДЕСЬ ЗНАЧИМ: пока откат открыт, правка ещё не отменена, а
+          отклонённый откат не отменил её вовсе. Одна формулировка на все три случая
+          сообщала бы «отменено» там, где ничего не отменено (авто-ревью #833). */}
+      {sug.revertedBy?.number && sug.revertedBy.status !== 'rejected' ? (
         <Alert variant="info" className="mb-3">
           <Link href={`/${owner}/${slug}/suggestions/${sug.revertedBy.number}`} className="text-accent hover:underline">
-            {t('prRevertedIn', lang).replace('{n}', String(sug.revertedBy.number))}
+            {t(sug.revertedBy.status === 'accepted' ? 'prRevertedIn' : 'prRevertPending', lang).replace(
+              '{n}',
+              String(sug.revertedBy.number),
+            )}
           </Link>
         </Alert>
       ) : null}

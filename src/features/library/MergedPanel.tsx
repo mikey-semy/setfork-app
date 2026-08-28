@@ -19,8 +19,8 @@ export interface MergedPanelLabels {
   deleteFailed: string
   revert: string
   revertBlocked: string
-  /** «Слияние прошло, список ещё не обновился» — версия не спроецирована. */
-  notProjected: string
+  /** «Версия не записана» — слияние либо не спроецировано, либо старее отметки. */
+  versionUnknown: string
 }
 
 /**
@@ -36,7 +36,7 @@ export function MergedPanel({
   branch,
   accepted,
   mergedVersion,
-  notProjected,
+  versionUnknown,
   revertOf,
   labels,
 }: {
@@ -48,8 +48,8 @@ export function MergedPanel({
   accepted: boolean
   /** Версия, в которую вошла правка. Показывается ссылкой — см. комментарий в разметке. */
   mergedVersion?: number | null
-  /** Правка из ВЕТКИ, у которой версии нет: слияние прошло, проекция не легла. */
-  notProjected?: boolean
+  /** Правка из ВЕТКИ без записанной версии — показать оговорку вместо ссылки. */
+  versionUnknown?: boolean
   /** id принятого предложения, если его вообще можно откатить (мейнтейнеру). */
   revertOf: string | null
   labels: MergedPanelLabels
@@ -90,11 +90,13 @@ export function MergedPanel({
               «принято и закрыто» и обрывалась на этом. У GitHub и Gitea на смерженном
               предложении стоит ссылка на коммит, то есть связь «правка → что вышло»
               видна; версия — наш аналог коммита. */}
-          {/* Пусто у ВЕТОЧНОГО предложения — не «версии нет», а «ядро слило, но не
-              спроецировало»: git ушёл вперёд базы. Молчать тут нельзя — человек видит
-              «принято» и не понимает, почему список не изменился. */}
-          {accepted && !mergedVersion && branch !== undefined && notProjected ? (
-            <span className="block text-body-sm font-normal text-warn">{labels.notProjected}</span>
+          {/* Пусто у ВЕТОЧНОГО предложения означает одно из двух, и различить их нечем:
+              либо проекция после слияния не легла (git ушёл вперёд базы), либо правку
+              приняли до появления этой отметки. Утверждать первое нельзя — старые
+              принятия выглядят так же, — но и молчать нельзя: человек видит «принято»
+              и не понимает, почему список не изменился. Поэтому названы оба исхода. */}
+          {accepted && !mergedVersion && versionUnknown ? (
+            <span className="block text-body-sm font-normal text-warn">{labels.versionUnknown}</span>
           ) : null}
           {accepted && mergedVersion ? (
             <>

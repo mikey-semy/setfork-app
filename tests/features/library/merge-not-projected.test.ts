@@ -37,11 +37,13 @@ const accepted = (over: Record<string, unknown>) => ({
 })
 
 describe('откат при пустой версии', () => {
-  it('у веточного предложения — «данные ещё не догнали», а не «откатывай руками»', async () => {
+  it('у веточного предложения — названы оба исхода, а не один уверенно', async () => {
     h.sug = accepted({ branchRef: 'suggest/1' })
     const res = await revertSuggestion('owner', 's1')
     expect(res).toMatchObject({ ok: false })
-    expect((res as { reason: string }).reason).toMatch(/not projected/i)
+    // Ответ называет ОБА исхода: различить «не спроецировано» и «принято до отметки»
+    // нечем — у старых веточных принятий ветка тоже есть, а версии тоже нет.
+    expect((res as { reason: string }).reason).toMatch(/not been projected yet, or predates/i)
   })
 
   it('у предложения из пунктов — по-прежнему «принято до появления отката»', async () => {

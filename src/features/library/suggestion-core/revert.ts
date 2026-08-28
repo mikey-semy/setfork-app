@@ -48,9 +48,18 @@ export async function revertSuggestion(
   // Признак — наличие ветки, а не дата: дату пришлось бы зашить числом, и она разошлась
   // бы с реальностью при первом же переносе данных.
   if (!sug.mergedVersion) {
-    return sug.branchRef
-      ? { ok: false, reason: 'the merge is not projected into the database yet — try again later' }
-      : { ok: false, reason: 'accepted before revert existed — revert it by hand' }
+    // У предложения из ПУНКТОВ версия пишется всегда, значит пусто = принято до того,
+    // как откат появился. У ВЕТОЧНОГО пусто означает одно из двух, и различить их
+    // нечем: либо проекция после слияния не легла (`new_version = 0` от ядра), либо
+    // правку приняли ещё до появления отметки — у таких тоже есть ветка и нет версии
+    // (указано авто-ревью на #833; мой прежний ответ уверенно называл первое).
+    // Поэтому ответ называет ОБА исхода и не выбирает за человека.
+    return {
+      ok: false,
+      reason: sug.branchRef
+        ? 'no version recorded for this merge — it either has not been projected yet, or predates this mark'
+        : 'accepted before revert existed — revert it by hand',
+    }
   }
 
   // Уже отменено — второй откат отменял бы отмену.
