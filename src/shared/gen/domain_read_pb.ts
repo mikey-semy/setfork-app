@@ -834,12 +834,12 @@ export type AddVersionRequest = Message<"setfork.domain.v1.AddVersionRequest"> &
    * взята `for update`, и при расхождении отказывает (ABORTED). Проверять снаружи
    * бесполезно: между чужой проверкой и этим вызовом успевает лечь чужая версия,
    * и правка молча вытеснит её из текущего содержимого.
-   * 
+   *
    * Так устроена защита от потерянного обновления везде, где её делают всерьёз:
    * resourceVersion в Kubernetes (409 + перечитай и повтори), sha в contents API
    * GitHub/Gitea, requiredRevisionId в Google Docs, --force-with-lease в git,
    * compare-по-ревизии в etcd Txn. Код ошибки — по AIP-154: ABORTED.
-   * 
+   *
    * Не задано — правка применяется как раньше (сайт шлёт полный снимок формы).
    *
    * @generated from field: optional int32 expected_version = 6;
