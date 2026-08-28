@@ -20,7 +20,7 @@ const GNOME = 'ad-gnome'
 const HUMAN = 'ad-human'
 const admin = { isOwner: false, isAdmin: true }
 
-async function makeDraft(handle: string, accountType: 'agent' | 'user', slug: string) {
+async function makeDraft(handle: string, accountType: 'agent' | 'human', slug: string) {
   await db.delete(users).where(eq(users.handle, handle))
   const [u] = await db
     .insert(users)
@@ -48,7 +48,7 @@ describe('деталь списка доносит до правила, что �
   })
 
   it('черновик человека — нет, и это разные случаи', async () => {
-    await makeDraft(HUMAN, 'user', 'human-draft')
+    await makeDraft(HUMAN, 'human', 'human-draft')
     const detail = await getTemplateDetail(HUMAN, 'human-draft')
     expect(detail!.tpl.ownerIsAgent).toBe(false)
     expect(canViewList(detail!.tpl, admin)).toBe(false)
