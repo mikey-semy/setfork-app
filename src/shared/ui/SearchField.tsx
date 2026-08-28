@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { Search, X } from 'lucide-react'
-import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, ICON_SIZE, TOUCH_MIN_H, type ControlSize } from './control'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, ICON_SIZE, TOUCH_HIT, TOUCH_MIN_H, type ControlSize } from './control'
 
 type Size = ControlSize
 
@@ -134,7 +134,12 @@ export function SearchField({
           aria-label={clearLabel}
           onMouseDown={(e) => e.preventDefault()}
           onClick={clear}
-          className="grid shrink-0 place-items-center rounded-md text-muted outline-hidden hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong"
+          /* Зона нажатия обязательна: сам крестик 14x14, и пальцем в него не попасть —
+             живой замер 28.08.2026 на 390px нашёл его самой мелкой целью приложения.
+             Растить видимый значок нельзя: он стоит ВНУТРИ поля и раздул бы его выше
+             ступени шкалы, а поле обязано совпадать по высоте с кнопкой рядом. Значит
+             зона, а не размер, — ровно тот случай, под который TOUCH_HIT и заведён. */
+          className={`grid shrink-0 place-items-center rounded-md text-muted outline-hidden hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong ${TOUCH_HIT}`}
         >
           <X size={s.clear} />
         </button>
