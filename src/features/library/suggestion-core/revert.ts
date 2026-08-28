@@ -34,9 +34,33 @@ export async function revertSuggestion(
   if (sug.status !== 'accepted') return { ok: false, reason: 'only an accepted suggestion can be reverted' }
   const tpl = sug.template
   if (tpl.ownerId !== actorUserId && !(await isCollaborator(tpl.id, actorUserId))) return { ok: false, reason: 'not a maintainer' }
-  // Правки, принятые до появления этого поля, откату не поддаются: что именно они
-  // внесли, пришлось бы угадывать по времени и тексту заметки.
-  if (!sug.mergedVersion) return { ok: false, reason: 'accepted before revert existed — revert it by hand' }
+  // Пусто здесь означает ДВА РАЗНЫХ состояния, и путать их нельзя — человеку уходит
+  // ответ, по которому он решает, что делать дальше.
+  //
+  // У ВЕТОЧНОГО предложения пусто = ядро слило ветку, но не спроецировало версию в
+  // Postgres (`new_version = 0` в ответе `MergeBranch`). Слияние состоялось, git ушёл
+  // вперёд базы, и откат сейчас невозможен ФИЗИЧЕСКИ: сравнивать нечего, версии в базе
+  // ещё нет. Это временно и чинится выравниванием, а не руками.
+  //
+  // У предложения из ПУНКТОВ версия пишется всегда, значит пусто = принято до того, как
+  // откат появился. Вот его и правда можно только руками.
+  //
+  // Признак — наличие ветки, а не дата: дату пришлось бы зашить числом, и она разошлась
+  // бы с реальностью при первом же переносе данных.
+  if (!sug.mergedVersion) {
+    // У предложения из ПУНКТОВ версия пишется всегда, значит пусто = принято до того,
+    // как откат появился. У ВЕТОЧНОГО пусто означает одно из двух, и различить их
+    // нечем: либо проекция после слияния не легла (`new_version = 0` от ядра), либо
+    // правку приняли ещё до появления отметки — у таких тоже есть ветка и нет версии
+    // (указано авто-ревью на #833; мой прежний ответ уверенно называл первое).
+    // Поэтому ответ называет ОБА исхода и не выбирает за человека.
+    return {
+      ok: false,
+      reason: sug.branchRef
+        ? 'no version recorded for this merge — it either has not been projected yet, or predates this mark'
+        : 'accepted before revert existed — revert it by hand',
+    }
+  }
 
   // Уже отменено — второй откат отменял бы отмену.
   const dup = await db.query.suggestions.findFirst({

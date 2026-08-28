@@ -10,7 +10,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getSuggestion } from '@/features/library/queries'
-import { updateSuggestionItems } from '@/features/library/actions'
+import { EditItemsForm } from '@/features/library/EditItemsForm'
 import { canEditSuggestionItems } from '@/features/library/suggestion-perms'
 import { blocksFrom } from '@/features/library/suggestion-blocks'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
@@ -67,7 +67,15 @@ export default async function EditSuggestionPage({
       </Link>
       <FloatingBack href={path} label={sug.note || tr(meta.title, lang) || slug} />
 
-      <form action={updateSuggestionItems.bind(null, sug.id)}>
+      <EditItemsForm
+        suggestionId={sug.id}
+        texts={{
+          closed: t('prEditClosed', lang),
+          'not-allowed': t('prEditNotAllowed', lang),
+          frozen: t('frozenOn', lang),
+          archived: t('archivedOn', lang),
+        }}
+      >
         <PageHeader
           title={t('prEditItems', lang)}
           subtitle={sug.branchRef ? t('prEditItemsHintBranch', lang) : t('prEditItemsHint', lang)}
@@ -82,7 +90,7 @@ export default async function EditSuggestionPage({
             {t('saveChanges', lang)}
           </SubmitButton>
         </div>
-      </form>
+      </EditItemsForm>
     </div>
   )
 }

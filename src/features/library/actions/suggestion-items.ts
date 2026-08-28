@@ -8,7 +8,7 @@ import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { type Lang } from '@/shared/i18n'
 import { notify } from '@/features/notifications/notify'
-import { canEditList } from '@/core'
+import { canEditList, editBlockReason } from '@/core'
 import { parseEditorItems, toProposedItems } from '../editor'
 import { toListContent } from '../list-content'
 import { canEditSuggestionItems } from '../suggestion-perms'
@@ -38,20 +38,38 @@ import { NOREPLY_DOMAIN } from '@/shared/site'
  * у ветки это `list.json` в её tip (пишем коммитом, авторство человека
  * сохраняется в git), у старых предложений — колонка в БД.
  */
-export async function updateSuggestionItems(suggestionId: string, formData: FormData): Promise<void> {
+/**
+ * Отказ на сохранении правки — ЗНАЧЕНИЕ, а не молчание и не переход.
+ *
+ * Форма правки предложения — это редактор со всеми пунктами. Три отказа здесь просто
+ * ВОЗВРАЩАЛИСЬ: предложение успели закрыть, право на правку отозвали, список
+ * заморозили — во всех трёх случаях человек жал «Сохранить» и не получал ничего:
+ * ни сохранения, ни объяснения. Причём два первых означают «пока ты правил, снаружи
+ * что-то изменилось» — то есть именно тот случай, где молчание хуже всего.
+ */
+export type EditItemsRefusal = 'closed' | 'not-allowed' | 'frozen' | 'archived' | string
+
+export async function updateSuggestionItems(
+  suggestionId: string,
+  _prev: EditItemsRefusal | null,
+  formData: FormData,
+): Promise<EditItemsRefusal | null> {
   const session = await requireSession()
   const lang = await getLang()
   const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
-  if (!sug || sug.status !== 'open') return
-  if (!(await canEditSuggestionItems(sug, session.userId))) return
+  if (!sug) return 'closed'
+  if (sug.status !== 'open') return 'closed'
+  if (!(await canEditSuggestionItems(sug, session.userId))) return 'not-allowed'
   const tpl = sug.template
-  if (!canEditList(tpl)) return // архив/заморозка — список только на чтение
+  if (!canEditList(tpl)) return editBlockReason(tpl) === 'archived' ? 'archived' : 'frozen'
 
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   const err = await writeSuggestionItems(sug, proposed, session, lang, `Update suggestion by @${session.handle}`)
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.number ?? sug.id}`
-  if (err) redirect(`${path}?e=${err}`)
+  // Отказ записи (конфликт, отказ ядра) — тоже значением: он приходит на набранной
+  // правке, и уносить её переходом значит требовать набрать заново.
+  if (err) return err
   revalidatePath(path)
   redirect(path)
 }

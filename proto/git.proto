@@ -95,6 +95,17 @@ message ReceivePackResponse {
   repeated MagicPush magic = 3;
 }
 
+// ── Как читать отказ ────────────────────────────────────────────────────────
+// Причина отказа едет ТРЕЙЛЕРОМ `sf-reason`, значение — UPPER_SNAKE_CASE
+// (AIP-193): CONFLICT, NOTHING_TO_MERGE, STALE, NOT_FOUND, PROTECTED, FROZEN,
+// ARCHIVED, BAD_NAME, EXISTS, …
+//
+// Клиент обязан смотреть на ПРИЧИНУ, а не на текст сообщения и не на код gRPC:
+//   • текст английский и человеческий, он для логов и отладки, меняется свободно;
+//   • код gRPC ГРУБЕЕ причины — под FailedPrecondition их четыре, под
+//     InvalidArgument две, и по коду отказы неразличимы.
+// Набор причин сверяется между репозиториями гейтом (scripts/check-proto-sync.sh),
+// поэтому переименование значения = поломка клиента, а добавление нового — нет.
 service GitCore {
   // Ф5: возможности ядра — см. CapabilitiesResponse. Читается ДО авторизации
   // постороннего, поэтому дешёвый и без побочных действий.
@@ -112,8 +123,11 @@ service GitCore {
   rpc CreateBranch(CreateBranchRequest) returns (BranchOpResponse);
   rpc DeleteBranch(DeleteBranchRequest) returns (BranchOpResponse);
   // A3: merge ветки в main (ff или merge-commit) + проекция новой версии.
-  // Ошибки: failed_precondition c message 'conflict' (не сливается чисто)
-  // или 'nothing-to-merge' (ветка не впереди main); not_found; invalid_argument.
+  // Отказы (причина — в трейлере, см. выше): CONFLICT (не сливается чисто),
+  // NOTHING_TO_MERGE (ветка не впереди main), NOT_FOUND, BAD_NAME.
+  // ⚠️ new_version = 0 в ответе означает «проекция НЕ легла», а не «версии нет»:
+  // слияние в git прошло, а Postgres о нём ещё не знает. Показывать это как
+  // «версии нет» — значит погасить сигнал; выравнивание чинится sync-repos.
   rpc MergeBranch(MergeBranchRequest) returns (MergeBranchResponse);
   // A4: вход конфликтного merge — три материализации для трёхстороннего
   // сравнения по шагам (base = merge-base, ours = main, theirs = ветка).

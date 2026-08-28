@@ -8,9 +8,7 @@ import { requireSession } from '@/shared/auth/session'
 import { notify } from '@/features/notifications/notify'
 import { isCollaborator } from '@/features/collab/queries'
 // eslint-disable-next-line boundaries/dependencies -- гейт «нерешённые обсуждения» живёт с комментариями
-import { countUnresolvedThreads } from '@/features/comments/queries'
-import { countApprovals, hasBlockingReview } from '../review-queries'
-import { checksGate, currentRevision, ensureBranchSuggestion, mergeSuggestion } from '../suggestion-core'
+import { currentRevision, ensureBranchSuggestion, mergeSuggestion, reviewGates } from '../suggestion-core'
 import { closeLinkedIssues, notifyWatchersNewVersion } from '../suggestion-side-effects'
 import { enqueueReindex } from '../jobs'
 import { recheckList } from '@/features/moderation/moderate-list'
@@ -118,20 +116,20 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   if (sug.draft) return // резолвер конфликтов тоже завершается слиянием — см. mergeBranchPr
   const tpl = sug.template
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-  // Гейты — ВСЕ те же, что у обычного слияния. Резолвер конфликтов тоже пишет в
-  // main, поэтому пропустить здесь хоть один значило бы дать обход: собери конфликт
-  // — и требуемые одобрения больше не нужны.
   const prs = withPrDefaults(tpl.prSettings)
-  if (await hasBlockingReview(sug.id)) return
-  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return
-  if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals) return
-  // Внешние проверки — ТОТ ЖЕ гейт, что у обычного слияния. Резолвер конфликтов тоже
-  // пишет в main: без этой строки достаточно было собрать конфликт, и упавшая проверка
-  // переставала держать. Ровно та же дыра, что и с остальными гейтами выше.
-  if (await checksGate(sug.id, prs.blockOnFailedChecks, await currentRevision(sug))) return
-
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
+
+  // Ворота — через ОБЩИЙ набор, а не своим списком. Резолвер конфликтов тоже пишет в
+  // main, поэтому пропустить здесь хоть одни значило бы дать обход: собери конфликт —
+  // и требуемые одобрения больше не нужны. Раньше те же четверо ворот были выписаны
+  // здесь копией — ровно то, ради чего заведён `reviewGates` («правило должно быть
+  // одно — иначе настройка работает у одного вида предложений и молча не работает у
+  // другого»). Копия успела разойтись с оригиналом в главном: она МОЛЧА возвращалась.
+  // Человек нажимал «Применить разрешение конфликтов» и не получал ничего — ни
+  // результата, ни причины, — тогда как обычное слияние причину называет.
+  const blocked = await reviewGates(sug, prs, await currentRevision(sug))
+  if (blocked) redirect(`${path}?e=${encodeURIComponent(blocked)}`)
   // Линейная история: разрешение конфликтов создаёт merge-коммит по определению, а
   // значит при этой настройке путь закрыт — сначала «Обновить из main», потом ff.
   // Текст ошибки `not-linear` ровно это и советует.

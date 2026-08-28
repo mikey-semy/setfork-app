@@ -7,7 +7,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { getStepPreviews } from '@/features/library/queries'
 import { requireViewableDetail } from '@/features/library/guard'
-import { submitSuggestion } from '@/features/library/actions'
+import { SuggestForm } from '@/features/library/SuggestForm'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
@@ -38,7 +38,14 @@ export default async function SuggestPage({
   if (!canEditList(tpl)) redirect(`/${owner}/${slug}`)
 
   const initial = toEditorItems(steps, lang, await getStepPreviews(steps))
-  const action = submitSuggestion.bind(null, tpl.id)
+  // Отказ приходит ЗНАЧЕНИЕМ и показывается над формой: переход уносил всю правку.
+  const refusalTexts = {
+    unavailable: t('suggestUnavailableRefusal', lang),
+    frozen: t('frozenOn', lang),
+    archived: t('archivedOn', lang),
+    'suggest-closed': t('suggestClosedRefusal', lang),
+    ratelimited: t('rateLimited', lang),
+  }
 
   return (
     <div className={PAGE_NARROW}>
@@ -51,7 +58,7 @@ export default async function SuggestPage({
       {/* На длинном списке верхняя ссылка уезжает — плавающий дубль слева-внизу (фидбек владельца). */}
       <FloatingBack href={`/${owner}/${slug}`} label={tr(tpl.title, lang) || `${tpl.owner.handle}/${tpl.slug}`} />
 
-      <form action={action}>
+      <SuggestForm templateId={tpl.id} texts={refusalTexts}>
         <PageHeader
           title={t('suggestEdit', lang)}
           subtitle={
@@ -70,7 +77,7 @@ export default async function SuggestPage({
         <button type="submit" className={buttonClass({ variant: 'primary', size: 'lg', className: 'mt-6' })}>
           {t('sendSuggestion', lang)}
         </button>
-      </form>
+      </SuggestForm>
     </div>
   )
 }

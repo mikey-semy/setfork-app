@@ -4,6 +4,7 @@
 import 'server-only'
 import { eq } from 'drizzle-orm'
 import { db, suggestions, users } from '@/shared/db'
+import { captureError } from '@/shared/observability'
 import { findDestructiveSteps } from '@/core/domain/destructive-command'
 import { suggestionBlocks } from '../suggestion-blocks'
 import { enqueueReindex } from '../jobs'
@@ -89,6 +90,20 @@ export async function mergeSuggestion(
     const title = sug.number ? `${head || sug.branchRef} (#${sug.number})` : head || sug.branchRef
     const merged = await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef, { mode: prs.mergeMethod, message: title })
     mergedVersion = merged.newVersion
+    // ⚠️ ПУСТО ЗДЕСЬ — НЕ «версии нет», А СИГНАЛ. Ядро отдаёт `new_version = 0`
+    // (порт переводит в null) ровно тогда, когда слияние прошло, а ПРОЕКЦИЯ в Postgres
+    // не легла: оно повторяет попытку, считает метрику и пишет warn. Метрику снаружи
+    // никто не читает — сборщика в стеке нет, — поэтому единственный наблюдатель этого
+    // сигнала здесь. Молча проглотить его нельзя: git ушёл вперёд базы, и человек об
+    // этом узнает по тому, что список «не изменился».
+    if (mergedVersion === null) {
+      captureError(new Error('core merged the branch but did not project the version'), {
+        where: 'mergeSuggestion',
+        templateId: tpl.id,
+        suggestionId: sug.id,
+        branch: sug.branchRef,
+      })
+    }
   } catch (e) {
     return { ok: false, reason: e instanceof BranchOpError ? e.code : 'internal' }
   }
@@ -104,5 +119,9 @@ export async function mergeSuggestion(
   if (tpl.visibility === 'public') await recheckList(tpl.id)
   await notifyWatchersNewVersion(tpl.id, actorUserId)
   await enqueueReindex(tpl.id)
-  return { ok: true, owner, slug: tpl.slug, kind: 'branch' }
+  // Версия отдаётся и здесь. Она вычислена ядром и уже записана в `mergedVersion`, но
+  // наружу уходила только у предложения из ПУНКТОВ: MCP печатал `version: undefined`
+  // при слиянии ветки и число — при принятии из пунктов, хотя действие одно и то же.
+  // Агент по такому ответу не мог сказать, во что влилась правка.
+  return { ok: true, owner, slug: tpl.slug, kind: 'branch', version: mergedVersion ?? undefined }
 }

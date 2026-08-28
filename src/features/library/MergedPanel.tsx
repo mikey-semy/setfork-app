@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useState, useTransition } from 'react'
 import { GitMerge, Trash2, Undo2, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
@@ -17,6 +19,8 @@ export interface MergedPanelLabels {
   deleteFailed: string
   revert: string
   revertBlocked: string
+  /** «Версия не записана» — слияние либо не спроецировано, либо старее отметки. */
+  versionUnknown: string
 }
 
 /**
@@ -31,6 +35,8 @@ export function MergedPanel({
   slug,
   branch,
   accepted,
+  mergedVersion,
+  versionUnknown,
   revertOf,
   labels,
 }: {
@@ -40,6 +46,10 @@ export function MergedPanel({
   branch: string | null
   /** true — слито/принято, false — отклонено. */
   accepted: boolean
+  /** Версия, в которую вошла правка. Показывается ссылкой — см. комментарий в разметке. */
+  mergedVersion?: number | null
+  /** Правка из ВЕТКИ без записанной версии — показать оговорку вместо ссылки. */
+  versionUnknown?: boolean
   /** id принятого предложения, если его вообще можно откатить (мейнтейнеру). */
   revertOf: string | null
   labels: MergedPanelLabels
@@ -73,7 +83,30 @@ export function MergedPanel({
     <div className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-3 rounded-lg border px-3.5 py-3 ${tone}`}>
       <span className={accepted ? 'text-accent' : 'text-muted'}>{accepted ? <GitMerge size={18} /> : <X size={18} />}</span>
       <div className="min-w-0 flex-1">
-        <div className="text-body font-semibold text-ink">{accepted ? labels.merged : labels.closed}</div>
+        <div className="text-body font-semibold text-ink">
+          {accepted ? labels.merged : labels.closed}
+          {/* ВО ЧТО именно влилось. Номер версии лежал в базе (`merged_version`), им
+              пользовался откат — а человеку его не показывали нигде: страница сообщала
+              «принято и закрыто» и обрывалась на этом. У GitHub и Gitea на смерженном
+              предложении стоит ссылка на коммит, то есть связь «правка → что вышло»
+              видна; версия — наш аналог коммита. */}
+          {/* Пусто у ВЕТОЧНОГО предложения означает одно из двух, и различить их нечем:
+              либо проекция после слияния не легла (git ушёл вперёд базы), либо правку
+              приняли до появления этой отметки. Утверждать первое нельзя — старые
+              принятия выглядят так же, — но и молчать нельзя: человек видит «принято»
+              и не понимает, почему список не изменился. Поэтому названы оба исхода. */}
+          {accepted && !mergedVersion && versionUnknown ? (
+            <span className="block text-body-sm font-normal text-warn">{labels.versionUnknown}</span>
+          ) : null}
+          {accepted && mergedVersion ? (
+            <>
+              {' '}
+              <Link href={`/${owner}/${slug}/compare?from=${mergedVersion - 1}&to=${mergedVersion}`} className="text-accent hover:underline">
+                v{mergedVersion}
+              </Link>
+            </>
+          ) : null}
+        </div>
         {branch && !done && <div className="text-body-sm text-ink-2">{labels.branchSafeToDelete}</div>}
         {done && <div className="text-body-sm text-muted">{labels.branchDeleted}</div>}
         {failed && <div className="text-body-sm text-danger">{labels.deleteFailed}</div>}

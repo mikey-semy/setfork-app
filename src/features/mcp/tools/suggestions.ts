@@ -2,7 +2,7 @@ import 'server-only'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, steps, suggestionReportedChecks, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { tr } from '@/shared/i18n'
-import { applySuggestion, createSuggestion, currentRevision, mergeSuggestion, reviewSuggestion, revertSuggestion } from '@/features/library/suggestion-core'
+import { createSuggestion, currentRevision, mergeSuggestion, reviewSuggestion, revertSuggestion } from '@/features/library/suggestion-core'
 import { REPORTED_STATUSES, reportedChecks, type ReportedStatus } from '@/features/library/suggestion-checks'
 import { recordAgentAction } from '@/shared/agents/policy'
 import { recordAudit } from '@/shared/audit'
@@ -22,13 +22,18 @@ import { SITE_URL, mcpCanView, resolveListRefOrMoved, toProposed, type McpItemIn
 /**
  * Принять правку своего списка. Нужно затем, что правки компании копились без разбора:
  * заходить на страницу каждой — работа, а из ассистента это одна фраза.
- * Логика приёма НЕ дублируется — зовём то же ядро, что и кнопка на сайте.
+ *
+ * Зовём `mergeSuggestion` — ТУ ЖЕ точку, что кнопка на сайте. Раньше здесь стоял
+ * `applySuggestion`, то есть половина ядра: она не пишет `merged_version`, и откат
+ * принятой так правки становился невозможен («принято до появления отката»).
+ *
+ * Ссылка собирается из ВЛАДЕЛЬЦА списка, а не из ника принявшего: соавтор получал
+ * ссылку на несуществующий адрес — свой ник плюс чужой слаг.
  */
 export async function mcpApplySuggestion(userId: string, suggestionId: string) {
-  const res = await applySuggestion(suggestionId, userId)
+  const res = await mergeSuggestion(suggestionId, userId)
   if (!res.ok) return { error: res.reason }
-  const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
-  return { ref: `${u?.handle ?? ''}/${res.slug}`, version: res.version, note: 'Accepted — a new version was created.' }
+  return { ref: `${res.owner}/${res.slug}`, version: res.version, note: 'Accepted — a new version was created.' }
 }
 
 /**

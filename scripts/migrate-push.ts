@@ -139,6 +139,27 @@ export async function clearDanglingForks(pool: Pool): Promise<number> {
   return rowCount ?? 0
 }
 
+/**
+ * ВИСЯЧИЕ ССЫЛКИ отката — перед внешним ключом на `revert_of_id`.
+ *
+ * Та же история, что с форками, и тот же сценарий: автор удаляет аккаунт, его
+ * предложение уходит каскадом, а откат этого предложения остаётся указывать в никуда.
+ * Ключа до сих пор не было (единственная ссылка таблицы без него), значит на проде
+ * такие строки могли накопиться, и ADD FOREIGN KEY на них упадёт.
+ */
+export async function clearDanglingReverts(pool: Pool): Promise<number> {
+  const WHERE = `s.revert_of_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM suggestions p WHERE p.id = s.revert_of_id)`
+  const orphan = await pool.query<{ id: string; parent: string }>(
+    `SELECT s.id, s.revert_of_id AS parent FROM suggestions s WHERE ${WHERE}`,
+  )
+  if (!orphan.rowCount) return 0
+  for (const r of orphan.rows) console.log(`[preflight] предложение ${r.id}: отменяемое ${r.parent} не существует`)
+  const { rowCount } = await pool.query(`UPDATE suggestions s SET revert_of_id = NULL WHERE ${WHERE}`)
+  console.log(`[preflight] отвязано откатов от исчезнувшего предложения: ${rowCount}`)
+  return rowCount ?? 0
+}
+
 export async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
@@ -162,6 +183,7 @@ export async function main() {
   }
 
   await clearDanglingForks(pool)
+  await clearDanglingReverts(pool)
 
   // Уникальный индекс на СУЩЕСТВУЮЩИХ данных: если инвариант нарушался до его
   // появления, дубликаты уже лежат в таблице, и CREATE UNIQUE INDEX не пройдёт — а
