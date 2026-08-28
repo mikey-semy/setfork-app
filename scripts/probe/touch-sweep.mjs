@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { chromium } from '@playwright/test'
 
@@ -29,7 +30,16 @@ import { chromium } from '@playwright/test'
  */
 
 const BASE = process.env.PROBE_BASE ?? 'http://localhost:3111'
-const P = { email: `sw${Date.now()}@example.test`, handle: `sw${Date.now().toString(36)}`, name: 'Sweep', password: 'Probe-pass-123' }
+// Пароль СОЧИНЯЕТСЯ на запуске, а не лежит строкой в файле. Персона одноразовая, и
+// какой у неё пароль — замеру безразлично; а литерал вида «Xxx-xxx-123» неотличим от
+// настоящего ключа и справедливо ловится гейтом секретов. Заодно снимается соблазн
+// однажды подставить сюда рабочий пароль «на минутку».
+const P = {
+  email: `sw${Date.now()}@example.test`,
+  handle: `sw${Date.now().toString(36)}`,
+  name: 'Sweep',
+  password: `Pr-${randomUUID()}`,
+}
 
 const PAGES = ['/', '/new', '/explore', '/search?q=test', '/settings', '/my-lists', '/runs', '/generate', '/notifications']
 

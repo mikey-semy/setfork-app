@@ -83,13 +83,29 @@ jobs:
       # контейнере с проброшенным docker.sock, поэтому демон на ХОСТЕ монтировал бы
       # несуществующий путь (пустоту) — gitleaks не находил .gitleaks.toml и падал
       # с «unable to load gitleaks config». Тот же приём — в setfork-core/audit.yml.
+      # Отчёт забирается ОБЯЗАТЕЛЬНО, и вот почему: сам gitleaks при падении печатает
+      # только «leaks found: 1», без файла и строки. Такой красный не сообщает, что
+      # чинить, — приходится воспроизводить скан у себя на клоне merge-коммита, чтобы
+      # узнать адрес (так и было 28.08.2026). Значение остаётся скрытым: --redact
+      # заменяет его на REDACTED и в отчёте тоже, поэтому в лог попадают правило,
+      # файл, строка и коммит — ровно то, что нужно, и ничего сверх.
       - name: gitleaks (secret scan)
         run: |
           docker rm -f "gl-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true
           docker create --name "gl-${GITHUB_RUN_ID}" zricethezav/gitleaks:latest \
-            detect --source=/repo --config=/repo/.gitleaks.toml --redact --exit-code 1
+            detect --source=/repo --config=/repo/.gitleaks.toml --redact --exit-code 1 \
+            --report-format json --report-path /tmp/gitleaks.json
           docker cp . "gl-${GITHUB_RUN_ID}:/repo"
-          docker start -a "gl-${GITHUB_RUN_ID}"
+          docker start -a "gl-${GITHUB_RUN_ID}" && code=0 || code=$?
+          if [ "$code" != "0" ]; then
+            echo "::group::найденные места"
+            docker cp "gl-${GITHUB_RUN_ID}:/tmp/gitleaks.json" - 2>/dev/null \
+              | tar -xO 2>/dev/null \
+              | python3 -c "import json,sys; [print(x['RuleID'], x['File'] + ':' + str(x['StartLine']), 'коммит', x['Commit'][:8]) for x in json.load(sys.stdin)]" \
+              || echo "отчёт забрать не удалось — воспроизводи скан на клоне merge-коммита"
+            echo "::endgroup::"
+          fi
+          exit "$code"
       - name: cleanup
         if: always()
         run: docker rm -f "gl-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true
