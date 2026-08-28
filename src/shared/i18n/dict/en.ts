@@ -62,6 +62,8 @@ export const en = {
   listCreate: 'Create list',
   listItems: 'Items',
   listTitlePh: 'List title',
+  discussionTitleRequired: 'A title is required to open a discussion.',
+  listTitleRequired: 'A title is required to create a list.',
   listTitleRequiredMark: 'Required field',
   listDescPh: 'One line about the list',
   listQuotaReached: 'You’ve reached the list limit ({n}). Delete some to create a new one.',

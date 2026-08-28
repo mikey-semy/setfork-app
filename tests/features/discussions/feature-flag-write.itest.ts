@@ -44,7 +44,9 @@ let visitorId = ''
 let tplId = ''
 
 /** Вызов server action: он всегда заканчивается redirect'ом — ловим его. */
-const call = async (fn: () => Promise<void>): Promise<string> => {
+// Действия теперь могут ВЕРНУТЬ отказ вместо перехода, поэтому помощник принимает
+// любой результат: его дело — отличить переход от его отсутствия.
+const call = async (fn: () => Promise<unknown>): Promise<string> => {
   try {
     await fn()
     return 'no-redirect'
@@ -97,13 +99,13 @@ beforeEach(async () => {
 describe('запись при выключенном разделе «Обсуждения»', () => {
   it('открытая форма нового треда после выключения раздела ничего не создаёт', async () => {
     await setFeatures({ discussionsEnabled: false })
-    await call(() => createDiscussion(form({ owner: OWNER, slug: SLUG, title: 'Скрытый тред', body: 'текст' })))
+    await call(() => createDiscussion(null, form({ owner: OWNER, slug: SLUG, title: 'Скрытый тред', body: 'текст' })))
     expect((await counts()).discussions).toBe(0)
   })
 
   it('ответ в существующий тред после выключения раздела не добавляется', async () => {
     // Тред создан, пока раздел был включён, — ответ должен отказать уже по разделу.
-    await call(() => createDiscussion(form({ owner: OWNER, slug: SLUG, title: 'Тред', body: 'текст' })))
+    await call(() => createDiscussion(null, form({ owner: OWNER, slug: SLUG, title: 'Тред', body: 'текст' })))
     await setFeatures({ discussionsEnabled: false })
     await call(() => addDiscussionComment(form({ owner: OWNER, slug: SLUG, number: '1', body: 'ответ' })))
     expect((await counts()).discussionComments).toBe(0)
@@ -112,12 +114,12 @@ describe('запись при выключенном разделе «Обсуж
   it('владелец выключенного раздела тоже не пишет: сначала включает его обратно', async () => {
     h.session = { userId: ownerId, handle: OWNER }
     await setFeatures({ discussionsEnabled: false })
-    await call(() => createDiscussion(form({ owner: OWNER, slug: SLUG, title: 'Свой тред', body: 'текст' })))
+    await call(() => createDiscussion(null, form({ owner: OWNER, slug: SLUG, title: 'Свой тред', body: 'текст' })))
     expect((await counts()).discussions).toBe(0)
   })
 
   it('включённый раздел работает как раньше', async () => {
-    const url = await call(() => createDiscussion(form({ owner: OWNER, slug: SLUG, title: 'Обычный тред', body: 'текст' })))
+    const url = await call(() => createDiscussion(null, form({ owner: OWNER, slug: SLUG, title: 'Обычный тред', body: 'текст' })))
     expect(url).toBe(`/${OWNER}/${SLUG}/discussions/1`)
     expect((await counts()).discussions).toBe(1)
     await call(() => addDiscussionComment(form({ owner: OWNER, slug: SLUG, number: '1', body: 'ответ' })))
@@ -126,7 +128,7 @@ describe('запись при выключенном разделе «Обсуж
 
   it('выключение одного раздела не задевает соседний', async () => {
     await setFeatures({ discussionsEnabled: false })
-    await call(() => createIssue(form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
+    await call(() => createIssue(null, form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
     expect((await counts()).issues).toBe(1)
   })
 })
@@ -134,19 +136,19 @@ describe('запись при выключенном разделе «Обсуж
 describe('запись при выключенном разделе «Вопросы»', () => {
   it('новая задача не заводится', async () => {
     await setFeatures({ issuesEnabled: false })
-    await call(() => createIssue(form({ owner: OWNER, slug: SLUG, title: 'Скрытая задача', body: 'текст' })))
+    await call(() => createIssue(null, form({ owner: OWNER, slug: SLUG, title: 'Скрытая задача', body: 'текст' })))
     expect((await counts()).issues).toBe(0)
   })
 
   it('комментарий к прежней задаче не добавляется', async () => {
-    await call(() => createIssue(form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
+    await call(() => createIssue(null, form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
     await setFeatures({ issuesEnabled: false })
     await call(() => addIssueComment(form({ owner: OWNER, slug: SLUG, number: '1', body: 'ответ' })))
     expect((await counts()).issueComments).toBe(0)
   })
 
   it('статус прежней задачи не меняется — это тоже запись в выключенный раздел', async () => {
-    await call(() => createIssue(form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
+    await call(() => createIssue(null, form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
     await setFeatures({ issuesEnabled: false })
     h.session = { userId: ownerId, handle: OWNER }
     await call(() => setIssueStatus(OWNER, SLUG, 1, 'closed'))
@@ -156,7 +158,7 @@ describe('запись при выключенном разделе «Вопро
 
   it('веха задаче не назначается — это тоже запись в выключенный раздел', async () => {
     h.session = { userId: ownerId, handle: OWNER }
-    await call(() => createIssue(form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
+    await call(() => createIssue(null, form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
     const [m] = await db.insert(milestones).values({ templateId: tplId, title: 'Веха' }).returning({ id: milestones.id })
     await setFeatures({ issuesEnabled: false })
     await call(() => setIssueMilestone(OWNER, SLUG, 1, m.id))
@@ -165,7 +167,7 @@ describe('запись при выключенном разделе «Вопро
   })
 
   it('включённый раздел работает как раньше', async () => {
-    await call(() => createIssue(form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
+    await call(() => createIssue(null, form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
     expect((await counts()).issues).toBe(1)
     await call(() => addIssueComment(form({ owner: OWNER, slug: SLUG, number: '1', body: 'ответ' })))
     expect((await counts()).issueComments).toBe(1)

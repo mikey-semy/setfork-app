@@ -210,6 +210,15 @@ export function stepDanger(step: { danger?: boolean | null; command?: string | n
  * действия, и MCP — импорт из инфраструктуры в фичу нарушил бы границы слоёв.
  * `reason` — ключ словаря, чтобы причина доходила до автора на его языке.
  */
+/**
+ * Все коды причин, какие страж умеет назвать, — выведены ИЗ САМИХ ПРАВИЛ.
+ *
+ * Нужны интерфейсу: форма создания показывает причину словами и потому обязана иметь
+ * словарь на каждый код. Перечислять коды там руками нельзя — добавь правило, и в форме
+ * появится непереведённый код, о чём никто не узнает до первого отказа.
+ */
+export const DESTRUCTIVE_REASONS: readonly string[] = [...new Set([...RULES, ...RISKY].map((r) => r.reason))]
+
 export class DestructiveCommandError extends Error {
   constructor(
     readonly stepIndex: number,
