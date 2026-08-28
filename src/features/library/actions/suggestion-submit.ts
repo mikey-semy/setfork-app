@@ -14,7 +14,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { collabStore } from '@/features/collab-store/store'
 import { canEditList, canViewList, editBlockReason } from '@/core'
 import { parseEditorItems, toProposedItems } from '../editor'
-import { applySuggestion } from '../suggestion-core'
+import { mergeSuggestion } from '../suggestion-core'
 import { ownerHandle } from './shared'
 import { withPrDefaults } from '../pr-settings'
 
@@ -73,12 +73,37 @@ export async function submitSuggestion(
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions`)
 }
+/**
+ * ПРИНЯТЬ правку кнопкой на странице — через то же ядро, что и слияние ветки.
+ *
+ * Раньше этот вход звал `applySuggestion` НАПРЯМУЮ, минуя `mergeSuggestion`, и это
+ * стоило двух вещей сразу.
+ *
+ * ⚠️ ОТКАТ НЕ РАБОТАЛ ДЛЯ ПРИНЯТЫХ С САЙТА. Номер версии (`merged_version`) пишет
+ * только `mergeSuggestion`; здесь он не писался вовсе. Кнопка «Откатить» на такой
+ * правке не показывается, а ядро отвечает «принято до появления отката — откатывай
+ * руками». Комментарий в `revert.ts` объяснял пустое поле старыми записями — на деле
+ * оно пусто и у сегодняшних, если правку приняли кнопкой. Через MCP то же действие
+ * версию записывало: два входа, разный результат.
+ *
+ * ⚠️ И РЕДИРЕКТ ВЁЛ НЕ ТУДА У СОАВТОРА: адрес собирался из ника ТОГО, КТО ПРИНЯЛ
+ * (`session.handle`), а список принадлежит владельцу. Соавтор после принятия попадал
+ * на несуществующую страницу. Ядро возвращает настоящего владельца.
+ *
+ * Причина отказа теперь тоже доходит: раньше `if (!res.ok) return` — человек жал
+ * «Принять» при незакрытых обсуждениях или нехватке одобрений и не получал ничего.
+ */
 export async function acceptSuggestion(suggestionId: string): Promise<void> {
   const session = await requireSession()
-  const res = await applySuggestion(suggestionId, session.userId)
-  if (!res.ok) return
+  const res = await mergeSuggestion(suggestionId, session.userId)
+  if (!res.ok) {
+    const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
+    if (!sug) return
+    const owner = await ownerHandle(sug.template.ownerId)
+    redirect(`/${owner}/${sug.template.slug}/suggestions/${sug.number ?? sug.id}?e=${encodeURIComponent(res.reason)}`)
+  }
   revalidatePath('/', 'layout')
-  redirect(`/${session.handle}/${res.slug}`)
+  redirect(`/${res.owner}/${res.slug}`)
 }
 
 // ── Обсуждение предложения (review-комментарии) ──────────────────────

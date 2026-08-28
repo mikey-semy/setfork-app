@@ -397,6 +397,8 @@ export const en = {
   tlClosed: 'closed this suggestion',
   prReverts: 'Reverts suggestion #{n}',
   prRevertedIn: 'Reverted in suggestion #{n}',
+  prEditClosed: 'This suggestion is already closed — there is nowhere to save.',
+  prEditNotAllowed: 'You can no longer edit this suggestion.',
   prMerged: 'Suggestion merged and closed',
   prClosed: 'Suggestion closed without merging',
   prBranchSafeDelete: 'The branch is no longer needed — it can be safely deleted.',

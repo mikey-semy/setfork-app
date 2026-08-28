@@ -32,6 +32,26 @@ function walk(dir: string, out: string[] = []): string[] {
   return out
 }
 
+describe('принятие правки идёт через одну точку', () => {
+  it('прямых вызовов applySuggestion вне ядра нет', () => {
+    // `applySuggestion` — ПОЛОВИНА действия: она создаёт версию, но не пишет
+    // `merged_version`, а по нему работает откат. Оба внешних входа — кнопка на сайте
+    // и MCP — звали именно её, и откат принятой правки был невозможен: страница не
+    // показывала кнопку, ядро отвечало «принято до появления отката». Точка входа
+    // одна — `mergeSuggestion`, она сама разбирает вид предложения.
+    const offenders: string[] = []
+    for (const file of walk(SRC)) {
+      const rel = file.slice(file.indexOf('src/'))
+      if (rel.startsWith('src/features/library/suggestion-core/')) continue
+      for (const [i, line] of readFileSync(file, 'utf8').split('\n').entries()) {
+        if (line.trimStart().startsWith('import') || line.trimStart().startsWith('*')) continue
+        if (/\bapplySuggestion\s*\(/.test(line)) offenders.push(`${rel}:${i + 1}`)
+      }
+    }
+    expect(offenders, 'принимать правку следует через mergeSuggestion').toEqual([])
+  })
+})
+
 describe('ворота ревью спрашиваются в одном месте', () => {
   it('прямых вызовов гейтов вне модуля ворот нет', () => {
     const offenders: string[] = []

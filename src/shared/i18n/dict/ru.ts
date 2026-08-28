@@ -389,6 +389,8 @@ export const ru: Record<DictKey, string> = {
   tlClosed: 'отклонил(а) предложение',
   prReverts: 'Отменяет предложение #{n}',
   prRevertedIn: 'Отменено предложением #{n}',
+  prEditClosed: 'Предложение уже закрыто — сохранять правку некуда.',
+  prEditNotAllowed: 'Править это предложение больше нельзя.',
   prMerged: 'Предложение принято и закрыто',
   prClosed: 'Предложение отклонено',
   prBranchSafeDelete: 'Ветка больше не нужна — её можно безопасно удалить.',
