@@ -23,6 +23,7 @@ export function SuggestionNotices({ owner, slug, lang, data }: { owner: string; 
           // отклонённое нечего, а версия слияния нужна, чтобы знать ЧТО отменять.
           revertOf={sug.status === 'accepted' && canMerge && sug.mergedVersion ? sug.id : null}
           accepted={sug.status === 'accepted'}
+          mergedVersion={sug.mergedVersion}
           labels={{
             merged: t('prMerged', lang),
             closed: t('prClosed', lang),

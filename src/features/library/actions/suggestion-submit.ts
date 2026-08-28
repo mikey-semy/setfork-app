@@ -27,25 +27,41 @@ import { withPrDefaults } from '../pr-settings'
  */
 
 // ── Предложить правку (PR) ────────────────────────────────────────────
-export async function submitSuggestion(templateId: string, formData: FormData): Promise<void> {
+/**
+ * Отказ на отправке правки — ЗНАЧЕНИЕ, а не переход.
+ *
+ * Страница `/suggest` — это редактор со ВСЕМИ пунктами списка плюс заметка: человек
+ * приходит сюда работать, а не заполнять два поля. Переход на `?e=…` начинал новый GET
+ * и уносил всю правку, причём на самых обидных отказах — «предложения закрыты» и
+ * «слишком часто», то есть на тех, где сама правка ни при чём. Тот же корень, что у
+ * формы создания списка и формы релиза (#832).
+ *
+ * `unavailable` — общий ответ на «списка нет» и «список тебе не виден»: различать их
+ * наружу нельзя, иначе ответ становится оракулом существования приватных списков.
+ */
+export type SuggestRefusal = 'unavailable' | 'frozen' | 'archived' | 'suggest-closed' | 'ratelimited'
+
+export async function submitSuggestion(
+  templateId: string,
+  _prev: SuggestRefusal | null,
+  formData: FormData,
+): Promise<SuggestRefusal | null> {
   const session = await requireSession()
   const [lang, tpl] = await Promise.all([getLang(), db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })])
-  if (!tpl) return
+  if (!tpl) return 'unavailable'
   // Нельзя предлагать правки к приватному/скрытому списку, которого не видишь
   // (иначе — запись в чужую очередь + пинг владельцу + оракул существования).
-  if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return
+  if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return 'unavailable'
   // Архив/заморозка: предложения запрещены в обоих состояниях (список только-чтение).
-  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${editBlockReason(tpl) ?? 'frozen'}`)
+  if (!canEditList(tpl)) return editBlockReason(tpl) === 'archived' ? 'archived' : 'frozen'
   // Настройка списка «кто может предлагать»: аналог Creation allowed by у GitHub.
   // Владелец может предлагать всегда — иначе он запирал бы сам себя.
   const prs = withPrDefaults(tpl.prSettings)
   if (prs.allowFrom === 'collaborators' && tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) {
-    redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=suggest-closed`)
+    return 'suggest-closed'
   }
   // Анти-спам: правки — запись в чужую очередь + пинг владельца/упомянутых. Кап на автора.
-  if (!(await rateLimit(`suggest:${session.userId}`, 10, 10 * 60_000)).ok) {
-    redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions?e=ratelimited`)
-  }
+  if (!(await rateLimit(`suggest:${session.userId}`, 10, 10 * 60_000)).ok) return 'ratelimited'
 
   const note = String(formData.get('note') ?? '').trim()
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)

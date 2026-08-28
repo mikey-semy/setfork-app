@@ -78,6 +78,8 @@ export const en = {
   councilHall: 'Council hall',
   cantFind: 'Can\'t find it?',
   aiFail: 'Couldn\'t draft a list — try rephrasing.',
+  suggestClosedRefusal: 'The maintainer accepts edits from collaborators only.',
+  suggestUnavailableRefusal: 'This list is unavailable — it may be closed or removed.',
   rateLimited: 'Too many requests. Try again in a minute.',
   aiVerifyHint: 'A draft — review, refine and star it so it becomes a proven reference.',
   pinnedLabel: 'Pinned',

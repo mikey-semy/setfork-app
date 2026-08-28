@@ -74,6 +74,8 @@ export const ru: Record<DictKey, string> = {
   councilHall: 'Зал совета',
   cantFind: 'Не нашёл?',
   aiFail: 'Не получилось — переформулируй запрос.',
+  suggestClosedRefusal: 'Автор списка принимает правки только от соавторов.',
+  suggestUnavailableRefusal: 'Список недоступен — возможно, он закрыт или удалён.',
   rateLimited: 'Слишком часто. Попробуй через минуту.',
   aiVerifyHint: 'Черновик — проверьте, доработайте и отметьте звездой, чтобы он стал эталоном.',
   pinnedLabel: 'Закреплённые',

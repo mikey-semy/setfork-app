@@ -40,8 +40,22 @@ export async function closeLinkedIssues(templateId: string, text: string, actorI
 }
 
 
+/**
+ * Рассылка следящим — ПОСЛЕ точки невозврата, поэтому она не имеет права ронять
+ * действие. `notify` внутри себя ошибки уже глотает, а вот чтение списка следящих —
+ * нет: обрыв соединения к базе (на этой машине их приносит порт-прокси Docker) уронил
+ * бы слияние ПОСЛЕ того, как ветка влита и статус проставлен. Человек увидел бы
+ * ошибку на удавшемся слиянии, а повторное нажатие ответило бы «уже принято».
+ *
+ * Тот же вывод записан у садовника (`sweep/publish.ts`): порядок здесь нагружен, и в
+ * худшем случае теряется уведомление — только оно.
+ */
 export async function notifyWatchersNewVersion(templateId: string, actorId: string): Promise<void> {
-  const watchers = await getWatcherIds(templateId, 'versions')
-  await notifyMany(watchers, { actorId, type: 'new_version', templateId })
+  try {
+    const watchers = await getWatcherIds(templateId, 'versions')
+    await notifyMany(watchers, { actorId, type: 'new_version', templateId })
+  } catch (e) {
+    captureError(e, { where: 'notifyWatchersNewVersion', templateId })
+  }
 }
 

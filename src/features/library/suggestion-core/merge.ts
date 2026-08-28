@@ -104,5 +104,9 @@ export async function mergeSuggestion(
   if (tpl.visibility === 'public') await recheckList(tpl.id)
   await notifyWatchersNewVersion(tpl.id, actorUserId)
   await enqueueReindex(tpl.id)
-  return { ok: true, owner, slug: tpl.slug, kind: 'branch' }
+  // Версия отдаётся и здесь. Она вычислена ядром и уже записана в `mergedVersion`, но
+  // наружу уходила только у предложения из ПУНКТОВ: MCP печатал `version: undefined`
+  // при слиянии ветки и число — при принятии из пунктов, хотя действие одно и то же.
+  // Агент по такому ответу не мог сказать, во что влилась правка.
+  return { ok: true, owner, slug: tpl.slug, kind: 'branch', version: mergedVersion ?? undefined }
 }
