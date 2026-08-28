@@ -399,6 +399,7 @@ export const en = {
   prRevertedIn: 'Reverted in suggestion #{n}',
   prEditClosed: 'This suggestion is already closed — there is nowhere to save.',
   prEditNotAllowed: 'You can no longer edit this suggestion.',
+  prMergedNotProjected: 'Merged, but the list has not caught up yet — the version will appear once data syncs.',
   prMerged: 'Suggestion merged and closed',
   prClosed: 'Suggestion closed without merging',
   prBranchSafeDelete: 'The branch is no longer needed — it can be safely deleted.',

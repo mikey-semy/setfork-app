@@ -25,6 +25,8 @@ export function SuggestionNotices({ owner, slug, lang, data }: { owner: string; 
           revertOf={sug.status === 'accepted' && canMerge && sug.mergedVersion ? sug.id : null}
           accepted={sug.status === 'accepted'}
           mergedVersion={sug.mergedVersion}
+          // Ветка есть, версии нет: ядро слило, но проекция не легла — молчать нельзя.
+          notProjected={sug.status === 'accepted' && !!sug.branchRef && !sug.mergedVersion}
           labels={{
             merged: t('prMerged', lang),
             closed: t('prClosed', lang),
@@ -33,6 +35,7 @@ export function SuggestionNotices({ owner, slug, lang, data }: { owner: string; 
             branchDeleted: t('prBranchDeleted', lang),
             deleteFailed: t('prDeleteFailed', lang),
             revert: t('prRevert', lang),
+            notProjected: t('prMergedNotProjected', lang),
             revertBlocked: t('prRevertBlocked', lang),
           }}
         />
