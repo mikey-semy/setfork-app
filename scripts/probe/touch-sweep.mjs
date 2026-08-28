@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { chromium } from '@playwright/test'
 
 /**
@@ -31,6 +32,19 @@ const BASE = process.env.PROBE_BASE ?? 'http://localhost:3111'
 const P = { email: `sw${Date.now()}@example.test`, handle: `sw${Date.now().toString(36)}`, name: 'Sweep', password: 'Probe-pass-123' }
 
 const PAGES = ['/', '/new', '/explore', '/search?q=test', '/settings', '/my-lists', '/runs', '/generate', '/notifications']
+
+/**
+ * Младшая ступень шкалы контролов — В ПИКСЕЛЯХ, вычитанная из самой шкалы.
+ * Ниже неё контролов у нас не бывает по определению, поэтому всё, что ниже, —
+ * строка текста, а не цель. Число берётся из кода, а не задаётся здесь: сдвинут
+ * шкалу — сдвинется и порог, и замер не начнёт тихо врать про другой рубеж.
+ */
+const MIN_STEP = (() => {
+  const src = readFileSync(new URL('../../src/shared/ui/control.ts', import.meta.url), 'utf8')
+  const m = src.match(/CONTROL_H: Record<ControlSize, string> = \{\s*\n\s*\w+: 'h-(\d+)'/)
+  if (!m) throw new Error('шкала CONTROL_H не прочиталась — правь замер вместе с ней, а не порог в нём')
+  return Number(m[1]) * 4 // Tailwind: единица шкалы = 0.25rem = 4px
+})()
 
 const probe = () => {
   const W = document.documentElement.clientWidth
@@ -69,10 +83,23 @@ const probe = () => {
     const r = b.getBoundingClientRect()
     if (r.width === 0 || r.height === 0) continue
     if (r.height >= 44) continue
+    // ПОЛЯ СЮДА НЕ ВХОДЯТ. По ним решение принято отдельно и записано в
+    // src/shared/ui/control.ts у FIELD_BOX: роста до 44 на сенсоре нет, потому что
+    // поле в ряду с кнопкой обязано совпасть с ней по высоте. Radix рисует свой
+    // Select кнопкой, поэтому без этой строки замер докладывал бы о каждом поле
+    // приложения и приучал не читать собственный вывод.
+    if (b.getAttribute('role') === 'combobox') continue
     // Ссылка внутри текста целью 44px быть не обязана — это абзац, а не контрол.
+    // Но «похоже на контрол» нельзя мерить только рамкой и фоном: у вкладки нет ни
+    // того, ни другого, и ряд вкладок 41px замер пропускал целиком, показывая из
+    // него одну кнопку «…» (у неё есть aria-label). Признак элемента РАСКЛАДКИ —
+    // родитель-флекс/сетка; признак строки текста — высота ниже младшей ступени
+    // шкалы контролов, а она берётся не из головы, а из самого кода (MIN_STEP).
     const cs = getComputedStyle(b)
     const looksControl = cs.borderTopWidth !== '0px' || (cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backgroundColor !== 'transparent')
-    if (!looksControl && !b.getAttribute('aria-label')) continue
+    const pd = b.parentElement ? getComputedStyle(b.parentElement).display : ''
+    const laidOut = (pd.includes('flex') || pd.includes('grid')) && r.height >= window.__MIN_STEP
+    if (!looksControl && !laidOut && !b.getAttribute('aria-label')) continue
     const before = getComputedStyle(b, '::before')
     if (before.content !== 'none' && parseFloat(before.height) >= 40) continue
     out.smallTargets++
@@ -96,6 +123,7 @@ for (const path of PAGES) {
   try {
     await page.goto(BASE + path, { waitUntil: 'domcontentloaded', timeout: 20_000 })
     await page.waitForTimeout(1200)
+    await page.evaluate((v) => { window.__MIN_STEP = v }, MIN_STEP)
     const r = await page.evaluate(probe)
     const issues = []
     if (r.overflow) issues.push(`РАСПИРАЕТ ${r.overflow.scrollWidth}>${r.overflow.viewport}: ${r.overflow.culprits.join(' | ')}`)
