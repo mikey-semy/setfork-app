@@ -1,5 +1,5 @@
 import { cn } from '@/shared/lib/cn'
-import { CONTROL_H, CONTROL_TEXT, TOUCH_HIT, TOUCH_MIN_H, type ControlSize } from './control'
+import { CONTROL_H, CONTROL_TEXT, TOUCH_HIT, TOUCH_HIT_ZONE, TOUCH_MIN_H, type ControlSize } from './control'
 
 // Вид кнопки живёт ОТДЕЛЬНО от самой кнопки: те же классы нужны ссылке-кнопке
 // (навигация, которая обязана выглядеть кнопкой, но остаться ссылкой — открываться
@@ -65,6 +65,8 @@ export function buttonClass({
   touch = 'hit',
   className,
 }: { variant?: ButtonVariant; size?: ButtonSize; touch?: ButtonTouch; className?: string } = {}): string {
+  /** Вызывающий позиционировал кнопку сам — значит `relative` от зоны ей не нужен и вреден. */
+  const positioned = /(^|\s)(absolute|fixed|sticky)(\s|$)/.test(className ?? '')
   return cn(
     // `whitespace-nowrap` — НЕСУЩЕЕ, а не косметика. Высоту кнопки задаёт шкала
     // (CONTROL_H), и подпись, перенесённая на вторую строку, в эту высоту не влезает:
@@ -79,7 +81,11 @@ export function buttonClass({
     // (Apple HIG, у Material 48dp), но добирается она НЕВИДИМОЙ зоной, а не ростом
     // кнопки: иначе ряд на телефоне выглядит иначе, чем задуман. `grow` оставлен
     // для одиночной кнопки формы во всю ширину, где расти некуда и незачем мешать.
-    touch === 'hit' ? TOUCH_HIT : TOUCH_MIN_H,
+    // Зона нажатия — но `relative` только если вызывающий НЕ позиционировал кнопку сам.
+    // Иначе `pointer-coarse:relative` перебивает его `absolute` (одно свойство, вариант
+    // сильнее), кнопка выпадает в поток и уезжает — так уезжали крестик панели настроек
+    // и веер вставки блоков. Уже позиционирована — зоне и так есть к чему привязаться.
+    touch === 'hit' ? (positioned ? TOUCH_HIT_ZONE : TOUCH_HIT) : TOUCH_MIN_H,
     CONTROL_TEXT[size],
     SIZES[size],
     className,
