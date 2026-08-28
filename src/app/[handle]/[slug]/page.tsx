@@ -2,6 +2,7 @@
 // шапка ответа уходит клиенту сразу, и notFound() из загрузчика уже не может поставить
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
+import type { Metadata } from 'next'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { DigChatHost } from '@/features/dig/DigChat'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -18,13 +19,55 @@ import { ListToolbar } from './ListToolbar'
 import { ListViewBanner } from './ListViewBanner'
 import { loadListPage } from './load'
 
-// Заголовок вкладки как в GitHub: owner/slug (layout добавит « · SetFork»).
-export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+/**
+ * Мета страницы списка.
+ *
+ * Заголовок вкладки как в GitHub: owner/slug (layout добавит « · SetFork»).
+ *
+ * ⚠️ ПОЧЕМУ ЗДЕСЬ ЯВНО ОБЪЯВЛЕН `openGraph`, хотя он есть в корневом layout.
+ * Метаданные в Next сливаются ПОВЕРХНОСТНО: сегмент, не объявивший `openGraph`,
+ * наследует родительский объект ЦЕЛИКОМ — вместе с его `title` и `description`.
+ * Пока здесь возвращался один `title`, при отправке ссылки в мессенджер
+ * показывалось название САЙТА, а не название списка (замер 28.08). То же и с
+ * `description`: свой заголовок был, описание приезжало общесайтовое.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }): Promise<Metadata> {
   const { handle, slug } = await params
   // Вкладка браузера = человеческий title, а не slug (title гейтит requireViewableMeta).
   const [meta, lang] = await Promise.all([requireViewableMeta(handle, slug), getLang()])
-  return { title: meta ? tr(meta.title, lang) : `${handle}/${slug}` }
+  const path = `/${handle}/${slug}`
+  if (!meta) return { title: `${handle}/${slug}`, alternates: { canonical: path } }
+
+  const title = tr(meta.title, lang) || `${handle}/${slug}`
+  const description = listDescription(tr(meta.desc, lang), title)
+  // Видит владелец — не значит «показываем поисковику»: черновик, приватный и снятый
+  // модерацией доступны по прямой ссылке своему, но в индексе им делать нечего.
+  // Тот же предикат, что и в карте сайта, — правило видимости одно на всех.
+  const indexable = meta.status === 'published' && meta.visibility === 'public' && meta.moderation === 'active'
+
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    robots: indexable ? undefined : { index: false, follow: false },
+    openGraph: { type: 'article', siteName: 'SetFork', url: path, title, description },
+    twitter: { card: 'summary_large_image', title, description },
+  }
 }
+
+/** Описание для поисковика: своё, если автор его написал, иначе честная замена.
+ *  Режем по границе слова — обрезка на середине слова читается как поломка. */
+function listDescription(desc: string | undefined, title: string): string {
+  const own = desc?.trim()
+  if (!own) return `${title} — a runnable, versioned list on SetFork.`
+  if (own.length <= META_DESCRIPTION_MAX) return own
+  const cut = own.slice(0, META_DESCRIPTION_MAX)
+  const lastSpace = cut.lastIndexOf(' ')
+  return `${(lastSpace > 80 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`
+}
+
+/** Больше этого поисковик всё равно обрежет сам — лучше обрезать осмысленно. */
+const META_DESCRIPTION_MAX = 160
 
 /**
  * Страница списка. Здесь только состав: что и в каком порядке стоит в колонке

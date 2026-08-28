@@ -20,7 +20,24 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!c) return {}
   // Заголовок/описание подборки — LocaleText: показываем на языке пользователя (fallback внутри tr).
   const title = tr(c.title, lang) || slug
-  return { title, description: tr(c.desc, lang) || undefined, openGraph: c.coverUrl ? { images: [c.coverUrl] } : undefined }
+  const description = tr(c.desc, lang) || `Curated lists on SetFork: ${title}.`
+  const canonical = `/collections/${slug}`
+  // ⚠️ `openGraph` здесь ОБЯЗАН нести title и description, а не одну обложку:
+  // объявленный в сегменте, он ЗАМЕНЯЕТ родительский ЦЕЛИКОМ — и подборка с обложкой
+  // уезжала в шеринг под названием сайта, а не своим.
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: 'website',
+      siteName: 'SetFork',
+      url: canonical,
+      title,
+      description,
+      ...(c.coverUrl ? { images: [c.coverUrl] } : {}),
+    },
+  }
 }
 
 export default async function CollectionPage({ params }: { params: Promise<{ slug: string }> }) {

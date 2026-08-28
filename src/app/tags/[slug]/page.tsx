@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
@@ -12,9 +13,21 @@ import { Badge } from '@/shared/ui/badge'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE } from '@/shared/ui/control'
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
-  return { title: `#${decodeURIComponent(slug)}` }
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug: raw } = await params
+  const slug = decodeURIComponent(raw)
+  const tag = await getTag(slug.toLowerCase())
+  const label = tag?.label || slug
+  // Своё описание у страницы тега, а не общесайтовое: подпись из реестра, если её
+  // завели курированием, иначе — что здесь вообще лежит.
+  const description = tag?.description || `Lists tagged ${label} on SetFork — runnable, versioned, forkable.`
+  return {
+    title: `#${slug}`,
+    description,
+    // Адрес канона — с тем же кодированием, что в карте сайта: тег бывает не только латиницей.
+    alternates: { canonical: `/tags/${encodeURIComponent(slug)}` },
+    openGraph: { type: 'website', siteName: 'SetFork', title: `#${slug}`, description },
+  }
 }
 
 // Страница тега: списки с этим тегом (переиспользуем getFeed({tag}) + FeedList).

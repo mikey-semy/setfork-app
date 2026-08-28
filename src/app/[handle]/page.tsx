@@ -2,6 +2,7 @@
 // шапка ответа уходит клиенту сразу, и notFound() из загрузчика уже не может поставить
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
+import type { Metadata } from 'next'
 import { BookOpen, FolderGit2, ListChecks, Star, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
@@ -18,18 +19,26 @@ import { ProfileOverview } from './ProfileOverview'
 import { ProfileCatalogCard } from '@/features/catalogs/ProfileCatalogCard'
 
 // Заголовок вкладки: «Имя (handle)» как в GitHub (layout добавит « · SetFork»).
-export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const { handle } = await params
+  const canonical = `/${handle}`
   const user = await getUserByHandle(handle)
-  if (!user) return { title: handle }
+  if (!user) return { title: handle, alternates: { canonical } }
   // Приватный профиль не раскрываем в мете (og:title/desc) чужим — только сам ник.
+  // И не отдаём его поисковику: закрытый профиль в индексе — это раскрытие через выдачу.
   if (user.profilePrivate) {
     const viewer = await getSession()
-    if (viewer?.userId !== user.id) return { title: handle }
+    if (viewer?.userId !== user.id) return { title: handle, alternates: { canonical }, robots: { index: false, follow: false } }
   }
+  const title = user.name ? `${user.name} (${handle})` : handle
+  const description = user.bio ?? `Lists by ${title} on SetFork.`
   return {
-    title: user.name ? `${user.name} (${handle})` : handle,
-    description: user.bio ?? undefined,
+    title,
+    description,
+    alternates: { canonical },
+    // Явный openGraph по той же причине, что и на странице списка: без него
+    // сегмент наследует родительский целиком и показывает название сайта.
+    openGraph: { type: 'profile', siteName: 'SetFork', url: canonical, title, description },
   }
 }
 
