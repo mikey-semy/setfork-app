@@ -5,20 +5,23 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, type TKey } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
-import { Alert } from '@/shared/ui/Alert'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { getVersions } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
-import { createRelease } from '@/features/releases/actions'
+import type { ReleaseRefusal } from '@/features/releases/actions'
+import { NewReleaseForm } from '@/features/releases/NewReleaseForm'
 import { VersionSelect } from '@/features/releases/VersionSelect'
 import { ReleaseNotesGen } from '@/features/releases/ReleaseNotesGen'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { Checkbox } from '@/shared/ui/checkbox'
 
-const ERR: Record<string, TKey> = {
+// Код отказа → ключ словаря. Отказ приходит ЗНАЧЕНИЕМ из действия, а не адресом `?e=`:
+// переход стирал форму вместе с заметками релиза, которые человек мог только что
+// сгенерировать (вызов ИИ — деньги и минуты). Тот же корень, что у формы списка (#832).
+const ERR: Record<ReleaseRefusal, TKey> = {
   badtag: 'release.errBadtag',
   badversion: 'release.errBadversion',
   tagtaken: 'release.errTagtaken',
@@ -33,12 +36,11 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
 
 export default async function NewReleasePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ e?: string }>
 }) {
-  const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
+  // Параметров адреса у страницы больше нет: отказ приходит значением из действия.
+  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
@@ -46,7 +48,9 @@ export default async function NewReleasePage({
   const canManage = session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId))
   if (!canManage) redirect(`/${owner}/${slug}/releases`)
   const versions = await getVersions(meta.id)
-  const errKey = sp.e ? ERR[sp.e] : null
+  const errTexts = Object.fromEntries(
+    (Object.keys(ERR) as ReleaseRefusal[]).map((code) => [code, t(ERR[code], lang)]),
+  ) as Record<ReleaseRefusal, string>
 
   return (
     <>
@@ -62,13 +66,7 @@ export default async function NewReleasePage({
           }
         />
 
-        {errKey && (
-          <Alert variant="danger" className="mb-4">
-            {t(errKey, lang)}
-          </Alert>
-        )}
-
-        <form action={createRelease.bind(null, meta.id)} className="flex flex-col gap-4">
+        <NewReleaseForm templateId={meta.id} texts={errTexts} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
               <span className="text-body-sm font-semibold text-ink">{ru ? 'Версия' : 'Version'}</span>
@@ -113,7 +111,7 @@ export default async function NewReleasePage({
               {ru ? 'Отмена' : 'Cancel'}
             </Link>
           </div>
-        </form>
+        </NewReleaseForm>
       </div>
     </>
   )

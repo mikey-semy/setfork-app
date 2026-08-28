@@ -15,12 +15,26 @@ async function handleOf(userId: string): Promise<string> {
   return u?.handle ?? ''
 }
 
+/**
+ * Коды отказа на выпуске релиза. Возвращаются ЗНАЧЕНИЕМ, а не адресом `?e=`.
+ *
+ * Переход начинал новый GET и стирал форму, а в ней самое дорогое — заметки релиза,
+ * которые человек мог только что СГЕНЕРИРОВАТЬ (вызов ИИ стоит денег и минуты). Ошибся
+ * в теге — плати ещё раз. Тот же корень, что у формы создания списка (#832).
+ */
+export type ReleaseRefusal = 'badtag' | 'vreserved' | 'badversion' | 'tagtaken' | 'tagfail'
+
 /** Владелец/коллаборатор: опубликовать релиз из версии. */
-export async function createRelease(templateId: string, formData: FormData): Promise<void> {
+export async function createRelease(
+  templateId: string,
+  _prev: ReleaseRefusal | null,
+  formData: FormData,
+): Promise<ReleaseRefusal | null> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
-  if (!tpl) return
-  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
+  // Нет списка или нет права — молча ничего: это не ошибка ввода, а чужой адрес.
+  if (!tpl) return null
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return null
 
   const owner = await handleOf(tpl.ownerId)
   const base = `/${owner}/${tpl.slug}/releases`
@@ -32,22 +46,22 @@ export async function createRelease(templateId: string, formData: FormData): Pro
   const notes = String(formData.get('notes') ?? '').trim().slice(0, 50000)
   const prerelease = formData.get('prerelease') === 'on'
 
-  if (!TAG_RE.test(tag)) redirect(`${base}/new?e=badtag`)
-  if (isReservedTag(tag)) redirect(`${base}/new?e=vreserved`)
+  if (!TAG_RE.test(tag)) return 'badtag'
+  if (isReservedTag(tag)) return 'vreserved'
   // Версия должна существовать.
   const [v] = await db
     .select({ id: templateVersions.id })
     .from(templateVersions)
     .where(and(eq(templateVersions.templateId, tpl.id), eq(templateVersions.version, version)))
     .limit(1)
-  if (!v) redirect(`${base}/new?e=badversion`)
+  if (!v) return 'badversion'
   // Тег уникален per-list.
   const [dup] = await db
     .select({ id: releases.id })
     .from(releases)
     .where(and(eq(releases.templateId, tpl.id), eq(releases.tag, tag)))
     .limit(1)
-  if (dup) redirect(`${base}/new?e=tagtaken`)
+  if (dup) return 'tagtaken'
 
   // Git-тег релиза — ДО вставки в базу: раньше сбой ядра глотался, и релиз
   // существовал без тега в git, а пользователь ничего не узнавал (#590).
@@ -57,7 +71,7 @@ export async function createRelease(templateId: string, formData: FormData): Pro
     await gitCore.createTag({ owner, slug: tpl.slug }, tag, version)
   } catch (err) {
     console.error(`[releases] git tag "${tag}" (v${version}) failed for ${owner}/${tpl.slug}:`, err)
-    redirect(`${base}/new?e=tagfail`)
+    return 'tagfail'
   }
   await db.insert(releases).values({ templateId: tpl.id, version, tag, title, notes, prerelease, authorId: session.userId })
   revalidatePath(base)
