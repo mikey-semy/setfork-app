@@ -26,6 +26,8 @@ describe('точка входа прод-миграции', () => {
     // деплой встанет на ADD FOREIGN KEY. Здесь проверяется именно ВЫЗОВ.
     const src = read('scripts/migrate-push.ts')
     expect(src).toMatch(/await clearDanglingForks\(pool\)/)
+    // Второй такой шаг — чистка висячих откатов перед ключом на revert_of_id.
+    expect(src).toMatch(/await clearDanglingReverts\(pool\)/)
   })
 
   it('Dockerfile зовёт существующую точку входа, и она зовёт main', () => {

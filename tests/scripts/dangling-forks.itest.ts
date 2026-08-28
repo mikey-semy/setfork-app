@@ -1,7 +1,7 @@
 import { Pool } from 'pg'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
-import { clearDanglingForks } from '../../scripts/migrate-push'
-import { db, templates, users } from '@/shared/db'
+import { clearDanglingForks, clearDanglingReverts } from '../../scripts/migrate-push'
+import { db, suggestions, templates, users } from '@/shared/db'
 import { eq } from 'drizzle-orm'
 
 /**
@@ -65,6 +65,54 @@ describe('висячая ссылка на источник форка', () => {
     } finally {
       await pool.query(`ALTER TABLE templates DROP CONSTRAINT IF EXISTS ${name}`)
       await pool.query(ADD_FK(name))
+    }
+  })
+})
+
+/**
+ * То же самое для связи ОТКАТА — `revert_of_id` был единственной ссылкой таблицы
+ * предложений без внешнего ключа. Сценарий висячей ссылки: автор удаляет аккаунт, его
+ * предложение уходит каскадом, а откат остаётся указывать в никуда.
+ */
+describe('висячая ссылка отката', () => {
+  it('без шага миграции ключ не встаёт, после шага — встаёт', async () => {
+    const { rows: fk } = await pool.query<{ name: string }>(
+      `SELECT con.conname AS name
+         FROM pg_constraint con
+         JOIN pg_class rel ON rel.oid = con.conrelid
+         JOIN pg_attribute a ON a.attrelid = rel.oid AND a.attnum = ANY (con.conkey)
+        WHERE con.contype = 'f' AND rel.relname = 'suggestions' AND a.attname = 'revert_of_id'`,
+    )
+    expect(fk, 'внешнего ключа на revert_of_id нет — тест проверял бы пустоту').toHaveLength(1)
+    const name = fk[0].name
+    const ADD = `ALTER TABLE suggestions ADD CONSTRAINT ${name} FOREIGN KEY (revert_of_id) REFERENCES suggestions(id) ON DELETE SET NULL`
+
+    const [o] = await db.insert(users).values({ handle: `${OWNER}-r`, name: OWNER }).returning({ id: users.id })
+    const [t] = await db
+      .insert(templates)
+      .values({ ownerId: o.id, slug: 'df-revert', title: { en: 'r' }, currentVersion: 1 })
+      .returning({ id: templates.id })
+
+    await pool.query(`ALTER TABLE suggestions DROP CONSTRAINT ${name}`)
+    try {
+      const ghost = '00000000-0000-0000-0000-0000000000ee'
+      await db.insert(suggestions).values({
+        templateId: t.id,
+        authorId: o.id,
+        number: 1,
+        note: 'откат в никуда',
+        items: [],
+        baseVersion: 1,
+        revertOfId: ghost,
+      })
+      await expect(pool.query(ADD), 'ключ на грязных данных обязан падать').rejects.toThrow()
+      expect(await clearDanglingReverts(pool)).toBe(1)
+      const [row] = await db.select({ r: suggestions.revertOfId }).from(suggestions).where(eq(suggestions.templateId, t.id))
+      expect(row.r).toBeNull()
+    } finally {
+      await pool.query(`ALTER TABLE suggestions DROP CONSTRAINT IF EXISTS ${name}`)
+      await pool.query(ADD)
+      await db.delete(users).where(eq(users.handle, `${OWNER}-r`))
     }
   })
 })

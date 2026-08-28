@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { t, type Lang } from '@/shared/i18n'
 import { Alert } from '@/shared/ui/Alert'
 import { MergedPanel } from '@/features/library/MergedPanel'
@@ -36,6 +37,24 @@ export function SuggestionNotices({ owner, slug, lang, data }: { owner: string; 
           }}
         />
       )}
+      {/* СВЯЗЬ ОТКАТА — с обеих сторон. Схема обещает её прямо, поле в базе есть, а
+          показать было некому: человек видел два несвязанных предложения с похожим
+          текстом и сам догадывался, что одно отменяет другое. Так же устроено у
+          GitHub: на revert-PR стоит «Reverts #123», на исходном — обратная ссылка. */}
+      {sug.reverts?.number ? (
+        <Alert variant="info" className="mb-3">
+          <Link href={`/${owner}/${slug}/suggestions/${sug.reverts.number}`} className="text-accent hover:underline">
+            {t('prReverts', lang).replace('{n}', String(sug.reverts.number))}
+          </Link>
+        </Alert>
+      ) : null}
+      {sug.revertedBy?.number ? (
+        <Alert variant="info" className="mb-3">
+          <Link href={`/${owner}/${slug}/suggestions/${sug.revertedBy.number}`} className="text-accent hover:underline">
+            {t('prRevertedIn', lang).replace('{n}', String(sug.revertedBy.number))}
+          </Link>
+        </Alert>
+      ) : null}
       {mergeErr && (
         <Alert variant="danger" className="mb-3">
           {t(mergeErr, lang)}

@@ -395,6 +395,8 @@ export const en = {
   tlResolved: 'resolved a thread',
   tlMerged: 'merged this suggestion',
   tlClosed: 'closed this suggestion',
+  prReverts: 'Reverts suggestion #{n}',
+  prRevertedIn: 'Reverted in suggestion #{n}',
   prMerged: 'Suggestion merged and closed',
   prClosed: 'Suggestion closed without merging',
   prBranchSafeDelete: 'The branch is no longer needed — it can be safely deleted.',

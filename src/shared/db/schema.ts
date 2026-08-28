@@ -1061,7 +1061,12 @@ export const suggestions = pgTable('suggestions', {
   mergedVersion: integer('merged_version'),
   // Откат — это НОВОЕ предложение, отменяющее старое (как Revert у GitHub), а не
   // тихая правка истории. Связь видна с обеих сторон: «отменяет #7» / «отменено в #9».
-  revertOfId: uuid('revert_of_id'),
+  // Внешний ключ, как у всех прочих ссылок этой таблицы — он один тут отсутствовал.
+  // Сценарий висячей ссылки реален: автор удаляет аккаунт, его предложение уходит
+  // каскадом (`author_id ... on delete cascade`), а откат этого предложения остаётся
+  // указывать в никуда. `set null` — связь снимается, сам откат живёт: он уже принят
+  // или обсуждается, и терять его из-за чужого удаления нельзя.
+  revertOfId: uuid('revert_of_id').references((): AnyPgColumn => suggestions.id, { onDelete: 'set null' }),
 }, (t) => [
   index('suggestions_tpl_idx').on(t.templateId, t.status),
   uniqueIndex('suggestions_tpl_number').on(t.templateId, t.number),

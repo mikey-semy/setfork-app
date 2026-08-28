@@ -213,7 +213,24 @@ export async function getSuggestion(templateId: string, idOrNumber: string) {
     with: { author: true },
   })
   if (!row) return null
-  return { ...row, author: { ...row.author, avatarUrl: await avatarSrc(row.author.avatarUrl, 64) } }
+  // Связь отката — С ОБЕИХ СТОРОН. Схема обещает это прямо («отменяет #7» /
+  // «отменено в #9»), и поле в базе есть, а показать его было некому: страница не
+  // спрашивала ни того, что отменяет ЭТО предложение, ни того, чем отменено оно само.
+  // Человек видел два несвязанных предложения с похожим текстом. У GitHub на
+  // revert-PR стоит «Reverts #123», и на исходном появляется обратная ссылка.
+  const [reverts, revertedBy] = await Promise.all([
+    row.revertOfId
+      ? db.query.suggestions.findFirst({
+          where: (s2, { eq: e }) => e(s2.id, row.revertOfId as string),
+          columns: { id: true, number: true },
+        })
+      : Promise.resolve(undefined),
+    db.query.suggestions.findFirst({
+      where: (s2, { eq: e }) => e(s2.revertOfId, row.id),
+      columns: { id: true, number: true, status: true },
+    }),
+  ])
+  return { ...row, reverts: reverts ?? null, revertedBy: revertedBy ?? null, author: { ...row.author, avatarUrl: await avatarSrc(row.author.avatarUrl, 64) } }
 }
 
 /** Комментарии-обсуждение к предложению. */
