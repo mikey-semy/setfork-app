@@ -6,9 +6,10 @@ import type { Metadata } from 'next'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { DigChatHost } from '@/features/dig/DigChat'
 import { requireViewableMeta } from '@/features/library/guard'
+import { FeedList } from '@/features/library/FeedList'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { breadcrumbList, creativeWork, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { PAGE, STACK } from '@/shared/ui/control'
 import { ListAbout } from './ListAbout'
@@ -85,7 +86,7 @@ export default async function ListPage({
 }) {
   const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const loaded = await loadListPage({ owner, slug, sp, lang })
-  const { tpl, currentVersion, steps, viewer, isOwner, readOnlyView, mon, digGnomes, quizBids, quizPassed, completion, base } = loaded
+  const { tpl, currentVersion, steps, related, viewer, isOwner, readOnlyView, mon, digGnomes, quizBids, quizPassed, completion, base } = loaded
 
   // Структурные данные — только у публично видимой страницы: у черновика их быть
   // не должно ровно потому же, почему его нет в карте сайта.
@@ -166,6 +167,18 @@ export default async function ListPage({
             )}
 
             <ListBlocks {...loaded} lang={lang} />
+
+            {/* Связанные списки (Д6): и человеку — куда идти дальше, и обходчику —
+                по чему обходить корпус. Карточки те же, что в ленте: своей
+                разновидности карточки списка заводить незачем. */}
+            {related.length > 0 && (
+              <section aria-labelledby="related-lists" className="print:hidden">
+                <h2 id="related-lists" className="mb-3 text-body font-semibold text-ink">
+                  {t('list.relatedLists', lang)}
+                </h2>
+                <FeedList items={related} lang={lang} viewerId={viewer?.userId} />
+              </section>
+            )}
           </main>
 
           <ListAside {...loaded} lang={lang} />

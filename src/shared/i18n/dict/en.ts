@@ -1792,6 +1792,7 @@ export const en = {
   'list.branch': 'Branch',
   'list.branchVsMain': 'vs main (draft — no versions projected)',
   'list.digIntoStep': 'Dig into this step',
+  'list.relatedLists': 'Related lists',
   'list.forkTree': 'Fork tree',
   'list.forkTreeTruncated': 'Some branches are hidden — the tree is too large.',
   'list.hideMessage': 'Hide message',

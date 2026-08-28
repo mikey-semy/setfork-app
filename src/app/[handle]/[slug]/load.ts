@@ -11,7 +11,7 @@ import { type OutlineLesson } from '@/features/library/CourseOutline'
 import { productItems } from '@/features/library/blocks'
 import { requireViewableDetail } from '@/features/library/guard'
 import { getListLineage, isLineageExact } from '@/features/library/lineage'
-import { getContributors, getStepPreviews, getVersionAuthors, getVersionSteps, getDraft } from '@/features/library/queries'
+import { getContributors, getRelatedLists, getStepPreviews, getVersionAuthors, getVersionSteps, getDraft } from '@/features/library/queries'
 import { getPollResults } from '@/features/polls/queries'
 import { getCourseCompletion, getQuizState } from '@/features/quizzes/queries'
 import { getWatchCount } from '@/features/watch/queries'
@@ -256,7 +256,12 @@ export async function loadListPage({
   // языке зрителя. Русский текст под ключом 'en' (неверный тег генерации) не должен
   // предлагать «перевести на русский» — детектим по самому тексту (кириллица → ru).
   const titleIsForeign = !tpl.title[lang] && detectTextLang(tr(tpl.title, lang), lang) !== lang
+  // Соседи по тегам — внутренняя перелинковка (Д6). До неё со страницы списка
+  // не вело НИ ОДНОЙ ссылки на другой список, и обходчику корпус был доступен
+  // только из ленты. У списка без тегов соседей не ищем — запрос вернёт пусто.
+  const related = await getRelatedLists({ id: tpl.id, tags: tpl.tags })
   return {
+    related,
     owner,
     slug,
     gatedFromLesson,
