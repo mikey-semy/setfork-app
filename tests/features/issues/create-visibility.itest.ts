@@ -43,7 +43,7 @@ async function open(slug: string, title: string): Promise<void> {
   fd.set('slug', slug)
   fd.set('title', title)
   try {
-    await createIssue(fd)
+    await createIssue(null, fd)
   } catch {
     /* NEXT_REDIRECT — и отказ, и успех уходят редиректом; смотрим таблицу */
   }

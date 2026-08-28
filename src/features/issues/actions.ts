@@ -21,14 +21,24 @@ const customIdSet = async (templateId: string) => new Set((await getListLabels(t
 
 /** Открыть issue. Любой залогиненный на видимом списке; приватный/черновик/снятый
  *  модерацией — владелец и коллабораторы (те, кто список и так видит). */
-export async function createIssue(formData: FormData): Promise<void> {
+/**
+ * Отказ ввода — ЗНАЧЕНИЕМ, а не адресом `?e=`.
+ *
+ * Форма проверяет заголовок на клиенте, и туда переход не доходил. Проверено живьём:
+ * без JS ветка тоже недостижима — `required` не даёт браузеру отправить форму. Значит
+ * это УНИФИКАЦИЯ, а не починка наблюдаемой потери: ветка остаётся страховкой на прямой
+ * POST и теперь отказывает так же, как остальные формы (#832), вместо перехода.
+ */
+export type IssueRefusal = 'empty'
+
+export async function createIssue(_prev: IssueRefusal | null, formData: FormData): Promise<IssueRefusal | null> {
   const session = await requireSession()
   const owner = String(formData.get('owner') ?? '')
   const slug = String(formData.get('slug') ?? '')
   const title = String(formData.get('title') ?? '').trim().slice(0, 200)
   const body = String(formData.get('body') ?? '').trim().slice(0, 20000)
   const rawLabels = formData.getAll('labels').map(String)
-  if (!title) redirect(`/${owner}/${slug}/issues/new?e=empty`)
+  if (!title) return 'empty'
 
   const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)

@@ -1,10 +1,10 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useActionState, useRef, useState } from 'react'
 import { Input } from '@/shared/ui/input'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { t, type Lang } from '@/shared/i18n'
-import { createIssue } from './actions'
+import { createIssue, type IssueRefusal } from './actions'
 import { LabelPicker } from './LabelPicker'
 import type { CustomLabel } from '@/shared/lib/labels'
 
@@ -15,10 +15,13 @@ const inputCls = 'px-3 py-2 text-body-lg'
 export function NewIssueForm({ owner, slug, lang, custom = [] }: { owner: string; slug: string; lang: Lang; custom?: CustomLabel[] }) {
   const [error, setError] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
+  // Серверный отказ приходит ЗНАЧЕНИЕМ: проверка ниже не даёт отправить пустое, но без
+  // JS её нет, и раньше серверная ветка уносила переходом, стирая набранное тело.
+  const [refusal, action] = useActionState<IssueRefusal | null, FormData>(createIssue, null)
 
   return (
     <form
-      action={createIssue}
+      action={action}
       onSubmit={(e) => {
         if (!titleRef.current?.value.trim()) {
           e.preventDefault() // не сабмитим — тело сохраняется в состоянии редактора
@@ -36,13 +39,13 @@ export function NewIssueForm({ owner, slug, lang, custom = [] }: { owner: string
           name="title"
           required
           onChange={() => error && setError(false)}
-          className={`${inputCls} ${error ? 'border-danger focus:border-danger' : ''}`}
+          className={`${inputCls} ${error || refusal === 'empty' ? 'border-danger focus:border-danger' : ''}`}
           aria-label={t('issueTitlePh', lang)}
           placeholder={t('issueTitlePh', lang)}
           autoFocus
           maxLength={200}
         />
-        <div className={`grid overflow-hidden transition-all dur-base ${error ? 'mt-1.5 grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className={`grid overflow-hidden transition-all dur-base ${error || refusal === 'empty' ? 'mt-1.5 grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
           <p className="min-h-0 overflow-hidden text-body-sm text-danger">{t('titleRequired', lang)}</p>
         </div>
       </div>

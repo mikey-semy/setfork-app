@@ -9,7 +9,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { requireViewableMeta } from '@/features/library/guard'
-import { createDiscussion } from '@/features/discussions/actions'
+import { NewDiscussionForm } from '@/features/discussions/NewDiscussionForm'
 import { DISCUSSION_CATEGORIES } from '@/features/discussions/constants'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
@@ -21,12 +21,12 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
 
 export default async function NewDiscussionPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ e?: string }>
 }) {
-  const [{ handle: owner, slug }, { e }, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
+  // Параметра `?e=` больше нет: отказ ввода приходит значением из действия и не стирает
+  // набранный текст.
+  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   const ru = lang === 'ru'
   if (!session) redirect(`/login?next=/${owner}/${slug}/discussions/new`)
   const meta = await requireViewableMeta(owner, slug)
@@ -40,7 +40,7 @@ export default async function NewDiscussionPage({
       <div className={PAGE_NARROW}>
       <FloatingBack href={`/${owner}/${slug}/discussions`} label={t('featDiscussions', lang)} />
         <PageHeader icon={<MessagesSquare size={18} />} title={ru ? 'Новое обсуждение' : 'New discussion'} />
-        <form action={createDiscussion} className="flex flex-col gap-3">
+        <NewDiscussionForm emptyText={t('discussionTitleRequired', lang)} className="flex flex-col gap-3">
           <input type="hidden" name="owner" value={owner} />
           <input type="hidden" name="slug" value={slug} />
 
@@ -64,7 +64,7 @@ export default async function NewDiscussionPage({
             required
             maxLength={200}
             autoFocus
-            className={`px-3 py-2 text-body-lg ${e === 'empty' ? 'border-danger' : ''}`}
+            className="px-3 py-2 text-body-lg"
             placeholder={ru ? 'Заголовок' : 'Title'}
           />
           <MarkdownEditor name="body" rows={8} placeholder={ru ? 'О чём хотите поговорить?' : 'What do you want to discuss?'} maxLength={20000} lang={lang} refScope={{ owner, slug }} />
@@ -74,7 +74,7 @@ export default async function NewDiscussionPage({
               {ru ? 'Создать' : 'Start discussion'}
             </SubmitButton>
           </div>
-        </form>
+        </NewDiscussionForm>
       </div>
     </>
   )
