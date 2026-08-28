@@ -43,7 +43,7 @@ RUN npm run build
 # «зелёный» migrate, старая схема, регистрация 42703). Обёртка предсоздаёт
 # спорные колонки и проверяет маркеры схемы после push — иначе exit 1.
 FROM builder AS migrate
-CMD ["npx", "tsx", "scripts/migrate-push.ts"]
+CMD ["npx", "tsx", "scripts/migrate-push-run.ts"]
 
 # ── runner: минимальный standalone-сервер (непривилегированный) ──
 FROM base AS runner

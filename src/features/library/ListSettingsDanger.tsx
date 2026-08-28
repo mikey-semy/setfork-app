@@ -30,6 +30,7 @@ export function ListSettingsDanger({
   moderation,
   archived,
   frozen,
+  mirrored,
   pendingTransfer,
   lang,
 }: {
@@ -44,6 +45,9 @@ export function ListSettingsDanger({
   moderation: string
   archived: boolean
   frozen: boolean
+  /** У списка настроено внешнее зеркало. Влияет ТОЛЬКО на текст удаления: снять
+   *  внешнюю копию мы не можем, и умолчать об этом — обещать больше, чем делаем. */
+  mirrored: boolean
   pendingTransfer: { id: string; toHandle: string } | null
   lang: Lang
 }) {
@@ -344,7 +348,23 @@ export function ListSettingsDanger({
         open={dialog === 'delete'}
         onClose={() => setDialog(null)}
         title={t('deleteList', lang)}
-        intro={t('deleteListCascade', lang)}
+        intro={
+          <>
+            {/* Обещание разложено на то, что правда, и то, что было умолчанием.
+                Первая строка верна для базы: версии, шаги, прогоны, предложения,
+                обсуждения и звёзды уходят каскадом и не возвращаются.
+                Вторая — про КАНОН: у списка есть вторая копия истории, в git, и
+                удаление до неё не доходит вовсе (удаление идёт мимо ядра). Стирает её
+                уборка. Замер 27.08.2026: канон удалённого списка читался спустя 37
+                дней — то есть «все версии» в первой строке были неправдой ровно про
+                то, что названо первым.
+                Третья — только когда есть зеркало: внешнюю копию мы снять не можем
+                НИКАК, и это единственная часть, где от человека нужно действие. */}
+            <span className="block">{t('deleteListCascade', lang)}</span>
+            <span className="mt-2 block">{t('deleteListCanonNote', lang)}</span>
+            {mirrored && <span className="mt-2 block font-semibold">{t('deleteListMirrorWarn', lang)}</span>}
+          </>
+        }
         confirmPhrase={fullName}
         confirmHint={t('dangerConfirmHint', lang)}
         confirmLabel={t('deleteList', lang)}

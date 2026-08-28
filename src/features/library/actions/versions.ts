@@ -76,6 +76,12 @@ export async function createTemplate(formData: FormData): Promise<void> {
     })
   } catch (e) {
     if (e instanceof DestructiveCommandError) redirect(`/new?blocked=${e.reason}&step=${e.stepIndex}`)
+    // Адрес занят: возвращаем человека в форму с названной причиной, а не роняем в
+    // страницу ошибки Next. До 27.08.2026 сюда попадал ЛЮБОЙ отказ ядра и уходил в
+    // `throw` — вертикаль «собрать список» показала, что причина, которую ядро честно
+    // шлёт трейлером, на этом пути не читалась никем. Занятый адрес — самый частый из
+    // отказов рождения и единственный, который человек может исправить сам.
+    if (e instanceof ListWriteError && e.code === 'exists') redirect(`/new?e=slug_taken&slug=${encodeURIComponent(slug)}`)
     throw e
   }
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate

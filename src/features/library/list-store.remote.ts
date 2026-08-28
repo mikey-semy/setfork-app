@@ -21,6 +21,33 @@ const transport = coreTransport()
 const client = createClient(ListRead, transport)
 const writeClient = createClient(ListWrite, transport)
 
+/** Вызов create с переводом отказа в доменную ошибку.
+ *
+ *  ⚠️ Обёртки здесь не было вовсе, и это нашла вертикаль «собрать список» 27.08.2026:
+ *  у правки перевод причин есть (`callAddVersion` ниже), у РОЖДЕНИЯ не было. Любой отказ
+ *  ядра на создании приходил сырым `ConnectError`, а действие ловит только отказ стража
+ *  исполняемых команд — значит человек получал страницу ошибки Next вместо причины.
+ *
+ *  Мало того: сверка на живом стенде (сессия ядра) показала, что трейлера на этом пути
+ *  тоже не было — `Create` отдавал `AlreadyExists` с ПУСТЫМИ метаданными. Обёртка,
+ *  написанная раньше, прочитала бы пустоту. Причину `EXISTS` ядро ставит с core#131,
+ *  поэтому здесь она появляется вместе с ней, а не раньше.
+ *
+ *  По коду `AlreadyExists` НЕ страхуемся, в отличие от `Aborted` у правки: там страховка
+ *  нужна, потому что фронт выкатывается раньше ядра и старая сборка причины ещё не шлёт,
+ *  а здесь до core#131 причины не было ни у одной сборки — читать код значило бы угадывать
+ *  за все будущие отказы, которые тоже носят `AlreadyExists`. */
+async function callCreate(req: Parameters<typeof writeClient.create>[0]): Promise<PbList> {
+  try {
+    return await writeClient.create(req)
+  } catch (e) {
+    if (e instanceof ConnectError && e.metadata.get('sf-reason') === 'EXISTS') {
+      throw new ListWriteError('exists')
+    }
+    throw e
+  }
+}
+
 /** Вызов addVersion с переводом отказа по предусловию в доменную ошибку.
  *  Причину читаем из трейлера sf-reason (контракт ядра, AIP-193), а по коду
  *  ABORTED страхуемся: фронт выкатывается раньше ядра, и старая сборка причины
@@ -222,7 +249,7 @@ export const listWriteRemote = {
   },
   async create(input: CreateListInput): Promise<List> {
     assertNoDestructiveSteps(input.steps)
-    const res = await writeClient.create({
+    const res = await callCreate({
       ownerId: input.ownerId,
       slug: input.slug,
       title: toPbLoc(input.title),

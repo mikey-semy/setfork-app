@@ -147,6 +147,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
           moderation={meta.moderation}
           archived={meta.archivedAt != null}
           frozen={meta.frozenAt != null}
+          mirrored={!!meta.mirrorUrl}
           pendingTransfer={pendingTransfer}
           lang={lang}
         />
