@@ -1792,6 +1792,7 @@ export const ru: Record<DictKey, string> = {
   'list.branch': 'Ветка',
   'list.branchVsMain': 'относительно main (черновик, версии не создаются)',
   'list.digIntoStep': 'Копнуть этот пункт',
+  'list.relatedLists': 'Связанные списки',
   'list.forkTree': 'Дерево форков',
   'list.forkTreeTruncated': 'Показаны не все ветви — дерево слишком большое.',
   'list.hideMessage': 'Свернуть сообщение',

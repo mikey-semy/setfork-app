@@ -1,7 +1,9 @@
+import type { Metadata } from 'next'
+import { breadcrumbList, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { plural, t } from '@/shared/i18n'
+import { plural, t, tr } from '@/shared/i18n'
 import { countLists, getFeed } from '@/features/library/queries'
 import { getTag } from '@/features/tags/queries'
 import { FeedList } from '@/features/library/FeedList'
@@ -12,9 +14,21 @@ import { Badge } from '@/shared/ui/badge'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE } from '@/shared/ui/control'
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
-  return { title: `#${decodeURIComponent(slug)}` }
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug: raw } = await params
+  const slug = decodeURIComponent(raw)
+  const tag = await getTag(slug.toLowerCase())
+  const label = tag?.label || slug
+  // Своё описание у страницы тега, а не общесайтовое: подпись из реестра, если её
+  // завели курированием, иначе — что здесь вообще лежит.
+  const description = tag?.description || `Lists tagged ${label} on SetFork — runnable, versioned, forkable.`
+  return {
+    title: `#${slug}`,
+    description,
+    // Адрес канона — с тем же кодированием, что в карте сайта: тег бывает не только латиницей.
+    alternates: { canonical: `/tags/${encodeURIComponent(slug)}` },
+    openGraph: { type: 'website', siteName: 'SetFork', title: `#${slug}`, description },
+  }
 }
 
 // Страница тега: списки с этим тегом (переиспользуем getFeed({tag}) + FeedList).
@@ -37,6 +51,19 @@ export default async function TagPage({
 
   return (
     <div className={PAGE}>
+      {/* Страница тега для машины — это перечень: что здесь лежит и куда ведёт.
+          Только первая страница: вторая и дальше — тот же перечень со сдвигом. */}
+      {page === 1 && items.length > 0 ? (
+        <>
+          <JsonLd
+            data={itemList(
+              `#${slug}`,
+              items.map((it) => ({ name: tr(it.title, lang) || it.slug, path: `/${it.ownerHandle}/${it.slug}` })),
+            )}
+          />
+          <JsonLd data={breadcrumbList([{ name: 'Tags', path: '/tags' }, { name: `#${slug}`, path: `/tags/${encodeURIComponent(slug)}` }])} />
+        </>
+      ) : null}
       <PageHeader
         icon={
           <span className="grid size-10 place-items-center rounded-lg bg-accent-soft">

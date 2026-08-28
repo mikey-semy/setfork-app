@@ -335,3 +335,37 @@ export async function getStarredIds(userId: string, ids: string[]): Promise<Set<
     .where(and(eq(stars.userId, userId), inArray(stars.templateId, ids)))
   return new Set(rows.map((r) => r.t))
 }
+
+/**
+ * Соседи по тегам — блок «связанные списки» на странице списка.
+ *
+ * Зачем: у нового домена внутренняя перелинковка это половина того, по чему
+ * обходчик вообще находит корпус, — до Д6 со страницы списка не вело ни одной
+ * ссылки на другой список. Человеку это тоже полезнее «похожего» из поиска:
+ * общий тег — явное намерение автора, а не догадка модели.
+ *
+ * Только публичные, даже своему: подсказать себе же черновик здесь незачем,
+ * а один и тот же блок попадёт в чужой скриншот.
+ */
+export async function getRelatedLists(list: { id: string; tags: string[] }, limit = 6): Promise<FeedItem[]> {
+  if (!list.tags.length) return []
+  // ⚠️ Массив связываем поэлементно, как в `tagFilter`. Прямое `${list.tags}::text[]`
+  // раскрывается драйвером в СПИСОК параметров `($1, $2, $3)`, и Postgres отвечает
+  // 42846 «cannot cast type record to text[]» — ошибка видна только на живой базе,
+  // ни типы, ни линт её не ловят.
+  const tags = sql`ARRAY[${sql.join(
+    list.tags.map((t) => sql`${t}`),
+    sql`, `,
+  )}]::text[]`
+  // Сколько тегов совпало: по нему и сортируем — «два общих» ближе, чем «один общий».
+  const shared = sql<number>`cardinality(array(select unnest(${templates.tags}) intersect select unnest(${tags})))`
+  const rows = await db
+    .select(FEED_COLS)
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(and(publiclyVisible(), sql`${templates.id} <> ${list.id}`, sql`${templates.tags} && ${tags}`))
+    // `asc(id)` в хвосте — доопределение порядка на равных ключах, как в ленте.
+    .orderBy(desc(shared), desc(templates.starsCount), desc(templates.updatedAt), asc(templates.id))
+    .limit(limit)
+  return withAvatar(rows as FeedItem[])
+}
