@@ -1,4 +1,5 @@
 import 'server-only'
+import { latestReport } from '@/features/library/verification-report'
 import { notFound } from 'next/navigation'
 import { and as andOp, eq } from 'drizzle-orm'
 import { hasAffiliateLink, hasMarkedAffiliate, markedAdvertisers } from '@/core'
@@ -207,10 +208,14 @@ export async function loadListPage({
   // Наблюдатели — для сводки показателей (ListStats): в самом tpl их нет.
   // Авторы ПОСЛЕДНЕЙ версии (их может быть несколько — принятая правка с соавторами) и
   // число версий: и то и другое стоит в строке коммита, как у GitHub.
-  const [contributors, watchers, versionAuthors] = await Promise.all([
+  const [contributors, watchers, versionAuthors, runReport] = await Promise.all([
     getContributors(tpl.id, tpl.ownerId),
     getWatchCount(tpl.id),
     currentVersion ? getVersionAuthors(tpl.id, currentVersion.version) : Promise.resolve([]),
+    // Последний отчёт о прогоне ЭТОЙ версии. Право видеть провал — у тех, кто список
+    // ведёт (см. константу Р2c): пока она `true`, разницы нет ни для кого, но правило
+    // уже написано, и решение владельца меняет одну строку, а не эту.
+    currentVersion ? latestReport(currentVersion.id, canManageBranches) : Promise.resolve(null),
   ])
   const commitsCount = tpl.versions.length
   // Родословная: как список появился (запрос, участники витка, прецеденты, разбор критика,
@@ -267,6 +272,7 @@ export async function loadListPage({
     gatedFromLesson,
     tpl,
     currentVersion,
+    runReport,
     steps,
     branches,
     refBranch,

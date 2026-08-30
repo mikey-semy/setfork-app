@@ -630,6 +630,63 @@ export const steps = pgTable('steps', {
 ])
 
 // ── Runs (прогон = исполняемый экземпляр шаблона на версии) ──────────
+/**
+ * ОТЧЁТ О ПРОГОНЕ — публичный артефакт ВЕРСИИ (спека прохода 5, T1.2).
+ *
+ * Отдельная таблица, а не поля на `runs`, и это не вкусовщина: прогон человека —
+ * личный трекер прогресса («докуда я дошёл»), а отчёт — утверждение о версии,
+ * адресованное другим. Правила у них разные: прогон правится по ходу, отчёт не
+ * правится вовсе.
+ *
+ * ⚠️ APPEND-ONLY. Отчёт не редактируется и не удаляется: новый прогон добавляет новую
+ * запись. История прогонов и ЕСТЬ та самая «непрерывная перепроверка», ради которой всё
+ * затевалось; правка отчёта задним числом превратила бы её в рассказ о прошлом.
+ *
+ * ⚠️ ОТЧЁТ ПРИНАДЛЕЖИТ ВЕРСИИ, а не списку. Новая версия рождается без отчётов, и сброс
+ * доверия при правке получается из устройства — как и уровень проверки, без отдельного
+ * кода сброса.
+ *
+ * ⚠️ ПРОВАЛ — ТОЖЕ ОТЧЁТ. `verdict: fails` с шагом и причиной — законная и ценная
+ * запись, а не отсутствие записи. Отсутствие отчёта означает «не прогоняли», и путать
+ * это с «прогоняли и не вышло» нельзя.
+ */
+export const reportKind = pgEnum('verification_report_kind', ['machine', 'manual'])
+export const reportVerdict = pgEnum('verification_verdict', ['works', 'works_with_caveats', 'fails'])
+
+export const verificationReports = pgTable(
+  'verification_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    /** Версия, о которой отчёт. Именно она, а не «текущая»: версия — это байты. */
+    versionId: uuid('version_id')
+      .notNull()
+      .references(() => templateVersions.id, { onDelete: 'cascade' }),
+    /** Прогон, из которого вырос отчёт (пошаговка). Пусто у ручного отчёта без прогона. */
+    runId: uuid('run_id').references(() => runs.id, { onDelete: 'set null' }),
+    kind: reportKind('kind').notNull(),
+    /** Эталонная задача одной строкой: отчёт называет ПРОВЕРЕННОЕ, а не «проверено». */
+    task: text('task').notNull(),
+    /** В чём прогоняли: {tool, os, node, ...}. Без окружения отчёт стареет молча. */
+    environment: jsonb('environment').notNull().default({}).$type<Record<string, string>>(),
+    /** Шаги с исходами: [{n, status, note?}]. Полный лог — ссылкой, не блобом в БД. */
+    steps: jsonb('steps').notNull().default([]).$type<{ n: number; status: 'pass' | 'fail' | 'skip'; note?: string }[]>(),
+    verdict: reportVerdict('verdict').notNull(),
+    /** Оговорки словами: «работает, но…». Витрина не сокращает их до «работает». */
+    notes: text('notes').notNull().default(''),
+    /** Кто прогонял. Агент — тоже аккаунт: прогон агентом помечен как прогон агентом. */
+    runnerId: uuid('runner_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Витрина всегда спрашивает «последний отчёт этой версии» — под это и индекс.
+    index('verification_reports_version_idx').on(t.versionId, t.createdAt),
+    index('verification_reports_tpl_idx').on(t.templateId),
+  ],
+)
+
 export const runs = pgTable('runs', {
   id: uuid('id').primaryKey().defaultRandom(),
   templateId: uuid('template_id')
