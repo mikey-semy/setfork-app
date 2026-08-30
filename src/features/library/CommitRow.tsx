@@ -35,6 +35,9 @@ interface Labels {
   fullCompare: string
   viewVersion: string
   expandHint: string
+  /** «Коммит {sha}» — полный sha в подсказке: в строке он обрезан до семи знаков. */
+  commitSha: string
+  commitShaMissing: string
 }
 
 /**
@@ -47,6 +50,7 @@ export function CommitRow({
   slug,
   base,
   version,
+  commitSha,
   msg,
   createdAtMs,
   isCurrent,
@@ -58,6 +62,8 @@ export function CommitRow({
   slug: string
   base: string
   version: number
+  /** SHA коммита версии из ядра. Пусто — законно: подписи может не быть. */
+  commitSha?: string | null
   msg: string
   createdAtMs: number
   isCurrent: boolean
@@ -122,6 +128,16 @@ export function CommitRow({
           <span className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-ink">{msg}</span>
             <span className="shrink-0 rounded-md border border-accent/50 bg-accent-soft px-1.5 font-mono text-caption text-accent">v{version}</span>
+            {/* SHA КОММИТА — короткий, моноширинный, как у GitHub и Gitea. Он и есть
+                ответ на вопрос «те же ли это байты»: номер версии наш и локальный, а sha
+                проверяется в любом клоне репозитория.
+                ⚠️ ПУСТО ПОКАЗЫВАЕТСЯ КАК «—», И НИКОГДА КАК «нет версии». Версия есть
+                всегда — может не быть её ПОДПИСИ: у списков, созданных до git-слоя,
+                репозитория нет вовсе. Написать здесь «нет версии» значило бы объявить
+                отсутствующим то, что existует, — та же ошибка, что new_version = 0. */}
+            <Tooltip label={commitSha ? labels.commitSha.replace('{sha}', commitSha) : labels.commitShaMissing}>
+              <span className="shrink-0 font-mono text-caption text-muted">{commitSha ? commitSha.slice(0, 7) : '—'}</span>
+            </Tooltip>
             {isCurrent && <Badge variant="ok" className="shrink-0">{labels.current}</Badge>}
           </span>
           {/* Строка 2 — кто и когда. */}

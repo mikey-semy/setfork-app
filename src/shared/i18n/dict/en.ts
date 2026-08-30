@@ -753,6 +753,8 @@ export const en = {
   noCommitsMatch: 'No commits match the filters',
   resetFilters: 'Reset filters',
   about: 'About',
+  commitShaLabel: 'Commit {sha}',
+  commitShaMissing: 'This version has no commit: the list predates the git layer',
   currentVersion: 'current',
   viewVersion: 'View this version',
   defaultBranchHint: 'default branch',

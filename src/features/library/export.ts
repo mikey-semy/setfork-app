@@ -57,6 +57,8 @@ export interface ExportList {
   version: number
   ownerHandle: string
   slug: string
+  /** Подпись версии из ядра. Пусто — законно: у списков до git-слоя коммита нет. */
+  commitSha?: string | null
   steps: ExportStep[]
 }
 
@@ -64,9 +66,15 @@ type TemplateDetail = NonNullable<Awaited<ReturnType<typeof import('./queries').
 
 /** Детали списка → ExportList. Единый маппинг для raw/export/embed-роутов
  *  (был скопипащен в каждом; MCP пока держит свою копию — см. boundaries-todo). */
-export function toExportList(detail: TemplateDetail): ExportList {
+/**
+ * `commitSha` приходит ОТДЕЛЬНЫМ аргументом, а не из `detail`: подпись версии живёт в
+ * ядре, а `detail` — проекция Postgres, где её нет. Необязательный: экспорт обязан
+ * работать и когда ядро молчит — файл без подписи честнее отказа отдать файл.
+ */
+export function toExportList(detail: TemplateDetail, commitSha?: string | null): ExportList {
   const { tpl, currentVersion, steps } = detail
   return {
+    commitSha: commitSha ?? null,
     title: tpl.title,
     desc: tpl.desc,
     tags: tpl.tags,
@@ -100,7 +108,20 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
   const desc = tr(list.desc, lang)
   if (desc) out.push(desc, '')
   if (list.tags.length) out.push(`*${list.tags.map((t) => `#${t}`).join(' ')}*`, '')
-  out.push(`> ${list.ownerHandle}/${list.slug} · v${list.version}`, '')
+  /**
+   * Шапка: адрес, версия и — если она есть — ПОДПИСЬ версии.
+   *
+   * SHA идентифицирует байты: номер версии наш и локальный, а sha проверяется в любом
+   * клоне репозитория. Агент, которому скормили этот файл, по нему может сказать, тот
+   * же ли перед ним список.
+   *
+   * ⚠️ ПУСТОЙ SHA НЕ ПИШЕТСЯ ВОВСЕ. В интерфейсе пусто показывается как «—» (человек
+   * видит, что графа есть и она пуста), но в файле, который читает машина, «SHA: —»
+   * прочиталось бы как ДАННЫЕ — подпись со значением «—». Отсутствие строки читается
+   * однозначно: подписи нет.
+   */
+  const head = `> ${list.ownerHandle}/${list.slug} · v${list.version}`
+  out.push(list.commitSha ? `${head} · \`${list.commitSha}\`` : head, '')
 
   let stepNo = 0
   list.steps.forEach((s) => {
