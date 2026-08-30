@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { and, eq, sql } from 'drizzle-orm'
-import { db, publiclyVisible, templates, templateVersions, users } from '@/shared/db'
+import { db, templates, users } from '@/shared/db'
+import { indexableFilter } from '@/features/library/queries/shared'
 import { getCollections } from '@/features/collections/queries'
 import { SITE_ORIGIN } from '@/shared/site'
 
@@ -33,38 +34,13 @@ export const dynamic = 'force-dynamic'
 const at = (path: string) => `${SITE_ORIGIN}${path}`
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const visible = publiclyVisible()
   /**
-   * ⚠️ ИНДЕКСАЦИЯ УЖЕ НЕ ТО ЖЕ, ЧТО ВИДИМОСТЬ, и это ОТДЕЛЬНОЕ условие, а не правка
-   * `publiclyVisible()`. Решение 0018: список уровня «порода» (никто не проверял)
-   * публиковать можно, но в витрину и в карту сайта он не идёт до первой проверки.
-   *
-   * Смешать это с видимостью было бы легко и неверно: видимость отвечает на вопрос
-   * «кому можно показать», индексация — «что мы предлагаем поисковику как готовое».
-   * Спрятать непроверенный список от его же автора и от людей по ссылке никто не
-   * просил, а `publiclyVisible()` используют лента, страница списка и админка — правка
-   * там ушла бы во все четыре места разом.
-   *
-   * Уровень живёт у ВЕРСИИ, поэтому смотрим на текущую версию списка.
+   * ⚠️ ИНДЕКСАЦИЯ УЖЕ НЕ ТО ЖЕ, ЧТО ВИДИМОСТЬ. Решение 0018: список уровня «порода»
+   * публиковать можно, но в витрину и в карту он не идёт до первой проверки. Правило
+   * живёт ОДНО на карту сайта и на llms.txt — оба адресата машинные и оба читают наше
+   * утверждение о готовности; две копии разошлись бы, и заметить это было бы некому.
    */
-  const indexable = and(
-    visible,
-    /**
-     * ⚠️ «НЕТ СТРОКИ ВЕРСИИ» — НЕ ТО ЖЕ, ЧТО «ПОРОДА», и здесь это различается намеренно.
-     * Порода — сказанное про список утверждение («никто не проверял»), а отсутствие
-     * строки версии у опубликованного списка — аномалия данных: так быть не должно, и
-     * что это значит, никто не знает. Приравнять их значило бы молча выкинуть из
-     * индекса неизвестное число списков под видом правила. Поэтому условие исключает
-     * ТОЛЬКО явную породу, а список без версии остаётся в карте — как и до 0018.
-     * Сколько таких строк на проде, на 30.08 неизвестно; вопрос заведён в очередь.
-     */
-    sql`not exists (
-      select 1 from ${templateVersions} v
-       where v.template_id = ${templates.id}
-         and v.version = ${templates.currentVersion}
-         and v.verification_level = 'rock'
-    )`,
-  )
+  const indexable = indexableFilter()
 
   const [lists, authors, tags, collections] = await Promise.all([
     db
