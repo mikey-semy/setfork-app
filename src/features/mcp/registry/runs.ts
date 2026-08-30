@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { mcpCheckStep, mcpStartRun } from '@/features/mcp/tools'
+import { mcpCheckStep, mcpReportRun, mcpStartRun } from '@/features/mcp/tools'
 import { json, err, type ToolKit } from './kit'
 
 /** Прогоны: старт и отметка шага. */
@@ -36,6 +36,38 @@ export function registerRuns({ readTool, writeTool }: ToolKit) {
     },
     async (userId, { runId, step, done, blocked, reason }) => {
       const res = await mcpCheckStep(userId, runId, step, { done, blocked, reason })
+      return 'error' in res ? err(res.error as string) : json(res)
+    },
+  )
+
+  writeTool(
+    'report_run',
+    {
+      title: 'Report a verification run',
+      description:
+        'Record a machine verification report for the version you just ran. The report belongs to that VERSION, not to the list: a later edit makes a new version, which starts with no reports. runId is REQUIRED and must belong to this list — a report without a run is a claim, not a fact. Failures are reported the same way as successes (verdict "fails"): "ran and failed" and "never ran" are different facts. A successful report raises the version to machine-run level, but never overwrites a higher human level.',
+      inputSchema: {
+        list: z.string().describe('List reference: "handle/slug" or just "slug"'),
+        runId: z.string().describe('Run id from start_run — the report references a real, existing run'),
+        task: z.string().describe('What exactly was verified, one line — the report names the checked thing, not "verified"'),
+        environment: z
+          .record(z.string(), z.string())
+          .describe('Where it ran: {tool, os, node, ...}. Without it the report ages silently'),
+        steps: z
+          .array(
+            z.object({
+              n: z.number().int().min(1),
+              status: z.enum(['pass', 'fail', 'skip']),
+              note: z.string().optional(),
+            }),
+          )
+          .describe('Per-step outcome'),
+        verdict: z.enum(['works', 'works_with_caveats', 'fails']).describe('The verdict; it is shown verbatim and never shortened'),
+        notes: z.string().optional().describe('Caveats in words — what "works with caveats" means here'),
+      },
+    },
+    async (userId, args) => {
+      const res = await mcpReportRun(userId, args)
       return 'error' in res ? err(res.error as string) : json(res)
     },
   )
