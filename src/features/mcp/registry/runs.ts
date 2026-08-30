@@ -8,7 +8,10 @@ export function registerRuns({ readTool, writeTool }: ToolKit) {
     'start_run',
     {
       title: 'Start a run',
-      description: 'Start (or resume your active) run of a list by ref — a personal pass to track progress. Returns the run id, steps and progress.',
+      // Прогон — не «галочки для себя», а запись исполнения: по ней потом судят, работает
+      // список или нет. Агенту это нужно знать ДО старта, иначе он отмечает шаги наугад.
+      description:
+        'Start (or resume your active) run of a list by ref — an execution record against the list\'s current version. Returns the run id, steps and progress. Report each step with check_step: the run is what later shows whether the list actually works.',
       inputSchema: {
         handle: z.string().describe('Owner handle'),
         slug: z.string().describe('List slug'),
@@ -25,7 +28,7 @@ export function registerRuns({ readTool, writeTool }: ToolKit) {
     {
       title: 'Check off a run step',
       description:
-        'Report the outcome of a run step by its number (like a CI step). done true/false marks it passed/not; blocked true marks it failed with an optional reason. Omit all to toggle done. Returns the updated run.',
+        'Report the outcome of a run step by its number (like a CI step). done true/false marks it passed/not; blocked true marks it failed, with reason for why. Report failures honestly: a run with an unreported failure claims the list works when it does not.',
       inputSchema: {
         runId: z.string().describe('The run id'),
         step: z.number().int().min(1).describe('Step number (1-based)'),

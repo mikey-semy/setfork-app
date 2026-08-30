@@ -9,7 +9,11 @@ export function registerReads({ readTool, writeTool }: ToolKit) {
     'search_lists',
     {
       title: 'Search lists',
-      description: 'Search public SetFork lists (and your own private ones) by keywords/meaning. Returns list refs "owner/slug".',
+      // Что такое ref и почему его мало для доверия — говорится ЗДЕСЬ, в первом
+      // инструменте, который агент обычно зовёт: дальше он идёт в get_list, и знать про
+      // версию ему нужно уже там.
+      description:
+        'Search public SetFork lists (and your own private ones) by keywords/meaning. Returns list refs "owner/slug" — a ref points at the list, not at a fixed revision. Fetch it with get_list to get the current version number and its blocks.',
       inputSchema: {
         query: z.string().describe('Search terms — topic, tool or task'),
         limit: z.number().int().min(1).max(50).optional().describe('Max results (default 10)'),
@@ -23,7 +27,7 @@ export function registerReads({ readTool, writeTool }: ToolKit) {
     {
       title: 'Get a list',
       description:
-        'Fetch a full list by ref (owner handle + slug). Returns ALL blocks with their type — steps (title/command/subtasks/links) plus text, image, poll, video and quiz blocks with their content — so you get the complete context, not just text. If YOU have unpublished edits on this list, they come back as "pendingEdits" (their own blocks and baseVersion) — patch those further with publish:false or publish them with publish_draft.',
+        'Fetch a full list by ref (owner handle + slug). Returns ALL blocks with their type — steps (title/command/subtasks/links) plus text, image, poll, video and quiz blocks with their content — so you get the complete context, not just text. The response carries "version": a version is a fixed set of bytes, not a moving branch, so quoting owner/slug@version identifies exactly what you read. Pass that number back as baseVersion when you edit — the write is rejected if the list moved on meanwhile, instead of overwriting someone else\'s work. If YOU have unpublished edits on this list, they come back as "pendingEdits" (their own blocks and baseVersion) — patch those further with publish:false or publish them with publish_draft.',
       inputSchema: {
         handle: z.string().describe('Owner handle, e.g. "acme"'),
         slug: z.string().describe('List slug, e.g. "deploy-to-vps"'),
@@ -67,7 +71,8 @@ export function registerReads({ readTool, writeTool }: ToolKit) {
     'get_run',
     {
       title: 'Get run progress',
-      description: 'Fetch a run by its id: steps with done/not-done and overall progress.',
+      description:
+        'Fetch a run by its id: steps with done/not-done, failure reasons and overall progress. A run is a record of an actual execution — read it when you need evidence that a list works, rather than trusting its description.',
       inputSchema: { runId: z.string().describe('The run id from start_run') },
     },
     async (userId, { runId }) => {
