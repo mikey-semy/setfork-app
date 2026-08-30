@@ -32,7 +32,6 @@ export async function mcpSearch(userId: string, query: string, limit: number) {
       tags: f.tags,
       version: f.version,
       stars: f.starsCount,
-      verified: f.verified,
     })),
   }
 }
@@ -68,7 +67,10 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     tags: tpl.tags,
     ordered: tpl.ordered,
     version: currentVersion?.version ?? tpl.currentVersion,
-    verified: tpl.verified,
+    /* ⚠️ ПОЛЯ `verified` ЗДЕСЬ НЕТ. Решение 0006: публичного знака проверки не
+       существует, потому что видимый публичный список и есть прошедший проверку.
+       Отдавать флаг агенту значило бы обещать вторую проверку, которой нет, — и агент
+       понесёт это обещание дальше, в свой ответ человеку. */
     /**
      * УРОВЕНЬ ПРОВЕРКИ И ПОСЛЕДНИЙ ОТЧЁТ О ПРОГОНЕ этой версии — то, что агент читает
      * ДО того, как поверить списку. Без них он видит только текст, а текст одинаков у

@@ -1,12 +1,11 @@
 // Разбор строки поиска с квалификаторами (как на GitHub): `docker by:demo tag:redis
-// is:verified type:ordered stars:>100`. Всё, что не квалификатор — свободный текст.
+// type:ordered stars:>100`. Всё, что не квалификатор — свободный текст.
 // Чистая функция без БД — легко тестировать.
 
 export interface ParsedQuery {
   text: string
   by?: string // автор (owner/author/by)
   tags: string[] // tag:/topic:
-  verified?: boolean // is:verified
   type?: 'ordered' | 'unordered' // type:ordered
   minStars?: number // stars:>N
 }
@@ -35,9 +34,11 @@ export function parseSearchQuery(raw: string): ParsedQuery {
       case 'topic':
         out.tags.push(val.toLowerCase())
         break
-      case 'is':
-        if (val.toLowerCase() === 'verified') out.verified = true
-        break
+      // `is:verified` СНЯТ. Публичный отбор «только проверенные» — тот же бейдж, только
+      // фильтром: он обещает вторую проверку сверх видимости, а её нет (решение 0006).
+      // Флаг остаётся внутренним инструментом модерации; снаружи по нему не отбирают.
+      // Старый запрос `is:verified` теперь ОТБРАСЫВАЕТСЯ, как любой незнакомый
+      // квалификатор: выдача перестаёт отбираться по флагу, слова в текст не попадают.
       case 'type':
         if (val === 'ordered' || val === 'unordered') out.type = val
         break
@@ -61,7 +62,6 @@ export function buildSearchQuery(p: ParsedQuery): string {
   if (p.text.trim()) parts.push(p.text.trim())
   if (p.by) parts.push(`by:${p.by}`)
   for (const tag of p.tags) parts.push(`tag:${tag}`)
-  if (p.verified) parts.push('is:verified')
   if (p.type) parts.push(`type:${p.type}`)
   if (p.minStars != null) parts.push(`stars:>${p.minStars}`)
   return parts.join(' ')
