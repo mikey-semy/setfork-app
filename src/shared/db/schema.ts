@@ -35,6 +35,26 @@ import type { Lang, LocaleText } from '../i18n'
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
 export const listVisibility = pgEnum('list_visibility', ['public', 'private'])
 // draft — черновик (не опубликован, виден только владельцу); published — опубликован (виден по visibility).
+/**
+ * УРОВЕНЬ ПРОВЕРКИ ВЕРСИИ (решение 0018 от 04.08.2026).
+ *
+ * Бинарное «проверено» нежизнеспособно: проверить «в деле» список про развёртывание —
+ * значит реально развернуть, и такую планку пришлось бы либо нарушать молча, либо не
+ * масштабировать. Поэтому градация, и она — свойство ВЕРСИИ, а не списка: правка
+ * сбрасывает уровень, пока автор не подтвердит заново.
+ *
+ * Имена латиницей и по существу, а не по метафоре: в интерфейсе они показываются
+ * камнями (порода → кристалл), но в данных должно быть написано, ЧТО именно сделано,
+ * иначе через полгода никто не вспомнит, огранённый камень — это «прогнал частично»
+ * или «сверил по документации».
+ *   rock         — не проверялось: собрано и опубликовано, но никто не проверял;
+ *   doc_checked  — сверено по первоисточникам, но не выполнялось;
+ *   machine_run  — прогнано машиной (⚠️ ждёт решения владельца Р2);
+ *   cut          — выполнены ключевые шаги;
+ *   crystal      — выполнено целиком, от начала до конца.
+ */
+export const verificationLevel = pgEnum('verification_level', ['rock', 'doc_checked', 'machine_run', 'cut', 'crystal'])
+
 export const listStatus = pgEnum('list_status', ['draft', 'published'])
 // active — норма; pending — ждёт авто-проверку публикации (виден только владельцу);
 // flagged — на проверку (репорт/ИИ); hidden — скрыт админом (не публичен).
@@ -501,6 +521,21 @@ export const templateVersions = pgTable(
     // gardener и Rust-write-путь (SETFORK_DOMAIN_WRITES) автора не проставляют.
     authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Уровень проверки ЭТОЙ версии (0018). Новая версия рождается `rock`, и сброс при
+     * правке получается сам: версии пишет ядро, а не отдельный код сброса — писать его
+     * значило бы завести второе место, где решается уровень, и однажды забыть про него.
+     */
+    verificationLevel: verificationLevel('verification_level').notNull().default('rock'),
+    /**
+     * Когда проверяли. Без даты метка врёт тем сильнее, чем старше список: «прогнал
+     * целиком» полугодовой давности про Caddy 2.8 сегодня может не работать вовсе.
+     */
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    /** В чём проверяли: «Ubuntu 24.04, Caddy 2.8». Свободный текст — окружение бывает любым. */
+    verifiedEnv: text('verified_env'),
+    /** Кто проверял. Не обязательно автор версии: проверить может и второй человек. */
+    verifiedBy: uuid('verified_by').references(() => users.id, { onDelete: 'set null' }),
   },
   (t) => ({ tplVersion: uniqueIndex('template_versions_tpl_version').on(t.templateId, t.version), created: index('template_versions_created_idx').on(t.createdAt) }),
 )

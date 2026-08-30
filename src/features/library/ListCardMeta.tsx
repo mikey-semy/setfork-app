@@ -4,6 +4,7 @@ import { cn } from '@/shared/lib/cn'
 import { t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { LIST_VISIBILITY_BADGE, listVisibilityState } from './list-visibility'
+import { VerificationBadge } from './VerificationBadge'
 import type { FeedItem } from './queries'
 
 function fmt(n: number): string {
@@ -40,6 +41,9 @@ export function ListCardMeta({ item, lang, className }: { item: FeedItem; lang: 
           </span>
         </Tooltip>
       )}
+      {/* Уровень проверки ТЕКУЩЕЙ версии с датой (0018). Порода не рисуется — отсутствие
+          метки и есть «никто не проверял». */}
+      <VerificationBadge level={item.verificationLevel} verifiedAt={item.verifiedAt} lang={lang} />
       <Link href={`${base}/forks`} className="inline-flex items-center gap-1.5 hover:text-accent">
         <GitFork size={14} className="text-muted" /> {fmt(item.forksCount)}
       </Link>

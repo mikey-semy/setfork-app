@@ -52,6 +52,8 @@ export function ListAbout({ tpl, base, branches, currentVersion, watchers, lang,
           runs={tpl.runsCount}
           branches={Math.max(1, branches.length)}
           version={currentVersion?.version ?? tpl.currentVersion}
+          verificationLevel={currentVersion?.verificationLevel}
+          verifiedAt={currentVersion?.verifiedAt}
           visibility={tpl.visibility}
           status={tpl.status}
         />

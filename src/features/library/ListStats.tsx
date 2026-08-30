@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { VerificationBadge } from './VerificationBadge'
 import { Eye, GitBranch, GitFork, PlayCircle, Star, Tag } from 'lucide-react'
 import { fmtCount } from '@/shared/lib/count'
 import { plural, t, type Lang } from '@/shared/i18n'
@@ -31,6 +32,8 @@ export function ListStats({
   runs,
   branches,
   version,
+  verificationLevel,
+  verifiedAt,
   visibility,
   status,
 }: {
@@ -44,6 +47,9 @@ export function ListStats({
   runs: number
   branches: number
   version: number
+  /** Уровень проверки текущей версии и дата (0018). */
+  verificationLevel?: string | null
+  verifiedAt?: Date | string | null
   visibility: 'public' | 'private'
   /** Вместе с visibility даёт то состояние, которое видит человек (list-visibility). */
   status: 'draft' | 'published'
@@ -74,6 +80,9 @@ export function ListStats({
           v<b className="text-ink">{version}</b>
         </span>
       </Link>
+      {/* Уровень проверки — сразу за версией, потому что относится к НЕЙ: правка сбрасывает
+          его в породу (0018). Порода не рисуется: отсутствие метки и есть «не проверялось». */}
+      <VerificationBadge level={verificationLevel} verifiedAt={verifiedAt} lang={lang} className={item} />
       <span className={item}>
         <Star size={14} className="text-muted" /> {num(stars, 'stars')}
       </span>

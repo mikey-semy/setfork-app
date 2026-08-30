@@ -49,12 +49,33 @@ export const FEED_COLS = {
   visibility: templates.visibility,
   verified: templates.verified,
   updatedAt: templates.updatedAt,
+  // Уровень проверки ТЕКУЩЕЙ версии и дата проверки (решение 0018). Подзапросом, а не
+  // join'ом: join по версии размножил бы строки ленты при любой невнимательности в
+  // условии, а здесь нужен ровно один скаляр на список.
+  verificationLevel: sql<string>`(
+    select v.verification_level from template_versions v
+     where v.template_id = ${templates.id} and v.version = ${templates.currentVersion}
+  )`,
+  verifiedAt: sql<Date | null>`(
+    select v.verified_at from template_versions v
+     where v.template_id = ${templates.id} and v.version = ${templates.currentVersion}
+  )`,
   accent: templates.accent,
   coverImage: templates.coverImage,
   // Каталог («полка») списка: по нему профиль фильтрует свою библиотеку, а «без каталога»
   // отвечает на вопрос «что ещё не разложено» — это и есть очередь разбора.
   repositoryId: templates.repositoryId,
 }
+
+/**
+ * ПОРЯДОК УРОВНЕЙ ПРОВЕРКИ — от слабого к сильному, одним списком на весь код.
+ *
+ * «Порода» сюда не входит: её нельзя запросить как минимум — это отсутствие проверки, а
+ * не её степень. Порядок нужен фильтру «не ниже чем», и держать его в одном месте
+ * обязательно: разные представления о том, что выше — «прогнано машиной» или «ключевые
+ * шаги», разошлись бы молча и дали бы разную выдачу на соседних страницах.
+ */
+export const VERIFICATION_ORDER = ['doc_checked', 'machine_run', 'cut', 'crystal'] as const
 
 export const tagFilter = (tag: string): SQL => sql`${templates.tags} @> ARRAY[${tag}]::text[]`
 
@@ -86,9 +107,16 @@ export function visibleFilter(viewerId?: string): SQL {
   return viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
 }
 
-/** Доп. фильтры ленты: verified, тип, автор (by), теги (AND), минимум звёзд. */
+/** Доп. фильтры ленты: уровень проверки, тип, автор (by), теги (AND), минимум звёзд. */
 export function extraFilters(opts: {
   verified?: boolean
+  /**
+   * Минимальный уровень проверки ТЕКУЩЕЙ версии (решение 0018): «покажи то, что хотя бы
+   * сверяли по источникам». Порядок уровней задан здесь, а не в вызывающем: иначе каждый
+   * фильтр решал бы сам, что выше — «прогнано машиной» или «ключевые шаги», и они бы
+   * разошлись.
+   */
+  minVerification?: 'doc_checked' | 'machine_run' | 'cut' | 'crystal'
   ordered?: boolean
   by?: string
   tags?: string[]
@@ -96,6 +124,15 @@ export function extraFilters(opts: {
 }): SQL[] {
   const f: SQL[] = []
   if (opts.verified) f.push(eq(templates.verified, true))
+  if (opts.minVerification) {
+    const order = VERIFICATION_ORDER.slice(VERIFICATION_ORDER.indexOf(opts.minVerification))
+    f.push(sql`exists (
+      select 1 from template_versions v
+       where v.template_id = ${templates.id}
+         and v.version = ${templates.currentVersion}
+         and v.verification_level in (${sql.join(order.map((l) => sql`${l}`), sql`, `)})
+    )`)
+  }
   if (opts.ordered !== undefined) f.push(eq(templates.ordered, opts.ordered))
   if (opts.by) f.push(eq(users.handle, opts.by)) // users приджойнен в обоих режимах
   if (opts.minStars != null) f.push(gte(templates.starsCount, opts.minStars))

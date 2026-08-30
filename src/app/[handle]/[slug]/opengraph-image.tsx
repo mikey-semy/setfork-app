@@ -36,6 +36,17 @@ const MUTED = '#6f6f68'
 const ACCENT = '#2159d6'
 const BORDER = '#e7e6e0'
 
+/**
+ * Подписи уровня НА КАРТИНКЕ — короткие и по-английски: картинку показывают в чужих
+ * лентах, где языка зрителя мы не знаем, а место в строке ограничено.
+ */
+const OG_VERIFICATION: Record<string, string> = {
+  doc_checked: 'checked',
+  machine_run: 'machine-run',
+  cut: 'partly run',
+  crystal: 'run end to end',
+}
+
 export default async function Image({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
   const list = await publicList(handle, slug)
@@ -98,6 +109,14 @@ export default async function Image({ params }: { params: Promise<{ handle: stri
                 {list ? <div style={{ display: 'flex', color: INK }}>{list.ownerName || handle}</div> : null}
                 {list ? <div style={{ display: 'flex' }}>{list.blocks} blocks</div> : null}
                 {list ? <div style={{ display: 'flex' }}>v{list.currentVersion}</div> : null}
+                {/* УРОВЕНЬ ПРОВЕРКИ НА КАРТИНКЕ (0018). Это единственное место, где он
+                    попадает в чужую ленту при пересылке ссылки, — и ровно то, что
+                    решение называет «скриншотится, в отличие от логотипа на градиенте».
+                    Порода не рисуется: пустое место честнее слова «не проверялось» на
+                    картинке, которую увидят вне контекста. */}
+                {list?.verificationLevel && list.verificationLevel !== 'rock' ? (
+                  <div style={{ display: 'flex', color: ACCENT }}>{OG_VERIFICATION[list.verificationLevel] ?? ''}</div>
+                ) : null}
               </div>
               <div style={{ display: 'flex', fontSize: 26, color: ACCENT, fontWeight: 700 }}>SetFork</div>
             </div>
@@ -117,6 +136,10 @@ export async function publicList(handle: string, slug: string) {
       title: templates.title,
       desc: templates.desc,
       currentVersion: templates.currentVersion,
+      verificationLevel: sql<string>`(
+        select v.verification_level from template_versions v
+         where v.template_id = ${templates.id} and v.version = ${templates.currentVersion}
+      )`,
       tags: templates.tags,
       ownerName: users.name,
     })
