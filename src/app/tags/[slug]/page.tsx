@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { breadcrumbList, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
@@ -8,7 +9,7 @@ import { countLists, getFeed } from '@/features/library/queries'
 import { getTag } from '@/features/tags/queries'
 import { FeedList } from '@/features/library/FeedList'
 import { Pagination } from '@/shared/ui/Pagination'
-import { canonicalPage, canonicalPageParam, decodeSegment, pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
+import { canonicalPage, canonicalPageParam, decodeSegment, pageCount, pageHref, pageOrNotFound, pageWindow } from '@/shared/lib/paging'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Badge } from '@/shared/ui/badge'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -56,7 +57,10 @@ export default async function TagPage({
   // тянула их все вместе с аватарами авторов, чтобы показать экран.
   const [tag, total] = await Promise.all([getTag(slug), countLists({ tag: slug }, session?.userId)])
   const totalPages = pageCount(total)
-  const page = pageFromParam(sp.page, totalPages)
+  // За последней страницей — «не найдено», а не молчаливый показ последней: иначе одно
+  // содержимое живёт под бесконечным числом адресов, и canonical у каждого свой.
+  const page = pageOrNotFound(sp.page, totalPages)
+  if (page === null) notFound()
   const items = await getFeed({ tag: slug, sort: 'trending' }, session?.userId, lang, pageWindow(page))
 
   return (

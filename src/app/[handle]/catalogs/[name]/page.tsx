@@ -8,7 +8,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
 import { Pagination } from '@/shared/ui/Pagination'
-import { canonicalPage, canonicalPageParam, decodeSegment, pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
+import { canonicalPage, canonicalPageParam, decodeSegment, pageCount, pageHref, pageOrNotFound, pageWindow } from '@/shared/lib/paging'
 import { countListsInCatalog, getListsInCatalog } from '@/features/library/queries'
 import { getCatalog } from '@/features/catalogs/queries'
 import { PAGE } from '@/shared/ui/control'
@@ -52,7 +52,10 @@ export default async function CatalogPage({
   // ради одного экрана нет причин.
   const total = await countListsInCatalog(cat.id, viewer?.userId)
   const totalPages = pageCount(total)
-  const page = pageFromParam(sp.page, totalPages)
+  // За последней страницей — «не найдено», а не молчаливый показ последней: иначе одно
+  // содержимое живёт под бесконечным числом адресов, и canonical у каждого свой.
+  const page = pageOrNotFound(sp.page, totalPages)
+  if (page === null) notFound()
   const lists = await getListsInCatalog(cat.id, viewer?.userId, pageWindow(page))
 
   return (

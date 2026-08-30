@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  pageOrNotFound,
   AFTER_PARAM,
   BEFORE_PARAM,
   cursorHref,
@@ -383,5 +384,38 @@ describe('keyset: курсор', () => {
       expect(cursorHref('/n', { after: 'вниз' }, BEFORE_PARAM)('вверх')).toBe('/n?before=%D0%B2%D0%B2%D0%B5%D1%80%D1%85')
       expect(cursorHref('/n', { before: 'вверх' }, AFTER_PARAM)('вниз')).toBe('/n?after=%D0%B2%D0%BD%D0%B8%D0%B7')
     })
+  })
+})
+
+describe('страница за последней', () => {
+  /**
+   * `?page=999` при трёх страницах раньше показывал ТРЕТЬЮ: удобно человеку и вредно
+   * обходчику — одно содержимое под бесконечным числом адресов, и canonical у каждого
+   * свой. GitHub и Gitea на такой адрес отвечают «не найдено».
+   */
+  it('несуществующий номер — отказ, а не последняя страница', () => {
+    expect(pageOrNotFound('999', 3)).toBeNull()
+    expect(pageOrNotFound('4', 3)).toBeNull()
+  })
+
+  it('существующий номер проходит как есть', () => {
+    expect(pageOrNotFound(undefined, 3)).toBe(1)
+    expect(pageOrNotFound('1', 3)).toBe(1)
+    expect(pageOrNotFound('3', 3)).toBe(3)
+    // Дробь — мусор в адресе, а не просьба: округляем вниз, как и весь остальной модуль.
+    expect(pageOrNotFound('2.9', 3)).toBe(2)
+    // Слева край НЕ отказывает: таких адресов конечное число, и canonical у них голый
+    // путь. Проверка написана после того, как первая версия отказывала на «-2» и
+    // пропускала «0» — несогласованность вылезла ровно здесь.
+    expect(pageOrNotFound('0', 3)).toBe(1)
+    expect(pageOrNotFound('-2', 3)).toBe(1)
+  })
+
+  it('первая страница существует даже у пустой выдачи', () => {
+    // Пустой тег или новая полка — это ПУСТАЯ страница, а не отсутствующая. Иначе тег
+    // отдавал бы 404 до первого списка на нём.
+    expect(pageOrNotFound(undefined, 0)).toBe(1)
+    expect(pageOrNotFound('1', 0)).toBe(1)
+    expect(pageOrNotFound('2', 0)).toBeNull()
   })
 })
