@@ -27,7 +27,10 @@ const EXPLORE_SIDE = 5
 
 export async function generateMetadata() {
   const lang = await getLang()
-  return { title: t('explore', lang) }
+  // Canonical у обзора — по той же причине, что у корня: страница принимает параметры
+  // (прежние `?tab=` перенаправляет middleware), и каждый из них без этой строки
+  // выглядел бы для обходчика отдельной страницей с тем же содержимым.
+  return { title: t('explore', lang), alternates: { canonical: '/explore' } }
 }
 
 export default async function ExplorePage() {

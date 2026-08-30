@@ -8,14 +8,21 @@ import { countLists, getFeed } from '@/features/library/queries'
 import { getTag } from '@/features/tags/queries'
 import { FeedList } from '@/features/library/FeedList'
 import { Pagination } from '@/shared/ui/Pagination'
-import { pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
+import { canonicalPage, canonicalPageParam, pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Badge } from '@/shared/ui/badge'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE } from '@/shared/ui/control'
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug: raw } = await params
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  // Номер страницы нужен canonical'у: он обязан указывать на СЕБЯ, а не на первую.
+  searchParams: Promise<{ page?: string }>
+}): Promise<Metadata> {
+  const [{ slug: raw }, sp] = await Promise.all([params, searchParams])
   const slug = decodeURIComponent(raw)
   const tag = await getTag(slug.toLowerCase())
   const label = tag?.label || slug
@@ -26,7 +33,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: `#${slug}`,
     description,
     // Адрес канона — с тем же кодированием, что в карте сайта: тег бывает не только латиницей.
-    alternates: { canonical: `/tags/${encodeURIComponent(slug)}` },
+    // Страница листалки канонизирует СЕБЯ: у второй страницы `?page=2`. Указать на
+    // первую значило бы сказать обходчику «всё уже описано там», и списки со второй
+    // страницы не попали бы в индекс вовсе.
+    alternates: { canonical: canonicalPage(`/tags/${encodeURIComponent(slug)}`, canonicalPageParam(sp.page)) },
     openGraph: { type: 'website', siteName: 'SetFork', title: `#${slug}`, description },
   }
 }

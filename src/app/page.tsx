@@ -31,7 +31,10 @@ const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
 // Слоган — из словаря, на языке пользователя; en повторяет корневой default в layout.
 export async function generateMetadata() {
   const lang = await getLang()
-  return { title: { absolute: `SetFork — ${t('homeTagline', lang)}` } }
+  // Canonical у корня. Его не было: адрес отдаётся и как `/`, и с любым мусорным
+  // параметром (метки рекламных переходов, `?ref=`), и без канонического указания
+  // обходчик считает их разными страницами с одинаковым содержимым.
+  return { title: { absolute: `SetFork — ${t('homeTagline', lang)}` }, alternates: { canonical: '/' } }
 }
 
 export default async function HomePage() {
