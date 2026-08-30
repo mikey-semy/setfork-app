@@ -95,9 +95,30 @@ function legacyExploreTarget(url: NextRequest['nextUrl']): string | null {
   return range && range !== 'week' ? `/trending?range=${range}` : '/trending'
 }
 
+/**
+ * `/{handle}/{slug}.md` — тот же список в markdown.
+ *
+ * Адрес с суффиксом читается человеком и агентом одинаково: «дай мне это файлом».
+ * Переписыванием, а не своим роутом, — потому что рендерер обязан остаться ОДИН:
+ * второй вариант markdown разошёлся бы с экспортом, и агент, прочитавший список по
+ * суффиксу, получил бы не то, что скачал бы по кнопке.
+ *
+ * Только два сегмента: `/a/b.md` — список, а `/a/b/c.md` уже не он. Точка в слаге
+ * невозможна (слаг строится транслитерацией), поэтому `.md` в конце однозначен.
+ */
+function markdownSuffixTarget(url: URL): string | null {
+  const m = /^\/([^/]+)\/([^/]+)\.md$/.exec(url.pathname)
+  if (!m) return null
+  const [, handle, slug] = m
+  return `/${handle}/${slug}/export?format=md`
+}
+
 export async function middleware(req: NextRequest) {
   const legacy = legacyExploreTarget(req.nextUrl)
   if (legacy) return NextResponse.redirect(new URL(legacy, req.url), 308)
+
+  const md = markdownSuffixTarget(req.nextUrl)
+  if (md) return NextResponse.rewrite(new URL(md, req.url))
 
   // ПРОБЫ ПРОПУСКАЕМ ДО обращения к БД. `maintenanceEnabled()` ходит в ту же
   // базу и своего потолка ожидания не имеет: при исчерпанном пуле или зависшем
