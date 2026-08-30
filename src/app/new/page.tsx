@@ -48,7 +48,7 @@ export default async function NewListPage() {
   return (
     <div className={PAGE_NARROW}>
       <FloatingBack href={'/my-lists'} label={t('myLists', lang)} />
-      <NewListForm texts={texts}>
+      <NewListForm texts={texts} lang={lang}>
         {/* Название страницы уже стоит в шапке приложения. */}
         <PageHeader hideTitle title={t('newList', lang)} />
 

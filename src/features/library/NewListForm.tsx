@@ -1,9 +1,14 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createTemplate, type NewListRefusal } from '@/features/library/actions'
+import type { Lang } from '@/shared/i18n'
 import { Alert } from '@/shared/ui/Alert'
+// Замер спроса живёт в monetization, а показывается там, где человек упёрся в предел:
+// интерес к платному тарифу возникает в этот момент, а не на витрине тарифов.
+// eslint-disable-next-line boundaries/dependencies -- см. абзац выше
+import { ProInterestForm } from '@/features/monetization/ProInterestForm'
 import { useKeepFormValues } from '@/shared/ui/keep-form-values'
 
 /**
@@ -23,8 +28,11 @@ import { useKeepFormValues } from '@/shared/ui/keep-form-values'
 export function NewListForm({
   children,
   texts,
+  lang,
 }: {
   children: ReactNode
+  /** Язык — для формы замера спроса внутри сообщения о пределе (0021). */
+  lang: Lang
   texts: {
     slugTakenTitle: string
     /** `{slug}` — занятый адрес. */
@@ -40,6 +48,24 @@ export function NewListForm({
   }
 }) {
   const [refusal, action, pending] = useActionState<NewListRefusal | null, FormData>(createTemplate, null)
+  /**
+   * ⚠️ ПРЕДЕЛ, РАЗ УВИДЕННЫЙ, С ЭКРАНА НЕ ПРОПАДАЕТ. Внутри этого сообщения стоит форма
+   * замера спроса, а её отправка — серверное действие; оно обновляет дерево, и
+   * состояние `useActionState` сбрасывается. Человек нажимал «Хочу Pro» и видел, как
+   * весь блок исчезает: ни ошибки, ни подтверждения. Поймано живой проверкой.
+   *
+   * Поэтому факт «упёрся в предел» запоминается отдельно и живёт до ухода со страницы —
+   * ровно как и должен: ограничение никуда не делось от того, что человек оставил почту.
+   */
+  const [quotaSeen, setQuotaSeen] = useState(false)
+  const [quotaLimit, setQuotaLimit] = useState<number | null>(null)
+  useEffect(() => {
+    if (refusal?.kind === 'list_quota') {
+      setQuotaSeen(true)
+      setQuotaLimit(refusal.limit)
+    }
+  }, [refusal])
+
   // Набранное переживает отказ: форма React сбрасывает неуправляемые поля сама.
   const { formRef, onSubmit } = useKeepFormValues(refusal !== null, pending)
 
@@ -63,9 +89,14 @@ export function NewListForm({
         </Alert>
       )}
 
-      {refusal?.kind === 'list_quota' && (
+      {(refusal?.kind === 'list_quota' || quotaSeen) && (
         <Alert variant="warn" className="mb-5">
-          {texts.quotaReached.replace('{n}', String(refusal.limit))}
+          {texts.quotaReached.replace('{n}', String(quotaLimit ?? 0))}
+          {/* ЗАМЕР СПРОСА ровно в точке, где человек упёрся в предел (решение 0021):
+              интерес к платному тарифу возникает здесь, а не на витрине тарифов. Форма
+              прямо говорит, что оплаты нет и мы её не обещаем — без этой строки мы
+              меряли бы не готовность платить, а реакцию на собственное обещание. */}
+          <ProInterestForm source="list_quota" lang={lang} />
         </Alert>
       )}
 
