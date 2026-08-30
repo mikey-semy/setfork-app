@@ -1,0 +1,13 @@
+{
+  "count": 8,
+  "hits": [
+    "src/features/generation/actions.ts:14",
+    "src/features/generation/reputation.ts:4",
+    "src/features/generation/service.ts:9",
+    "src/features/generation/service.ts:10",
+    "src/features/library/selfgen.ts:13",
+    "src/features/runs/RunView.tsx:18",
+    "src/instrumentation.ts:82",
+    "src/instrumentation.ts:83"
+  ]
+}
