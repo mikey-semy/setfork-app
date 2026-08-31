@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next'
-import { and, eq, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
 import { indexableFilter } from '@/features/library/queries/shared'
 import { getCollections } from '@/features/collections/queries'

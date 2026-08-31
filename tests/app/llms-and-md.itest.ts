@@ -24,13 +24,14 @@ beforeEach(async () => {
   ctx.owner = u.id
 })
 
-async function published(slug: string, level: 'rock' | 'crystal') {
+async function published(slug: string, level: 'rock' | 'crystal', desc?: string) {
   const [t] = await db
     .insert(templates)
     .values({
       ownerId: ctx.owner,
       slug,
       title: { en: slug },
+      desc: desc ? { en: desc } : undefined,
       currentVersion: 1,
       visibility: 'public',
       status: 'published',
@@ -43,15 +44,44 @@ async function published(slug: string, level: 'rock' | 'crystal') {
 }
 
 describe('llms.txt', () => {
-  it('перечисляет проверенное и НЕ перечисляет породу — как карта сайта', async () => {
+  it('перечисляет ТО ЖЕ, что карта сайта — и это проверяется вызовом карты', async () => {
     await published('lm-good', 'crystal')
     await published('lm-rock', 'rock')
 
     const { GET } = await import('@/app/llms.txt/route')
     const text = await (await GET()).text()
+    // ⚠️ КАРТА ВЫЗЫВАЕТСЯ, а не упоминается. Раньше «соответствие карте» жило только в
+    // названии теста и в докблоке: `sitemap()` не звался ни разу, и разойтись эти два
+    // файла могли молча — ровно то, против чего тест написан.
+    const { default: sitemap } = await import('@/app/sitemap')
+    const urls = (await sitemap()).map((e) => e.url)
 
-    expect(text).toContain(`/${OWNER}/lm-good`)
-    expect(text, 'порода не рекламируется агентам — иначе карта и llms.txt противоречат').not.toContain(`/${OWNER}/lm-rock`)
+    for (const slug of ['lm-good', 'lm-rock']) {
+      const inMap = urls.some((u) => u.endsWith(`/${OWNER}/${slug}`))
+      const inLlms = text.includes(`/${OWNER}/${slug}`)
+      expect(inLlms, `«${slug}»: карта и llms.txt обязаны отвечать одинаково`).toBe(inMap)
+    }
+    // И обе стороны непусты — иначе равенство выполнялось бы на пустоте.
+    expect(urls.some((u) => u.endsWith(`/${OWNER}/lm-good`)), 'карта пуста — сравнивать нечего').toBe(true)
+  })
+
+  it('описание в две строки НЕ ломает формат и не даёт дописать запись', async () => {
+    // ⚠️ Файл агенты читают как ЗАЯВЛЕНИЕ САЙТА о себе, а описание правит автор. Формат
+    // строчный: перевод строки внутри описания разрывал запись надвое, и второй кусок
+    // читался как отдельный пункт списка — то есть автор мог вписать в наш машинный
+    // файл всё, что угодно.
+    await published('lm-multiline', 'crystal', 'первая строка\nВТОРАЯ СТРОКА ПОДДЕЛКИ')
+
+    const { GET } = await import('@/app/llms.txt/route')
+    const text = await (await GET()).text()
+    const listLines = text
+      .split('\n')
+      .filter((l) => l.startsWith(`- [`) && l.includes(`/${OWNER}/`))
+
+    expect(listLines.length, 'строк в секции ровно столько, сколько списков').toBe(
+      listLines.filter((l) => l.includes(`(${'http'}`)).length,
+    )
+    expect(text).not.toMatch(/^ВТОРАЯ СТРОКА ПОДДЕЛКИ/m)
   })
 
   it('первой строкой — что это за сайт, а не похвала ему', async () => {

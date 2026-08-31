@@ -150,6 +150,9 @@ export async function middleware(req: NextRequest) {
   const machine =
     pathname.startsWith('/api/') ||
     pathname.endsWith('.bundle') ||
+    // `.md` — тоже машинная поверхность: этот адрес мы САМИ рекламируем агентам в
+    // llms.txt («допишите .md к адресу»). Человеческая заглушка ремонта им не нужна.
+    pathname.endsWith('.md') ||
     pathname.endsWith('/raw') ||
     pathname.endsWith('/releases.atom') ||
     /\/(info\/refs|git-upload-pack|git-receive-pack)$/.test(pathname)
@@ -173,7 +176,16 @@ export async function middleware(req: NextRequest) {
     }
     return new NextResponse(`${MAINTENANCE_LINE}\n`, {
       status: 503,
-      headers: { 'Retry-After': RETRY_AFTER_SEC, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+      headers: {
+        'Retry-After': RETRY_AFTER_SEC,
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+        // Причина машинно: 503 бывает разным (ремонт, перегрузка, отказ вышестоящего), и
+        // клиенту важно отличить «вернись позже, у нас работы» от «что-то сломалось».
+        // Скриптовая ветка выше этот заголовок ставит — здесь его не было, хотя адресат
+        // тот же машинный.
+        'SF-Reason': 'maintenance',
+      },
     })
   }
 
