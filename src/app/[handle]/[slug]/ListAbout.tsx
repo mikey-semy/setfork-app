@@ -1,10 +1,11 @@
 import Link from 'next/link'
+import { RunReportLine } from '@/features/library/RunReportLine'
 import { tr, type Lang } from '@/shared/i18n'
 import { ListStats } from '@/features/library/ListStats'
 import type { ListPageData } from './load'
 import { TagChip } from '@/shared/ui/TagChip'
 
-type Props = Pick<ListPageData, 'tpl' | 'base' | 'branches' | 'currentVersion' | 'watchers'> & {
+type Props = Pick<ListPageData, 'tpl' | 'base' | 'branches' | 'currentVersion' | 'watchers' | 'runReport'> & {
   lang: Lang
   /** row — сводка строкой (мобильная шапка), column — колонкой (сайдбар на lg). */
   layout: 'row' | 'column'
@@ -17,7 +18,7 @@ type Props = Pick<ListPageData, 'tpl' | 'base' | 'branches' | 'currentVersion' |
  * копии разметки, и они успели разойтись (у сайдбарной не было переноса длинных слов,
  * и один тег без пробелов распирал колонку).
  */
-export function ListAbout({ tpl, base, branches, currentVersion, watchers, lang, layout }: Props) {
+export function ListAbout({ tpl, base, branches, currentVersion, watchers, runReport, lang, layout }: Props) {
   const desc = tr(tpl.desc, lang)
   return (
     <>
@@ -57,6 +58,14 @@ export function ListAbout({ tpl, base, branches, currentVersion, watchers, lang,
           visibility={tpl.visibility}
           status={tpl.status}
         />
+        {/* Строка отчёта о прогоне: метку уровня выше она ОБЪЯСНЯЕТ — что именно
+            прогоняли, в чём и чем кончилось. Без отчёта строки нет: «не прогоняли» —
+            это отсутствие записи, а не запись об отсутствии. */}
+        {runReport && (
+          <div className="mt-2">
+            <RunReportLine report={runReport} lang={lang} />
+          </div>
+        )}
       </div>
     </>
   )

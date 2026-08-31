@@ -1,4 +1,5 @@
 import 'server-only'
+import { latestReport } from '@/features/library/verification-report'
 import { eq } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
 import { tr, trKey } from '@/shared/i18n'
@@ -68,6 +69,36 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     ordered: tpl.ordered,
     version: currentVersion?.version ?? tpl.currentVersion,
     verified: tpl.verified,
+    /**
+     * УРОВЕНЬ ПРОВЕРКИ И ПОСЛЕДНИЙ ОТЧЁТ О ПРОГОНЕ этой версии — то, что агент читает
+     * ДО того, как поверить списку. Без них он видит только текст, а текст одинаков у
+     * проверенного списка и у собранного вчера из чужой статьи.
+     *
+     * Отсутствие отчёта — это `null`, а не «не работает»: «не прогоняли» и «прогоняли и
+     * не вышло» — разные факты, и подменять один другим нельзя.
+     */
+    verification: currentVersion
+      ? {
+          level: currentVersion.verificationLevel,
+          verifiedAt: currentVersion.verifiedAt,
+          // ⚠️ `canWrite` посчитан выше и обязан доехать сюда: без него агент ВЛАДЕЛЬЦА
+          // получал `lastRun: null` там, где сайт показывает провальный отчёт. Одно
+          // право — один ответ, независимо от того, человек смотрит или его агент.
+          lastRun: await latestReport(currentVersion.id, canWrite).then((r) =>
+            r
+              ? {
+                  verdict: r.verdict,
+                  kind: r.kind,
+                  task: r.task,
+                  environment: r.environment,
+                  steps: `${r.steps.filter((x) => x.status === 'pass').length}/${r.steps.length}`,
+                  notes: r.notes || undefined,
+                  at: r.createdAt,
+                }
+              : null,
+          ),
+        }
+      : null,
     // Все блоки списка (шаги + текст/картинки/опросы/видео/тесты) — полный контекст.
     // section = заголовок урока/секции (для контекста границ уроков у AI).
     steps: blocksForMcp(steps),

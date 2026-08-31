@@ -26,6 +26,7 @@ type Props = Pick<
   | 'branches'
   | 'currentVersion'
   | 'watchers'
+  | 'runReport'
 > & { lang: Lang }
 
 /** Сколько участников показываем в сайдбаре; остальные — в зачёте вкладов. */

@@ -1,0 +1,202 @@
+import { eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { db, templates, templateVersions, users, verificationReports } from '@/shared/db'
+import { latestReport, recordVerificationReport } from '@/features/library/verification-report'
+
+/**
+ * ОТЧЁТ О ПРОГОНЕ И УРОВЕНЬ ПРОВЕРКИ: что поднимается, что не трогается.
+ *
+ * Правило спеки: успешный machine-отчёт поднимает версию до «прогнано машиной», но
+ * ТОЛЬКО если текущий уровень ниже. Ручной «кристалл» машиной не перетирается — это
+ * было бы понижением утверждения: машина проверяет меньше, чем человек. Провал не
+ * меняет уровень вовсе, но отчёт пишется: «прогоняли и не вышло» и «не прогоняли» —
+ * разные факты, и подменять один другим нельзя.
+ */
+const OWNER = 'rp-owner'
+const ctx: Record<string, string> = {}
+
+beforeEach(async () => {
+  await db.delete(users).where(eq(users.handle, OWNER))
+  const [u] = await db.insert(users).values({ handle: OWNER, name: OWNER }).returning({ id: users.id })
+  ctx.owner = u.id
+})
+
+async function version(slug: string, level: 'rock' | 'machine_run' | 'crystal') {
+  const [t] = await db
+    .insert(templates)
+    .values({ ownerId: ctx.owner, slug, title: { en: slug }, currentVersion: 1 })
+    .returning({ id: templates.id })
+  const [v] = await db
+    .insert(templateVersions)
+    .values({ templateId: t.id, version: 1, verificationLevel: level })
+    .returning({ id: templateVersions.id })
+  return { templateId: t.id, versionId: v.id }
+}
+
+const levelOf = async (versionId: string) => {
+  const [row] = await db.select({ l: templateVersions.verificationLevel }).from(templateVersions).where(eq(templateVersions.id, versionId))
+  return row.l
+}
+
+const report = (over: Partial<Parameters<typeof recordVerificationReport>[0]> = {}) => ({
+  templateId: '',
+  versionId: '',
+  kind: 'machine' as const,
+  task: 'установить хук и вызвать событие',
+  environment: { tool: 'claude-code 2.x', os: 'ubuntu 24.04' },
+  steps: [
+    { n: 1, status: 'pass' as const },
+    { n: 2, status: 'pass' as const },
+  ],
+  verdict: 'works' as const,
+  runnerId: null,
+  ...over,
+})
+
+describe('отчёт о прогоне и уровень версии', () => {
+  it('успешный machine-отчёт поднимает породу до «прогнано машиной»', async () => {
+    const { templateId, versionId } = await version('rp-low', 'rock')
+    const res = await recordVerificationReport(report({ templateId, versionId }))
+    expect(res.raisedLevel).toBe(true)
+    expect(await levelOf(versionId)).toBe('machine_run')
+  })
+
+  it('ручной «кристалл» машиной НЕ перетирается и не понижается', async () => {
+    const { templateId, versionId } = await version('rp-high', 'crystal')
+    const res = await recordVerificationReport(report({ templateId, versionId }))
+    expect(res.raisedLevel).toBe(false)
+    expect(await levelOf(versionId)).toBe('crystal')
+    // Отчёт при этом записан: он объясняет метку, а не заменяет её.
+    const rows = await db.select().from(verificationReports).where(eq(verificationReports.versionId, versionId))
+    expect(rows).toHaveLength(1)
+  })
+
+  it('провал уровень не меняет, но отчёт пишется', async () => {
+    const { templateId, versionId } = await version('rp-fail', 'rock')
+    const res = await recordVerificationReport(
+      report({ templateId, versionId, verdict: 'fails', steps: [{ n: 1, status: 'fail', note: 'нет прав' }] }),
+    )
+    expect(res.raisedLevel).toBe(false)
+    expect(await levelOf(versionId)).toBe('rock')
+    const last = await latestReport(versionId)
+    expect(last?.verdict).toBe('fails')
+  })
+
+  it('повторный прогон не дублирует уровень и добавляет запись', async () => {
+    const { templateId, versionId } = await version('rp-twice', 'rock')
+    await recordVerificationReport(report({ templateId, versionId }))
+    const second = await recordVerificationReport(report({ templateId, versionId }))
+    expect(second.raisedLevel).toBe(false)
+    expect(await levelOf(versionId)).toBe('machine_run')
+    const rows = await db.select().from(verificationReports).where(eq(verificationReports.versionId, versionId))
+    expect(rows, 'история прогонов — это все прогоны, а не последний').toHaveLength(2)
+  })
+
+  it('новая версия не наследует отчётов', async () => {
+    // Сброс доверия при правке получается из устройства: отчёт принадлежит версии.
+    const { templateId, versionId } = await version('rp-fresh', 'rock')
+    await recordVerificationReport(report({ templateId, versionId }))
+    const [v2] = await db.insert(templateVersions).values({ templateId, version: 2 }).returning({ id: templateVersions.id })
+    expect(await latestReport(v2.id)).toBeNull()
+    expect(await levelOf(v2.id)).toBe('rock')
+  })
+})
+
+/**
+ * ⚠️ ПРОВАЛЫ НЕ ПРЯЧУТ СТАРЫЙ УСПЕХ — проверка ВТОРОЙ ветки решения Р2c.
+ *
+ * Пока `SHOW_FAILED_REPORTS_PUBLICLY` был `true`, эта ветка не исполнялась ни разу, и
+ * дефект в ней жил незамеченным: выборка поднимала десять последних строк и только потом
+ * отбрасывала провалы, поэтому десять неудач подряд прятали более старый УСПЕШНЫЙ отчёт,
+ * и посторонний видел «никогда не запускался». Это ровно та подмена, которую запрещает
+ * комментарий рядом с самой функцией.
+ *
+ * Флаг подменяется мокапом — ради этого он и вынесен в отдельный модуль: подменить
+ * константу внутри проверяемого модуля нельзя, и вторая ветка оставалась бы без пробы.
+ */
+describe('скрытые провалы не подменяют историю', () => {
+  it('десять провалов подряд не прячут успешный отчёт под ними', async () => {
+    // Частичный мок: в модуле рядом с флагом живёт `envLine`, и подмена целиком
+    // унесла бы её вместе с решением, которое мы проверяем.
+    vi.doMock('@/features/library/report-visibility', async (orig) => ({
+      ...(await orig<typeof import('@/features/library/report-visibility')>()),
+      SHOW_FAILED_REPORTS_PUBLICLY: false,
+    }))
+    vi.resetModules()
+    const { recordVerificationReport: recordReport, latestReport } = await import('@/features/library/verification-report')
+
+    const { templateId, versionId } = await version('hidden-fails', 'rock')
+    await recordReport({
+      templateId,
+      versionId,
+      kind: 'machine',
+      task: 'первый прогон',
+      environment: { os: 'ubuntu 24.04' },
+      steps: [{ n: 1, status: 'pass' }],
+      verdict: 'works',
+    })
+    for (let i = 0; i < 10; i++) {
+      await recordReport({
+        templateId,
+        versionId,
+        kind: 'machine',
+        task: `провал ${i + 1}`,
+        environment: { os: 'ubuntu 24.04' },
+        steps: [{ n: 1, status: 'fail' }],
+        verdict: 'fails',
+      })
+    }
+
+    const seen = await latestReport(versionId)
+    expect(seen, 'успешный отчёт существует — «не прогоняли» было бы неправдой').not.toBeNull()
+    expect(seen!.verdict).toBe('works')
+    expect(seen!.task).toBe('первый прогон')
+
+    // Тот, кто список ведёт, видит последнее как есть — включая провал.
+    const asMaintainer = await latestReport(versionId, true)
+    expect(asMaintainer!.verdict).toBe('fails')
+    vi.doUnmock('@/features/library/report-visibility')
+  })
+})
+
+/**
+ * ⚠️ СТРОКА ОКРУЖЕНИЯ ОДНА И ТА ЖЕ С ОБЕИХ СТОРОН.
+ *
+ * Один объект приходит в `envLine` дважды и в РАЗНОМ порядке: при записи — как прислал
+ * агент, при показе — распарсенным из `jsonb`, где Postgres пересортировал ключи. Общего
+ * построителя для этого мало: он выравнивает преобразование, а не порядок входов.
+ *
+ * Поэтому ключи задаются здесь в «неправильном» порядке вставки — и обе стороны обязаны
+ * совпасть побайтово.
+ */
+describe('окружение печатается одинаково при записи и при показе', () => {
+  it('порядок ключей на входе не влияет на строку', async () => {
+    const { envLine } = await import('@/features/library/report-visibility')
+    const asAgentSent = { runner: 'claude-code 2.x', os: 'ubuntu 24.04' }
+    const asPostgresReturns = { os: 'ubuntu 24.04', runner: 'claude-code 2.x' }
+    expect(envLine(asAgentSent)).toBe(envLine(asPostgresReturns))
+  })
+
+  it('записанная метка совпадает с тем, что покажет строка отчёта', async () => {
+    const { recordVerificationReport, latestReport } = await import('@/features/library/verification-report')
+    const { envLine } = await import('@/features/library/report-visibility')
+    const { templateId, versionId } = await version('env-order', 'rock')
+    // Порядок как у агента: длинный ключ первым — именно его Postgres переставит.
+    const environment = { runner: 'claude-code 2.x', os: 'ubuntu 24.04' }
+    await recordVerificationReport({
+      templateId,
+      versionId,
+      kind: 'machine',
+      task: 'проверка порядка',
+      environment,
+      steps: [{ n: 1, status: 'pass' }],
+      verdict: 'works',
+    })
+    const [row] = await db
+      .select({ env: templateVersions.verifiedEnv })
+      .from(templateVersions)
+      .where(eq(templateVersions.id, versionId))
+    const shown = await latestReport(versionId)
+    expect(envLine(shown!.environment as Record<string, string>)).toBe(row.env)
+  })
+})
