@@ -47,6 +47,9 @@ export interface FeedItem {
   starsCount: number
   visibility: 'public' | 'private'
   verified: boolean
+  /** Уровень проверки ТЕКУЩЕЙ версии и дата проверки (решение 0018). */
+  verificationLevel?: string | null
+  verifiedAt?: Date | string | null
   updatedAt: Date
   accent?: string | null
   coverImage?: string | null // после withAvatar — готовый URL обложки (null/undef → авто-баннер)
@@ -321,6 +324,16 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       // черновик человека — нет. Поле едет вместе с метой, а не спрашивается отдельно:
       // иначе каждый вызывающий обязан вспомнить про этот шаг, и один из них забудет.
       ownerIsAgent: sql<boolean>`${users.accountType} = 'agent'`,
+      // Уровень проверки текущей версии и окружение — настройкам списка, чтобы форма
+      // открывалась на том, что стоит сейчас, а не на пустом выборе (0018).
+      verificationLevel: sql<string | null>`(
+        select v.verification_level from template_versions v
+         where v.template_id = ${templates.id} and v.version = ${templates.currentVersion}
+      )`,
+      verifiedEnv: sql<string | null>`(
+        select v.verified_env from template_versions v
+         where v.template_id = ${templates.id} and v.version = ${templates.currentVersion}
+      )`,
       slug: templates.slug,
       title: templates.title,
       desc: templates.desc,

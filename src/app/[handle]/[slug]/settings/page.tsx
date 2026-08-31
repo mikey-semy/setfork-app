@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { FolderGit2, GitFork, GitPullRequest, Image as ImageIcon, Info, LayoutTemplate, Radio, SlidersHorizontal, TriangleAlert, Users } from 'lucide-react'
+import { BadgeCheck, FolderGit2, GitFork, GitPullRequest, Image as ImageIcon, Info, LayoutTemplate, Radio, SlidersHorizontal, TriangleAlert, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
@@ -11,6 +11,7 @@ import { CollaboratorsSection } from '@/features/collab/CollaboratorsSection'
 import { MirrorSection } from '@/features/library/MirrorSection'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { CatalogSection } from '@/features/catalogs/CatalogSection'
+import { VerificationSection } from '@/features/library/VerificationSection'
 import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
 import { TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
@@ -70,6 +71,21 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       icon: <FolderGit2 size={15} />,
       keywords: ['catalog', 'repository', 'group', 'каталог', 'репозиторий', 'группа'],
       content: <CatalogSection templateId={meta.id} currentId={meta.repositoryId} catalogs={catalogs} lang={lang} />,
+    },
+    {
+      id: 'verification',
+      title: t('verify.heading', lang),
+      icon: <BadgeCheck size={15} />,
+      keywords: ['verification', 'verified', 'level', 'проверка', 'уровень', 'прогон'],
+      content: (
+        <VerificationSection
+          templateId={meta.id}
+          level={meta.verificationLevel}
+          env={meta.verifiedEnv}
+          version={meta.currentVersion}
+          lang={lang}
+        />
+      ),
     },
     {
       id: 'mirror',

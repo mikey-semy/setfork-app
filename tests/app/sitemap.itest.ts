@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 import sitemap from '@/app/sitemap'
-import { db, templates, users } from '@/shared/db'
+import { db, templates, templateVersions, users } from '@/shared/db'
 import { SITE_ORIGIN } from '@/shared/site'
 
 /**
@@ -11,6 +11,11 @@ import { SITE_ORIGIN } from '@/shared/site'
  *
  * Сторож проверен снятием: если в `sitemap.ts` заменить `publiclyVisible()`
  * на выборку без условий, падают ровно эти три ожидания.
+ *
+ * ⚠️ С решения 0018 у карты ВТОРОЕ условие — уровень проверки текущей версии (порода в
+ * индекс не идёт). Поэтому списки здесь заводятся С ВЕРСИЕЙ и уровнем: без версии
+ * список не индексируется, и тест проверял бы не то, что написано в его названии.
+ * Отдельный сторож самого правила — tests/app/sitemap-verification.itest.ts.
  */
 const OWNER = 'sm-owner'
 const GHOST = 'sm-ghost' // есть аккаунт, публичных списков нет
@@ -33,6 +38,12 @@ beforeEach(async () => {
     // У «призрака» список есть, но он приватный: профиль такого автора в карте не нужен.
     { ownerId: ctx.ghost, slug: 'sm-ghost-private', title: { en: 'ghost' }, visibility: 'private' },
   ])
+  // Версии с уровнем ВЫШЕ породы: иначе публичный список не попал бы в карту по второму
+  // условию (0018), и первое ожидание падало бы по постороннему поводу.
+  const rows = await db.select({ id: templates.id }).from(templates).where(eq(templates.ownerId, ctx.owner))
+  for (const r of rows) {
+    await db.insert(templateVersions).values({ templateId: r.id, version: 1, verificationLevel: 'doc_checked' })
+  }
 })
 
 describe('карта сайта', () => {
