@@ -26,8 +26,13 @@ describe('связность с гномами', () => {
     const now = JSON.parse(execFileSync('node', ['scripts/gnomes-coupling.mjs', '--json'], { cwd: ROOT, encoding: 'utf8' }))
     const base = JSON.parse(readFileSync(new URL('../../gnomes-coupling-baseline.json', import.meta.url), 'utf8'))
 
-    const added = now.hits.filter((h: string) => !base.hits.includes(h))
-    expect(added, 'новая связь с гномами: пока решение о выносе не принято, цена не должна расти').toEqual([])
+    // ⚠️ СРАВНИВАЕМ ПО ФАЙЛАМ И ЧИСЛАМ, а не по `файл:строка`. Точные строки уезжают от
+    // любой правки в этих же файлах, и существующая связь объявлялась бы НОВОЙ: храповик
+    // краснел бы там, где ничего не прибавилось, — а ложное красное учит его обходить.
+    const grew = Object.entries(now.byFile as Record<string, number>).filter(
+      ([file, n]) => n > ((base.byFile as Record<string, number>)[file] ?? 0),
+    )
+    expect(grew, 'новая связь с гномами: пока решение о выносе не принято, цена не должна расти').toEqual([])
     expect(now.count).toBeLessThanOrEqual(base.count)
   })
 })

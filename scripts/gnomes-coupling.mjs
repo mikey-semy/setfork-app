@@ -37,16 +37,24 @@ import { join } from 'node:path'
  */
 
 /** Что считается «гномьим». Признак — предмет, а не каталог. */
+// ⚠️ И АЛИАС, И ОТНОСИТЕЛЬНЫЙ ПУТЬ. Все образцы были привязаны к `@/`, и связь
+// `src/shared/ai/dialogue.ts → ./gnomes` в счёт не попадала: число было 8 вместо 9.
+// Соседний модуль импортируют относительным путём чаще всего — то есть слепое пятно
+// приходилось ровно на самые близкие связи, которые при выносе рвутся первыми.
+//
+// Кавычки обе: `"@/features/dig"` в этом коде тоже встречается.
 const GNOME = [
-  /@\/shared\/ai\/gnome[\w-]*/,
-  /@\/shared\/ai\/council[\w-]*/,
-  /@\/features\/dig(\/|')/,
+  /(?:@\/shared\/ai|\.)\/gnome[\w-]*/,
+  /(?:@\/shared\/ai|\.)\/council[\w-]*/,
+  /@\/features\/dig(?![\w-])/,
   /@\/features\/library\/gnome-[\w-]*/,
 ]
 
 /** Сам гномий код себя не считает: связь внутри предмета при выносе переезжает целиком. */
+// ⚠️ `dig` С ГРАНИЦЕЙ. Без неё под «гномий код» попадал весь `features/digest` — целая
+// чужая фича молча исключалась из подсчёта, и число выходило меньше настоящего.
 const IS_GNOME_FILE = (rel) =>
-  /^src\/(features\/dig|features\/library\/gnome-|shared\/ai\/gnome|shared\/ai\/council)/.test(rel)
+  /^src\/(features\/dig(?![\w-])|features\/library\/gnome-|shared\/ai\/gnome|shared\/ai\/council)/.test(rel)
 
 /**
  * Поверхности НЕ считаются: app, widgets, mcp, admin и садовник показывают гномов, как
@@ -71,14 +79,25 @@ for (const file of walk(join(root, 'src'))) {
   if (IS_GNOME_FILE(rel) || IS_SURFACE(rel)) continue
   const src = readFileSync(file, 'utf8')
   for (const [i, line] of src.split('\n').entries()) {
-    if (line.trimStart().startsWith('//') || line.trimStart().startsWith('*')) continue
-    if (GNOME.some((re) => re.test(line))) hits.push(`${rel}:${i + 1}`)
+    // Комментарии всех видов: `//`, тело блока (`*`) и его начало (`/*`, `/**`).
+    // Без последнего упоминание гномьего пути в шапке файла считалось связью, и
+    // храповик падал на правке одних комментариев.
+    const t = line.trimStart()
+    if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')) continue
+    if (GNOME.some((re) => re.test(line))) hits.push({ file: rel, line: i + 1 })
   }
 }
 
+// ⚠️ СЛЕПОК ХРАНИТ ФАЙЛЫ И ЧИСЛА, А НЕ `файл:строка`. Сравнение точных строк ломалось от
+// ЛЮБОЙ правки, сдвигающей строку в одном из этих файлов: существующая связь уезжала на
+// строку ниже и объявлялась НОВОЙ — храповик падал с сообщением «новая связь» там, где
+// связей не прибавилось. Ложное красное учит обходить проверку, а не разбираться.
+const byFile = {}
+for (const h of hits) byFile[h.file] = (byFile[h.file] ?? 0) + 1
+
 if (process.argv.includes('--json')) {
-  console.log(JSON.stringify({ count: hits.length, hits }, null, 2))
+  console.log(JSON.stringify({ count: hits.length, byFile }, null, 2))
 } else {
   console.log(`связей с гномами из не-гномьего кода: ${hits.length}`)
-  for (const h of hits) console.log('  ' + h)
+  for (const h of hits) console.log(`  ${h.file}:${h.line}`)
 }

@@ -245,7 +245,7 @@
   },
   "src/features/generation/service.ts": {
     "boundaries/dependencies": {
-      "count": 1
+      "count": 2
     }
   },
   "src/features/git/BranchPicker.tsx": {
