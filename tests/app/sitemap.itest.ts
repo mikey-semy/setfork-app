@@ -38,15 +38,47 @@ beforeEach(async () => {
     // У «призрака» список есть, но он приватный: профиль такого автора в карте не нужен.
     { ownerId: ctx.ghost, slug: 'sm-ghost-private', title: { en: 'ghost' }, visibility: 'private' },
   ])
-  // Версии с уровнем ВЫШЕ породы: иначе публичный список не попал бы в карту по второму
-  // условию (0018), и первое ожидание падало бы по постороннему поводу.
+  // ⚠️ ВЕРСИИ С УРОВНЕМ ПО УМОЛЧАНИЮ («порода») — И ЭТО ЧАСТЬ ПРОВЕРКИ.
+  //
+  // Здесь стоял подложенный `doc_checked`: без него ожидания падали по гейту 0018, и
+  // строчка «иначе первое ожидание падало бы по постороннему поводу» звучала разумно.
+  // Разумно и неверно: тест перестал проверять поведение и начал ЕГО КОМПЕНСИРОВАТЬ —
+  // а вместе с тем спрятал последствие гейта от двух проходов ревью подряд. На проде
+  // карта схлопнулась до пяти статических адресов, и узнали мы это curl'ом, а не отсюда.
+  //
+  // Теперь уровень не задаётся: список рождается «породой», как в жизни, и обязан быть
+  // в карте. Вернётся гейт по уровню — этот тест упадёт первым, и это правильно.
   const rows = await db.select({ id: templates.id }).from(templates).where(eq(templates.ownerId, ctx.owner))
   for (const r of rows) {
-    await db.insert(templateVersions).values({ templateId: r.id, version: 1, verificationLevel: 'doc_checked' })
+    await db.insert(templateVersions).values({ templateId: r.id, version: 1 })
   }
 })
 
 describe('карта сайта', () => {
+  it('НЕПРОВЕРЕННЫЙ список в карте — индексация не зависит от уровня', async () => {
+    // ⚠️ Прямая проверка правила, отсутствие которой стоило нам живого инцидента:
+    // гейт по уровню выкинул из карты всё, потому что уровни заполнены у полупроцента
+    // корпуса. Проверяем ровно то, что произошло на проде: список «породы» — в карте.
+    const urls = (await sitemap()).map((e) => e.url)
+    const [row] = await db
+      .select({ lvl: templateVersions.verificationLevel })
+      .from(templateVersions)
+      .innerJoin(templates, eq(templates.id, templateVersions.templateId))
+      .where(eq(templates.slug, 'sm-public'))
+    expect(row.lvl, 'фикстура обязана быть «породой», иначе проверка ничего не значит').toBe('rock')
+    expect(urls).toContain(url(`/${OWNER}/sm-public`))
+  })
+
+  it('карта не пустеет: списки, профили и теги на месте', async () => {
+    // Канарейка против повторения инцидента: считаем не конкретные адреса, а то, что
+    // каждая из трёх групп вообще присутствует. Схлопывание карты до статических
+    // страниц — это ровно «все три группы исчезли разом».
+    const urls = (await sitemap()).map((e) => e.url)
+    expect(urls.some((u) => u.includes(`/${OWNER}/sm-public`)), 'ни одного списка').toBe(true)
+    expect(urls.some((u) => u.endsWith(`/${OWNER}`)), 'ни одного профиля').toBe(true)
+    expect(urls.some((u) => u.includes('/tags/')), 'ни одного тега').toBe(true)
+  })
+
   it('публичный список попадает, черновик/приватный/на модерации — нет', async () => {
     const urls = (await sitemap()).map((e) => e.url)
 
