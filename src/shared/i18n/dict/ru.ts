@@ -853,7 +853,6 @@ export const ru: Record<DictKey, string> = {
   'verify.machineRun': 'прогнано машиной',
   'verify.cut': 'ключевые шаги пройдены',
   'verify.crystal': 'пройден целиком',
-  verifiedBadge: 'проверен',
   detailed: 'Подробно',
   compact: 'Кратко',
   markDone: 'Отметить',

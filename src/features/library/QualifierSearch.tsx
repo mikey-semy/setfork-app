@@ -24,9 +24,11 @@ interface Suggestion {
   count?: number
 }
 
-const QUAL_RE = /^(tag|topic|by|owner|author|is|type):(.*)$/i
+// `is` убран вслед за разбором (search-query.ts): подсвечивать как квалификатор то,
+// что квалификатором больше не является, значит обещать поведение, которого нет.
+const QUAL_RE = /^(tag|topic|by|owner|author|type):(.*)$/i
 // Для подсветки значений в оверлее (глобально, по всей строке).
-const HL_RE = /(by|owner|author|tag|topic|is|type|stars):(\S*)/gi
+const HL_RE = /(by|owner|author|tag|topic|type|stars):(\S*)/gi
 
 /** Активный квалификатор = ПОСЛЕДНИЙ токен строки (если не завершён пробелом). */
 function activeToken(v: string): { key: string; partial: string } | null {

@@ -10,7 +10,15 @@ export interface ParsedQuery {
   minStars?: number // stars:>N
 }
 
-const KEY_RE = /^(by|owner|author|tag|topic|is|type|stars):(.*)$/i
+// ⚠️ `is` УБРАН ИЗ КЛЮЧЕЙ, а не просто лишён обработчика. Пока он оставался здесь без
+// своего `case`, разбор ПРОГЛАТЫВАЛ токен: сохранённая ссылка `/search?q=is:verified`
+// молча возвращала весь корпус — то есть отбор, снятый решением 0006, превращался в
+// «показать всё», а не в поиск по словам.
+//
+// Незнакомый квалификатор ведёт себя иначе и правильно: `foo:bar` не совпадает с этим
+// выражением и уходит в свободный текст. Именно так теперь и `is:verified` — человек
+// увидит поиск по фразе, а не подмену.
+const KEY_RE = /^(by|owner|author|tag|topic|type|stars):(.*)$/i
 
 export function parseSearchQuery(raw: string): ParsedQuery {
   const out: ParsedQuery = { text: '', tags: [] }

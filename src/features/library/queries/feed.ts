@@ -46,7 +46,6 @@ export async function getFeed(
     sort?: FeedSort
     tag?: string
     q?: string
-    verified?: boolean
     /** Не ниже этого уровня проверки текущей версии (0018). */
     minVerification?: 'doc_checked' | 'machine_run' | 'cut' | 'crystal'
     ordered?: boolean
@@ -145,7 +144,6 @@ export async function countLists(
   opts: {
     q?: string
     tag?: string
-    verified?: boolean
     minVerification?: 'doc_checked' | 'machine_run' | 'cut' | 'crystal'
     ordered?: boolean
     by?: string

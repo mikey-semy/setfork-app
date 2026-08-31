@@ -71,7 +71,8 @@ export default async function SearchPage({
   const peopleSort = (PEOPLE_SORTS.find((s) => s.key === sp.psort)?.key ?? 'followers') as PeopleSort
   const issueState = (ISSUE_STATES.find((s) => s.key === sp.state)?.key ?? 'open') as IssueStateFilter
   const type = sp.type === 'ordered' ? 'ordered' : sp.type === 'unordered' ? 'unordered' : undefined
-  // Квалификаторы из строки поиска (by:/tag:/is:/type:/stars:) + свободный текст.
+  // Квалификаторы из строки поиска (by:/tag:/type:/stars:) + свободный текст.
+  // `is:` снят вместе с публичным отбором «только проверенные» (решение 0006).
   const parsed = parseSearchQuery(sp.q ?? '')
   const typeQ = parsed.type ?? type
   const text = parsed.text.trim() || undefined

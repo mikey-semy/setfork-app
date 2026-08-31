@@ -1,5 +1,6 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { walkSrc } from '../helpers/walk-src'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -24,36 +25,44 @@ const SRC = new URL('../../src', import.meta.url).pathname
 /** Публичное — всё, кроме админки, модерации и самой схемы БД. */
 const INTERNAL = /\/(admin|moderation)\/|\/db\/schema\.ts$|\/gen\//
 
-const walk = (dir: string, out: string[] = []): string[] => {
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name)
-    if (statSync(p).isDirectory()) walk(p, out)
-    else if (/\.tsx?$/.test(p)) out.push(p)
-  }
-  return out
+
+
+/**
+ * Строка-комментарий: `//`, тело JSDoc (`*`) и JSX-комментарий (`{/*`).
+ *
+ * Прежде пропускались только `//` — а объяснение решения 0006 пишут именно в JSDoc и в
+ * JSX, то есть гвард ругался на текст, который сам же и требует оставить.
+ */
+const isComment = (l: string): boolean => {
+  const t = l.trimStart()
+  return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('{/*')
 }
 
 describe('флаг «проверен» не всплывает наружу', () => {
   it('в языке поиска нет квалификатора is:verified', () => {
-    const files = walk(SRC).filter((f) => !INTERNAL.test(f))
+    const files = walkSrc(SRC).filter((f) => !INTERNAL.test(f))
     // Комментарии не считаются: объяснение, ПОЧЕМУ квалификатора нет, обязано остаться
     // на месте снятия — иначе следующий заведёт его заново, не зная о решении 0006.
     const offenders = files
       .filter((f) =>
         readFileSync(f, 'utf8')
           .split('\n')
-          .some((l) => !l.trimStart().startsWith('//') && /is:verified/.test(l)),
+          // ⚠️ И ЛИТЕРАЛ, И РАЗБОР. Прежняя проверка искала только строку `is:verified` —
+          // и срабатывала на комментарии и подсказке интерфейса, но НЕ на самом
+          // разборщике. Вернуть `case 'is': if (val === 'verified')` можно было бы, не
+          // уронив её: сторож стоял не у той двери.
+          .some((l) => !isComment(l) && (/is:verified/.test(l) || /['"]verified['"]\s*(?:===|==|\))/.test(l))),
       )
       .map((f) => f.slice(f.indexOf('src/')))
     expect(offenders, 'публичный отбор «только проверенные» — тот же бейдж, только фильтром').toEqual([])
   })
 
   it('ответы MCP не несут поля verified', () => {
-    const mcp = walk(join(SRC, 'features/mcp'))
+    const mcp = walkSrc(join(SRC, 'features/mcp'))
     const offenders: string[] = []
     for (const f of mcp) {
       for (const [i, line] of readFileSync(f, 'utf8').split('\n').entries()) {
-        if (line.trimStart().startsWith('//')) continue
+        if (isComment(line)) continue
         if (/\bverified:/.test(line)) offenders.push(`${f.slice(f.indexOf('src/'))}:${i + 1}`)
       }
     }
@@ -61,8 +70,11 @@ describe('флаг «проверен» не всплывает наружу', (
   })
 
   it('карточка списка не рисует значок проверки', () => {
+    // ⚠️ ЯКОРЬ ОБЯЗАТЕЛЕН. Без него `item.verified` ловит и `item.verifiedAt` — поле
+    // уровня проверки (0018), совершенно законное. Гвард краснел бы на исправном коде, а
+    // такая узда учит себя обходить: следующий добавит исключение вместо разбирательства.
     const card = readFileSync(join(SRC, 'features/library/ListCardMeta.tsx'), 'utf8')
-    const drawn = card.split('\n').filter((l) => !l.trimStart().startsWith('//') && /item\.verified/.test(l))
+    const drawn = card.split('\n').filter((l) => !isComment(l) && /\bitem\.verified\b(?!At)/.test(l))
     expect(drawn, 'значок на карточке — ровно то, что запрещает решение 0006').toEqual([])
   })
 })
