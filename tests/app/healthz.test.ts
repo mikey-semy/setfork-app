@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 /**
  * `/healthz` ОТВЕЧАЕТ, И ОТВЕЧАЕТ ТЕМ ЖЕ, ЧТО `/api/health`.
@@ -34,9 +34,43 @@ describe('/healthz', () => {
   it('живость не ходит в базу: она про процесс, а не про зависимости', async () => {
     // При мёртвой базе живой процесс обязан отвечать 200 на liveness, иначе оркестратор
     // перезапустит его по кругу, не починив причину. «Готов ли обслуживать» — /api/ready.
+    //
+    // ⚠️ Проверка ИСХОДНИКА обработчика — заведомо слабая: она зелёная и при том, что
+    // запрос доходит до базы ЧЕРЕЗ middleware, и обходится двойными кавычками, иным
+    // путём импорта или транзитивной зависимостью. Оставлена как дешёвый первый рубеж,
+    // но настоящую работу делает проверка ПУТИ ниже.
     const src = await import('node:fs').then((fs) =>
       fs.readFileSync(new URL('../../src/app/api/health/route.ts', import.meta.url), 'utf8'),
     )
     expect(src).not.toMatch(/from '@\/shared\/db'/)
+  })
+})
+
+/**
+ * ⚠️ ПРОБА ОБЯЗАНА ОТВЕЧАТЬ ДО ЛЮБОГО ОБРАЩЕНИЯ К БАЗЕ.
+ *
+ * `/healthz` не начинается с `/api/`, поэтому без явного обхода он в режиме ремонта
+ * уходит в человеческую ветку и отвечает 503 с HTML-страницей — балансировщик выкидывает
+ * ЖИВОЙ экземпляр из ротации (та самая цепочка unhealthy → Traefik → 404 на весь сайт).
+ * А при зависшей базе `maintenanceEnabled()` не имеет своего предела ожидания, и здоровый
+ * контейнер получает перезапуск по таймауту пробы.
+ *
+ * Прежний тест этого не ловил: он читал ИСХОДНИК обработчика и был зелёным, пока запрос
+ * шёл в базу мимо него. Проверяем путь.
+ */
+describe('проба проходит middleware не глядя на базу', () => {
+  it('в режиме ремонта /healthz отвечает не заглушкой', async () => {
+    vi.doMock('@/shared/settings/maintenance', () => ({
+      maintenanceEnabled: async () => {
+        throw new Error('проба обязана ответить ДО обращения к базе')
+      },
+    }))
+    vi.resetModules()
+    const { middleware } = await import('@/middleware')
+    const { NextRequest } = await import('next/server')
+
+    const res = await middleware(new NextRequest(new Request('https://setfork.test/healthz')))
+    expect(res.status, 'проба не должна получать 503 от ремонта').not.toBe(503)
+    vi.doUnmock('@/shared/settings/maintenance')
   })
 })

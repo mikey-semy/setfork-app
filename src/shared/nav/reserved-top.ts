@@ -9,6 +9,8 @@ export const RESERVED_TOP = new Set([
   'about',
   'admin',
   'api',
+  // Проба живости на общепринятом адресе: ник `healthz` увёл бы монитор на профиль.
+  'healthz',
   'change-email',
   'changelog',
   'collections',
