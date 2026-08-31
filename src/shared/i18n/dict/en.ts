@@ -847,6 +847,8 @@ export const en = {
   'verify.levelLabel': 'Level',
   'verify.envLabel': 'Environment',
   'verify.envPh': 'Ubuntu 24.04, Caddy 2.8',
+  'verify.machineSet': 'The level was set by a run — “machine-run”. It is not set by hand; the choice below replaces it.',
+  'verify.saved': 'Level saved.',
   'verify.rock': 'not verified',
   'verify.errNoVersion': 'This list has no current version row — there is nowhere to record the level.',
   'verify.errNotAllowed': 'Only the list author or a collaborator can set the level.',

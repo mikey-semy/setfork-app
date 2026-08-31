@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { BadgeCheck } from 'lucide-react'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
@@ -46,10 +47,19 @@ export function VerificationSection({
   version: number
   lang: Lang
 }) {
+  const router = useRouter()
   const [pending, start] = useTransition()
-  const [value, setValue] = useState<HumanLevel>((level as HumanLevel) ?? 'rock')
+  // ⚠️ ПОСТАВЛЕННОЕ ПРОГОНОМ не подставляем в выбор. `machine_run` в списке нет (его
+  // ставит машина), и подстановка давала пустой триггер без подсказки, а Save отправлял
+  // это значение обратно — действие отказывало, и автор видел «уровень может ставить
+  // только автор или соавтор». Тупик из ШТАТНОГО состояния: после первого же прогона.
+  // Поэтому машинный уровень показывается отдельной строкой, а выбор начинается с того,
+  // что человек может поставить.
+  const machine = level === 'machine_run'
+  const [value, setValue] = useState<HumanLevel>(machine ? 'rock' : ((level as HumanLevel) ?? 'rock'))
   const [envText, setEnvText] = useState(env ?? '')
   const [failed, setFailed] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
 
   return (
     <SettingsSection
@@ -62,9 +72,25 @@ export function VerificationSection({
       {/* Что именно метится — версия, а не список. Сказано до выбора, а не после. */}
       <p className="mb-3 text-body-sm text-muted">{t('verify.hint', lang).replace('{n}', String(version))}</p>
 
+      {/* Машинный уровень стоит — говорим об этом прямо, а не подставляем в выбор.
+          Иначе человек видит пустое поле и не понимает, что уровень вообще есть. */}
+      {machine && (
+        <Alert variant="info" className="mb-3">
+          {t('verify.machineSet', lang)}
+        </Alert>
+      )}
+
       {failed && (
         <Alert variant="danger" className="mb-3">
           {failed === 'no-version' ? t('verify.errNoVersion', lang) : t('verify.errNotAllowed', lang)}
+        </Alert>
+      )}
+
+      {/* Удачное сохранение выглядело В ТОЧНОСТИ как несохранение: ни подтверждения, ни
+          обновления страницы. Человек жал ещё раз, чтобы убедиться. */}
+      {saved && !pending && (
+        <Alert variant="ok" className="mb-3">
+          {t('verify.saved', lang)}
         </Alert>
       )}
 
@@ -103,7 +129,12 @@ export function VerificationSection({
           onClick={() =>
             start(async () => {
               const res = await setVerificationLevel(templateId, value, envText)
-              setFailed('error' in res ? res.error : null)
+              const bad = 'error' in res ? res.error : null
+              setFailed(bad)
+              setSaved(!bad)
+              // Метка и дата видны на самой странице списка — без обновления они остались
+              // бы прежними, и «сохранено» противоречило бы тому, что человек видит.
+              if (!bad) router.refresh()
             })
           }
         >

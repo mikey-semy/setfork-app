@@ -100,4 +100,30 @@ describe('постановка уровня проверки', () => {
     expect(rows[0].a).toBe('list.verify')
     expect(rows[0].m).toMatchObject({ verificationLevel: 'doc_checked', version: 1 })
   })
+  it('machine_run руками НЕ ставится — и страж этого настоящий', async () => {
+    // ⚠️ Этот тест — половина правки. Страж был написан как `HUMAN_LEVELS.includes(level)`
+    // при `level: HumanLevel`, то есть для TypeScript всегда истинен: удали его — набор
+    // останется зелёным, а инвариант откроется. Мёртвый страж хуже отсутствующего:
+    // он выглядит защитой. Теперь вход строка, проверка рантайменая, и вот её проба.
+    //
+    // Инвариант по существу: `machine_run` означает «машина проверяла». Поставленный
+    // руками, он ровно это и заявляет там, где машина ничего не проверяла.
+    const { setVerificationLevel } = await import('@/features/library/actions/verification')
+    const id = await listWithVersion('sv-machine')
+    expect(await setVerificationLevel(id, 'machine_run', 'ubuntu')).toEqual({ error: 'not-allowed' })
+    const [row] = await db
+      .select({ lvl: templateVersions.verificationLevel })
+      .from(templateVersions)
+      .where(eq(templateVersions.templateId, id))
+    expect(row.lvl, 'отказ обязан быть ДО записи, а не после').toBe('rock')
+  })
+
+  it('замороженный список не штампуется — даже владельцем', async () => {
+    // ⚠️ Своя проверка права знала про владельца и соавтора, но не про заморозку:
+    // «crystal» на замороженном списке — это ещё и возврат его в карту сайта.
+    const { setVerificationLevel } = await import('@/features/library/actions/verification')
+    const id = await listWithVersion('sv-frozen')
+    await db.update(templates).set({ frozenAt: new Date() }).where(eq(templates.id, id))
+    expect(await setVerificationLevel(id, 'crystal', 'prod')).toEqual({ error: 'not-allowed' })
+  })
 })

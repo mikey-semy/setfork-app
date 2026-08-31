@@ -839,6 +839,8 @@ export const ru: Record<DictKey, string> = {
   'verify.levelLabel': 'Уровень',
   'verify.envLabel': 'В чём проверяли',
   'verify.envPh': 'Ubuntu 24.04, Caddy 2.8',
+  'verify.machineSet': 'Уровень поставлен прогоном — «проверено машиной». Руками его не ставят; выбор ниже заменит его.',
+  'verify.saved': 'Уровень сохранён.',
   'verify.rock': 'не проверялось',
   'verify.errNoVersion': 'У списка нет записи текущей версии — уровень ставить некуда.',
   'verify.errNotAllowed': 'Ставить уровень может автор списка или соавтор.',

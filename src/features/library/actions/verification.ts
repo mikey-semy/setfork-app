@@ -4,9 +4,8 @@ import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db, templates, templateVersions } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
-// eslint-disable-next-line boundaries/dependencies -- права соавтора живут в collab, как и у слияния предложения
-import { isCollaborator } from '@/features/collab/queries'
 import { recordAudit } from '@/shared/audit'
+import { editableList, ownerHandle } from './shared'
 
 /**
  * ПОСТАВИТЬ УРОВЕНЬ ПРОВЕРКИ ТЕКУЩЕЙ ВЕРСИИ (решение 0018).
@@ -28,19 +27,29 @@ export type SetLevelResult = { ok: true } | { error: 'not-allowed' | 'no-version
 const HUMAN_LEVELS = ['rock', 'doc_checked', 'cut', 'crystal'] as const
 export type HumanLevel = (typeof HUMAN_LEVELS)[number]
 
+/** Уровень приходит СТРОКОЙ, а проверяется в рантайме — см. страж ниже. */
+const isHumanLevel = (v: string): v is HumanLevel => (HUMAN_LEVELS as readonly string[]).includes(v)
+
 export async function setVerificationLevel(
   templateId: string,
-  level: HumanLevel,
+  level: string,
   env: string,
 ): Promise<SetLevelResult> {
   const session = await requireSession()
-  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  // ⚠️ ЧЕРЕЗ `editableList`, а не своей проверкой. Своя знала про владельца и соавтора,
+  // но НЕ знала про архив и заморозку: замороженный список можно было проштамповать
+  // «crystal» — а это ещё и возвращало его в карту сайта. Право ставить уровень то же,
+  // что право править список, и живёт оно в одном месте вместе с запретом на archived.
+  const tpl = await editableList(templateId)
   if (!tpl) return { error: 'not-allowed' }
-  // Право то же, что у правки списка: кто ведёт список, тот и отвечает за уровень.
-  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return { error: 'not-allowed' }
-  // `machine_run` человеку недоступен намеренно: его ставит прогон, и поставленный
+  // ⚠️ `machine_run` человеку недоступен намеренно: его ставит прогон, и поставленный
   // руками он означал бы «машина проверяла», когда машина не проверяла.
-  if (!HUMAN_LEVELS.includes(level)) return { error: 'not-allowed' }
+  //
+  // Раньше страж был написан как `HUMAN_LEVELS.includes(level)` при `level: HumanLevel` —
+  // то есть для TypeScript всегда истинен, а значит МЁРТВ: удали его, и набор останется
+  // зелёным. Теперь вход строка, проверка настоящая, и на неё есть тест, посылающий
+  // `machine_run` и ожидающий отказ.
+  if (!isHumanLevel(level)) return { error: 'not-allowed' }
 
   const cleared = level === 'rock'
   const [updated] = await db
@@ -65,7 +74,9 @@ export async function setVerificationLevel(
     targetId: tpl.id,
     meta: { verificationLevel: level, version: tpl.currentVersion, env: env.trim().slice(0, 200) },
   })
-  revalidatePath(`/${session.handle}/${tpl.slug}`)
+  // ⚠️ Ник ВЛАДЕЛЬЦА, а не актора: соавтору правка разрешена, и его ник в адресе списка
+  // не появляется — страница владельца оставалась бы несвежей.
+  revalidatePath(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
   revalidatePath('/explore')
   return { ok: true }
 }
