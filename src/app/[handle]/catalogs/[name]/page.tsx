@@ -8,10 +8,14 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
 import { Pagination } from '@/shared/ui/Pagination'
-import { canonicalPage, canonicalPageParam, pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
+import { canonicalPage, canonicalPageParam, decodeSegment, pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { countListsInCatalog, getListsInCatalog } from '@/features/library/queries'
 import { getCatalog } from '@/features/catalogs/queries'
 import { PAGE } from '@/shared/ui/control'
+
+/** Адрес полки — ОДНОЙ строкой на метаданные и листалку: два способа собрать один путь
+ *  уже разошлись на именах с пробелом и кириллицей. */
+const catalogPath = (handle: string, name: string) => `/${handle}/catalogs/${name}`
 
 export async function generateMetadata({
   params,
@@ -23,9 +27,13 @@ export async function generateMetadata({
 }) {
   const [{ handle, name }, sp] = await Promise.all([params, searchParams])
   return {
-    title: `${decodeURIComponent(name)} · ${handle}`,
+    title: `${decodeSegment(name)} · ${handle}`,
     alternates: {
-      canonical: canonicalPage(`/${handle}/catalogs/${encodeURIComponent(name)}`, canonicalPageParam(sp.page)),
+      // ⚠️ Путь строится ТЕМ ЖЕ способом, что у листалки ниже: `name` как есть, без
+      // повторного кодирования. Сегмент уже пришёл закодированным из адреса, и
+      // `encodeURIComponent` кодировал его второй раз — у полки с пробелом или
+      // кириллицей canonical указывал на адрес, которым сама листалка не ходит.
+      canonical: canonicalPage(catalogPath(handle, name), canonicalPageParam(sp.page)),
     },
   }
 }
@@ -75,7 +83,7 @@ export default async function CatalogPage({
             <Pagination
               page={page}
               totalPages={totalPages}
-              makeHref={pageHref(`/${handle}/catalogs/${name}`, sp)}
+              makeHref={pageHref(catalogPath(handle, name), sp)}
               lang={lang}
             />
           </>

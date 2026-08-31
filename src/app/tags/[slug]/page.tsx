@@ -8,7 +8,7 @@ import { countLists, getFeed } from '@/features/library/queries'
 import { getTag } from '@/features/tags/queries'
 import { FeedList } from '@/features/library/FeedList'
 import { Pagination } from '@/shared/ui/Pagination'
-import { canonicalPage, canonicalPageParam, pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
+import { canonicalPage, canonicalPageParam, decodeSegment, pageCount, pageFromParam, pageHref, pageWindow } from '@/shared/lib/paging'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Badge } from '@/shared/ui/badge'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -23,7 +23,7 @@ export async function generateMetadata({
   searchParams: Promise<{ page?: string }>
 }): Promise<Metadata> {
   const [{ slug: raw }, sp] = await Promise.all([params, searchParams])
-  const slug = decodeURIComponent(raw)
+  const slug = decodeSegment(raw)
   const tag = await getTag(slug.toLowerCase())
   const label = tag?.label || slug
   // Своё описание у страницы тега, а не общесайтовое: подпись из реестра, если её
@@ -36,7 +36,7 @@ export async function generateMetadata({
     // Страница листалки канонизирует СЕБЯ: у второй страницы `?page=2`. Указать на
     // первую значило бы сказать обходчику «всё уже описано там», и списки со второй
     // страницы не попали бы в индекс вовсе.
-    alternates: { canonical: canonicalPage(`/tags/${encodeURIComponent(slug)}`, canonicalPageParam(sp.page)) },
+    alternates: { canonical: canonicalPage(`/tags/${encodeURIComponent(slug.toLowerCase())}`, canonicalPageParam(sp.page)) },
     openGraph: { type: 'website', siteName: 'SetFork', title: `#${slug}`, description },
   }
 }
@@ -50,7 +50,7 @@ export default async function TagPage({
   searchParams: Promise<{ page?: string }>
 }) {
   const { slug: raw } = await params
-  const slug = decodeURIComponent(raw).toLowerCase()
+  const slug = decodeSegment(raw).toLowerCase()
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   // Сначала СЧЁТ, потом окно: у популярного тега списков могут быть сотни, и страница
   // тянула их все вместе с аватарами авторов, чтобы показать экран.

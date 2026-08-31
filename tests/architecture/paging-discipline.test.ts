@@ -153,14 +153,38 @@ const PAGED_WITH_CANONICAL = (): string[] => {
     if (!file.endsWith('page.tsx')) continue
     const src = readFileSync(file, 'utf8')
     if (!/pageFromParam\(/.test(src)) continue // листалки нет — правило не о ней
-    if (!/canonical:/.test(src)) continue // canonical не объявлен — это другое правило
-    if (!/canonicalPage\(/.test(src)) bad.push(file.slice(file.indexOf('src/')))
+    // ⚠️ И СОКРАЩЁННАЯ ФОРМА ТОЖЕ. `alternates: { canonical }` — так написаны профиль и
+    // подборки; проверка на `canonical:` их не видела и молча пропускала.
+    if (!/canonical:/.test(src) && !/\{\s*canonical\s*\}/.test(src)) continue
+    // ⚠️ СМОТРИМ НА СТРОКУ С `canonical`, а не на файл целиком. Файл листалки почти
+    // всегда содержит `pageHref` — для самой листалки, — и проверка «построитель где-то
+    // есть» проходила бы при рукописном canonical рядом. Поймано снятием правила: гвард
+    // остался зелёным на дефекте, ради которого написан.
+    const canonLines = src
+      .split('\n')
+      .filter((l) => /canonical/.test(l) && !l.trimStart().startsWith('//') && !l.trimStart().startsWith('*'))
+    const built = canonLines.some((l) => /canonicalPage\(|pageHref\(/.test(l))
+    if (!built) bad.push(file.slice(file.indexOf('src/')))
   }
   return bad
 }
 
 describe('canonical листалки указывает на себя', () => {
-  it('страницы с номером страницы строят canonical через canonicalPage', () => {
+  it('страницы с номером страницы строят canonical через общий построитель', () => {
     expect(PAGED_WITH_CANONICAL(), 'canonical со страницы листалки обязан нести свой ?page=').toEqual([])
+  })
+
+  // ⚠️ АНТИ-ВЫРОЖДЕНИЕ. Проверка выше зелёная и когда всё верно, и когда она перестала
+  // находить страницы вовсе — например, после переименования помощника или переноса
+  // папки. Пустая выборка не отличима от чистой; поэтому спрашиваем отдельно, что
+  // предмет проверки существует.
+  //
+  // ⚠️ ПРЕДЕЛ, названный вслух: страницы, у которых листание живёт в отдельном `load.ts`
+  // (профиль), проверка не видит — `pageFromParam` там, а `canonical` здесь. Расширять
+  // до разбора соседних файлов дорого и хрупко; вместо этого предел записан, чтобы
+  // следующий не принял тишину за подтверждение.
+  it('проверке есть что проверять', () => {
+    const paged = walk(APP).filter((f) => f.endsWith('page.tsx') && /pageFromParam\(/.test(readFileSync(f, 'utf8')))
+    expect(paged.length, 'страниц с листалкой не найдено — проверка выше проверяет пустоту').toBeGreaterThan(2)
   })
 })

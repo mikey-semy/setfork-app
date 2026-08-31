@@ -436,7 +436,11 @@ export function cursorHref(
  * то же, и параметр здесь только плодил бы второй адрес одной страницы.
  */
 export function canonicalPage(pathname: string, page: number, param = PAGE_PARAM): string {
-  return page > 1 ? `${pathname}?${param}=${page}` : pathname
+  // Через `pageHref`, а не своей строкой: правило «у первой страницы нет `?page=1`»
+  // должно жить в ОДНОМ месте. Своя строка была вторым его владельцем — и, что хуже,
+  // внутри файла, который узда дисциплины листания не проверяет (она смотрит страницы,
+  // а не сам модуль). Разошлись бы они молча.
+  return pageHref(pathname, {}, param)(page)
 }
 
 /**
@@ -452,5 +456,27 @@ export function canonicalPage(pathname: string, page: number, param = PAGE_PARAM
  * написано, что оно есть, чтобы следующий не решил, будто про этот случай не подумали.
  */
 export function canonicalPageParam(raw: string | undefined): number {
-  return Math.max(1, Math.floor(Number(raw)) || 1)
+  // ⚠️ ПОТОЛОК ОБЯЗАТЕЛЕН, и это не перестраховка. Свой разбор без него давал canonical
+  // `?page=Infinity` на `?page=1e999` и `?page=1e+21` (с плюсом, который в адресе
+  // означает пробел) на `?page=1e21`. `MAX_PAGE` заведён ровно против такого входа —
+  // и разбор, повторяющий `pageFromParam` без его потолка, обходил защиту с той стороны,
+  // где её никто не искал.
+  return pageFromParam(raw, MAX_PAGE)
+}
+
+/**
+ * Разбор сегмента адреса, который МОЖЕТ БЫТЬ ИСПОРЧЕН.
+ *
+ * `decodeURIComponent` бросает `URIError` на битой последовательности (`/mike/catalogs/100%`
+ * — процент без двух цифр). В `generateMetadata` это исключение уходит наружу и страница
+ * отвечает ПЯТИСОТКОЙ там, где правильный ответ — «не найдено»: сегмент просто не
+ * соответствует ничему. Возвращаем сырую строку — дальше её всё равно не найдут в базе,
+ * и путь придёт к штатному 404.
+ */
+export function decodeSegment(raw: string): string {
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return raw
+  }
 }
