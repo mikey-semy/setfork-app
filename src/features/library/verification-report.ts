@@ -96,8 +96,17 @@ export async function recordVerificationReport(input: ReportInput): Promise<{ id
   // Решается ЗДЕСЬ, а не в MCP-слое: тем же путём ходят веб и очередь, и дыра осталась
   // бы у них.
   const readOnly = !!version?.archivedAt || !!version?.frozenAt
-  const blockedBy = version?.archivedAt ? 'list is archived' : version?.frozenAt ? 'list is frozen' : null
-  const raise = !readOnly && shouldRaise(version?.level ?? null, input.kind, input.verdict)
+  // ⚠️ ПРИЧИНУ НАЗЫВАЕМ, ТОЛЬКО ЕСЛИ ОНА И ЕСТЬ ПРИЧИНА. Уровень не поднимается по
+  // разным поводам: версия уже выше (`crystal`), отчёт провальный, список «только
+  // чтение». Считаем СНАЧАЛА, поднялся бы он вообще, и лишь потом объясняем заморозкой —
+  // иначе агент на `crystal`-версии прочтёт «дело в заморозке» и поверит.
+  //
+  // Это тот же промах, что я убрал из подсказки подписи версии: назвать одну причину из
+  // нескольких — значит соврать во всех остальных случаях.
+  const would = shouldRaise(version?.level ?? null, input.kind, input.verdict)
+  const raise = would && !readOnly
+  const blockedBy =
+    would && readOnly ? (version?.archivedAt ? 'list is archived' : 'list is frozen') : null
   if (raise) {
     await db
       .update(templateVersions)
@@ -138,7 +147,7 @@ export async function recordVerificationReport(input: ReportInput): Promise<{ id
   }
   // Почему уровень не поднят — говорим вслух: молчание здесь читалось бы как «подняли»,
   // а это тихая деградация ровно того сорта, что мы чиним по всему пути.
-  return { id: row.id, raisedLevel: raise, ...(blockedBy && !raise ? { levelUnchanged: blockedBy } : {}) }
+  return { id: row.id, raisedLevel: raise, ...(blockedBy ? { levelUnchanged: blockedBy } : {}) }
 }
 
 

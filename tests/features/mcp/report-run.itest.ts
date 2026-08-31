@@ -144,4 +144,26 @@ describe('report_run', () => {
     const reports = await db.select({ id: verificationReports.id }).from(verificationReports).where(eq(verificationReports.versionId, versionId))
     expect(reports.length, 'сам отчёт обязан быть записан').toBe(1)
   })
+  it('уровень и так не поднялся бы — заморозку причиной НЕ называем', async () => {
+    // ⚠️ Причин «уровень не изменился» несколько: версия уже выше, отчёт провальный,
+    // список «только чтение». Называть заморозку, когда дело не в ней, — соврать: агент
+    // решит, что на живом списке метка бы обновилась. Это тот же промах, что был в
+    // подсказке подписи версии («список старше git-слоя» наугад).
+    const { templateId, versionId, runId, slug } = await listWithRun('rr-crystal-frozen')
+    // Версия уже на верхнем уровне — подниматься некуда даже на живом списке.
+    await db.update(templateVersions).set({ verificationLevel: 'crystal' }).where(eq(templateVersions.id, versionId))
+    await db.update(templates).set({ frozenAt: new Date() }).where(eq(templates.id, templateId))
+
+    const res = await mcpReportRun(ctx.owner, { ...payload(runId), list: `${OWNER}/${slug}` })
+
+    expect('error' in res).toBe(false)
+    expect(res).toMatchObject({ raisedLevel: false })
+    expect('levelUnchanged' in res, 'заморозка тут ни при чём — молчим о ней').toBe(false)
+
+    const [v] = await db
+      .select({ lvl: templateVersions.verificationLevel })
+      .from(templateVersions)
+      .where(eq(templateVersions.id, versionId))
+    expect(v.lvl, 'верхний уровень машинный отчёт не понижает').toBe('crystal')
+  })
 })
