@@ -215,7 +215,12 @@ export async function loadListPage({
     // Последний отчёт о прогоне ЭТОЙ версии. Право видеть провал — у тех, кто список
     // ведёт (см. константу Р2c): пока она `true`, разницы нет ни для кого, но правило
     // уже написано, и решение владельца меняет одну строку, а не эту.
-    currentVersion ? latestReport(currentVersion.id, canManageBranches) : Promise.resolve(null),
+    //
+    // ⚠️ ТОЛЬКО НА ТЕКУЩЕЙ ВЕРСИИ. Отчёт принадлежит версии — это инвариант самой
+    // задачи; а `ListAbout` рисуется и на `?v=N`, и на `?ref=`, где показаны ЧУЖИЕ шаги.
+    // «Работает · 9/9 шагов» рядом с содержимым другой версии — прямая неправда, и
+    // честная пустота здесь лучше чужого отчёта.
+    currentVersion && !histVer && !snapshot ? latestReport(currentVersion.id, canManageBranches) : Promise.resolve(null),
   ])
   const commitsCount = tpl.versions.length
   // Родословная: как список появился (запрос, участники витка, прецеденты, разбор критика,

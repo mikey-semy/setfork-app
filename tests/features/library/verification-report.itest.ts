@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, templates, templateVersions, users, verificationReports } from '@/shared/db'
 import { latestReport, recordVerificationReport } from '@/features/library/verification-report'
 
@@ -99,5 +99,57 @@ describe('отчёт о прогоне и уровень версии', () => {
     const [v2] = await db.insert(templateVersions).values({ templateId, version: 2 }).returning({ id: templateVersions.id })
     expect(await latestReport(v2.id)).toBeNull()
     expect(await levelOf(v2.id)).toBe('rock')
+  })
+})
+
+/**
+ * ⚠️ ПРОВАЛЫ НЕ ПРЯЧУТ СТАРЫЙ УСПЕХ — проверка ВТОРОЙ ветки решения Р2c.
+ *
+ * Пока `SHOW_FAILED_REPORTS_PUBLICLY` был `true`, эта ветка не исполнялась ни разу, и
+ * дефект в ней жил незамеченным: выборка поднимала десять последних строк и только потом
+ * отбрасывала провалы, поэтому десять неудач подряд прятали более старый УСПЕШНЫЙ отчёт,
+ * и посторонний видел «никогда не запускался». Это ровно та подмена, которую запрещает
+ * комментарий рядом с самой функцией.
+ *
+ * Флаг подменяется мокапом — ради этого он и вынесен в отдельный модуль: подменить
+ * константу внутри проверяемого модуля нельзя, и вторая ветка оставалась бы без пробы.
+ */
+describe('скрытые провалы не подменяют историю', () => {
+  it('десять провалов подряд не прячут успешный отчёт под ними', async () => {
+    vi.doMock('@/features/library/report-visibility', () => ({ SHOW_FAILED_REPORTS_PUBLICLY: false }))
+    vi.resetModules()
+    const { recordVerificationReport: recordReport, latestReport } = await import('@/features/library/verification-report')
+
+    const { templateId, versionId } = await version('hidden-fails', 'rock')
+    await recordReport({
+      templateId,
+      versionId,
+      kind: 'machine',
+      task: 'первый прогон',
+      environment: { os: 'ubuntu 24.04' },
+      steps: [{ n: 1, status: 'pass' }],
+      verdict: 'works',
+    })
+    for (let i = 0; i < 10; i++) {
+      await recordReport({
+        templateId,
+        versionId,
+        kind: 'machine',
+        task: `провал ${i + 1}`,
+        environment: { os: 'ubuntu 24.04' },
+        steps: [{ n: 1, status: 'fail' }],
+        verdict: 'fails',
+      })
+    }
+
+    const seen = await latestReport(versionId)
+    expect(seen, 'успешный отчёт существует — «не прогоняли» было бы неправдой').not.toBeNull()
+    expect(seen!.verdict).toBe('works')
+    expect(seen!.task).toBe('первый прогон')
+
+    // Тот, кто список ведёт, видит последнее как есть — включая провал.
+    const asMaintainer = await latestReport(versionId, true)
+    expect(asMaintainer!.verdict).toBe('fails')
+    vi.doUnmock('@/features/library/report-visibility')
   })
 })

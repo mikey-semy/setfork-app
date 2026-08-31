@@ -63,7 +63,7 @@ export function ListAbout({ tpl, base, branches, currentVersion, watchers, runRe
             это отсутствие записи, а не запись об отсутствии. */}
         {runReport && (
           <div className="mt-2">
-            <RunReportLine report={runReport} href={`${base}/versions`} lang={lang} />
+            <RunReportLine report={runReport} lang={lang} />
           </div>
         )}
       </div>

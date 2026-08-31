@@ -1,6 +1,6 @@
-import Link from 'next/link'
 import { CheckCircle2, AlertTriangle, XCircle, Bot, User } from 'lucide-react'
-import { t, type Lang } from '@/shared/i18n'
+import { plural, t, type Lang } from '@/shared/i18n'
+import { envLine } from './verification-report'
 
 /**
  * СТРОКА ОТЧЁТА О ПРОГОНЕ на странице списка (спека прохода 5, §5).
@@ -30,19 +30,23 @@ export type ReportLineData = {
   createdAt: Date | string
 }
 
-export function RunReportLine({ report, href, lang }: { report: ReportLineData; href: string; lang: Lang }) {
+export function RunReportLine({ report, lang }: { report: ReportLineData; lang: Lang }) {
   const look = VERDICT[report.verdict]
   const Icon = look.icon
   const KindIcon = report.kind === 'machine' ? Bot : User
   const passed = report.steps.filter((s) => s.status === 'pass').length
   const when = new Date(report.createdAt).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-GB')
-  const env = Object.values(report.environment).filter(Boolean).join(' · ')
+  // ⚠️ ТЕМ ЖЕ ПОСТРОИТЕЛЕМ, что сохранял метку. `Object.values` по `jsonb` печатал
+  // окружение в порядке, который выбирает Postgres (по длине ключа, потом побайтово), —
+  // строка расходилась с `verified_env` на той же странице и могла меняться от запроса к
+  // запросу. Одно окружение — один способ его показать.
+  const env = envLine(report.environment)
 
+  // ⚠️ БЕЗ ССЫЛКИ. Строка вела на `/versions` — историю коммитов, где про отчёты нет
+  // ничего. Ссылка «не туда» хуже её отсутствия: человек кликает и теряет место. Когда
+  // появится страница отчётов, ссылка вернётся вместе с ней.
   return (
-    <Link
-      href={href}
-      className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-ink-2 hover:text-ink"
-    >
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-ink-2">
       <span className={`inline-flex items-center gap-1.5 ${look.tone}`}>
         <Icon size={14} />
         {t(look.key as Parameters<typeof t>[0], lang)}
@@ -63,8 +67,8 @@ export function RunReportLine({ report, href, lang }: { report: ReportLineData; 
       )}
       <span className="text-muted">·</span>
       <span>
-        {passed}/{report.steps.length} {t('report.steps', lang)}
+        {passed}/{report.steps.length} {plural(report.steps.length, 'steps', lang)}
       </span>
-    </Link>
+    </div>
   )
 }

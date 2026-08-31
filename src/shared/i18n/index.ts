@@ -98,6 +98,9 @@ const PLURALS = {
   contributions: { ru: ['вклад', 'вклада', 'вкладов'], en: ['contribution', 'contributions'] },
   suggestions: { ru: ['предложение', 'предложения', 'предложений'], en: ['suggestion', 'suggestions'] },
   contributors: { ru: ['участник', 'участника', 'участников'], en: ['contributor', 'contributors'] },
+  // Шаги отчёта о прогоне: «1/1 шагов» читалось как обрывок. Ключ жил в пространстве
+  // имён (`report.steps`), и архитектурная проверка склонений его не видела.
+  steps: { ru: ['шаг', 'шага', 'шагов'], en: ['step', 'steps'] },
 } as const
 
 export type PluralKey = keyof typeof PLURALS

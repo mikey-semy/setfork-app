@@ -81,7 +81,10 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
       ? {
           level: currentVersion.verificationLevel,
           verifiedAt: currentVersion.verifiedAt,
-          lastRun: await latestReport(currentVersion.id).then((r) =>
+          // ⚠️ `canWrite` посчитан выше и обязан доехать сюда: без него агент ВЛАДЕЛЬЦА
+          // получал `lastRun: null` там, где сайт показывает провальный отчёт. Одно
+          // право — один ответ, независимо от того, человек смотрит или его агент.
+          lastRun: await latestReport(currentVersion.id, canWrite).then((r) =>
             r
               ? {
                   verdict: r.verdict,
