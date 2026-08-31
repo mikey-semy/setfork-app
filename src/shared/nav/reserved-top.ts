@@ -18,6 +18,9 @@ export const RESERVED_TOP = new Set([
   'generate',
   'guilds',
   'improve',
+  // Машиночитаемые выходы: адрес занят файлом, значит ником стать не может.
+  'llms-full.txt',
+  'llms.txt',
   'login',
   'my-lists',
   'new',

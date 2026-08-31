@@ -95,6 +95,24 @@ function legacyExploreTarget(url: NextRequest['nextUrl']): string | null {
   return range && range !== 'week' ? `/trending?range=${range}` : '/trending'
 }
 
+/**
+ * `/{handle}/{slug}.md` — тот же список в markdown.
+ *
+ * Адрес с суффиксом читается человеком и агентом одинаково: «дай мне это файлом».
+ * Переписыванием, а не своим роутом, — потому что рендерер обязан остаться ОДИН:
+ * второй вариант markdown разошёлся бы с экспортом, и агент, прочитавший список по
+ * суффиксу, получил бы не то, что скачал бы по кнопке.
+ *
+ * Только два сегмента: `/a/b.md` — список, а `/a/b/c.md` уже не он. Точка в слаге
+ * невозможна (слаг строится транслитерацией), поэтому `.md` в конце однозначен.
+ */
+function markdownSuffixTarget(url: URL): string | null {
+  const m = /^\/([^/]+)\/([^/]+)\.md$/.exec(url.pathname)
+  if (!m) return null
+  const [, handle, slug] = m
+  return `/${handle}/${slug}/export?format=md`
+}
+
 export async function middleware(req: NextRequest) {
   const legacy = legacyExploreTarget(req.nextUrl)
   if (legacy) return NextResponse.redirect(new URL(legacy, req.url), 308)
@@ -113,7 +131,14 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   if (pathname === '/api/health' || pathname === '/api/ready') return pass(req)
 
-  if (!(await maintenanceEnabled())) return pass(req)
+  if (!(await maintenanceEnabled())) {
+    // ⚠️ `.md` ПОСЛЕ проверки режима, а не до неё. Стоя выше, переписывание отдавало
+    // 200 с полным содержимым и продолжало ходить в базу ровно тогда, когда режим
+    // обслуживания существует, чтобы база молчала. Машинная поверхность — не повод
+    // обходить ремонт: `/raw` и `/api/` его не обходят.
+    const md = markdownSuffixTarget(req.nextUrl)
+    return md ? NextResponse.rewrite(new URL(md, req.url)) : pass(req)
+  }
   // Дверь для админа: страница входа и auth-эндпоинты (GitHub OAuth, POST
   // server actions самого /login) остаются открыты.
   if (pathname === '/login' || pathname.startsWith('/api/auth/')) return pass(req)
@@ -124,6 +149,9 @@ export async function middleware(req: NextRequest) {
   const machine =
     pathname.startsWith('/api/') ||
     pathname.endsWith('.bundle') ||
+    // `.md` — тоже машинная поверхность: этот адрес мы САМИ рекламируем агентам в
+    // llms.txt («допишите .md к адресу»). Человеческая заглушка ремонта им не нужна.
+    pathname.endsWith('.md') ||
     pathname.endsWith('/raw') ||
     pathname.endsWith('/releases.atom') ||
     /\/(info\/refs|git-upload-pack|git-receive-pack)$/.test(pathname)
@@ -147,7 +175,16 @@ export async function middleware(req: NextRequest) {
     }
     return new NextResponse(`${MAINTENANCE_LINE}\n`, {
       status: 503,
-      headers: { 'Retry-After': RETRY_AFTER_SEC, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+      headers: {
+        'Retry-After': RETRY_AFTER_SEC,
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+        // Причина машинно: 503 бывает разным (ремонт, перегрузка, отказ вышестоящего), и
+        // клиенту важно отличить «вернись позже, у нас работы» от «что-то сломалось».
+        // Скриптовая ветка выше этот заголовок ставит — здесь его не было, хотя адресат
+        // тот же машинный.
+        'SF-Reason': 'maintenance',
+      },
     })
   }
 

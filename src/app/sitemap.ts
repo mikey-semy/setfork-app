@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
-import { and, eq, sql } from 'drizzle-orm'
-import { db, publiclyVisible, templates, templateVersions, users } from '@/shared/db'
+import { eq, sql } from 'drizzle-orm'
+import { db, templates, users } from '@/shared/db'
+import { indexableFilter } from '@/features/library/queries/shared'
 import { getCollections } from '@/features/collections/queries'
 import { SITE_ORIGIN } from '@/shared/site'
 
@@ -45,15 +46,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * Это тот же корень, что в треке стандарта списков: СНАЧАЛА ЗАПОЛНЕНИЕ, ПОТОМ ГЕЙТ.
    * Правило по пустому полю не фильтрует — оно обнуляет.
    *
-   * Уровень остаётся тем, чем он полезен уже сейчас: бейджем, сортировкой, фильтром по
-   * желанию зрителя. Гейт присутствия в карте включится отдельным решением, когда будет
-   * что фильтровать, и с порогом, посчитанным по числам, а не по намерению.
-   *
    * ⚠️ Бэкфилл «поставить всем doc_checked» рассматривался и ОТВЕРГНУТ: это метка без
-   * предмета — ровно та ложь, против которой весь продукт. Пустой уровень честнее
-   * выдуманного.
+   * предмета — ровно та ложь, против которой весь продукт.
+   *
+   * ПРАВИЛО ОДНО на карту сайта и на llms.txt — оба адресата машинные и оба читают наше
+   * утверждение о готовности; две копии разошлись бы, и заметить это было бы некому.
+   * Поэтому оно живёт в `indexableFilter()`, а не здесь: когда гейт по уровню вернётся
+   * (отдельным решением, с порогом по числам), он появится в ОДНОМ месте для обоих.
    */
-  const indexable = publiclyVisible()
+  const indexable = indexableFilter()
 
   const [lists, authors, tags, collections] = await Promise.all([
     db
