@@ -77,13 +77,27 @@ export async function recordVerificationReport(input: ReportInput): Promise<{ id
       number: templateVersions.version,
       slug: templates.slug,
       ownerHandle: users.handle,
+      archivedAt: templates.archivedAt,
+      frozenAt: templates.frozenAt,
     })
     .from(templateVersions)
     .innerJoin(templates, eq(templates.id, templateVersions.templateId))
     .innerJoin(users, eq(users.id, templates.ownerId))
     .where(eq(templateVersions.id, input.versionId))
 
-  const raise = shouldRaise(version?.level ?? null, input.kind, input.verdict)
+  // ⚠️ ОТЧЁТ ПИШЕТСЯ ВСЕГДА, УРОВЕНЬ — НЕ ВСЕГДА, и это разные вопросы.
+  //
+  // Прогнать замороженный или архивный список законно: отчёт — append-only ФАКТ о том,
+  // что кто-то запустил и что вышло, и терять его незачем. А вот МЕТКА на таком списке
+  // меняться не должна: заморозка и архив означают «только чтение», и мы уже закрыли
+  // этот обход у ручной постановки уровня (#838) — второй вход обязан подчиняться тому
+  // же правилу, иначе правило не правило.
+  //
+  // Решается ЗДЕСЬ, а не в MCP-слое: тем же путём ходят веб и очередь, и дыра осталась
+  // бы у них.
+  const readOnly = !!version?.archivedAt || !!version?.frozenAt
+  const blockedBy = version?.archivedAt ? 'list is archived' : version?.frozenAt ? 'list is frozen' : null
+  const raise = !readOnly && shouldRaise(version?.level ?? null, input.kind, input.verdict)
   if (raise) {
     await db
       .update(templateVersions)
@@ -122,7 +136,9 @@ export async function recordVerificationReport(input: ReportInput): Promise<{ id
       captureError(e, { where: 'recordVerificationReport.revalidate', templateId: input.templateId })
     }
   }
-  return { id: row.id, raisedLevel: raise }
+  // Почему уровень не поднят — говорим вслух: молчание здесь читалось бы как «подняли»,
+  // а это тихая деградация ровно того сорта, что мы чиним по всему пути.
+  return { id: row.id, raisedLevel: raise, ...(blockedBy && !raise ? { levelUnchanged: blockedBy } : {}) }
 }
 
 

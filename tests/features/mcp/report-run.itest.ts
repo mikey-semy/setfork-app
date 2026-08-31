@@ -119,4 +119,29 @@ describe('report_run', () => {
     expect(res).toMatchObject({ reportedVersion: 1, currentVersion: 1 })
     expect('staleVersion' in res, 'лишнего предупреждения быть не должно').toBe(false)
   })
+  it('замороженный список: отчёт пишется, уровень НЕ поднимается', async () => {
+    // ⚠️ Второй вход к той же метке. У ручной постановки уровня заморозку мы закрыли
+    // (#838); здесь она обходилась: отчёт поднимал версию до machine_run на списке,
+    // который «только чтение». Правило одно на оба входа.
+    //
+    // Но запрещать ОТЧЁТ нельзя: прогнать архивный список законно, и факт прогона —
+    // append-only запись, терять её незачем. Поэтому пишется отчёт, не меняется метка,
+    // и агенту сказано почему.
+    const { templateId, versionId, runId, slug } = await listWithRun('rr-frozen')
+    await db.update(templates).set({ frozenAt: new Date() }).where(eq(templates.id, templateId))
+
+    const res = await mcpReportRun(ctx.owner, { ...payload(runId), list: `${OWNER}/${slug}` })
+
+    expect('error' in res, 'честный отчёт по замороженному списку не запрещаем').toBe(false)
+    expect(res).toMatchObject({ raisedLevel: false, levelUnchanged: 'list is frozen' })
+
+    const [v] = await db
+      .select({ lvl: templateVersions.verificationLevel })
+      .from(templateVersions)
+      .where(eq(templateVersions.id, versionId))
+    expect(v.lvl, 'метка на замороженном списке остаётся прежней').toBe('rock')
+
+    const reports = await db.select({ id: verificationReports.id }).from(verificationReports).where(eq(verificationReports.versionId, versionId))
+    expect(reports.length, 'сам отчёт обязан быть записан').toBe(1)
+  })
 })

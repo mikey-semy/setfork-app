@@ -207,6 +207,9 @@ export async function mcpReportRun(
   return {
     reportId: res.id,
     raisedLevel: res.raisedLevel,
+    // Уровень не поднят по состоянию списка (заморожен/в архиве) — говорим прямо: агент
+    // иначе решит, что метка обновилась, и его отчёт за неё ручается.
+    ...('levelUnchanged' in res ? { levelUnchanged: res.levelUnchanged } : {}),
     verdict: input.verdict,
     reportedVersion: run.version,
     currentVersion: run.listVersion,
