@@ -5,7 +5,7 @@ import { db, templates, templateVersions, users, verificationReports } from '@/s
 import { recordAudit } from '@/shared/audit'
 import { captureError } from '@/shared/observability'
 import { VERIFICATION_ORDER } from './queries/shared'
-import { SHOW_FAILED_REPORTS_PUBLICLY } from './report-visibility'
+import { envLine, SHOW_FAILED_REPORTS_PUBLICLY } from './report-visibility'
 
 /**
  * ЗАПИСЬ ОТЧЁТА О ПРОГОНЕ и его влияние на уровень проверки версии.
@@ -125,10 +125,6 @@ export async function recordVerificationReport(input: ReportInput): Promise<{ id
   return { id: row.id, raisedLevel: raise }
 }
 
-/** Окружение одной строкой для метки: «claude-code 2.x · ubuntu 24.04». */
-export function envLine(environment: Record<string, string>): string {
-  return Object.values(environment).filter(Boolean).join(' · ').slice(0, 200)
-}
 
 /**
  * Последний отчёт ВЕРСИИ — то, что показывает витрина и читает агент до доверия.

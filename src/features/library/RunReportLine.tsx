@@ -1,6 +1,6 @@
 import { CheckCircle2, AlertTriangle, XCircle, Bot, User } from 'lucide-react'
 import { plural, t, type Lang } from '@/shared/i18n'
-import { envLine } from './verification-report'
+import { envLine } from './report-visibility'
 
 /**
  * СТРОКА ОТЧЁТА О ПРОГОНЕ на странице списка (спека прохода 5, §5).

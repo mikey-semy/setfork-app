@@ -116,7 +116,12 @@ describe('отчёт о прогоне и уровень версии', () => {
  */
 describe('скрытые провалы не подменяют историю', () => {
   it('десять провалов подряд не прячут успешный отчёт под ними', async () => {
-    vi.doMock('@/features/library/report-visibility', () => ({ SHOW_FAILED_REPORTS_PUBLICLY: false }))
+    // Частичный мок: в модуле рядом с флагом живёт `envLine`, и подмена целиком
+    // унесла бы её вместе с решением, которое мы проверяем.
+    vi.doMock('@/features/library/report-visibility', async (orig) => ({
+      ...(await orig<typeof import('@/features/library/report-visibility')>()),
+      SHOW_FAILED_REPORTS_PUBLICLY: false,
+    }))
     vi.resetModules()
     const { recordVerificationReport: recordReport, latestReport } = await import('@/features/library/verification-report')
 
