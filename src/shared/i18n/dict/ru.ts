@@ -745,6 +745,8 @@ export const ru: Record<DictKey, string> = {
   noCommitsMatch: 'Под фильтры ничего не подошло',
   resetFilters: 'Сбросить фильтры',
   about: 'О списке',
+  commitShaLabel: 'Коммит {sha}',
+  commitShaMissing: 'Подпись версии недоступна',
   currentVersion: 'текущая',
   viewVersion: 'Посмотреть версию',
   defaultBranchHint: 'главная ветка',

@@ -1,4 +1,6 @@
 import { Fragment } from 'react'
+import { versionShaMap } from '@/features/library/version-sha'
+import { listStore } from '@/features/library/list-store'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { GitBranch, GitCommitHorizontal } from 'lucide-react'
@@ -46,7 +48,7 @@ export default async function CommitsPage({
   const cutoff = commitCutoff(since)
   // Ключ истории — НОМЕР ВЕРСИИ, целое; курсор от ленты сюда не подойдёт и честно отсеется.
   const { cursor, dir } = readCursor(sp, 'int')
-  const [history, authors, total, branches] = await Promise.all([
+  const [history, authors, total, branches, versionShas] = await Promise.all([
     getCommitsPage(meta.id, COMMITS_PER_PAGE, cursor, dir, {
       authorHandle: author === 'all' ? undefined : author,
       since: cutoff ? new Date(cutoff) : undefined,
@@ -58,7 +60,21 @@ export default async function CommitsPage({
     // всей истории целиком.
     countCommits(meta.id),
     gitCore.listBranches({ owner, slug }).catch(() => [] as { name: string }[]),
+    /**
+     * SHA версий — ОДНИМ вызовом на страницу, а не по строке: спрашивать ядро на каждую
+     * версию значило бы N запросов на показ одного экрана.
+     *
+     * ⚠️ Источник — ЯДРО, а не Postgres: в проекции SHA нет и не планируется, версия
+     * рождается коммитом в git, и подпись под ней должна приходить оттуда же. Пока
+     * ядро его не наполнило, приходит пусто — и это законное состояние, а не ошибка.
+     * Отказ ядра тоже не ломает страницу: история читается из Postgres и без подписей.
+     */
+    // ⚠️ НЕ через `listStore`: фасад читает Postgres, пока не поднят флаг перехода, а в
+    // проекции SHA нет — поверхность показывала бы прочерк ВСЕГДА. Спрашиваем ядро
+    // точечно, ровно за подписью (см. `versionShaMap`).
+    versionShaMap(meta.id),
   ])
+  const shaByVersion = versionShas
   const filtered = history.items
   const base = `/${owner}/${slug}`
   const versionsBase = `${base}/versions`
@@ -151,6 +167,7 @@ export default async function CommitsPage({
                     slug={slug}
                     base={base}
                     version={c.version}
+                    commitSha={shaByVersion.get(c.version) ?? null}
                     msg={msg}
                     createdAtMs={new Date(c.createdAt).getTime()}
                     isCurrent={c.version === meta.currentVersion}
@@ -166,6 +183,8 @@ export default async function CommitsPage({
                       fullCompare: t('compareTitle', lang),
                       viewVersion: t('viewVersion', lang),
                       expandHint: t('expandCommit', lang),
+                      commitSha: t('commitShaLabel', lang),
+                      commitShaMissing: t('commitShaMissing', lang),
                     }}
                   />
                 )
