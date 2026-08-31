@@ -152,7 +152,11 @@ const PAGED_WITH_CANONICAL = (): string[] => {
   for (const file of walk(APP)) {
     if (!file.endsWith('page.tsx')) continue
     const src = readFileSync(file, 'utf8')
-    if (!/pageFromParam\(/.test(src)) continue // листалки нет — правило не о ней
+    // ⚠️ ВСЕ СПОСОБЫ ПРОЧИТАТЬ НОМЕР, а не один. Триггер стоял на `pageFromParam`, и
+    // когда тег с полкой перешли на `pageOrNotFound`, проверка перестала видеть ИХ ЖЕ —
+    // то есть все страницы разом. Снятие правила давало зелёное. Третий случай за смену,
+    // когда правка гварда его же и ослепила.
+    if (!/pageFromParam\(|pageOrNotFound\(|canonicalPageParam\(/.test(src)) continue
     // ⚠️ И СОКРАЩЁННАЯ ФОРМА ТОЖЕ. `alternates: { canonical }` — так написаны профиль и
     // подборки; проверка на `canonical:` их не видела и молча пропускала.
     if (!/canonical:/.test(src) && !/\{\s*canonical\s*\}/.test(src)) continue
@@ -184,7 +188,15 @@ describe('canonical листалки указывает на себя', () => {
   // до разбора соседних файлов дорого и хрупко; вместо этого предел записан, чтобы
   // следующий не принял тишину за подтверждение.
   it('проверке есть что проверять', () => {
-    const paged = walk(APP).filter((f) => f.endsWith('page.tsx') && /pageFromParam\(/.test(readFileSync(f, 'utf8')))
-    expect(paged.length, 'страниц с листалкой не найдено — проверка выше проверяет пустоту').toBeGreaterThan(2)
+    // ⚠️ СЧИТАЕМ ПЕРЕСЕЧЕНИЕ, а не «страницы с листалкой вообще». Прежняя проверка
+    // считала не то множество: листалок семь, а страниц с листалкой И canonical — три,
+    // и когда их стало ноль, она осталась зелёной, потому что семь никуда не делись.
+    const both = walk(APP).filter((f) => {
+      if (!f.endsWith('page.tsx')) return false
+      const src = readFileSync(f, 'utf8')
+      const reads = /pageFromParam\(|pageOrNotFound\(|canonicalPageParam\(/.test(src)
+      return reads && (/canonical:/.test(src) || /\{\s*canonical\s*\}/.test(src))
+    })
+    expect(both.length, 'страниц с листалкой И canonical не найдено — проверка выше проверяет пустоту').toBeGreaterThan(1)
   })
 })
