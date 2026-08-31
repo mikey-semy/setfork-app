@@ -22,7 +22,7 @@ import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { BULK_MAX } from '@/features/library/bulk/limits'
 import { dayKey } from '@/features/profile/activity/types'
-import { pageCount, pageFromParam, pageHref as buildPageHref, pageWindow } from '@/shared/lib/paging'
+import { pageCount, pageHref as buildPageHref, pageOrNotFound, pageWindow } from '@/shared/lib/paging'
 
 export type ProfileTab = 'overview' | 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
 
@@ -194,7 +194,12 @@ export async function loadProfilePage({ handle, sp: raw, lang }: { handle: strin
     isOwner && tab === 'lists' ? countUnfiledLists(user.id, viewer?.userId) : Promise.resolve(0),
   ])
   const totalPages = pageCount(firstTry.total)
-  const page = pageFromParam(sp.page, totalPages)
+  // За последней страницей — 404, как у тега и полки: адресов справа бесконечно много, и
+  // каждый показывал бы последнюю страницу под своим каноническим адресом. Профиль сюда
+  // добавлен вместе с ними, а не позже: у него есть и листалка, и canonical, то есть тот
+  // же дефект в полном составе (находка ревью по перебазе).
+  const page = pageOrNotFound(sp.page, totalPages)
+  if (page === null) notFound()
   // Повторный запрос идёт с УЖЕ ИЗВЕСТНЫМ числом: условия те же, считать второй раз нечего.
   const listPage = isListsTab && page !== asked ? await getProfileListPage(filter, pageWindow(page), firstTry.total) : firstTry
   const pageItems = listPage.items
