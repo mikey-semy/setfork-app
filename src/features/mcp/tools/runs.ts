@@ -167,10 +167,20 @@ export async function mcpReportRun(
   // же, что у постановки уровня: отвечает за метку тот, кто список ведёт.
   if (tpl.ownerId !== userId && !(await isCollaborator(tpl.id, userId))) return { error: 'forbidden' }
 
+  // Текущая версия списка берётся ЗДЕСЬ, тем же запросом: `resolveListRefOrMoved` её не
+  // отдаёт, а расширять общую функцию ради одного вызывающего — плодить лишнее в шести
+  // других местах, которым это поле не нужно.
   const [run] = await db
-    .select({ id: runs.id, versionId: runs.versionId, templateId: runs.templateId, version: templateVersions.version })
+    .select({
+      id: runs.id,
+      versionId: runs.versionId,
+      templateId: runs.templateId,
+      version: templateVersions.version,
+      listVersion: templates.currentVersion,
+    })
     .from(runs)
     .innerJoin(templateVersions, eq(templateVersions.id, runs.versionId))
+    .innerJoin(templates, eq(templates.id, runs.templateId))
     .where(and(eq(runs.id, input.runId), eq(runs.templateId, tpl.id)))
     .limit(1)
   if (!run) return { error: 'run not found for this list — report must reference a real run' }
@@ -193,15 +203,15 @@ export async function mcpReportRun(
   // не меняется ничего. Запрещать такой отчёт нельзя (он честный), молчать — тоже:
   // агент решил бы, что поручился за текущее состояние. Поэтому сообщаем факт, а
   // решение оставляем ему.
-  const stale = run.version !== tpl.currentVersion
+  const stale = run.version !== run.listVersion
   return {
     reportId: res.id,
     raisedLevel: res.raisedLevel,
     verdict: input.verdict,
     reportedVersion: run.version,
-    currentVersion: tpl.currentVersion,
+    currentVersion: run.listVersion,
     ...(stale
-      ? { staleVersion: true, note: `This run was on v${run.version}; the list is now v${tpl.currentVersion}. The report belongs to v${run.version} and does not vouch for the current one.` }
+      ? { staleVersion: true, note: `This run was on v${run.version}; the list is now v${run.listVersion}. The report belongs to v${run.version} and does not vouch for the current one.` }
       : {}),
   }
 }

@@ -45,7 +45,7 @@ export function registerRuns({ readTool, writeTool }: ToolKit) {
     {
       title: 'Report a verification run',
       description:
-        'Record a machine verification report for the version you just ran. The report belongs to that VERSION, not to the list: a later edit makes a new version, which starts with no reports. runId is REQUIRED and must belong to this list — a report without a run is a claim, not a fact. Failures are reported the same way as successes (verdict "fails"): "ran and failed" and "never ran" are different facts. A successful report raises the version to machine-run level, but never overwrites a higher human level.',
+        'Record a machine verification report for the version you just ran. The report belongs to that VERSION, not to the list: a later edit makes a new version, which starts with no reports. runId is REQUIRED and must belong to this list — a report without a run is a claim, not a fact. Failures are reported the same way as successes (verdict "fails"): "ran and failed" and "never ran" are different facts. A successful report raises the version to machine-run level, but never overwrites a higher human level. The response echoes reportedVersion and currentVersion; if they differ it also sets staleVersion — the list moved on while you were running, so your report vouches for the version you ran, not for what people see now.',
       inputSchema: {
         list: z.string().describe('List reference: "handle/slug" or just "slug"'),
         runId: z.string().describe('Run id from start_run — the report references a real, existing run'),

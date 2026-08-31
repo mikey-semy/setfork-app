@@ -95,4 +95,28 @@ describe('report_run', () => {
     const [v] = await db.select({ l: templateVersions.verificationLevel }).from(templateVersions).where(eq(templateVersions.id, versionId))
     expect(v.l).toBe('rock')
   })
+  it('прогон по СТАРОЙ версии принимается — и агент об этом узнаёт', async () => {
+    // ⚠️ Отчёт правильно ложится на СВОЮ версию и правильно поднимает её уровень —
+    // «отчёт принадлежит версии» цел. Но список за это время мог уйти вперёд: агент
+    // прогнал v1, автор внёс правку, и на самом списке не меняется ничего. Запрещать
+    // такой отчёт нельзя (он честный), молчать — тоже: агент решил бы, что поручился
+    // за текущее состояние. Поэтому сообщаем факт, а решение оставляем ему.
+    const { templateId, runId, slug } = await listWithRun('rr-stale')
+    // Список уезжает на v2 — как после принятой правки.
+    await db.insert(templateVersions).values({ templateId, version: 2 })
+    await db.update(templates).set({ currentVersion: 2 }).where(eq(templates.id, templateId))
+
+    const res = await mcpReportRun(ctx.owner, { ...payload(runId), list: `${OWNER}/${slug}` })
+
+    expect('error' in res, 'честный отчёт по старой версии не запрещаем').toBe(false)
+    expect(res).toMatchObject({ reportedVersion: 1, currentVersion: 2, staleVersion: true })
+    expect((res as { note?: string }).note, 'агенту сказано словами, за что он поручился').toMatch(/v1/)
+  })
+
+  it('прогон по текущей версии не помечается устаревшим', async () => {
+    const { runId, slug } = await listWithRun('rr-fresh')
+    const res = await mcpReportRun(ctx.owner, { ...payload(runId), list: `${OWNER}/${slug}` })
+    expect(res).toMatchObject({ reportedVersion: 1, currentVersion: 1 })
+    expect('staleVersion' in res, 'лишнего предупреждения быть не должно').toBe(false)
+  })
 })
