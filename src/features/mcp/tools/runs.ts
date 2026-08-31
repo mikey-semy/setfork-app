@@ -168,8 +168,9 @@ export async function mcpReportRun(
   if (tpl.ownerId !== userId && !(await isCollaborator(tpl.id, userId))) return { error: 'forbidden' }
 
   const [run] = await db
-    .select({ id: runs.id, versionId: runs.versionId, templateId: runs.templateId })
+    .select({ id: runs.id, versionId: runs.versionId, templateId: runs.templateId, version: templateVersions.version })
     .from(runs)
+    .innerJoin(templateVersions, eq(templateVersions.id, runs.versionId))
     .where(and(eq(runs.id, input.runId), eq(runs.templateId, tpl.id)))
     .limit(1)
   if (!run) return { error: 'run not found for this list — report must reference a real run' }
@@ -186,5 +187,21 @@ export async function mcpReportRun(
     notes: input.notes,
     runnerId: userId,
   })
-  return { reportId: res.id, raisedLevel: res.raisedLevel, verdict: input.verdict }
+  // ⚠️ ГОВОРИМ, ЕСЛИ ПРОГОН БЫЛ НЕ ПО ПОСЛЕДНЕЙ ВЕРСИИ. Отчёт правильно ложится на СВОЮ
+  // версию и правильно поднимает ЕЁ уровень — «отчёт принадлежит версии» цел. Но список
+  // за это время мог уйти вперёд: агент прогнал v3, автор внёс правку, и на самом списке
+  // не меняется ничего. Запрещать такой отчёт нельзя (он честный), молчать — тоже:
+  // агент решил бы, что поручился за текущее состояние. Поэтому сообщаем факт, а
+  // решение оставляем ему.
+  const stale = run.version !== tpl.currentVersion
+  return {
+    reportId: res.id,
+    raisedLevel: res.raisedLevel,
+    verdict: input.verdict,
+    reportedVersion: run.version,
+    currentVersion: tpl.currentVersion,
+    ...(stale
+      ? { staleVersion: true, note: `This run was on v${run.version}; the list is now v${tpl.currentVersion}. The report belongs to v${run.version} and does not vouch for the current one.` }
+      : {}),
+  }
 }
