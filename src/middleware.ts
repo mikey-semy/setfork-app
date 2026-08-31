@@ -113,6 +113,10 @@ function markdownSuffixTarget(url: URL): string | null {
   return `/${handle}/${slug}/export?format=md`
 }
 
+/** Адреса проб: отвечают САМИ и до любого обращения к базе. Один набор, чтобы новый
+ *  адрес пробы нельзя было завести, забыв про обход. */
+const PROBE_PATHS = new Set(['/api/health', '/api/ready', '/healthz'])
+
 export async function middleware(req: NextRequest) {
   const legacy = legacyExploreTarget(req.nextUrl)
   if (legacy) return NextResponse.redirect(new URL(legacy, req.url), 308)
@@ -129,7 +133,17 @@ export async function middleware(req: NextRequest) {
   // /api/ready — readiness для внешнего монитора: она обязана отвечать САМА,
   // в том числе когда база мертва (в этом её работа), и в ремонте тоже.
   const { pathname } = req.nextUrl
-  if (pathname === '/api/health' || pathname === '/api/ready') return pass(req)
+  // ⚠️ `/healthz` — ТОТ ЖЕ ОБХОД. Это общепринятый адрес пробы, и внешний монитор ходит
+  // именно туда. Без этой строки он не начинается с `/api/`, значит в ремонте уходит в
+  // ЧЕЛОВЕЧЕСКУЮ ветку и отвечает 503 с HTML-страницей: балансировщик выкидывает живой
+  // экземпляр из ротации — та самая цепочка unhealthy → Traefik → 404 на весь сайт, от
+  // которой предостерегает абзац выше.
+  //
+  // Хуже того, при ЗАВИСШЕЙ (а не отказавшей) базе `maintenanceEnabled()` своего
+  // предела ожидания не имеет: проба перевалила бы за таймаут и здоровый контейнер
+  // получил бы перезапуск. Ровно перевёрнутый сигнал, ради починки которого адрес и
+  // заведён.
+  if (PROBE_PATHS.has(pathname)) return pass(req)
 
   if (!(await maintenanceEnabled())) {
     // ⚠️ `.md` ПОСЛЕ проверки режима, а не до неё. Стоя выше, переписывание отдавало
