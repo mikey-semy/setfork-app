@@ -262,6 +262,48 @@ export default [
     settings: {
       'boundaries/include': ['src/**/*'],
       'boundaries/elements': [
+        /**
+         * ГНОМЫ — отдельный тип ЧТОБЫ ПОСЧИТАТЬ, а не чтобы запретить.
+         *
+         * Спор «выносить ли гномов из продукта» (11-razdelenie-gnomov) до сих пор шёл
+         * словами: одни говорят «это ядро продукта», другие «это отдельный сервис,
+         * который тянет за собой половину кода». Обе стороны правы ровно настолько,
+         * насколько велика связность, — а её никто не мерил.
+         *
+         * Отсюда цель этой границы: ЧИСЛО нарушений в eslint-suppressions.json. Оно и
+         * есть ответ. Мало — вынести дёшево; много — вынос означает переписать
+         * половину библиотеки, и спор закрыт арифметикой, а не убеждением.
+         *
+         * ⚠️ СУЩЕСТВУЮЩИЕ НАРУШЕНИЯ НЕ ЧИНИМ. Они заморожены в baseline и служат
+         * замером; чинить их сейчас — значит стирать данные, ради которых граница и
+         * заведена. Запрещены только НОВЫЕ: связность не должна расти, пока решение
+         * не принято.
+         *
+         * ⚠️ СТОИТ ПЕРЕД `core`/`shared`, И ЭТО НЕ КОСМЕТИКА. Первый совпавший дескриптор
+         * выигрывает: пока `gnomes` стоял ниже, `src/shared/ai/council` определялся как
+         * `shared`, и половина границы была МЕРТВА — ровно та ловушка «выглядит
+         * работающей, не видя ничего», о которой предупреждает абзац выше. Поймано
+         * пробным файлом, а не чтением конфига.
+         *
+         * Состав по признаку «про гномов и совет», а не по каталогу: `shared/ai/gnome-*`
+         * и `shared/ai/council*` (личности, репутация, счета, созыв совета),
+         * `features/dig` (разговор с гномом) и `features/library/gnome-*` (их задачи и
+         * ревью). Общий ИИ-слой (`shared/ai/*` без этих имён) сюда НЕ входит: он нужен
+         * продукту и без гномов — генерация, эмбеддинги, модерация.
+         */
+        // ⚠️ ТОЛЬКО КАТАЛОГИ. Плагин сопоставляет образцы с ПАПКАМИ и на файловый
+        // образец отвечает предупреждением («Element patterns match folders, not
+        // individual files»): `gnome-account.ts` в тип не попадает, и граница выглядит
+        // работающей, не видя ничего. Поэтому здесь стоят только настоящие каталоги, а
+        // полный замер связности ведёт отдельный счётчик — scripts/gnomes-coupling.mjs.
+        //
+        // ⚠️ И ВТОРОЕ, ПОЧЕМУ ГРАНИЦЫ ЗДЕСЬ МАЛО ДЛЯ ЗАМЕРА: подавления в baseline
+        // считаются по ПРАВИЛУ на файл, а не по виду нарушения. Файл, у которого уже
+        // подавлен кросс-импорт фич, поглотит и новое «features → gnomes» — число
+        // связей из него узнать нельзя. Счётчик считает импорты сам и baseline не
+        // спрашивает.
+        { type: 'gnomes', pattern: 'src/shared/ai/council' },
+        { type: 'gnomes', pattern: 'src/features/dig' },
         { type: 'core', pattern: 'src/core' },
         { type: 'shared', pattern: 'src/shared' },
         // mcp и admin — delivery-поверхности (внешний API и админ-консоль над
@@ -301,13 +343,17 @@ export default [
             { from: { type: 'shared' }, allow: { to: [{ type: 'core' }] } },
             // Фича видит только себя (internal выше) + core/shared — кросс-импорт фич запрещён.
             { from: { type: 'features' }, allow: { to: [{ type: 'shared' }, { type: 'core' }] } },
-            { from: { type: 'widgets' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
-            { from: { type: 'mcp' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
-            { from: { type: 'admin' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
-            { from: { type: 'gardener' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
+            { from: { type: 'widgets' }, allow: { to: [{ type: 'features' }, { type: 'gnomes' }, { type: 'shared' }, { type: 'core' }] } },
+            { from: { type: 'mcp' }, allow: { to: [{ type: 'features' }, { type: 'gnomes' }, { type: 'shared' }, { type: 'core' }] } },
+            { from: { type: 'admin' }, allow: { to: [{ type: 'features' }, { type: 'gnomes' }, { type: 'shared' }, { type: 'core' }] } },
+            { from: { type: 'gardener' }, allow: { to: [{ type: 'features' }, { type: 'gnomes' }, { type: 'shared' }, { type: 'core' }] } },
+            // Гномам наружу можно то же, что фиче: они и есть предметная область.
+            // Считаем обратное направление — кто тянет ИЗ них, — а его считает
+            // `default: disallow` для всех, кто не объявил `gnomes` разрешённым.
+            { from: { type: 'gnomes' }, allow: { to: [{ type: 'shared' }, { type: 'core' }, { type: 'gnomes' }] } },
             {
               from: { type: 'app' },
-              allow: { to: [{ type: 'mcp' }, { type: 'admin' }, { type: 'gardener' }, { type: 'widgets' }, { type: 'features' }, { type: 'shared' }, { type: 'core' }] },
+              allow: { to: [{ type: 'mcp' }, { type: 'admin' }, { type: 'gardener' }, { type: 'gnomes' }, { type: 'widgets' }, { type: 'features' }, { type: 'shared' }, { type: 'core' }] },
             },
           ],
         },
