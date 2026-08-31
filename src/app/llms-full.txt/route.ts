@@ -7,6 +7,7 @@ import { indexableFilter } from '@/features/library/queries/shared'
 // eslint-disable-next-line no-restricted-imports -- см. абзац выше
 import { getTemplateDetail } from '@/features/library/queries'
 import { toExportList, toMarkdown } from '@/features/library/export'
+import { LLMS_INLINED } from '@/shared/seo/llms'
 import { SITE_ORIGIN } from '@/shared/site'
 
 /**
@@ -23,7 +24,11 @@ import { SITE_ORIGIN } from '@/shared/site'
  * ссылка на `.md` при этом работает для любого видимого списка — экспорт не индексация,
  * это то же разведение, что видимость/индексация у решения 0018.
  */
-export const dynamic = 'force-dynamic'
+// ⚠️ НЕ `force-dynamic`: файл читают обходчики, а не люди, и пересобирать его на каждый
+// запрос незачем. Час свежести здесь — не компромисс, а верная цена: корпус меняется
+// медленнее, а маршрут без авторизации, который сам себя рекламирует в `llms.txt`, не
+// имеет права стоить полного обхода базы на каждое обращение.
+export const revalidate = 3600
 export const runtime = 'nodejs'
 
 /**
@@ -31,7 +36,7 @@ export const runtime = 'nodejs'
  * бесконечная выгрузка корпуса делает его бесполезным для всех: указатель уже есть в
  * `llms.txt`, а за остальным — ссылки.
  */
-const INLINED = 20
+
 
 export async function GET() {
   const rows = await db
@@ -40,7 +45,7 @@ export async function GET() {
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(indexableFilter())
     .orderBy(desc(templates.starsCount), desc(templates.updatedAt))
-    .limit(INLINED)
+    .limit(LLMS_INLINED)
 
   const parts: string[] = [
     '# SetFork — full content of the top lists',
@@ -51,9 +56,14 @@ export async function GET() {
     '',
   ]
 
-  for (const r of rows) {
-    const detail = await getTemplateDetail(r.handle, r.slug)
+  // ⚠️ ОДНОЙ ВОЛНОЙ, а не по очереди. Каждый `getTemplateDetail` — это несколько запросов
+  // плюс подготовка аватара; двадцать списков подряд давали около шестидесяти
+  // последовательных обращений на один ответ. Порядок вывода сохраняется — он берётся из
+  // `rows`, а не из того, кто ответил первым.
+  const details = await Promise.all(rows.map((r) => getTemplateDetail(r.handle, r.slug)))
+  for (const [i, detail] of details.entries()) {
     if (!detail) continue
+    const r = rows[i]
     parts.push(`---`, '', `Source: ${SITE_ORIGIN}/${r.handle}/${r.slug}`, '', toMarkdown(toExportList(detail), 'en'), '')
   }
 

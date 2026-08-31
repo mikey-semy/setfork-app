@@ -20,7 +20,12 @@ export async function GET(
   return new Response(body, {
     headers: {
       'Content-Type': mime,
-      'Content-Disposition': `attachment; filename="${slug}.${format}"`,
+      // ⚠️ `inline` для markdown: этот же маршрут обслуживает адрес `/{handle}/{slug}.md`,
+      // а `llms.txt` обещает агентам «допишите `.md` к адресу». С `attachment` браузер и
+      // читающий клиент СКАЧИВАЮТ файл вместо того, чтобы показать, — обещание не
+      // исполняется. Для `html` (кнопка «скачать») поведение прежнее.
+      'Content-Disposition':
+        format === 'md' ? `inline; filename="${slug}.md"` : `attachment; filename="${slug}.${format}"`,
       // Скачивание идёт ПО СЕССИИ и на любом языке зрителя: приватный список тут
       // такой же законный гость, как публичный. Своей политики у ответа не было
       // вовсе — значит её выбирал прокси или браузер. Общий кеш здесь не нужен:

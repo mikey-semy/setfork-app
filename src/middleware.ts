@@ -117,8 +117,6 @@ export async function middleware(req: NextRequest) {
   const legacy = legacyExploreTarget(req.nextUrl)
   if (legacy) return NextResponse.redirect(new URL(legacy, req.url), 308)
 
-  const md = markdownSuffixTarget(req.nextUrl)
-  if (md) return NextResponse.rewrite(new URL(md, req.url))
 
   // ПРОБЫ ПРОПУСКАЕМ ДО обращения к БД. `maintenanceEnabled()` ходит в ту же
   // базу и своего потолка ожидания не имеет: при исчерпанном пуле или зависшем
@@ -134,7 +132,14 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   if (pathname === '/api/health' || pathname === '/api/ready') return pass(req)
 
-  if (!(await maintenanceEnabled())) return pass(req)
+  if (!(await maintenanceEnabled())) {
+    // ⚠️ `.md` ПОСЛЕ проверки режима, а не до неё. Стоя выше, переписывание отдавало
+    // 200 с полным содержимым и продолжало ходить в базу ровно тогда, когда режим
+    // обслуживания существует, чтобы база молчала. Машинная поверхность — не повод
+    // обходить ремонт: `/raw` и `/api/` его не обходят.
+    const md = markdownSuffixTarget(req.nextUrl)
+    return md ? NextResponse.rewrite(new URL(md, req.url)) : pass(req)
+  }
   // Дверь для админа: страница входа и auth-эндпоинты (GitHub OAuth, POST
   // server actions самого /login) остаются открыты.
   if (pathname === '/login' || pathname.startsWith('/api/auth/')) return pass(req)

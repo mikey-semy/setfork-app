@@ -1,6 +1,7 @@
 import { desc, eq } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
 import { indexableFilter } from '@/features/library/queries/shared'
+import { LLMS_INLINED, LLMS_LISTED } from '@/shared/seo/llms'
 import { SITE_ORIGIN } from '@/shared/site'
 import { tr } from '@/shared/i18n'
 
@@ -24,7 +25,18 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /** Сколько списков перечислять: файл — указатель, а не выгрузка корпуса. */
-const LISTED = 50
+
+
+/**
+ * Текст автора — в ОДНУ строку и заданной длины.
+ *
+ * Переводы строк (включая `\r`) и повторные пробелы схлопываются: строчный формат не
+ * должен зависеть от того, что человек набрал в многострочном поле. Обрезка — по числу
+ * символов, чтобы одна запись не вытесняла остальные из внимания читающего агента.
+ */
+function oneLine(text: string, max: number): string {
+  return text.replace(/\s+/g, ' ').trim().slice(0, max)
+}
 
 export async function GET() {
   // ТО ЖЕ правило, что у карты сайта: порода не рекламируется агентам. Иначе карта
@@ -42,7 +54,7 @@ export async function GET() {
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(indexableFilter())
     .orderBy(desc(templates.starsCount), desc(templates.updatedAt))
-    .limit(LISTED)
+    .limit(LLMS_LISTED)
 
   const lines = [
     '# SetFork',
@@ -61,14 +73,19 @@ export async function GET() {
     '## Lists',
     '',
     ...rows.map((r) => {
-      const title = tr(r.title, 'en') || r.slug
-      const desc = tr(r.desc, 'en')
+      // ⚠️ ОДНА СТРОКА НА СПИСОК — И ЭТО НАДО ОБЕСПЕЧИТЬ, а не предположить. Формат
+      // строчный, а название и описание правит автор: описание приходит из многострочного
+      // поля, и перевод строки внутри него ломает секцию `## Lists`, позволяя дописать в
+      // неё поддельную запись. Файл агенты читают как ЗАЯВЛЕНИЕ СЕТФОРКА о себе, поэтому
+      // цена подделки здесь выше обычной опечатки.
+      const title = oneLine(tr(r.title, 'en') || r.slug, 120)
+      const desc = oneLine(tr(r.desc, 'en'), 200)
       return `- [${title}](${SITE_ORIGIN}/${r.handle}/${r.slug})${desc ? `: ${desc}` : ''}`
     }),
     '',
     `## Full index`,
     '',
-    `- [llms-full.txt](${SITE_ORIGIN}/llms-full.txt): the same lists with their steps inlined`,
+    `- [llms-full.txt](${SITE_ORIGIN}/llms-full.txt): the first ${LLMS_INLINED} of these lists with their steps inlined`,
     `- [sitemap.xml](${SITE_ORIGIN}/sitemap.xml): every indexable address`,
     '',
   ]
