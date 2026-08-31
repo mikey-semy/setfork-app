@@ -37,7 +37,7 @@ const EXPECTED = [
   // предложения и проверки
   'pending_suggestions', 'apply_suggestion', 'suggest_edit', 'review_suggestion', 'merge_suggestion', 'revert_suggestion', 'report_check',
   // источники и прогоны
-  'register_source', 'list_sources', 'start_run', 'check_step',
+  'register_source', 'list_sources', 'start_run', 'check_step', 'report_run',
 ]
 
 describe('реестр MCP: состав', () => {

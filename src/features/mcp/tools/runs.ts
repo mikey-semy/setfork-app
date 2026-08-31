@@ -2,6 +2,7 @@ import 'server-only'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { db, runs, runStepState, steps, templates, templateVersions, users } from '@/shared/db'
 import { tr } from '@/shared/i18n'
+import { resolveListRefOrMoved } from './shared'
 import { canViewList } from '@/core'
 import { recordAgentAction } from '@/shared/agents/policy'
 import { recordRunCompletionIfDone } from '@/shared/completion'
@@ -124,4 +125,96 @@ export async function mcpCheckStep(userId: string, runId: string, stepN: number,
   // Все шаги отмечены → фиксируем прохождение курса (та же веха, что на сайте).
   await recordRunCompletionIfDone(userId, run)
   return mcpRunState(userId, runId)
+}
+
+/**
+ * ЗАПИСАТЬ ОТЧЁТ О ПРОГОНЕ версии — вход для внешнего прогонщика.
+ *
+ * Песочница живёт ВНЕ прода: исполнять чужие скрипты в прод-контейнере нельзя, это
+ * граница безопасности, а не оптимизация. Прод получает только результат — через этот
+ * инструмент.
+ *
+ * ⚠️ `runId` ОБЯЗАТЕЛЕН, и это не формальность. Отчёт называется воспроизводимым фактом;
+ * без прогона он превращается в утверждение «я это проверил», ничем не подкреплённое.
+ * Прогон существует, принадлежит тому же списку и той же версии — иначе отчёт
+ * рассказывал бы про одну версию, ссылаясь на прогон другой.
+ *
+ * ⚠️ `kind` ЗАФИКСИРОВАН МАШИННЫМ. Ручной уровень ставится ручкой в настройках списка,
+ * и позволить агенту записать `manual` значило бы дать ему выдать машинный прогон за
+ * человеческий — ровно то, что запрещает правило 5 спеки.
+ */
+export async function mcpReportRun(
+  userId: string,
+  input: {
+    list: string
+    runId: string
+    task: string
+    environment: Record<string, string>
+    steps: { n: number; status: 'pass' | 'fail' | 'skip'; note?: string }[]
+    verdict: 'works' | 'works_with_caveats' | 'fails'
+    notes?: string
+  },
+) {
+  const { recordVerificationReport } = await import('@/features/library/verification-report')
+  const { isCollaborator } = await import('@/features/collab/queries')
+
+  // Ссылку разбирает ОБЩИЙ резолвер — тот же, что у остальных инструментов: он знает и
+  // про «handle/slug», и про голый slug, и про переехавшие адреса. Свой разбор здесь
+  // был бы четвёртой копией правила и разошёлся бы на первом же переименовании.
+  const tpl = await resolveListRefOrMoved(input.list)
+  if (!tpl) return { error: 'list not found' }
+  // Отчёт — публичное утверждение о ЧУЖОМ списке, если его пишет посторонний. Право то
+  // же, что у постановки уровня: отвечает за метку тот, кто список ведёт.
+  if (tpl.ownerId !== userId && !(await isCollaborator(tpl.id, userId))) return { error: 'forbidden' }
+
+  // Текущая версия списка берётся ЗДЕСЬ, тем же запросом: `resolveListRefOrMoved` её не
+  // отдаёт, а расширять общую функцию ради одного вызывающего — плодить лишнее в шести
+  // других местах, которым это поле не нужно.
+  const [run] = await db
+    .select({
+      id: runs.id,
+      versionId: runs.versionId,
+      templateId: runs.templateId,
+      version: templateVersions.version,
+      listVersion: templates.currentVersion,
+    })
+    .from(runs)
+    .innerJoin(templateVersions, eq(templateVersions.id, runs.versionId))
+    .innerJoin(templates, eq(templates.id, runs.templateId))
+    .where(and(eq(runs.id, input.runId), eq(runs.templateId, tpl.id)))
+    .limit(1)
+  if (!run) return { error: 'run not found for this list — report must reference a real run' }
+
+  const res = await recordVerificationReport({
+    templateId: tpl.id,
+    versionId: run.versionId,
+    runId: run.id,
+    kind: 'machine',
+    task: input.task,
+    environment: input.environment,
+    steps: input.steps,
+    verdict: input.verdict,
+    notes: input.notes,
+    runnerId: userId,
+  })
+  // ⚠️ ГОВОРИМ, ЕСЛИ ПРОГОН БЫЛ НЕ ПО ПОСЛЕДНЕЙ ВЕРСИИ. Отчёт правильно ложится на СВОЮ
+  // версию и правильно поднимает ЕЁ уровень — «отчёт принадлежит версии» цел. Но список
+  // за это время мог уйти вперёд: агент прогнал v3, автор внёс правку, и на самом списке
+  // не меняется ничего. Запрещать такой отчёт нельзя (он честный), молчать — тоже:
+  // агент решил бы, что поручился за текущее состояние. Поэтому сообщаем факт, а
+  // решение оставляем ему.
+  const stale = run.version !== run.listVersion
+  return {
+    reportId: res.id,
+    raisedLevel: res.raisedLevel,
+    // Уровень не поднят по состоянию списка (заморожен/в архиве) — говорим прямо: агент
+    // иначе решит, что метка обновилась, и его отчёт за неё ручается.
+    ...('levelUnchanged' in res ? { levelUnchanged: res.levelUnchanged } : {}),
+    verdict: input.verdict,
+    reportedVersion: run.version,
+    currentVersion: run.listVersion,
+    ...(stale
+      ? { staleVersion: true, note: `This run was on v${run.version}; the list is now v${run.listVersion}. The report belongs to v${run.version} and does not vouch for the current one.` }
+      : {}),
+  }
 }

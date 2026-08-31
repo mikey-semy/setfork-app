@@ -77,13 +77,36 @@ export async function recordVerificationReport(input: ReportInput): Promise<{ id
       number: templateVersions.version,
       slug: templates.slug,
       ownerHandle: users.handle,
+      archivedAt: templates.archivedAt,
+      frozenAt: templates.frozenAt,
     })
     .from(templateVersions)
     .innerJoin(templates, eq(templates.id, templateVersions.templateId))
     .innerJoin(users, eq(users.id, templates.ownerId))
     .where(eq(templateVersions.id, input.versionId))
 
-  const raise = shouldRaise(version?.level ?? null, input.kind, input.verdict)
+  // ⚠️ ОТЧЁТ ПИШЕТСЯ ВСЕГДА, УРОВЕНЬ — НЕ ВСЕГДА, и это разные вопросы.
+  //
+  // Прогнать замороженный или архивный список законно: отчёт — append-only ФАКТ о том,
+  // что кто-то запустил и что вышло, и терять его незачем. А вот МЕТКА на таком списке
+  // меняться не должна: заморозка и архив означают «только чтение», и мы уже закрыли
+  // этот обход у ручной постановки уровня (#838) — второй вход обязан подчиняться тому
+  // же правилу, иначе правило не правило.
+  //
+  // Решается ЗДЕСЬ, а не в MCP-слое: тем же путём ходят веб и очередь, и дыра осталась
+  // бы у них.
+  const readOnly = !!version?.archivedAt || !!version?.frozenAt
+  // ⚠️ ПРИЧИНУ НАЗЫВАЕМ, ТОЛЬКО ЕСЛИ ОНА И ЕСТЬ ПРИЧИНА. Уровень не поднимается по
+  // разным поводам: версия уже выше (`crystal`), отчёт провальный, список «только
+  // чтение». Считаем СНАЧАЛА, поднялся бы он вообще, и лишь потом объясняем заморозкой —
+  // иначе агент на `crystal`-версии прочтёт «дело в заморозке» и поверит.
+  //
+  // Это тот же промах, что я убрал из подсказки подписи версии: назвать одну причину из
+  // нескольких — значит соврать во всех остальных случаях.
+  const would = shouldRaise(version?.level ?? null, input.kind, input.verdict)
+  const raise = would && !readOnly
+  const blockedBy =
+    would && readOnly ? (version?.archivedAt ? 'list is archived' : 'list is frozen') : null
   if (raise) {
     await db
       .update(templateVersions)
@@ -122,7 +145,9 @@ export async function recordVerificationReport(input: ReportInput): Promise<{ id
       captureError(e, { where: 'recordVerificationReport.revalidate', templateId: input.templateId })
     }
   }
-  return { id: row.id, raisedLevel: raise }
+  // Почему уровень не поднят — говорим вслух: молчание здесь читалось бы как «подняли»,
+  // а это тихая деградация ровно того сорта, что мы чиним по всему пути.
+  return { id: row.id, raisedLevel: raise, ...(blockedBy ? { levelUnchanged: blockedBy } : {}) }
 }
 
 
