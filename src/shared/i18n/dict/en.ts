@@ -754,7 +754,7 @@ export const en = {
   resetFilters: 'Reset filters',
   about: 'About',
   commitShaLabel: 'Commit {sha}',
-  commitShaMissing: 'This version has no commit: the list predates the git layer',
+  commitShaMissing: 'Version signature unavailable',
   currentVersion: 'current',
   viewVersion: 'View this version',
   defaultBranchHint: 'default branch',

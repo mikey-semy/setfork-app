@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { versionShaMap } from '@/features/library/version-sha'
 import { listStore } from '@/features/library/list-store'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -68,10 +69,12 @@ export default async function CommitsPage({
      * ядро его не наполнило, приходит пусто — и это законное состояние, а не ошибка.
      * Отказ ядра тоже не ломает страницу: история читается из Postgres и без подписей.
      */
-    listStore.listVersions(meta.id).catch(() => []),
+    // ⚠️ НЕ через `listStore`: фасад читает Postgres, пока не поднят флаг перехода, а в
+    // проекции SHA нет — поверхность показывала бы прочерк ВСЕГДА. Спрашиваем ядро
+    // точечно, ровно за подписью (см. `versionShaMap`).
+    versionShaMap(meta.id),
   ])
-  // Карта «версия → подпись»: строка истории спрашивает по номеру, а не ищет в списке.
-  const shaByVersion = new Map(versionShas.map((v) => [v.version, v.commitSha]))
+  const shaByVersion = versionShas
   const filtered = history.items
   const base = `/${owner}/${slug}`
   const versionsBase = `${base}/versions`

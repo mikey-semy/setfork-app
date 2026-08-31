@@ -746,7 +746,7 @@ export const ru: Record<DictKey, string> = {
   resetFilters: 'Сбросить фильтры',
   about: 'О списке',
   commitShaLabel: 'Коммит {sha}',
-  commitShaMissing: 'У этой версии нет коммита: список создан до git-слоя',
+  commitShaMissing: 'Подпись версии недоступна',
   currentVersion: 'текущая',
   viewVersion: 'Посмотреть версию',
   defaultBranchHint: 'главная ветка',
