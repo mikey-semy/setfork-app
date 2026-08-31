@@ -28,7 +28,7 @@ export function registerRuns({ readTool, writeTool }: ToolKit) {
     {
       title: 'Check off a run step',
       description:
-        'Report the outcome of a run step by its number (like a CI step). done true/false marks it passed/not; blocked true marks it failed, with reason for why. Report failures honestly: a run with an unreported failure claims the list works when it does not.',
+        'Report the outcome of a run step by its number (like a CI step). done true/false marks it passed/not; blocked true marks it failed, with reason for why. Report failures honestly: a run with an unreported failure claims the list works when it does not. Omitting done TOGGLES the step, and the updated run comes back in the response — you do not need get_run afterwards.',
       inputSchema: {
         runId: z.string().describe('The run id'),
         step: z.number().int().min(1).describe('Step number (1-based)'),
