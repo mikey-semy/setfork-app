@@ -863,7 +863,6 @@ export const en = {
   'verify.machineRun': 'run by machine',
   'verify.cut': 'key steps run',
   'verify.crystal': 'run end to end',
-  verifiedBadge: 'verified',
   detailed: 'Detailed',
   compact: 'Compact',
   markDone: 'Mark done',

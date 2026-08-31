@@ -1,8 +1,7 @@
 import Link from 'next/link'
-import { BadgeCheck, GitFork, PlayCircle, Tag } from 'lucide-react'
+import { GitFork, PlayCircle, Tag } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { t, type Lang } from '@/shared/i18n'
-import { Tooltip } from '@/shared/ui/Tooltip'
 import { LIST_VISIBILITY_BADGE, listVisibilityState } from './list-visibility'
 import { VerificationBadge } from './VerificationBadge'
 import type { FeedItem } from './queries'
@@ -34,15 +33,15 @@ export function ListCardMeta({ item, lang, className }: { item: FeedItem; lang: 
         <VisibilityIcon size={14} className="text-muted" />
         {t(visibility.labelKey, lang)}
       </span>
-      {item.verified && (
-        <Tooltip label={t('verifiedBadge', lang)}>
-          <span className="inline-flex items-center text-accent" aria-label={t('verifiedBadge', lang)}>
-            <BadgeCheck size={14} />
-          </span>
-        </Tooltip>
-      )}
-      {/* Уровень проверки ТЕКУЩЕЙ версии с датой (0018). Порода не рисуется — отсутствие
-          метки и есть «никто не проверял». */}
+      {/* Значка «проверен» здесь НЕТ и быть не должно: решение 0006 от 07.07.2026
+          («видимость = верификация») говорит прямо — публичного бейджа нет, потому что
+          видимый публичный список и есть прошедший проверку, а отдельный значок обещал
+          бы вторую, которой не существует. Флаг `verified` остаётся ВНУТРЕННИМ
+          инструментом модерации (админская таблица), и там значок на месте. */}
+      {/* А ВОТ УРОВЕНЬ ПРОВЕРКИ ВЕРСИИ (0018) — другая вещь и остаётся. Он говорит не
+          «сайт ручается», а «эту версию кто-то прогнал/сверил, вот когда»: у него есть
+          предмет и дата. Именно отсутствие предмета делало прежний значок обещанием без
+          содержания. Порода не рисуется — отсутствие метки и есть «никто не проверял». */}
       <VerificationBadge level={item.verificationLevel} verifiedAt={item.verifiedAt} lang={lang} />
       <Link href={`${base}/forks`} className="inline-flex items-center gap-1.5 hover:text-accent">
         <GitFork size={14} className="text-muted" /> {fmt(item.forksCount)}

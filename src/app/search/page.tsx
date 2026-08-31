@@ -53,7 +53,6 @@ export default async function SearchPage({
     tag?: string
     sort?: string
     e?: string
-    verified?: string
     type?: string
     scope?: string
     psort?: string
@@ -71,9 +70,9 @@ export default async function SearchPage({
   const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
   const peopleSort = (PEOPLE_SORTS.find((s) => s.key === sp.psort)?.key ?? 'followers') as PeopleSort
   const issueState = (ISSUE_STATES.find((s) => s.key === sp.state)?.key ?? 'open') as IssueStateFilter
-  const verified = sp.verified === '1'
   const type = sp.type === 'ordered' ? 'ordered' : sp.type === 'unordered' ? 'unordered' : undefined
-  // Квалификаторы из строки поиска (by:/tag:/is:/type:/stars:) + свободный текст.
+  // Квалификаторы из строки поиска (by:/tag:/type:/stars:) + свободный текст.
+  // `is:` снят вместе с публичным отбором «только проверенные» (решение 0006).
   const parsed = parseSearchQuery(sp.q ?? '')
   const typeQ = parsed.type ?? type
   const text = parsed.text.trim() || undefined
@@ -83,7 +82,6 @@ export default async function SearchPage({
   const listOpts = {
     tag: sp.tag,
     q: text,
-    verified: verified || parsed.verified || undefined,
     ordered: typeQ ? typeQ === 'ordered' : undefined,
     by: parsed.by,
     tags: parsed.tags.length ? parsed.tags : undefined,
@@ -109,7 +107,7 @@ export default async function SearchPage({
 
   // Отдаёт ПОЛНЫЙ адрес, а не хвост запроса (см. features/library/search-href).
   const qs = (over: Record<string, string | undefined>) =>
-    searchHref({ q: sp.q, tag: sp.tag, sort: sp.sort, verified: sp.verified, type: sp.type }, over)
+    searchHref({ q: sp.q, tag: sp.tag, sort: sp.sort, type: sp.type }, over)
   // Ссылки табов внутри scope people/issues (сохраняем свободный текст).
   const scopeTab = (extra: Record<string, string | undefined>) => {
     const p = new URLSearchParams()
@@ -279,7 +277,7 @@ export default async function SearchPage({
             <div className="mb-1.5 text-body-sm font-semibold text-ink">{t('proTip', lang)}</div>
             <p className="text-body-sm leading-relaxed text-muted">{t('proTipBody', lang)}</p>
             <div className="mt-2 wrap-break-word font-mono text-caption text-ink-2">
-              by:handle · tag:redis · is:verified · type:ordered · stars:&gt;100
+              by:handle · tag:redis · type:ordered · stars:&gt;100
             </div>
           </div>
           {tags.length > 0 && (

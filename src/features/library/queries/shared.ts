@@ -135,7 +135,10 @@ export function visibleFilter(viewerId?: string): SQL {
 
 /** Доп. фильтры ленты: уровень проверки, тип, автор (by), теги (AND), минимум звёзд. */
 export function extraFilters(opts: {
-  verified?: boolean
+  // ⚠️ Поля `verified` здесь НЕТ намеренно. Публичный отбор «только проверенные» снят
+  // решением 0006 вместе со значком: и то и другое обещало вторую проверку, которой не
+  // существует. Оставить опцию живой значило бы держать эту дверь приоткрытой — один
+  // новый вызывающий, и запрет обходится без единой узды на пути.
   /**
    * Минимальный уровень проверки ТЕКУЩЕЙ версии (решение 0018): «покажи то, что хотя бы
    * сверяли по источникам». Порядок уровней задан здесь, а не в вызывающем: иначе каждый
@@ -149,16 +152,6 @@ export function extraFilters(opts: {
   minStars?: number
 }): SQL[] {
   const f: SQL[] = []
-  if (opts.verified) f.push(eq(templates.verified, true))
-  if (opts.minVerification) {
-    const order = VERIFICATION_ORDER.slice(VERIFICATION_ORDER.indexOf(opts.minVerification))
-    f.push(sql`exists (
-      select 1 from template_versions v
-       where v.template_id = ${templates.id}
-         and v.version = ${templates.currentVersion}
-         and v.verification_level in (${sql.join(order.map((l) => sql`${l}`), sql`, `)})
-    )`)
-  }
   if (opts.ordered !== undefined) f.push(eq(templates.ordered, opts.ordered))
   if (opts.by) f.push(eq(users.handle, opts.by)) // users приджойнен в обоих режимах
   if (opts.minStars != null) f.push(gte(templates.starsCount, opts.minStars))

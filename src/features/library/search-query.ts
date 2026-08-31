@@ -1,17 +1,28 @@
 // Разбор строки поиска с квалификаторами (как на GitHub): `docker by:demo tag:redis
-// is:verified type:ordered stars:>100`. Всё, что не квалификатор — свободный текст.
+// type:ordered stars:>100`. Всё, что не квалификатор — свободный текст.
 // Чистая функция без БД — легко тестировать.
 
 export interface ParsedQuery {
   text: string
   by?: string // автор (owner/author/by)
   tags: string[] // tag:/topic:
-  verified?: boolean // is:verified
   type?: 'ordered' | 'unordered' // type:ordered
   minStars?: number // stars:>N
 }
 
-const KEY_RE = /^(by|owner|author|tag|topic|is|type|stars):(.*)$/i
+// ⚠️ `is` УБРАН ИЗ КЛЮЧЕЙ, а не просто лишён обработчика. Пока он оставался здесь без
+// своего `case`, разбор ПРОГЛАТЫВАЛ токен: сохранённая ссылка `/search?q=is:verified`
+// молча возвращала весь корпус — то есть отбор, снятый решением 0006, превращался в
+// «показать всё», а не в поиск по словам.
+//
+// Незнакомый квалификатор ведёт себя иначе и правильно: `foo:bar` не совпадает с этим
+// выражением и уходит в свободный текст. Именно так теперь и `is:verified` — человек
+// увидит поиск по фразе, а не подмену.
+//
+// Почему `is:verified` снят вообще: публичный отбор «только проверенные» — тот же знак,
+// что запрещён решением 0006, только фильтром. Он обещает вторую проверку сверх
+// видимости, а её нет. Флаг остаётся внутренним инструментом модерации.
+const KEY_RE = /^(by|owner|author|tag|topic|type|stars):(.*)$/i
 
 export function parseSearchQuery(raw: string): ParsedQuery {
   const out: ParsedQuery = { text: '', tags: [] }
@@ -34,9 +45,6 @@ export function parseSearchQuery(raw: string): ParsedQuery {
       case 'tag':
       case 'topic':
         out.tags.push(val.toLowerCase())
-        break
-      case 'is':
-        if (val.toLowerCase() === 'verified') out.verified = true
         break
       case 'type':
         if (val === 'ordered' || val === 'unordered') out.type = val
@@ -61,7 +69,6 @@ export function buildSearchQuery(p: ParsedQuery): string {
   if (p.text.trim()) parts.push(p.text.trim())
   if (p.by) parts.push(`by:${p.by}`)
   for (const tag of p.tags) parts.push(`tag:${tag}`)
-  if (p.verified) parts.push('is:verified')
   if (p.type) parts.push(`type:${p.type}`)
   if (p.minStars != null) parts.push(`stars:>${p.minStars}`)
   return parts.join(' ')

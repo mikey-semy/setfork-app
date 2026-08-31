@@ -51,7 +51,11 @@ describe('FeedCard', () => {
 
     expect(titleLine).toHaveClass('truncate', 'whitespace-nowrap')
     expect(version.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(status.closest('div')).toContainElement(screen.getByLabelText('проверен'))
+    // Значка «проверен» на карточке НЕТ, хотя флаг в фикстуре стоит: решение 0006
+    // («видимость = верификация») запрещает публичный бейдж, а этот тест раньше его
+    // закреплял. Проверяем при `verified: true` — иначе проверка проходила бы сама
+    // собой и ничего не сторожила.
+    expect(screen.queryByLabelText('проверен')).toBeNull()
     expect(container.firstElementChild?.firstElementChild).toHaveClass('border-b')
     expect(container.firstElementChild?.lastElementChild).toHaveClass('border-t')
   })
