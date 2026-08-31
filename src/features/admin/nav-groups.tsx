@@ -1,4 +1,4 @@
-import { BarChart3, Cpu, Flag, FolderGit2, LayoutDashboard, Megaphone, MessageSquare, Palette, Rss, ScrollText, Shield, Tag, TrendingUp } from 'lucide-react'
+import { BarChart3, Cpu, Flag, FolderGit2, LayoutDashboard, Megaphone, MessageSquare, Palette, Rss, ScrollText, Shield, Sparkles, Tag, TrendingUp } from 'lucide-react'
 import { t, tr, type Lang } from '@/shared/i18n'
 import type { AdminNavGroup } from './AdminNav'
 import { adminSettingsSections } from './settings-sections'
@@ -36,6 +36,7 @@ export function adminNavGroups(lang: Lang): AdminNavGroup[] {
         { href: '/admin/moderation', label: t('admin.moderation', lang), icon: <Shield size={14} /> },
         { href: '/admin/reports', label: t('reports', lang), icon: <Flag size={14} /> },
         { href: '/admin/feedback', label: t('feedback', lang), icon: <MessageSquare size={14} /> },
+        { href: '/admin/pro-interest', label: t('admin.proInterest', lang), icon: <Sparkles size={14} /> },
       ],
     },
   ]

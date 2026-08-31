@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, Link2, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Unlink, Wrench } from 'lucide-react'
+import { AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, Link2, LogOut, Mail, ShieldCheck, ShieldX, Sparkles, Trash2, Unlink, Wrench } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, type Lang, type TKey } from '@/shared/i18n'
@@ -27,6 +27,7 @@ const META: Record<AuditAction, { icon: typeof KeyRound; label: TKey; cls: strin
   'list.transfer-accept': { icon: GitCommitVertical, label: 'audit.listTransferAccept', cls: 'text-warn' },
   'git.push': { icon: GitCommitVertical, label: 'audit.gitPush', cls: 'text-ink-2' },
   'git.suggest': { icon: GitCommitVertical, label: 'audit.gitSuggest', cls: 'text-ink-2' },
+  'pro.interest': { icon: Sparkles, label: 'audit.proInterest', cls: 'text-accent' },
   'session.revoke': { icon: LogOut, label: 'audit.sessionRevoke', cls: 'text-ink-2' },
   'session.revoke_others': { icon: LogOut, label: 'audit.sessionRevoke_others', cls: 'text-ink-2' },
   '2fa.enable': { icon: ShieldCheck, label: 'audit.2faEnable', cls: 'text-ok' },
