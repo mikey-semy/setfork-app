@@ -3,6 +3,7 @@
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
 import type { Metadata } from 'next'
+import { canonicalPageParam, pageHref } from '@/shared/lib/paging'
 import { breadcrumbList, JsonLd, profilePage } from '@/shared/seo/jsonld'
 import { BookOpen, FolderGit2, ListChecks, Star, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
@@ -20,9 +21,25 @@ import { ProfileOverview } from './ProfileOverview'
 import { ProfileCatalogCard } from '@/features/catalogs/ProfileCatalogCard'
 
 // Заголовок вкладки: «Имя (handle)» как в GitHub (layout добавит « · SetFork»).
-export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
-  const { handle } = await params
-  const canonical = `/${handle}`
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ handle: string }>
+  searchParams: Promise<ProfileSearchParams>
+}): Promise<Metadata> {
+  const [{ handle }, sp] = await Promise.all([params, searchParams])
+  // Профиль ЛИСТАЕТСЯ и имеет вкладки, поэтому canonical несёт и то и другое: страница 3
+  // со вкладкой «подписчики» — отдельное содержимое, и указывать с неё на голый `/handle`
+  // значит сказать обходчику «всё это уже описано там».
+  //
+  // Прочие параметры (отбор, сортировка, месяц) canonical НЕ несёт намеренно: они дают
+  // тот же корпус в другом порядке или срезе, и каждый их набор в индексе — дубль. Так же
+  // поступают GitHub и Gitea: вкладка и страница адресуемы, сортировка нет.
+  // Параметры адреса могут прийти массивом (`?tab=a&tab=b`) — берём первое значение:
+  // canonical обязан быть одной строкой, а не склейкой повторов.
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
+  const canonical = pageHref(`/${handle}`, { tab: one(sp.tab) })(canonicalPageParam(one(sp.page)))
   const user = await getUserByHandle(handle)
   if (!user) return { title: handle, alternates: { canonical } }
   // Приватный профиль не раскрываем в мете (og:title/desc) чужим — только сам ник.

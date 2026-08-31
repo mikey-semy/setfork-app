@@ -22,6 +22,7 @@ import { describe, expect, it } from 'vitest'
  */
 
 const FEATURES = 'src/features'
+const APP = 'src/app'
 
 /** Файлы запросов: где живут выдачи. */
 const isQueryFile = (p: string): boolean =>
@@ -132,5 +133,58 @@ describe('дисциплина листания', () => {
           .map(({ line, n }) => `${p}:${n} ${line}`),
       )
     expect(handmade).toEqual([])
+  })
+})
+
+/**
+ * ТРЕТЬЕ ПРАВИЛО: у страницы с листалкой canonical указывает НА СЕБЯ.
+ *
+ * Страница 2 обязана канонизировать `?page=2`. Указать на первую — значит сказать
+ * обходчику «всё содержимое уже описано там», и списки со второй страницы не попадают
+ * в индекс вовсе: их канонический адрес показывает другое.
+ *
+ * Проверяется КЛАСС: если страница читает `page` из адреса и объявляет canonical, тот
+ * обязан строиться через `canonicalPage`. Рукописная строка тем и опасна, что выглядит
+ * правильной — `/tags/x` вместо `/tags/x?page=2` ошибкой не смотрится.
+ */
+const PAGED_WITH_CANONICAL = (): string[] => {
+  const bad: string[] = []
+  for (const file of walk(APP)) {
+    if (!file.endsWith('page.tsx')) continue
+    const src = readFileSync(file, 'utf8')
+    if (!/pageFromParam\(/.test(src)) continue // листалки нет — правило не о ней
+    // ⚠️ И СОКРАЩЁННАЯ ФОРМА ТОЖЕ. `alternates: { canonical }` — так написаны профиль и
+    // подборки; проверка на `canonical:` их не видела и молча пропускала.
+    if (!/canonical:/.test(src) && !/\{\s*canonical\s*\}/.test(src)) continue
+    // ⚠️ СМОТРИМ НА СТРОКУ С `canonical`, а не на файл целиком. Файл листалки почти
+    // всегда содержит `pageHref` — для самой листалки, — и проверка «построитель где-то
+    // есть» проходила бы при рукописном canonical рядом. Поймано снятием правила: гвард
+    // остался зелёным на дефекте, ради которого написан.
+    const canonLines = src
+      .split('\n')
+      .filter((l) => /canonical/.test(l) && !l.trimStart().startsWith('//') && !l.trimStart().startsWith('*'))
+    const built = canonLines.some((l) => /canonicalPage\(|pageHref\(/.test(l))
+    if (!built) bad.push(file.slice(file.indexOf('src/')))
+  }
+  return bad
+}
+
+describe('canonical листалки указывает на себя', () => {
+  it('страницы с номером страницы строят canonical через общий построитель', () => {
+    expect(PAGED_WITH_CANONICAL(), 'canonical со страницы листалки обязан нести свой ?page=').toEqual([])
+  })
+
+  // ⚠️ АНТИ-ВЫРОЖДЕНИЕ. Проверка выше зелёная и когда всё верно, и когда она перестала
+  // находить страницы вовсе — например, после переименования помощника или переноса
+  // папки. Пустая выборка не отличима от чистой; поэтому спрашиваем отдельно, что
+  // предмет проверки существует.
+  //
+  // ⚠️ ПРЕДЕЛ, названный вслух: страницы, у которых листание живёт в отдельном `load.ts`
+  // (профиль), проверка не видит — `pageFromParam` там, а `canonical` здесь. Расширять
+  // до разбора соседних файлов дорого и хрупко; вместо этого предел записан, чтобы
+  // следующий не принял тишину за подтверждение.
+  it('проверке есть что проверять', () => {
+    const paged = walk(APP).filter((f) => f.endsWith('page.tsx') && /pageFromParam\(/.test(readFileSync(f, 'utf8')))
+    expect(paged.length, 'страниц с листалкой не найдено — проверка выше проверяет пустоту').toBeGreaterThan(2)
   })
 })
