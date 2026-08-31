@@ -33,5 +33,18 @@ export const SHOW_FAILED_REPORTS_PUBLICLY = true
 
 /** Окружение одной строкой для метки: «claude-code 2.x · ubuntu 24.04». */
 export function envLine(environment: Record<string, string>): string {
-  return Object.values(environment).filter(Boolean).join(' · ').slice(0, 200)
+  // ⚠️ ПОРЯДОК КАНОНИЗИРУЕМ ЗДЕСЬ, а не полагаемся на порядок входа. Один и тот же
+  // объект приходит сюда ДВАЖДЫ и в РАЗНОМ порядке: при записи — как прислал агент
+  // (порядок вставки), при показе — распарсенным из `jsonb`, где Postgres пересортировал
+  // ключи (сначала по длине, потом побайтово). `{runner, os}` давало «claude-code · ubuntu»
+  // в `verified_env` и «ubuntu · claude-code» в строке отчёта — на одной и той же странице.
+  //
+  // Общего построителя для этого МАЛО: он выравнивает преобразование, а не порядок входов.
+  // Поэтому сортируем ключи — тогда строка зависит только от содержимого.
+  return Object.keys(environment)
+    .sort()
+    .map((k) => environment[k])
+    .filter(Boolean)
+    .join(' · ')
+    .slice(0, 200)
 }

@@ -158,3 +158,45 @@ describe('скрытые провалы не подменяют историю',
     vi.doUnmock('@/features/library/report-visibility')
   })
 })
+
+/**
+ * ⚠️ СТРОКА ОКРУЖЕНИЯ ОДНА И ТА ЖЕ С ОБЕИХ СТОРОН.
+ *
+ * Один объект приходит в `envLine` дважды и в РАЗНОМ порядке: при записи — как прислал
+ * агент, при показе — распарсенным из `jsonb`, где Postgres пересортировал ключи. Общего
+ * построителя для этого мало: он выравнивает преобразование, а не порядок входов.
+ *
+ * Поэтому ключи задаются здесь в «неправильном» порядке вставки — и обе стороны обязаны
+ * совпасть побайтово.
+ */
+describe('окружение печатается одинаково при записи и при показе', () => {
+  it('порядок ключей на входе не влияет на строку', async () => {
+    const { envLine } = await import('@/features/library/report-visibility')
+    const asAgentSent = { runner: 'claude-code 2.x', os: 'ubuntu 24.04' }
+    const asPostgresReturns = { os: 'ubuntu 24.04', runner: 'claude-code 2.x' }
+    expect(envLine(asAgentSent)).toBe(envLine(asPostgresReturns))
+  })
+
+  it('записанная метка совпадает с тем, что покажет строка отчёта', async () => {
+    const { recordVerificationReport, latestReport } = await import('@/features/library/verification-report')
+    const { envLine } = await import('@/features/library/report-visibility')
+    const { templateId, versionId } = await version('env-order', 'rock')
+    // Порядок как у агента: длинный ключ первым — именно его Postgres переставит.
+    const environment = { runner: 'claude-code 2.x', os: 'ubuntu 24.04' }
+    await recordVerificationReport({
+      templateId,
+      versionId,
+      kind: 'machine',
+      task: 'проверка порядка',
+      environment,
+      steps: [{ n: 1, status: 'pass' }],
+      verdict: 'works',
+    })
+    const [row] = await db
+      .select({ env: templateVersions.verifiedEnv })
+      .from(templateVersions)
+      .where(eq(templateVersions.id, versionId))
+    const shown = await latestReport(versionId)
+    expect(envLine(shown!.environment as Record<string, string>)).toBe(row.env)
+  })
+})
