@@ -2387,7 +2387,14 @@ export const proInterest = pgTable(
     note: text('note').notNull().default(''),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('pro_interest_created_idx').on(t.createdAt)],
+  (t) => [
+    index('pro_interest_created_idx').on(t.createdAt),
+    // ⚠️ ОДНА ЗАЯВКА НА ПОЧТУ — ПРАВИЛОМ БАЗЫ, а не проверкой перед вставкой. Проверка и
+    // вставка — два шага, между ними влезает второе обращение, и в списке админки
+    // появляются дубли (счёт «сколько людей» их переживал — он по distinct, — а вот
+    // человек, читающий список, видел одно и то же дважды).
+    uniqueIndex('pro_interest_email_uq').on(t.email),
+  ],
 )
 
 // ── Content reports (жалобы на списки) ───────────────────────────────

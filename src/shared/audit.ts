@@ -1,7 +1,7 @@
 import 'server-only'
-import { headers } from 'next/headers'
 import { auditLog, db } from '@/shared/db'
 import { captureError } from '@/shared/observability'
+import { requestIp } from '@/shared/request-ip'
 
 // Журнал аудита: кто что сделал с чувствительными объектами (токены, списки,
 // пуши, сессии, модерация). Best-effort — не роняет вызывающего.
@@ -43,29 +43,6 @@ export type AuditAction =
   | 'auth.identity-link'
   | 'auth.identity-unlink'
 
-/**
- * IP из заголовков запроса — или null, если запроса нет.
- *
- * ⚠️ Именно try/catch, а не `headers().catch(...)`. Вне области запроса (фоновая
- * задача, приём git-push, инструмент MCP, тест) отказ приходит ДВУМЯ разными
- * способами: иногда отклонённым промисом, а иногда синхронным броском — до того, как
- * промис вообще появится. `.catch` покрывает только первый; во втором исключение
- * улетало в общий перехват и отменяло ЗАПИСЬ ЦЕЛИКОМ, то есть журнал молча терял
- * событие ровно там, где человека рядом нет и заметить некому.
- *
- * Найдено 28.08.2026 тестом массового одобрения. Сначала я записал причину как «бросает
- * синхронно» — и мутация это опровергла: в чистом окружении сработал бы и `.catch`.
- * Верно более слабое и более полезное: способ отказа НЕ ГАРАНТИРОВАН, поэтому ловить
- * надо оба.
- */
-async function requestIp(): Promise<string | null> {
-  try {
-    const h = await headers()
-    return (h.get('x-forwarded-for') ?? '').split(',')[0].trim() || null
-  } catch {
-    return null
-  }
-}
 
 export async function recordAudit(
   action: AuditAction,

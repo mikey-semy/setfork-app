@@ -7,7 +7,7 @@ import { t } from '@/shared/i18n'
 import { PAGE } from '@/shared/ui/control'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { EmptyState } from '@/shared/ui/EmptyState'
-import { countProInterest } from '@/features/monetization/pro-interest'
+import { countProInterest } from '@/features/monetization/queries'
 
 /**
  * ЗАЯВКИ «ХОЧУ PRO» — витрина замера спроса (решение 0021).

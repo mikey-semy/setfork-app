@@ -58,13 +58,14 @@ export function NewListForm({
    * ровно как и должен: ограничение никуда не делось от того, что человек оставил почту.
    */
   const [quotaSeen, setQuotaSeen] = useState(false)
-  const [quotaLimit, setQuotaLimit] = useState<number | null>(null)
   useEffect(() => {
-    if (refusal?.kind === 'list_quota') {
-      setQuotaSeen(true)
-      setQuotaLimit(refusal.limit)
-    }
+    if (refusal?.kind === 'list_quota') setQuotaSeen(true)
   }, [refusal])
+  // ⚠️ ПРЕДЕЛ ЧИТАЕТСЯ ПРЯМО ИЗ ОТКАЗА, а не через состояние. В `useEffect` он попадал
+  // ПОСЛЕ первого кадра, и человек успевал прочесть «предел в 0 списков» — число,
+  // которого не бывает. Отказ уже несёт всё нужное; заводить для этого состояние значит
+  // добавить кадр, на котором мы говорим неправду.
+  const quotaLimit = refusal?.kind === 'list_quota' ? refusal.limit : null
 
   // Набранное переживает отказ: форма React сбрасывает неуправляемые поля сама.
   const { formRef, onSubmit } = useKeepFormValues(refusal !== null, pending)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState, useTransition } from 'react'
+import { useActionState, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { buttonClass } from '@/shared/ui/button-style'
@@ -38,11 +38,14 @@ import { expressProInterest, type ProInterestResult } from './pro-interest'
  */
 export function ProInterestForm({ source, lang }: { source: string; lang: Lang }) {
   const [email, setEmail] = useState('')
-  const [state, dispatch] = useActionState<ProInterestResult | null, FormData>(
+  // ⚠️ `pending` — ТРЕТЬЕ значение `useActionState`, а не отдельный переход. Внешний
+  // `useTransition` оставался false всё время запроса: колбэк был синхронным и лишь
+  // ставил вызов в очередь, а свой переход React заводит внутри. Кнопка не блокировалась,
+  // и человек не получал никакого отклика на нажатие.
+  const [state, dispatch, pending] = useActionState<ProInterestResult | null, FormData>(
     (_prev, fd) => expressProInterest(source, fd),
     null,
   )
-  const [pending, start] = useTransition()
 
   if (state && 'ok' in state) {
     return (
@@ -53,12 +56,11 @@ export function ProInterestForm({ source, lang }: { source: string; lang: Lang }
     )
   }
 
-  const send = () =>
-    start(() => {
-      const fd = new FormData()
-      fd.set('email', email)
-      dispatch(fd)
-    })
+  const send = () => {
+    const fd = new FormData()
+    fd.set('email', email)
+    dispatch(fd)
+  }
 
   return (
     <div className="mt-3">
@@ -66,7 +68,12 @@ export function ProInterestForm({ source, lang }: { source: string; lang: Lang }
       {/* Колонка на мобиле: поле и кнопка в строку на 390px не помещаются. */}
       <div className="flex flex-col gap-2 sm:flex-row">
         <Input
-          type="email"
+          // ⚠️ НЕ `type="email"`. Поле стоит ВНУТРИ формы создания списка, и нативная
+          // проверка браузера распространяется на всю форму: недописанный адрес в этом
+          // поле блокировал отправку САМОЙ ФОРМЫ — человек нажимал «Создать» и получал
+          // подсказку у чужого поля. Отсутствие `name` от проверки не спасает.
+          type="text"
+          inputMode="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={t('pro.emailPh', lang)}

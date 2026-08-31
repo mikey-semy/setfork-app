@@ -34,7 +34,8 @@ beforeEach(async () => {
 
 describe('заявка «хочу Pro»', () => {
   it('первая заявка записывается, повторная с той же почты — нет', async () => {
-    const { expressProInterest, countProInterest } = await import('@/features/monetization/pro-interest')
+    const { expressProInterest } = await import('@/features/monetization/pro-interest')
+    const { countProInterest } = await import('@/features/monetization/queries')
     const before = await countProInterest()
 
     expect(await expressProInterest('list_quota', form('a@pi-test.local'))).toEqual({ ok: true, already: false })
@@ -62,5 +63,25 @@ describe('заявка «хочу Pro»', () => {
     await expressProInterest('list_quota', form('c@pi-test.local'))
     const [row] = await db.select({ s: proInterest.source }).from(proInterest).where(eq(proInterest.email, 'c@pi-test.local'))
     expect(row.s).toBe('list_quota')
+  })
+  it('ограничитель считает ГОСТЯ, а не почту — иначе замер подделывается', async () => {
+    // ⚠️ Ключ по почте не мешал ровно тому, ради чего написан: почту задаёт сам
+    // вызывающий, и скрипт с сотней разных адресов набивал сотню строк. Хуже того, он
+    // накручивал бы порог «двадцать РАЗНЫХ людей», по которому принимается решение о
+    // деньгах (0021): подделывался не лимит, а сам замер.
+    //
+    // Гость без заголовков попадает в общее ведро `unknown` — строже, а не мягче.
+    const { expressProInterest } = await import('@/features/monetization/pro-interest')
+    const { countProInterest } = await import('@/features/monetization/queries')
+
+    const before = await countProInterest()
+    const results: string[] = []
+    for (let i = 0; i < 7; i++) {
+      const res = await expressProInterest('list_quota', form(`spam${i}@pi-test.local`))
+      results.push('error' in res ? String(res.error) : 'ok')
+    }
+
+    expect(results, 'семь разных почт подряд с одного места — не семь разных людей').toContain('ratelimited')
+    expect(await countProInterest(), 'замер не должен вырасти на все семь').toBeLessThan(before + 7)
   })
 })
