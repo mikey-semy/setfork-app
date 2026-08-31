@@ -117,7 +117,6 @@ export async function middleware(req: NextRequest) {
   const legacy = legacyExploreTarget(req.nextUrl)
   if (legacy) return NextResponse.redirect(new URL(legacy, req.url), 308)
 
-
   // ПРОБЫ ПРОПУСКАЕМ ДО обращения к БД. `maintenanceEnabled()` ходит в ту же
   // базу и своего потолка ожидания не имеет: при исчерпанном пуле или зависшем
   // (а не отказавшем) соединении запрос ждёт до таймаута получения клиента —

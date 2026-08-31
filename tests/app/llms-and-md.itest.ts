@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, templates, templateVersions, users } from '@/shared/db'
+import { SITE_ORIGIN } from '@/shared/site'
 
 /**
  * МАШИНОЧИТАЕМЫЕ ВЫХОДЫ: одно правило индексации и один рендерер.
@@ -23,6 +24,25 @@ beforeEach(async () => {
   const [u] = await db.insert(users).values({ handle: OWNER, name: OWNER }).returning({ id: users.id })
   ctx.owner = u.id
 })
+
+/** То же, что `published`, но с ЗАДАННЫМ заголовком — для проверок подделки разметкой. */
+async function publishedTitled(slug: string, level: 'rock' | 'crystal', title: string) {
+  const [t] = await db
+    .insert(templates)
+    .values({
+      ownerId: ctx.owner,
+      slug,
+      title: { en: title },
+      currentVersion: 1,
+      visibility: 'public',
+      status: 'published',
+      moderation: 'active',
+      starsCount: 5,
+    })
+    .returning({ id: templates.id })
+  await db.insert(templateVersions).values({ templateId: t.id, version: 1, verificationLevel: level })
+  return t.id
+}
 
 async function published(slug: string, level: 'rock' | 'crystal', desc?: string) {
   const [t] = await db
@@ -63,6 +83,26 @@ describe('llms.txt', () => {
     }
     // И обе стороны непусты — иначе равенство выполнялось бы на пустоте.
     expect(urls.some((u) => u.endsWith(`/${OWNER}/lm-good`)), 'карта пуста — сравнивать нечего').toBe(true)
+  })
+
+  it('заголовок с разметкой НЕ даёт ссылки на чужой домен', async () => {
+    // ⚠️ Вторая дорога к подделке, и она хуже переноса строки: название вставляется
+    // внутрь `[...]`, поэтому заголовок вида `Мой список](https://evil.example/phish`
+    // даёт `- [Мой список](https://evil.example/phish](https://setfork.com/...)` —
+    // разбирающий markdown агент увидит ссылку на ЧУЖОЙ домен, подписанную нашим
+    // названием. Проверяем не отсутствие символов, а СВОЙСТВО: каждая ссылка в секции
+    // ведёт на наш origin.
+    await publishedTitled('lm-markdown', 'crystal', 'Мой список](https://evil.example/phish')
+
+    const { GET } = await import('@/app/llms.txt/route')
+    const text = await (await GET()).text()
+    const links = [...text.matchAll(/\]\(([^)]+)\)/g)].map((m) => m[1])
+
+    expect(links.length, 'ссылок в файле нет — проверять нечего').toBeGreaterThan(0)
+    for (const href of links) {
+      expect(href.startsWith(SITE_ORIGIN), `ссылка на чужой домен: ${href}`).toBe(true)
+    }
+    expect(text).not.toContain('evil.example/phish)')
   })
 
   it('описание в две строки НЕ ломает формат и не даёт дописать запись', async () => {

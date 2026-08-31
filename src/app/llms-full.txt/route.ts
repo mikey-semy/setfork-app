@@ -36,13 +36,6 @@ import { SITE_ORIGIN } from '@/shared/site'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-/**
- * Сколько списков вкладывать целиком. Файл читают модели с ограниченным окном, и
- * бесконечная выгрузка корпуса делает его бесполезным для всех: указатель уже есть в
- * `llms.txt`, а за остальным — ссылки.
- */
-
-
 export async function GET() {
   const rows = await db
     .select({ handle: users.handle, slug: templates.slug })
