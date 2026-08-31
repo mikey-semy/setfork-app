@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest'
 import { registerTools } from '@/features/mcp/registry'
 
-type Captured = { name: string; config: { annotations?: Record<string, unknown> }; cb: (args: unknown, extra: unknown) => Promise<{ content: { text: string }[]; isError?: boolean }> }
+type Captured = { name: string; config: { description?: string; annotations?: Record<string, unknown> }; cb: (args: unknown, extra: unknown) => Promise<{ content: { text: string }[]; isError?: boolean }> }
 
 function collect(): Captured[] {
   const tools: Captured[] = []
@@ -119,5 +119,47 @@ describe('реестр MCP: вшитая авторизация', () => {
       expect(res.isError, `${t.name} ответил анониму`).toBe(true)
       expect(res.content[0].text).toBe('Unauthorized')
     }
+  })
+})
+
+/**
+ * ОПИСАНИЯ — ЭТО ДОКУМЕНТАЦИЯ ДЛЯ АГЕНТА, а не подпись к кнопке.
+ *
+ * Агент выбирает инструмент и строит вызов по одному тексту: если там не сказано, что у
+ * списка есть ВЕРСИЯ, он будет считать ref неподвижным; если не сказано про baseVersion —
+ * перезапишет чужую правку и не узнает об этом.
+ *
+ * Проверяются два свойства, которые ломаются молча:
+ *  1) описание есть и оно не заглушка — пустое поле в реестре не падает нигде;
+ *  2) там, где агент работает с содержимым списка, версия названа. Это ловится не
+ *     вычиткой, а списком: инструмент добавили — либо он в списке и обязан говорить о
+ *     версии, либо его туда осознанно не внесли.
+ */
+const MUST_MENTION_VERSION = [
+  'get_list',
+  'create_list',
+  'update_list',
+  'patch_list',
+  'publish_draft',
+  'suggest_edit',
+  'apply_suggestion',
+  'merge_suggestion',
+  'search_lists',
+]
+
+describe('описания инструментов', () => {
+  const tools = collect()
+
+  it('у каждого инструмента есть непустое описание', () => {
+    const bad = tools.filter((t) => (t.config.description ?? '').trim().length < 40).map((t) => t.name)
+    expect(bad, 'описание — единственное, по чему агент выбирает инструмент').toEqual([])
+  })
+
+  it('инструменты, работающие с содержимым списка, называют версию', () => {
+    const silent = MUST_MENTION_VERSION.filter((name) => {
+      const d = tools.find((t) => t.name === name)?.config.description ?? ''
+      return !/version/i.test(d)
+    })
+    expect(silent, 'без слова о версии агент считает ref неподвижным').toEqual([])
   })
 })

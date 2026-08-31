@@ -11,7 +11,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
     {
       title: 'Create a list',
       description:
-        'Create a new list owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site. Items can be plain steps or richer blocks (text, image, poll, video, quiz) — set each item\'s "type". Content language is auto-detected (or pass "lang"); the slug is generated from the title (Cyrillic is transliterated). Per-step "subtasks" are VERIFICATION CHECKS shown to the person doing the step — phrase them as checkable conditions, not sub-steps. If you need an existing list\'s ref, call search_lists first.',
+        'Create a new list owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site. Publishing makes version 1; every later edit makes the next version, and old ones stay readable. Items can be plain steps or richer blocks (text, image, poll, video, quiz) — set each item\'s "type". Content language is auto-detected (or pass "lang"); the slug is generated from the title (Cyrillic is transliterated). Per-step "subtasks" are VERIFICATION CHECKS shown to the person doing the step — phrase them as checkable conditions, not sub-steps. If you need an existing list\'s ref, call search_lists first.',
       inputSchema: {
         title: z.string().describe('List title'),
         lang: z.enum(['en', 'ru']).optional().describe('Content language; omit to auto-detect from the title/description'),

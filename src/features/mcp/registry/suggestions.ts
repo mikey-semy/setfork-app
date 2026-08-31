@@ -9,7 +9,7 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
     'pending_suggestions',
     {
       title: 'Suggested edits waiting for you',
-      description: 'List the OPEN suggested edits on lists you own — what is waiting for your decision. Use apply_suggestion to accept one.',
+      description: 'List the OPEN suggested edits on lists you own — what is waiting for your decision. Accepting one with apply_suggestion (or merge_suggestion) makes a new version of the list; rejecting leaves the list untouched.',
       inputSchema: { limit: z.number().int().min(1).max(50).optional().describe('Max results (default 20)') },
     },
     async (userId, { limit }) => json(await mcpPendingSuggestions(userId, limit ?? 20)),
@@ -35,7 +35,7 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
     {
       title: 'Suggest an edit to a list',
       description:
-        "Propose a change to someone else's list: it becomes a suggestion the owner can accept or reject. The items you pass REPLACE the list content when accepted, so send the full intended list, not just the new lines. Use get_list first to see what is there. For your own lists use update_list instead — it edits directly.",
+        "Propose a change to someone else's list: it becomes a suggestion the owner can accept or reject. The items you pass REPLACE the list content when accepted, so send the full intended list, not just the new lines. Use get_list first to see what is there — its \"version\" tells you which bytes you are proposing against, and blocks keep their \"bid\" across versions, so per-block comments and diffs stay attached. For your own lists use update_list instead — it edits directly.",
       inputSchema: {
         list: z.string().describe('List reference: "handle/slug" or just "slug"'),
         note: z.string().describe('What you changed and why — the owner reads this first'),
