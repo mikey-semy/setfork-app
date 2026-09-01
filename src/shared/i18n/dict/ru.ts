@@ -1205,6 +1205,7 @@ export const ru: Record<DictKey, string> = {
   makePublicEffects: 'Список станет виден всем в обзоре и поиске и пройдёт повторную проверку модерации перед показом.',
   publishList: 'Опубликовать список',
   publishAvailableHint: 'Этот список можно опубликовать',
+  translateAvailableHint: 'Этот список можно перевести',
   publishListEffects: 'Список перестанет быть черновиком и начнёт жить по своей видимости. Публичный пройдёт проверку модерации перед показом в обзоре и поиске.',
   visibilityAfterPublishPublic: 'После публикации список станет публичным.',
   visibilityAfterPublishPrivate: 'После публикации список останется приватным.',

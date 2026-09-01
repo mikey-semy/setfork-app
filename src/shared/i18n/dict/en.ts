@@ -1213,6 +1213,7 @@ export const en = {
   makePublicEffects: 'The list becomes visible to everyone in explore and search, and is re-checked by moderation before it appears.',
   publishList: 'Publish this list',
   publishAvailableHint: 'You can publish this list',
+  translateAvailableHint: 'This list can be translated',
   publishListEffects: 'The list stops being a draft and starts living by its visibility setting. A public one is re-checked by moderation before it appears in explore and search.',
   visibilityAfterPublishPublic: 'Once published it will be public.',
   visibilityAfterPublishPrivate: 'Once published it will stay private.',

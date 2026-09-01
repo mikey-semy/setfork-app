@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { StatTile } from '@/shared/ui/StatTile'
+import { HintDot } from '@/shared/ui/HintDot'
 import type { LiveMetrics } from './dashboard-types'
 import { useLiveMetrics } from './use-live-metrics'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
@@ -37,7 +38,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
       <div className="flex items-center justify-between">
         <SectionLabel as="h2" size="body">{t('admin.now', lang)}</SectionLabel>
         <span className="flex items-center gap-1.5 text-caption text-muted">
-          <span className={`inline-block h-1.5 w-1.5 rounded-full ${stale ? 'bg-warn' : 'bg-ok'}`} />
+          <HintDot place="inline" tone={stale ? 'warn' : 'ok'} />
           {stale ? t('admin.reconnecting', lang) : t('admin.live', lang)}
         </span>
       </div>
