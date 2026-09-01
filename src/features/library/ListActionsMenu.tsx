@@ -13,6 +13,7 @@ import { toast } from '@/shared/ui/toast'
 import { publishList } from './actions/versions'
 import { translateList } from './actions/ai'
 import { IconButton } from '@/shared/ui/IconButton'
+import { HintDot } from '@/shared/ui/HintDot'
 
 /**
  * Вторичные действия панели списка: правка, перевод, публикация черновика.
@@ -36,10 +37,44 @@ interface MenuAction {
   Icon: LucideIcon
   href?: string
   onSelect?: () => void
+  /** Пункт помечен точкой, пока действие не применили. */
+  hint?: Hint
 }
 
-type PublishHint = { templateId: string; phase: 'visible' | 'popping' } | null
-const publishHintKey = (templateId: string) => `sf:publish-hint:${templateId}`
+/**
+ * ПОДСКАЗКА ЖИВЁТ НА ПУНКТЕ, А НЕ НА КНОПКЕ МЕНЮ.
+ *
+ * Точка на кнопке «Ещё действия» гасла в момент открытия меню — ровно тогда, когда
+ * человек впервые получал шанс увидеть, О ЧЁМ она была. Внутри его встречал обычный
+ * список пунктов, и подсказка расходовалась впустую (жалоба владельца).
+ *
+ * Теперь у подсказки две части. Точка на КНОПКЕ зовёт открыть меню и гаснет от
+ * открытия — свою работу она сделала. Точки на ПУНКТАХ показывают, что именно
+ * доступно, и держатся, пока действие не применили: пока черновик не опубликован,
+ * «Опубликовать» помечено. Кнопка при этом больше не мигает — иначе черновик,
+ * лежащий месяцами, дёргал бы на каждой странице.
+ */
+type Hint = 'publish' | 'translate'
+type HintState = { templateId: string; pending: Set<Hint>; menuSeen: boolean } | null
+/** Ключ на КАЖДОЕ действие: принятая публикация не должна гасить подсказку перевода. */
+const hintKey = (h: Hint, templateId: string) => `sf:hint:${h}:${templateId}`
+/** Отдельно — «меню открывали»: это про кнопку, а не про действие внутри. */
+const menuSeenKey = (templateId: string) => `sf:hint-seen:${templateId}`
+const readFlag = (key: string) => {
+  try {
+    return window.localStorage.getItem(key) === '1'
+  } catch {
+    // Заблокированное хранилище не должно прятать полезную подсказку.
+    return false
+  }
+}
+const writeFlag = (key: string) => {
+  try {
+    window.localStorage.setItem(key, '1')
+  } catch {
+    // Даже без хранилища подсказка уходит в текущем просмотре — состояние ниже.
+  }
+}
 
 export function ListActionsMenu({
   base,
@@ -62,47 +97,58 @@ export function ListActionsMenu({
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
-  const [publishHint, setPublishHint] = useState<PublishHint>(null)
+  const [hints, setHints] = useState<HintState>(null)
   const translateLabel = t('translateInto', lang).replace('{lang}', LANG_META[targetLang].endonym)
   const publishHintLabel = t('publishAvailableHint', lang)
+  const translateHintLabel = t('translateAvailableHint', lang)
 
-  // Подсказка одноразовая для КАЖДОГО черновика: новый список снова заслуживает
-  // ненавязчивого указателя, уже просмотренный — больше не мигает при каждом визите.
-  // Через rAF, а не синхронный setState внутри эффекта: первый SSR/гидрационный
-  // кадр одинаковый, затем клиент безопасно читает localStorage.
+  // Подсказки читаются для КАЖДОГО черновика отдельно: новый список снова заслуживает
+  // ненавязчивого указателя, уже разобранный — молчит. Через rAF, а не синхронный
+  // setState внутри эффекта: первый SSR/гидрационный кадр одинаковый, затем клиент
+  // безопасно читает localStorage.
   useEffect(() => {
-    if (!canPublish) return
     const id = window.requestAnimationFrame(() => {
-      try {
-        if (window.localStorage.getItem(publishHintKey(templateId)) !== '1') {
-          setPublishHint({ templateId, phase: 'visible' })
-        }
-      } catch {
-        // Заблокированное хранилище не должно прятать полезную подсказку.
-        setPublishHint({ templateId, phase: 'visible' })
-      }
+      const pending = new Set<Hint>()
+      if (canPublish && !readFlag(hintKey('publish', templateId))) pending.add('publish')
+      if (canTranslate && !readFlag(hintKey('translate', templateId))) pending.add('translate')
+      setHints({ templateId, pending, menuSeen: readFlag(menuSeenKey(templateId)) })
     })
     return () => window.cancelAnimationFrame(id)
-  }, [canPublish, templateId])
+  }, [canPublish, canTranslate, templateId])
 
-  const hintPhase = publishHint?.templateId === templateId ? publishHint.phase : null
+  const state = hints?.templateId === templateId ? hints : null
+  const isPending = (h: Hint) => !!state?.pending.has(h)
+  // Точка на кнопке — пока есть хоть одна неприменённая подсказка И меню ещё не
+  // открывали: дальше зовёт уже сам пункт внутри.
+  const [burstingTrigger, setBurstingTrigger] = useState(false)
+  const triggerHint = !!state && state.pending.size > 0 && !state.menuSeen
   // animationend может не прийти, если вкладка ушла в фон или пользовательская
   // таблица стилей отключила animation. Таймер гарантирует, что «лопнувшая» точка
   // не зависнет прозрачным DOM-узлом.
   useEffect(() => {
-    if (hintPhase !== 'popping') return
-    const id = window.setTimeout(() => setPublishHint(null), 350)
+    if (!burstingTrigger) return
+    const id = window.setTimeout(() => setBurstingTrigger(false), 350)
     return () => window.clearTimeout(id)
-  }, [hintPhase])
+  }, [burstingTrigger])
 
-  const acknowledgePublishHint = () => {
-    if (!canPublish || hintPhase !== 'visible') return
-    try {
-      window.localStorage.setItem(publishHintKey(templateId), '1')
-    } catch {
-      // Даже без localStorage убираем точку в текущем просмотре.
-    }
-    setPublishHint({ templateId, phase: 'popping' })
+  const openedMenu = () => {
+    if (!triggerHint) return
+    writeFlag(menuSeenKey(templateId))
+    setBurstingTrigger(true)
+    setHints((h) => (h ? { ...h, menuSeen: true } : h))
+  }
+
+  // Подсказка пункта расходуется применением действия, а не взглядом на него:
+  // «Опубликовать» перестаёт быть помеченным, когда список опубликован.
+  const acknowledge = (h: Hint) => {
+    if (!isPending(h)) return
+    writeFlag(hintKey(h, templateId))
+    setHints((s) => {
+      if (!s) return s
+      const pending = new Set(s.pending)
+      pending.delete(h)
+      return { ...s, pending }
+    })
   }
 
   const doTranslate = () =>
@@ -112,13 +158,32 @@ export function ListActionsMenu({
       else router.refresh()
     })
 
+  // Пока точка на кнопке есть — подпись её расшифровывает: сама по себе точка не
+  // говорит ничего, и для экранного диктора она не существует вовсе. Публикация
+  // важнее перевода, поэтому при обеих подсказках названа она.
+  const triggerLabel = !triggerHint
+    ? t('library.moreActions', lang)
+    : isPending('publish')
+      ? publishHintLabel
+      : translateHintLabel
+
   const editHref = isOwner ? `${base}/edit` : `${base}/suggest`
   const editLabel = isOwner ? t('edit', lang) : t('suggestEdit', lang)
 
   // Пункты СПИСКОМ, а не лесенкой условий в разметке: новое действие = новая строка,
   // а решение «меню или одна кнопка» считается по длине и не переписывается заново.
   const actions: MenuAction[] = [{ key: 'edit', label: editLabel, Icon: Pencil, href: editHref }]
-  if (canTranslate) actions.push({ key: 'translate', label: translateLabel, Icon: Languages, onSelect: doTranslate })
+  if (canTranslate)
+    actions.push({
+      key: 'translate',
+      label: translateLabel,
+      Icon: Languages,
+      hint: 'translate',
+      onSelect: () => {
+        acknowledge('translate')
+        doTranslate()
+      },
+    })
   if (canPublish) {
     actions.push({
       key: 'publish',
@@ -126,7 +191,11 @@ export function ListActionsMenu({
       // Экшен сам уводит на страницу списка; последствия и отмена публикации живут
       // в опасной зоне настроек — здесь только быстрый путь.
       Icon: Rocket,
-      onSelect: () => start(() => publishList(templateId)),
+      hint: 'publish',
+      onSelect: () => {
+        acknowledge('publish')
+        start(() => publishList(templateId))
+      },
     })
   }
 
@@ -142,22 +211,16 @@ export function ListActionsMenu({
   }
 
   return (
-    <DropdownMenu onOpenChange={(open) => open && acknowledgePublishHint()}>
+    <DropdownMenu onOpenChange={(open) => open && openedMenu()}>
       {/* До первого просмотра тултип расшифровывает точку; после — возвращается
           обычное «Ещё действия». Само меню остаётся единственным явным сообщением. */}
-      <Tooltip label={hintPhase ? publishHintLabel : t('library.moreActions', lang)}>
+      <Tooltip label={triggerLabel}>
         <DropdownMenuTrigger asChild>
-          <IconButton size="md" label={hintPhase ? publishHintLabel : t('library.moreActions', lang)} className="relative">
+          <IconButton size="md" label={triggerLabel} className="relative">
             <MoreHorizontal size={16} />
-            {/* Открытие меню = пользователь «заглянул»: точка лопается и навсегда
-                запоминается просмотренной для этого списка. */}
-            {canPublish && hintPhase && (
-              <span
-                data-publish-hint
-                aria-hidden
-                className={`absolute right-0.5 top-0.5 size-1.5 rounded-full bg-warn ${hintPhase === 'popping' ? 'animate-sf-hint-burst' : ''}`}
-              />
-            )}
+            {/* Точка зовёт заглянуть внутрь и на этом свою работу заканчивает:
+                дальше показывает уже сам помеченный пункт. */}
+            {(triggerHint || burstingTrigger) && <HintDot data-publish-hint bursting={burstingTrigger} />}
           </IconButton>
         </DropdownMenuTrigger>
       </Tooltip>
@@ -178,7 +241,10 @@ export function ListActionsMenu({
                 a.onSelect?.()
               }}
             >
-              <a.Icon size={15} className="text-muted" /> {a.label}
+              <a.Icon size={15} className="text-muted" />
+              {/* Точка ничего не говорит диктору — смысл несёт подпись рядом с ней. */}
+              <span className="flex-1">{a.label}</span>
+              {a.hint && isPending(a.hint) && <HintDot place="inline" />}
             </DropdownMenuItem>
           ),
         )}

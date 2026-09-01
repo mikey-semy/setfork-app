@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { IconButton } from '@/shared/ui/IconButton'
+import { HintDot } from '@/shared/ui/HintDot'
 import { digChatAsk, getDigChatHistory, thankGnome, type DigChatMsg } from './chat-actions'
 
 /**
@@ -256,7 +257,7 @@ export function DigChatOpen({ detail, label, hasSession }: { detail: DigChatOpen
     <Tooltip label={label}>
       <IconButton size="sm" variant="ghost" label={label} className="relative shrink-0 text-muted hover:text-accent" onClick={() => window.dispatchEvent(new CustomEvent(DIG_CHAT_EVENT, { detail }))}>
         <Pickaxe size={14} />
-        {hasSession && <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-accent" aria-hidden />}
+        {hasSession && <HintDot tone="accent" />}
       </IconButton>
     </Tooltip>
   )
