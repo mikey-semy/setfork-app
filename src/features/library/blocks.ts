@@ -1,7 +1,12 @@
 // Типы блоков списка (всё-блочная модель). Чистый модуль без server-only —
 // используется и на сервере, и в редакторе. См. дизайн-док по блочному редактору.
 
-import { type Lang, type LocaleText, tr } from '@/shared/i18n'
+import { type Lang, type LocaleText, trLoose } from '@/shared/i18n'
+
+// Терпимое чтение поля, которое может быть строкой (одноязычный блок) или
+// LocaleText. Живёт в shared/i18n — его читают и другие фичи, а features друг
+// друга импортировать не могут. Здесь оставлено имя из словаря блоков.
+export { trLoose as blockText }
 
 export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video', 'quiz', 'file', 'product'] as const
 export type BlockType = (typeof BLOCK_TYPES)[number]
@@ -40,23 +45,6 @@ export interface TextBlockContent {
 export interface ImageBlockContent {
   ref?: string // storage_key картинки (как imageKey у шага)
   caption?: string | LocaleText
-}
-
-/** Читает переводимое поле не-step блока.
- *
- *  Терпимо к двум формам, и это не временная поблажка: строка означает блок,
- *  написанный до того, как у таких полей появился язык, и переписывать
- *  историю версий ради формы записи незачем. Пишем строго (см. ниже), читаем
- *  терпимо.
- *
- *  Без языка ведёт себя как tr(..., 'en'): английский, иначе первый
- *  доступный. Так вызывающим, у которых языка зрителя под рукой нет —
- *  экспорт, дифф, выдача агенту, — ничего передавать не нужно, и они
- *  получают оригинал, а не пустоту. */
-export function blockText(v: unknown, lang: Lang = 'en'): string {
-  if (typeof v === 'string') return v
-  if (v && typeof v === 'object') return tr(v as LocaleText, lang)
-  return ''
 }
 
 /** Добавляет перевод, СОХРАНЯЯ оригинал. Строка при этом становится

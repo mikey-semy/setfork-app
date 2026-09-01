@@ -68,6 +68,8 @@ export function toStepInput(items: ProposedItem[]) {
     // сравнивает `JSON.stringify(toProposed(...))` как отпечаток «изменилось ли», и
     // случайный uuid внутри ломал бы правило остановки «два прохода без изменений».
     blockId: it.blockId ?? newBlockId(),
+    // Транспортное поле: см. ProposedItem.langScope. Снимает его фасад listStore.
+    langScope: it.langScope,
     title: withoutOrdinal(it.title),
     desc: it.desc,
     command: it.command,

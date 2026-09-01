@@ -363,23 +363,15 @@ Translate the list above into ${langName} and return the full JSON list in the s
   return runListModel(system, prompt, current.title, 'translate', { ...opts, web: false })
 }
 
-/** Перевод markdown-врезок текстовых блоков.
+/** ОДИН вызов модели на одну партию кусков.
  *
- *  Отдельным вызовом, а не полем внутри JSON шагов, и на то две причины.
- *  Первая: форма шага общая с генерацией и правкой — добавив туда поле, мы
- *  меняем промпты, которые к переводу отношения не имеют. Вторая, важнее:
- *  врезка это проза, иногда на экран, и модель, разбирая её внутри большого
- *  JSON, охотно переносит строки, ломает списки и таблицы. Отдельная задача
- *  «переведи эти куски, верни столько же» держится куда крепче.
- *
- *  null — если модель вернула другое количество кусков: молча склеить перевод
- *  не с тем блоком хуже, чем не перевести вовсе. */
-export async function generateTextTranslation(
+ *  null — если модель вернула не то количество кусков или не строки: молча
+ *  склеить перевод не с тем блоком хуже, чем не перевести вовсе. */
+async function translateChunkBatch(
   chunks: string[],
   targetLang: Lang,
-  opts: GenerateOptions = {},
+  opts: GenerateOptions,
 ): Promise<string[] | null> {
-  if (chunks.length === 0) return []
   const langName = langEnName(targetLang)
   const sp = spotlight()
   const system = `You TRANSLATE Markdown fragments into ${langName}.
@@ -389,7 +381,11 @@ Do NOT translate code inside fenced blocks or inline backticks, URLs, or identif
 Quoted source material (lines starting with >) IS translated, but keep the quote marker.
 Translate nothing else: no commentary, no added or removed fragments.
 ${sp.rule()}`
-  const prompt = `${sp.wrap('FRAGMENTS (JSON)', JSON.stringify({ items: chunks }).slice(0, MAX_PROMPT_CHARS))}
+  // Обрезки по MAX_PROMPT_CHARS здесь НЕТ намеренно: партия собрана так, чтобы
+  // влезть целиком (см. generateTextTranslation). Обрезать сериализованный JSON
+  // значило бы разрубить кусок посередине, а то и потерять последние — при том
+  // что в промпте всё равно требуется ответ на каждый.
+  const prompt = `${sp.wrap('FRAGMENTS (JSON)', JSON.stringify({ items: chunks }))}
 
 Translate every fragment into ${langName} and return {"items":[…]} with exactly ${chunks.length} strings in the same order.`
 
@@ -428,11 +424,81 @@ Translate every fragment into ${langName} and return {"items":[…]} with exactl
     // Число кусков обязано совпасть: перевод, приклеенный не к тому блоку, хуже
     // непереведённого — он выглядит правильным.
     if (!Array.isArray(obj.items) || obj.items.length !== chunks.length) return null
-    return obj.items.map((v) => String(v ?? ''))
+    // И каждый кусок обязан быть НЕПУСТОЙ СТРОКОЙ. Приведение через String()
+    // превращало null в '', а объект — в '[object Object]', и такой «перевод»
+    // сохранялся молча: заголовок при этом получал ключ языка, кнопка перевода
+    // исчезала, и обычного пути повторить не оставалось.
+    const items = obj.items
+    if (!items.every((v) => typeof v === 'string' && v.trim())) return null
+    return items as string[]
   } catch (e) {
     console.warn('[translate-text] failed', e instanceof Error ? e.message : e)
     return null
   }
+}
+
+/**
+ * Куски → партии, каждая из которых влезает в промпт целиком.
+ *
+ * ПАРТИЯМИ, А НЕ ОБРЕЗКОЙ. Врезки — самое длинное, что есть у списка, и десяток
+ * разборов легко перебирает лимит. Резать сериализованный JSON нельзя: выйдет
+ * оборванный кусок и молча потерянные последние, а ответ по-прежнему требуется
+ * на каждый — то есть длинный список не переводился бы никогда, сколько ни жми.
+ *
+ * null — если хоть один кусок не влезает и в одиночку: перевести его можно
+ * только обрезав, а обрезанный перевод хуже отсутствующего — он выглядит целым.
+ */
+export function batchByChars(chunks: string[], limit: number): string[][] | null {
+  const batches: string[][] = []
+  let batch: string[] = []
+  let size = 0
+  for (const chunk of chunks) {
+    // +4 — кавычки и запятая в сериализованном виде. Точность тут не нужна,
+    // нужен запас в меньшую сторону.
+    const cost = chunk.length + 4
+    if (cost > limit) return null
+    if (size + cost > limit && batch.length) {
+      batches.push(batch)
+      batch = []
+      size = 0
+    }
+    batch.push(chunk)
+    size += cost
+  }
+  if (batch.length) batches.push(batch)
+  return batches
+}
+
+/** Перевод markdown-врезок текстовых блоков.
+ *
+ *  Отдельным вызовом, а не полем внутри JSON шагов, и на то две причины.
+ *  Первая: форма шага общая с генерацией и правкой — добавив туда поле, мы
+ *  меняем промпты, которые к переводу отношения не имеют. Вторая, важнее:
+ *  врезка это проза, иногда на экран, и модель, разбирая её внутри большого
+ *  JSON, охотно переносит строки, ломает списки и таблицы. Отдельная задача
+ *  «переведи эти куски, верни столько же» держится куда крепче.
+ *
+ *  Возвращает столько же строк, сколько получила, — или null. */
+export async function generateTextTranslation(
+  chunks: string[],
+  targetLang: Lang,
+  opts: GenerateOptions = {},
+): Promise<string[] | null> {
+  if (chunks.length === 0) return []
+
+  const batches = batchByChars(chunks, MAX_PROMPT_CHARS)
+  if (!batches) return null
+
+  const out: string[] = []
+  // Последовательно, а не Promise.all: партии считаются в общий бюджет ИИ, и
+  // параллельный залп прошёл бы проверку бюджета до того, как первая партия его
+  // потратила.
+  for (const part of batches) {
+    const done = await translateChunkBatch(part, targetLang, opts)
+    if (!done) return null
+    out.push(...done)
+  }
+  return out
 }
 
 /**
