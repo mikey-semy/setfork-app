@@ -18,29 +18,29 @@ import { walkSrc, relSrc } from '../helpers/walk-src'
 const POSITIONED = /(^|[\s`'"{])(absolute|fixed|sticky)([\s`'"}]|$)/
 /** `TOUCH_HIT` целиком, но не `TOUCH_HIT_ZONE` и не `TOUCH_HIT_ROW` — у тех своя роль. */
 const HIT = /\bTOUCH_HIT\b(?!_)/
+/** Символов вокруг вхождения: одно `className` целиком, даже разнесённое по строкам. */
+const WINDOW = 220
 
 describe('зона нажатия и позиционирование', () => {
   it('TOUCH_HIT не подставляется руками туда, где элемент позиционирован сам', () => {
     const offenders: string[] = []
     for (const file of walkSrc(new URL('../../src', import.meta.url).pathname)) {
       if (!file.endsWith('.tsx') && !file.endsWith('.ts')) continue
-      // ⚠️ Комментарии пропускаем ПО СОСТОЯНИЮ, а не по началу строки. Правило само
-      // разбирается в этом коде, и объяснение рядом с кнопкой законно называет и
-      // `TOUCH_HIT`, и `absolute`; сейчас они стоят на разных строках, но перенос
-      // одного слова при переформатировании уронил бы CI на прозе.
-      let inComment = false
-      for (const [i, line] of readFileSync(file, 'utf8').split('\n').entries()) {
-        const t = line.trimStart()
-        if (inComment) {
-          if (t.includes('*/')) inComment = false
-          continue
+      // ⚠️ Ищем не по СТРОКАМ, а по тексту: длинное `className` переносят, и
+      // `absolute` с `TOUCH_HIT` легко оказываются на разных строках — построчная
+      // проверка пропустила бы ровно тот случай, ради которого написана.
+      // Комментарии вырезаем целиком: правило само разбирается в этом коде, и
+      // объяснение рядом с кнопкой законно называет обе вещи (находка Codex #855).
+      const src = readFileSync(file, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/^\s*\/\/.*$/gm, ' ')
+        // Строка импорта называет константу, но ничего ею не задаёт.
+        .replace(/^\s*import[\s\S]*?from\s+'[^']+'\s*$/gm, ' ')
+      for (const m of src.matchAll(new RegExp(HIT, 'g'))) {
+        const around = src.slice(Math.max(0, m.index - WINDOW), m.index + WINDOW)
+        if (POSITIONED.test(around)) {
+          offenders.push(`${relSrc(file)}:${src.slice(0, m.index).split('\n').length}`)
         }
-        if (t.startsWith('//')) continue
-        if (t.startsWith('/*') || t.startsWith('{/*')) {
-          if (!line.includes('*/')) inComment = true
-          continue
-        }
-        if (HIT.test(line) && POSITIONED.test(line)) offenders.push(`${relSrc(file)}:${i + 1}`)
       }
     }
     expect(
