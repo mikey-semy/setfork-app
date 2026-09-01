@@ -1,7 +1,7 @@
 import { FileText, Image as ImageIcon, Info, ListChecks, ShoppingBag, UserRound, Video } from 'lucide-react'
 import type { ProposedItem } from '@/shared/db'
 import { t, tr, type Lang } from '@/shared/i18n'
-import { CodeCard } from '@/shared/ui/CodeCard'
+import { CommandText } from '@/shared/ui/CommandText'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
@@ -123,8 +123,13 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
                     </div>
                   )}
                   {it.command && (
-                    <div className="mt-3">
-                      <CodeCard code={it.command} />
+                    // ⚠️ Общий показ команды, а не `CodeCard`. Здесь предложенная правка на
+                    // ЭКРАНЕ — тот же предмет, что команда шага на странице списка, и вести
+                    // себя обязан так же: прокрутка, а не перенос. `CodeCard` с переносом и
+                    // номерами строк остаётся для печати и для кода внутри текста, где
+                    // прокрутки нет физически.
+                    <div className="mt-3 rounded-md border border-border bg-surface-2 px-2.5 py-1.5">
+                      <CommandText value={it.command} className="text-body-sm text-ink" />
                     </div>
                   )}
                   {(it.subtasks ?? []).length > 0 && (

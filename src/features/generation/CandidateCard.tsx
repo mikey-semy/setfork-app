@@ -9,6 +9,7 @@ import { detectLang, LANG_LABEL } from '@/shared/ui/detect-lang'
 import { t } from '@/shared/i18n'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
+import { CommandText } from '@/shared/ui/CommandText'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 /**
@@ -80,12 +81,18 @@ export function CandidateCard({
                   </div>
                   {it.desc && <div className="mt-0.5 text-body-sm text-ink-2">{it.desc}</div>}
                   {it.command && (
-                    // Бейдж языка в углу (detect-lang, как в редакторе); перенос вместо
-                    // горизонтального скролла. CopyButton нельзя: карточка сама <button>.
-                    <code className="relative mt-1 block whitespace-pre-wrap rounded-md bg-surface-2 px-2 py-1 pr-14 font-mono text-body-sm text-ink [overflow-wrap:anywhere]">
-                      {it.command}
-                      <SectionLabel as="span" className="absolute right-1.5 top-1 font-mono">{LANG_LABEL[detectLang(it.command)]}</SectionLabel>
-                    </code>
+                    // Бейдж языка в углу (detect-lang, как в редакторе). CopyButton нельзя:
+                    // карточка сама <button>, вложенная кнопка недопустима — поэтому здесь
+                    // общий ПОКАЗ команды без кнопки копирования, а не своя разметка.
+                    //
+                    // Перенос был выбран не решением, а как следствие «раз кнопки нет».
+                    // Поведение теперь общее: прокрутка внутри блока, как везде.
+                    <div className="relative mt-1 rounded-md bg-surface-2 px-2 py-1 pr-14">
+                      <CommandText value={it.command} className="text-body-sm text-ink" />
+                      <SectionLabel as="span" className="absolute right-1.5 top-1 font-mono">
+                        {LANG_LABEL[detectLang(it.command)]}
+                      </SectionLabel>
+                    </div>
                   )}
                   {it.subtasks.length > 0 && (
                     <ul className="mt-1 space-y-0.5">

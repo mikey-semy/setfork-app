@@ -19,6 +19,12 @@ function StepCard({ s, deleted, ru }: { s: TwStep | null; deleted: string; ru: b
     <div className="min-w-0 px-3 py-2">
       <div className="truncate text-body font-semibold text-ink">{s.title}</div>
       {s.desc && <div className="mt-0.5 line-clamp-3 whitespace-pre-wrap text-body-sm text-ink-2">{s.desc}</div>}
+      {/* ⚠️ ОБРЕЗКА, А НЕ ПРОКРУТКА — и это исключение из общего показа команды, названное
+          вслух. Здесь не «команда», а ПРЕВЬЮ СТОРОНЫ конфликта: заголовок обрезан,
+          описание в три строки, «зачем» обрезано — человек сравнивает две стороны
+          глазами, а не читает команду целиком. Прокручиваемый блок внутри карточки
+          выбора заставлял бы возить пальцем в каждой из двух сторон, чтобы понять, чем
+          они различаются. Полный текст доступен после выбора. */}
       {s.command && (
         <code className="mt-1 block truncate rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-body-sm text-ink-2">{s.command}</code>
       )}
