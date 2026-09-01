@@ -214,4 +214,55 @@ describe('выдача вкладок профиля', () => {
       expect(res.total).toBe(4)
     })
   })
+  describe('отбор по состоянию списка', () => {
+    /**
+     * Состояния — те же три, что показывает метка на карточке (`listVisibilityState`).
+     * Владелец: «нет фильтра по черновикам, а приватные будто отсутствуют» — при 514
+     * черновиках и почти без приватных отбор по полю `visibility` отвечал ему пустотой.
+     *
+     * Свой владелец, а не общая фикстура: набор наверху проверяют соседние тесты по
+     * точным числам, и добавленные строки ломали бы их — заодно пряча, что сломано.
+     */
+    let stateOwner: string
+    beforeAll(async () => {
+      const [u] = await db.insert(users).values({ handle: 'sel-states' }).returning({ id: users.id })
+      stateOwner = u.id
+      await db.insert(templates).values([
+        { ownerId: stateOwner, slug: 'st-public', title: { en: 'Public' } },
+        { ownerId: stateOwner, slug: 'st-private', title: { en: 'Private' }, visibility: 'private' },
+        // ⚠️ ЧЕРНОВИК С `visibility: 'public'` — не опечатка, а обычное состояние: поле
+        // говорит, каким список станет ПОСЛЕ публикации. Ровно на таком и ломался отбор.
+        { ownerId: stateOwner, slug: 'st-draft', title: { en: 'Draft' }, status: 'draft' },
+        { ownerId: stateOwner, slug: 'st-draft-private', title: { en: 'Draft private' }, status: 'draft', visibility: 'private' },
+      ])
+    })
+    const mine = async (over: Record<string, unknown> = {}) =>
+      (await getProfileListPage({ ownerId: stateOwner, viewerId: stateOwner, tab: 'lists', ...over }, win)).items
+        .map((i) => i.slug)
+        .sort()
+
+    it('черновик отбирается по статусу, какой бы ни была будущая видимость', async () => {
+      expect(await mine({ listType: 'draft' })).toEqual(['st-draft', 'st-draft-private'])
+    })
+
+    it('«Публичные» — только опубликованные: черновик сюда не попадает', async () => {
+      expect(await mine({ listType: 'public' })).toEqual(['st-public'])
+    })
+
+    it('«Приватные» — тоже только опубликованные', async () => {
+      expect(await mine({ listType: 'private' })).toEqual(['st-private'])
+    })
+
+    it('три состояния не пересекаются и в сумме дают всё своё', async () => {
+      const [all, pub, priv, draft] = await Promise.all([
+        mine(),
+        mine({ listType: 'public' }),
+        mine({ listType: 'private' }),
+        mine({ listType: 'draft' }),
+      ])
+      const parts = [...pub, ...priv, ...draft].sort()
+      expect(new Set(parts).size, 'состояния пересекаются — список попал в два фильтра сразу').toBe(parts.length)
+      expect(parts).toEqual(all)
+    })
+  })
 })

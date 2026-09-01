@@ -6,7 +6,7 @@ import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
-import { LIST_VISIBILITY_BADGE } from '@/features/library/list-visibility'
+import { LIST_VISIBILITY_BADGE } from '@/shared/list-visibility'
 import { ListSwitcher } from '../ListSwitcher'
 import type { Crumb, CrumbVisibility } from './use-crumb'
 

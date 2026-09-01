@@ -23,7 +23,15 @@ import { likeContains } from '@/shared/db/like'
 
 export type ProfileListTab = 'lists' | 'starred'
 export type ProfileListSort = 'recent' | 'name' | 'stars'
-export type ProfileListType = 'all' | 'public' | 'private' | 'forks'
+/**
+ * ⚠️ ТИПЫ ОТБОРА СОВПАДАЮТ С МЕТКОЙ НА КАРТОЧКЕ (`listVisibilityState`), а не с полем
+ * `visibility` в базе. Полей два, и они пересекаются: у черновика `visibility` говорит
+ * лишь о том, каким список СТАНЕТ после публикации, поэтому отбор по `visibility`
+ * заводил черновики в «Публичные», а «Приватные» отдавали пусто — у владельца 514
+ * черновиков и почти нет приватных, и фильтр отвечал ему «у тебя таких нет», хотя
+ * рядом на каждой карточке стояла метка «Черновик» (жалоба владельца 01.09.2026).
+ */
+export type ProfileListType = 'all' | 'public' | 'private' | 'draft' | 'forks'
 
 export interface ProfileListFilter {
   /** Чей профиль открыт: владелец списков (`lists`) или хозяин звёзд (`starred`). */
@@ -69,7 +77,13 @@ const conditions = (f: ProfileListFilter): SQL[] => {
   if (q) c.push(searchLike(q))
   if (f.tab === 'lists' && f.listType && f.listType !== 'all') {
     // Форк — это происхождение, а не видимость: их нельзя смешивать в одном поле фильтра.
-    c.push(f.listType === 'forks' ? eq(templates.origin, 'forked') : eq(templates.visibility, f.listType))
+    if (f.listType === 'forks') c.push(eq(templates.origin, 'forked'))
+    else if (f.listType === 'draft') c.push(eq(templates.status, 'draft'))
+    else {
+      // Опубликованность проверяется ЯВНО: без неё черновик с `visibility: 'public'`
+      // попадал в «Публичные», хотя его не видит никто, кроме владельца.
+      c.push(eq(templates.status, 'published'), eq(templates.visibility, f.listType))
+    }
   }
   if (f.tab === 'lists' && f.catalogId !== undefined) {
     c.push(f.catalogId === null ? isNull(templates.repositoryId) : eq(templates.repositoryId, f.catalogId))

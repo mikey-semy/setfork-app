@@ -194,6 +194,14 @@ export const en = {
   'digest.awaitingReview': '{n} awaiting your review',
   // Отписка от писем (заголовок List-Unsubscribe и страница по ссылке из письма).
   'profile.catalogAll': 'All catalogs',
+  'profile.typeAll': 'All types',
+  'profile.newList': 'New',
+  'profile.findList': 'Find a list…',
+  'profile.findListAria': 'Find a list',
+  'profile.sortRecent': 'Recent',
+  'profile.sortName': 'Name',
+  'profile.sortStars': 'Stars',
+  'profile.typeForks': 'Forks',
   'profile.catalogFilter': 'Filter by catalog',
   'profile.catalogNone': 'No catalog',
   // Пакетные действия над своими списками (режим выбора на вкладке «Списки»).

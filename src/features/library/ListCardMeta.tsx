@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { GitFork, PlayCircle, Tag } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { t, type Lang } from '@/shared/i18n'
-import { LIST_VISIBILITY_BADGE, listVisibilityState } from './list-visibility'
+import { LIST_VISIBILITY_BADGE, listVisibilityState } from '@/shared/list-visibility'
 import { VerificationBadge } from './VerificationBadge'
 import type { FeedItem } from './queries'
 

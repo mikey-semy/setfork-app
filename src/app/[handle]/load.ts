@@ -30,7 +30,7 @@ export type ProfileTab = 'overview' | 'lists' | 'starred' | 'catalogs' | 'follow
 // причин расходиться, а «по 20 тут и по 30 там» это следы разных решений в разное время.
 
 /** Что показываем на вкладке «Списки»: всё или один срез. */
-const LIST_TYPES = ['public', 'private', 'forks'] as const
+const LIST_TYPES = ['public', 'private', 'draft', 'forks'] as const
 type ListType = (typeof LIST_TYPES)[number] | 'all'
 
 /** Порядок списков; 'recent' — как отдал запрос (по дате звезды/обновления). */

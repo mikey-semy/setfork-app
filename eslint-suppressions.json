@@ -433,11 +433,6 @@
       "count": 4
     }
   },
-  "src/features/profile/ListsToolbar.tsx": {
-    "no-restricted-syntax": {
-      "count": 10
-    }
-  },
   "src/features/profile/PinsPicker.tsx": {
     "boundaries/dependencies": {
       "count": 1
