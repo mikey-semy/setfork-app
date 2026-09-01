@@ -58,17 +58,26 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
    */
   const loadHistory = async (detail: DigChatOpenDetail) => {
     setHistoryFailed(false)
+    // ⚠️ Ответ ОБОГНАВШЕГО запроса выбрасываем. Открыли шаг A, следом B — и пришедший
+    // позже отказ по A иначе пометил бы сбоем уже загруженную беседу B.
+    const stillHere = () => {
+      const cur = ctxRef.current
+      return !!cur && cur.templateId === detail.templateId && cur.stepN === detail.stepN
+    }
     try {
       const res = await getDigChatHistory(detail.templateId, detail.stepN)
+      if (!stillHere()) return
       if (!res.ok) {
         setHistoryFailed(true)
         return
       }
-      // Начатую в этом окне беседу не перетираем.
-      setMessages((m) => (m.length === 0 ? res.messages : m))
+      // ⚠️ История встаёт ПЕРЕД тем, что успели написать. Пока загрузка не удалась,
+      // спрашивать не запрещено — и удавшийся повтор не имеет права выбросить ни
+      // старую беседу (было бы «повтор стёр историю»), ни новые реплики.
+      setMessages((m) => [...res.messages, ...m])
     } catch {
       // Сюда попадает уже не ошибка запроса, а недоставленный вызов — тот самый обрыв.
-      setHistoryFailed(true)
+      if (stillHere()) setHistoryFailed(true)
     }
   }
 
@@ -195,8 +204,11 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
       chips={chips}
       pending={pending}
       pendingLabel={t('dig.digging', lang)}
+      // Повтор принадлежит ИМЕННО ошибке загрузки истории. Ошибка вопроса (лимит,
+      // квота) старше по приоритету и своего повтора не имеет: нажатие перечитывало
+      // бы беседу, никак не относясь к тому, о чём говорит текст рядом.
       error={err || (historyFailed ? t('dig.historyLoadFailed', lang) : '')}
-      onRetry={historyFailed && ctx ? () => void loadHistory(ctx) : undefined}
+      onRetry={!err && historyFailed && ctx ? () => void loadHistory(ctx) : undefined}
       retryLabel={t('tryAgain', lang)}
       value={text}
       onChange={setText}

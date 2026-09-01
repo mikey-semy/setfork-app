@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -17,12 +17,12 @@ vi.mock('@/features/dig/chat-actions', () => ({
 }))
 
 const { TooltipProvider } = await import('@/shared/ui/Tooltip')
-const { getDigChatHistory } = await import('@/features/dig/chat-actions')
+const { getDigChatHistory, digChatAsk } = await import('@/features/dig/chat-actions')
 const { DigChatHost, DIG_CHAT_EVENT } = await import('@/features/dig/DigChat')
 
-const openStep = () =>
+const openStep = (stepN = 3) =>
   window.dispatchEvent(
-    new CustomEvent(DIG_CHAT_EVENT, { detail: { templateId: 't-1', stepN: 3, stepTitle: 'Шаг' } }),
+    new CustomEvent(DIG_CHAT_EVENT, { detail: { templateId: 't-1', stepN, stepTitle: `Шаг ${stepN}` } }),
   )
 
 describe('история беседы кирки', () => {
@@ -61,6 +61,75 @@ describe('история беседы кирки', () => {
 
     expect(await screen.findByText('что это такое?')).toBeInTheDocument()
     expect(screen.queryByText('Не удалось загрузить беседу')).toBeNull()
+  })
+
+  it('удавшийся повтор не выбрасывает то, что успели написать', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getDigChatHistory)
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true, messages: [{ role: 'user', text: 'старый вопрос' }] })
+    vi.mocked(digChatAsk).mockResolvedValue({ replies: [{ who: 'generalist', name: 'Мастер', text: 'ответ гнома', followups: [] }] })
+    render(
+      <TooltipProvider delay={0}>
+        <DigChatHost gnomes={[{ id: 'generalist', name: 'Мастер', guild: '' }]} lang="ru" />
+      </TooltipProvider>,
+    )
+    openStep()
+    await screen.findByRole('button', { name: 'Повторить' })
+
+    // Пока загрузка не удалась, спрашивать не запрещено.
+    await user.type(screen.getByRole('textbox'), 'новый вопрос')
+    await user.keyboard('{Enter}')
+    await screen.findByText('ответ гнома')
+
+    await user.click(screen.getByRole('button', { name: 'Повторить' }))
+
+    // Обе стороны на месте: и восстановленная беседа, и написанное только что.
+    expect(await screen.findByText('старый вопрос')).toBeInTheDocument()
+    expect(screen.getByText('ответ гнома')).toBeInTheDocument()
+  })
+
+  it('отказ обогнавшего запроса не помечает сбоем уже загруженный шаг', async () => {
+    let failA: (v: { ok: false }) => void = () => {}
+    vi.mocked(getDigChatHistory)
+      .mockImplementationOnce(() => new Promise((r) => (failA = r as typeof failA)))
+      .mockResolvedValueOnce({ ok: true, messages: [{ role: 'user', text: 'беседа шага B' }] })
+    render(
+      <TooltipProvider delay={0}>
+        <DigChatHost gnomes={[{ id: 'generalist', name: 'Мастер', guild: '' }]} lang="ru" />
+      </TooltipProvider>,
+    )
+    openStep() // шаг 3 — ответ ещё не пришёл
+    openStep(7) // человек ушёл на шаг 7, тот загрузился
+    expect(await screen.findByText('беседа шага B')).toBeInTheDocument()
+
+    await act(async () => {
+      failA({ ok: false })
+      await Promise.resolve()
+    })
+
+    expect(screen.queryByText('Не удалось загрузить беседу')).toBeNull()
+    expect(screen.getByText('беседа шага B')).toBeInTheDocument()
+  })
+
+  it('повтор принадлежит ошибке истории, а не ошибке вопроса', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getDigChatHistory).mockResolvedValue({ ok: false })
+    vi.mocked(digChatAsk).mockResolvedValue({ error: 'quota' })
+    render(
+      <TooltipProvider delay={0}>
+        <DigChatHost gnomes={[{ id: 'generalist', name: 'Мастер', guild: '' }]} lang="ru" />
+      </TooltipProvider>,
+    )
+    openStep()
+    await screen.findByRole('button', { name: 'Повторить' })
+
+    await user.type(screen.getByRole('textbox'), 'вопрос')
+    await user.keyboard('{Enter}')
+
+    // Показана ошибка квоты — повторять ей нечего: кнопка перечитала бы беседу.
+    await waitFor(() => expect(screen.queryByText('Не удалось загрузить беседу')).toBeNull())
+    expect(screen.queryByRole('button', { name: 'Повторить' })).toBeNull()
   })
 
   it('пустая беседа остаётся пустой и ни на что не жалуется', async () => {
