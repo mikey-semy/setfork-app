@@ -1,7 +1,12 @@
 // Типы блоков списка (всё-блочная модель). Чистый модуль без server-only —
 // используется и на сервере, и в редакторе. См. дизайн-док по блочному редактору.
 
-import type { Lang } from '@/shared/i18n'
+import { type Lang, type LocaleText, trLoose } from '@/shared/i18n'
+
+// Терпимое чтение поля, которое может быть строкой (одноязычный блок) или
+// LocaleText. Живёт в shared/i18n — его читают и другие фичи, а features друг
+// друга импортировать не могут. Здесь оставлено имя из словаря блоков.
+export { trLoose as blockText }
 
 export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video', 'quiz', 'file', 'product'] as const
 export type BlockType = (typeof BLOCK_TYPES)[number]
@@ -32,11 +37,28 @@ export const goesToScript = (t: string, command?: string): boolean => t === 'ste
 // Payload не-step блоков (в колонке steps.content). Step-блок payload не использует
 // (его поля — в собственных колонках title/desc/command/…).
 export interface TextBlockContent {
-  md: string // markdown-врезка
+  /** Markdown-врезка. Строка — одноязычный блок (так хранились все блоки до
+   *  того, как перевод научился их видеть); LocaleText — блок на нескольких
+   *  языках, как остальные переводимые поля. Читать через blockText. */
+  md: string | LocaleText
 }
 export interface ImageBlockContent {
   ref?: string // storage_key картинки (как imageKey у шага)
-  caption?: string
+  caption?: string | LocaleText
+}
+
+/** Добавляет перевод, СОХРАНЯЯ оригинал. Строка при этом становится
+ *  LocaleText: язык оригинала здесь известен — его сообщает вызывающий,
+ *  который и определил, с какого языка переводит. */
+export function addBlockTranslation(
+  v: unknown,
+  sourceLang: Lang,
+  targetLang: Lang,
+  value: string,
+): string | LocaleText {
+  if (!value.trim()) return (v ?? '') as string | LocaleText
+  const base: LocaleText = typeof v === 'string' ? (v ? { [sourceLang]: v } : {}) : ((v ?? {}) as LocaleText)
+  return { ...base, [targetLang]: value.trim() }
 }
 // Poll-блок: варианты (в git, версионируются) + голоса ВНЕ git (таблица poll_votes).
 // Расширяемо под тесты/курсы: correct?, explanation, kind можно добавить позже.

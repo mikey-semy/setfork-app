@@ -6,7 +6,7 @@ import { safeHref } from '@/shared/lib/safe-url'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 import { markdownCodeBlock } from '@/shared/lib/markdown'
 import { stepDanger } from '@/core/domain/destructive-command'
-import { productItems } from './blocks'
+import { productItems, blockText } from './blocks'
 import { carriesCommands, dialectSpec, flatten, hashComment, scriptFilename, scriptUrl, type ScriptDialect } from '@/core/domain/script-dialect'
 
 export interface ExportStep {
@@ -30,7 +30,9 @@ export interface ExportStep {
 }
 
 const isStepBlk = (s: ExportStep): boolean => !s.type || s.type === 'step'
-const blockMd = (s: ExportStep): string => (typeof s.content?.md === 'string' ? s.content.md : '')
+// Скрипт языка зрителя не знает (его собирают и по curl) — там остаётся
+// оригинал: blockText без языка отдаёт первый доступный, а не пустоту.
+const blockMd = (s: ExportStep, lang?: Lang): string => blockText(s.content?.md, lang)
 const blockVideo = (s: ExportStep): { url: string; caption: string } => ({
   url: typeof s.content?.url === 'string' ? s.content.url : '',
   caption: typeof s.content?.caption === 'string' ? s.content.caption : '',
@@ -127,7 +129,7 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
   list.steps.forEach((s) => {
     if (!isStepBlk(s)) {
       // Картинки в экспорт не идут (ключ хранилища не подписан) — оставляем подпись.
-      if (s.type === 'text') { const md = blockMd(s); if (md) out.push(md, '') }
+      if (s.type === 'text') { const md = blockMd(s, lang); if (md) out.push(md, '') }
       else if (s.type === 'image') { const { caption } = blockImg(s); if (caption) out.push(`_🖼 ${caption}_`, '') }
       else if (s.type === 'poll') { const p = blockPoll(s); if (p.question || p.options.length) out.push(`**📊 ${p.question}**`, ...p.options.map((o) => `- ${o}`), '') }
       else if (s.type === 'video') { const v = blockVideo(s); if (v.url) out.push(`🎬 [${v.caption || v.url}](${v.url})`, '') }
@@ -177,7 +179,7 @@ export function embedHtml(list: ExportList, lang: Lang, backUrl: string): string
   const steps = list.steps
     .map((s) => {
       if (!isStepBlk(s)) {
-        const txt = s.type === 'text' ? esc(blockMd(s)) : esc(blockImg(s).caption)
+        const txt = s.type === 'text' ? esc(blockMd(s, lang)) : esc(blockImg(s).caption)
         return txt ? `<li class="step ctx"><span class="n">•</span><div class="body"><p class="d">${txt}</p></div></li>` : ''
       }
       embedNo++
@@ -242,7 +244,7 @@ export function toHtml(list: ExportList, lang: Lang): string {
   const steps = list.steps
     .map((s) => {
       if (!isStepBlk(s)) {
-        if (s.type === 'text') { const md = esc(blockMd(s)); return md ? `<div class="block-text"><p>${md}</p></div>` : '' }
+        if (s.type === 'text') { const md = esc(blockMd(s, lang)); return md ? `<div class="block-text"><p>${md}</p></div>` : '' }
         const { caption } = blockImg(s)
         return caption ? `<div class="block-text"><p>🖼 ${esc(caption)}</p></div>` : ''
       }

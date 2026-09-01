@@ -4,7 +4,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { getRun } from '@/features/runs/queries'
 import { RunView, type RunStepVM } from '@/features/runs/RunView'
-import { asBlockType, blockChatTitle, productItems } from '@/features/library/blocks'
+import { asBlockType, blockChatTitle, productItems, blockText } from '@/features/library/blocks'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { getAiSettings } from '@/shared/settings/ai'
@@ -35,8 +35,8 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
     id: s.id,
     n: s.n,
     type: s.type ?? 'step',
-    text: s.type === 'text' && typeof s.content?.md === 'string' ? s.content.md : '',
-    caption: s.type === 'image' && typeof s.content?.caption === 'string' ? s.content.caption : '',
+    text: s.type === 'text' ? blockText(s.content?.md, lang) : '',
+    caption: s.type === 'image' ? blockText(s.content?.caption, lang) : '',
     // Товары product-блока: href через /api/go/<step>/p<idx>, если клики включены.
     productTitle: s.type === 'product' && typeof s.content?.title === 'string' ? s.content.title : '',
     products:
@@ -51,7 +51,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       tr(s.title, lang),
       tr(s.section, lang),
       lang,
-      s.type === 'text' && typeof s.content?.md === 'string' ? s.content.md : '',
+      s.type === 'text' ? blockText(s.content?.md, lang) : '',
     ),
     desc: tr(s.desc, lang),
     command: s.command,

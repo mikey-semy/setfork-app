@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { Paperclip } from 'lucide-react'
 import { quizKind, stripQuizAnswers, type QuizBlockContent } from '@/core'
-import { blockChatTitle, pollDeadlineMs, productItems } from '@/features/library/blocks'
+import { blockChatTitle, pollDeadlineMs, productItems, blockText } from '@/features/library/blocks'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { QuizBlock } from '@/features/quizzes/QuizBlock'
@@ -36,7 +36,7 @@ type BlockProps = Pick<
  */
 const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
   text: ({ step, section, tpl, viewer, readOnlyView, digSteps, lang }) => {
-    const md = typeof step.content?.md === 'string' ? step.content.md : ''
+    const md = blockText(step.content?.md, lang)
     if (!md) return null
     // Текст-блок — такая же карточка с киркой, как шаг: это часть материала,
     // по которой так же копают (в прохождении он уже такой — RunView). Раньше

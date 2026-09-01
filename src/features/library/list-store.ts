@@ -1,11 +1,12 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
-import type { List, ListStore, Moderation } from '@/core'
+import { and, eq } from 'drizzle-orm'
+import type { List, ListStore, Moderation, NewStepInput } from '@/core'
 import { canEditList, editBlockReason } from '@/core'
-import { db, templates } from '@/shared/db'
+import { db, templateVersions, templates } from '@/shared/db'
 import { initialModeration } from '@/shared/moderation/publication-state'
 import { captureError } from '@/shared/observability'
 import { listStore as drizzleStore } from './list-store.adapter'
+import { carryTranslations, type NextStep, type PrevStep } from './translation-carry'
 import { listReadRemote, listWriteRemote } from './list-store.remote'
 
 // Фасад порта ListStore — точка катовера домена на Rust.
@@ -89,11 +90,47 @@ async function enforceModeration(list: List, expected: Moderation): Promise<void
   })
 }
 
+/**
+ * Перенос переводов — на той же ЕДИНОЙ точке, что и барьеры выше, и по той же
+ * причине: правило «не тронул поле — сохрани прежнее целиком» пришлось бы
+ * помнить в каждом из путей записи (форма, черновик, предложение правки,
+ * садовник). Забытое в одном из них, оно молча стирает переводы всего списка.
+ *
+ * Но применяется он НЕ ко всякой записи, а только к той, что сама объявила себя
+ * одноязычной (`langScope`). Записи, распоряжающейся всем LocaleText сразу —
+ * MCP, перевод, импорт, — переносить нечего, и вмешательство было бы вредным:
+ * `patch_list` умеет убрать один язык, оставив второй, и перенос воскрешал бы
+ * убранный. Это поймал интеграционный тест, а не рассуждение.
+ *
+ * Сопоставление идёт с ТЕКУЩЕЙ версией: именно её показывал редактор.
+ */
+async function withCarriedTranslations(templateId: string, input: NewStepInput[]): Promise<NewStepInput[]> {
+  // Метку снимаем ВСЕГДА: она транспортная и до ядра доезжать не должна.
+  const steps = input.map(({ langScope: _scope, ...rest }) => rest)
+  if (!input.some((s) => s.langScope)) return steps
+
+  const [tpl] = await db
+    .select({ current: templates.currentVersion })
+    .from(templates)
+    .where(eq(templates.id, templateId))
+    .limit(1)
+  if (!tpl) return steps
+  const [ver] = await db
+    .select({ id: templateVersions.id })
+    .from(templateVersions)
+    .where(and(eq(templateVersions.templateId, templateId), eq(templateVersions.version, tpl.current)))
+    .limit(1)
+  if (!ver) return steps
+  const prev = await db.query.steps.findMany({ where: (s) => eq(s.versionId, ver.id) })
+  return carryTranslations(steps as NextStep[], prev as PrevStep[]) as NewStepInput[]
+}
+
 export const listStore: ListStore = {
   ...base,
   async addVersion(templateId, input) {
     await assertVersionAllowed(templateId)
-    const ver = await base.addVersion(templateId, input)
+    const steps = await withCarriedTranslations(templateId, input.steps)
+    const ver = await base.addVersion(templateId, { ...input, steps })
     await moderate(templateId)
     return ver
   },
