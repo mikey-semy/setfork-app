@@ -25,11 +25,16 @@ export const itemShape = z.object({
   command: z.string().optional().describe('Step: shell command, if any'),
   level: z.enum(['required', 'recommended', 'optional']).optional().describe('Step: how essential it is'),
   why: z.string().optional().describe('Step: why this step matters (rationale)'),
+  // Секция — у ЛЮБОГО блока, а не только у шага (см. ListBlocks.tsx: заголовок
+  // рисуется, когда секция отличается от секции предыдущего блока). Описание
+  // говорило «Step:», и агенты верили: вместо секции они вбивали «## Заголовок»
+  // внутрь первого text-блока, из-за чего заголовок раздела оказывался частью
+  // карточки, а оглавление его не видело.
   section: z
     .string()
     .optional()
     .describe(
-      'Step: optional section header; consecutive steps sharing it are grouped. Do NOT number it — the table of contents numbers sections itself. Leading ordinals are stripped on write',
+      'Heading above this block — works on ANY block type, not just steps. Consecutive blocks sharing the same section are grouped under one heading, and it lands in the table of contents. THIS is how you put a heading between items: do NOT write "## Heading" inside a text block instead — the reader sees it glued to that block and the contents list misses it. Do NOT number it — the contents numbers sections itself. Leading ordinals are stripped on write',
     ),
   subtasks: z.array(z.string()).optional().describe('Step: verification checks'),
   needsHuman: z.boolean().optional().describe('Step: mark that this point needs a human — local prices, taste, personal experience'),
