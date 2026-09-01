@@ -1,4 +1,5 @@
 import { cn } from '@/shared/lib/cn'
+import { CommandText } from './CommandText'
 import { CopyButton } from './CopyButton'
 import { CONTROL_H, CONTROL_TEXT } from './control'
 import type { Lang } from '@/shared/i18n'
@@ -35,11 +36,20 @@ export function CopyRow({
   /** Для места вызова: например `print:hidden`, когда на печать идёт CodeCard. */
   className?: string
 }) {
+  // Многострочность определяется по самому значению, а не пропом: место вызова не знает
+  // заранее, что придёт — команда бывает и однострочной, и скриптом.
+  const multiline = value.includes('\n')
   return (
     <div
       className={cn(
-        'flex items-center gap-2 rounded-md border border-border bg-surface-2 pl-2.5 pr-1 font-mono text-ink',
-        CONTROL_H.md,
+        'flex gap-2 rounded-md border border-border bg-surface-2 pl-2.5 pr-1 font-mono text-ink',
+        // ⚠️ ВЫСОТА ФИКСИРОВАНА ТОЛЬКО У ОДНОСТРОЧНОГО значения. Ступень шкалы взята
+        // потому, что владелец видел «очень высокое поле кода», и для адреса, фразы и
+        // однострочной команды она верна. Но многострочный скрипт при `h-8` показывался
+        // ОДНОЙ строкой с невидимыми переносами: человек копирует не то, что видит.
+        // Поэтому многострочное значение растёт по содержимому, оставаясь в тех же
+        // отступах и с тем же кеглем.
+        multiline ? 'items-start py-1.5' : cn('items-center', CONTROL_H.md),
         CONTROL_TEXT.sm,
         className,
       )}
@@ -55,8 +65,12 @@ export function CopyRow({
         />
       ) : (
         // Значение не переносится и не режется: длинное прокручивают вбок — обрезка
-        // сделала бы его бесполезным, а перенос сломал бы высоту строки.
-        <code className="no-scrollbar min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap">{value}</code>
+        // сделала бы его бесполезным, а перенос читался бы как две команды.
+        // `no-scrollbar`: полосу здесь заменяет кнопка копирования — она забирает
+        // значение ЦЕЛИКОМ, поэтому спрятанный вправо хвост ничем не грозит. А у
+        // однострочного значения высота зажата ступенью шкалы, и классическая полоса
+        // Windows отняла бы у строки половину.
+        <CommandText value={value} className="no-scrollbar flex-1" />
       )}
       <CopyButton text={value} lang={lang} size="sm" />
     </div>

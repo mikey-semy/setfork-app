@@ -10,6 +10,7 @@ import { DiffComments, type DiffCommentLabels, type RowThread } from './DiffComm
 import { ViewedToggle } from './ViewedToggle'
 import { blockFingerprint, isStaleMark } from './viewed-fingerprint'
 import { cardClass } from '@/shared/ui/card-style'
+import { CommandText } from '@/shared/ui/CommandText'
 import { badgeClass } from '@/shared/ui/badge'
 
 // Два вида диффа версий — ОДИН источник правды для сравнения версий И для правки
@@ -160,7 +161,11 @@ export function ListDiff({
                     </div>
                   )}
                   {e.changes.includes('command') && (
-                    <div className="font-mono">
+                    // ⚠️ ЗДЕСЬ ИНЛАЙН — И ЭТО ОСОЗНАННО. Строка сравнения показывает «было →
+                    // стало» одним предложением: прокручиваемый блок разорвал бы пару на
+                    // два отдельных блока, и связь «одно превратилось в другое» пропала бы.
+                    // Предмет тут не команда сама по себе, а её ИЗМЕНЕНИЕ.
+                    <div className="font-mono [overflow-wrap:anywhere]">
                       {e.before.command && <span className="line-through opacity-70">{e.before.command}</span>}
                       {e.command && <> → {e.command}</>}
                     </div>
@@ -179,7 +184,9 @@ export function ListDiff({
                 </div>
               )}
               {e.status !== 'removed' && e.command && !e.changes.includes('command') && (
-                <code className="mt-2 block rounded-md bg-surface-2 px-2 py-1 font-mono text-body-sm text-ink">{e.command}</code>
+                // Через общий показ: голый `<code>` переносил команду по пробелам, а
+                // длинный токен распирал контейнер — на телефоне это уносило страницу вбок.
+                <CommandText value={e.command} className="mt-2 rounded-md bg-surface-2 px-2 py-1 text-body-sm text-ink" />
               )}
               {e.status !== 'removed' && e.refs && e.refs.length > 0 && (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">

@@ -2,6 +2,7 @@ import { FileText, Image as ImageIcon, Info, ListChecks, ShoppingBag, UserRound,
 import type { ProposedItem } from '@/shared/db'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { CodeCard } from '@/shared/ui/CodeCard'
+import { CopyRow } from '@/shared/ui/CopyRow'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
@@ -123,9 +124,22 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
                     </div>
                   )}
                   {it.command && (
-                    <div className="mt-3">
-                      <CodeCard code={it.command} />
-                    </div>
+                    <>
+                      {/* ⚠️ Тот же канон, что у команды шага (ListStepCard): на ЭКРАНЕ —
+                          прокрутка и кнопка копирования, на ПЕЧАТИ — CodeCard, потому что
+                          прокрутки на бумаге нет и всё правее видимой ширины пропадёт.
+                          Предложенную команду копируют чаще, чем читают: она приехала,
+                          чтобы её выполнить. */}
+                      <CopyRow
+                        value={it.command}
+                        lang={lang}
+                        prompt
+                        className="mt-3 print:hidden"
+                      />
+                      <div className="mt-3 hidden print:block">
+                        <CodeCard code={it.command} name="bash" lang={lang} />
+                      </div>
+                    </>
                   )}
                   {(it.subtasks ?? []).length > 0 && (
                     <ul className="mt-2 flex flex-col gap-1">
