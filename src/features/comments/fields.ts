@@ -1,4 +1,5 @@
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { blockText } from '@/features/library/blocks'
 
 // Какое поле блока прокомментировано. Роль `path` из модели GitHub/GitLab: там
 // комментарий адресуется файлом, у нас — блоком (block_id) и полем внутри него.
@@ -27,10 +28,7 @@ export interface AnchorableBlock {
  */
 export function fieldText(block: AnchorableBlock, field: CommentField, lang: Lang): string {
   if (field === 'command') return block.command ?? ''
-  if (field === 'content.md') {
-    const md = (block.content ?? {}).md
-    return typeof md === 'string' ? md : ''
-  }
+  if (field === 'content.md') return blockText((block.content ?? {}).md, lang)
   const loc = field === 'title' ? block.title : field === 'desc' ? block.desc : block.why
   return loc ? tr(loc, lang) : ''
 }

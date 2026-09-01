@@ -17,6 +17,7 @@ import { assignCatalogByName } from '@/features/catalogs/assign'
 import { registerTags } from '@/features/tags/service'
 import { ensureWatch } from '@/features/watch/actions'
 import { parseEditorItems, toProposedItems } from '../editor'
+import { carryField } from '../translation-carry'
 import { getDraft, getVersionSteps } from '../queries'
 import { publishOwnedDraft } from '../publish-draft'
 import { deleteDraft, publishDraftFor, upsertDraft, type PublishResult } from '../draft'
@@ -118,7 +119,11 @@ export async function createTemplate(_prev: NewListRefusal | null, formData: For
 
 // ── Владелец: правка метаданных списка (название/описание/теги/порядок) ──
 // slug НЕ трогаем — он технический и авто-генерённый, пользователя не касается.
-// title/desc меняем в ТЕКУЩЕМ языке интерфейса, значения на других языках сохраняем.
+// title/desc меняем в ТЕКУЩЕМ языке интерфейса, значения на других языках сохраняем
+// (carryField — то же правило, что у шагов: не тронул поле — прежнее значение
+// целиком). Простое слияние `{...prev, [lang]: title}` здесь не годилось: поле,
+// показанное ОТКАТОМ на другой язык, при каждом сохранении записывало чужой текст
+// как перевод — и кнопка «Перевести» считала, что переводить уже нечего.
 export async function updateListMeta(templateId: string, formData: FormData): Promise<void> {
   const session = await requireSession()
   const lang = await getLang()
@@ -132,8 +137,8 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
   await db
     .update(templates)
     .set({
-      title: { ...(tpl.title as LocaleText), [lang]: title },
-      desc: { ...(tpl.desc as LocaleText), [lang]: desc },
+      title: carryField({ [lang]: title }, tpl.title as LocaleText),
+      desc: carryField(desc ? { [lang]: desc } : {}, tpl.desc as LocaleText),
       tags,
       ordered,
       updatedAt: new Date(),

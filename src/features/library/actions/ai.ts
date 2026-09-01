@@ -6,8 +6,8 @@ import { redirect } from 'next/navigation'
 import { db, steps, templates, users, type ProposedItem, type StepLevel } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { isLang, langEnName, type LocaleText } from '@/shared/i18n'
-import { generateBlockRefine, generateChangeNote, generateListRefine, generateListTranslation } from '@/shared/ai/generate'
+import { isLang, langEnName, trKey, type Lang, type LocaleText } from '@/shared/i18n'
+import { generateBlockRefine, generateChangeNote, generateListRefine, generateListTranslation, generateTextTranslation } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 import { aiQuota } from '@/shared/quota'
@@ -15,6 +15,8 @@ import { textLang } from '@/shared/i18n/detect-text-lang'
 import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, canViewList } from '@/core'
 import { isCollaborator } from '@/features/collab/queries'
+import { addBlockTranslation, blockText } from '../blocks'
+import { hasLang } from '../translation-state'
 import { emptyItem, parseEditorItems, toProposedItems, type EditorBlockPatch, type EditorItem } from '../editor'
 import { listStore } from '../list-store'
 import { hasChanges, summarizeDiffForNote } from '../change-summary'
@@ -164,13 +166,21 @@ export async function translateList(templateId: string, targetLang: string): Pro
   // получил переведённые title/desc без версии.
   if (!canEditList(tpl)) return { error: 'forbidden' }
 
-  const { allowed } = await checkRateLimit(`translate:${session.userId}`)
-  if (!allowed) return { error: 'ratelimited' }
-  if (!(await aiQuota(session.userId, session.handle)).ok) return { error: 'ai_quota' }
-
   const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
   if (!cur) return { error: 'notfound' }
   const rows = await db.query.steps.findMany({ where: (s) => eq(s.versionId, cur.id), orderBy: (s, { asc }) => asc(s.n) })
+
+  // Перевод УЖЕ ЕСТЬ — берём из памяти, модель не зовём и версию не плодим.
+  //
+  // Показ и так идёт через tr(): раз ключ языка лежит в данных, читатель видит
+  // перевод без всякой нейросети. Кнопка нужна только чтобы создать
+  // недостающее — а нажатая второй раз она тратила бы и квоту, и деньги, и
+  // заводила версию, в которой ничего не изменилось.
+  if (hasLang(tpl, rows, targetLang)) return { ok: true }
+
+  const { allowed } = await checkRateLimit(`translate:${session.userId}`)
+  if (!allowed) return { error: 'ratelimited' }
+  if (!(await aiQuota(session.userId, session.handle)).ok) return { error: 'ai_quota' }
 
   // Исходный текст поля: значение на любом уже имеющемся языке (en → первый).
   const pick = (lt: LocaleText | null | undefined): string => (lt ? (lt.en ?? Object.values(lt).find(Boolean) ?? '') : '')
@@ -188,8 +198,37 @@ export async function translateList(templateId: string, targetLang: string): Pro
     })),
   }
 
-  const translated = await generateListTranslation(current, targetLang, { userId: session.userId, feature: 'translate' })
+  // Markdown-врезки переводятся отдельным вызовом: их нет в форме шага, и
+  // проза внутри большого JSON у модели разъезжается — списки, таблицы,
+  // переносы. См. generateTextTranslation.
+  const mdIdx: number[] = []
+  const mdChunks: string[] = []
+  rows.forEach((s, i) => {
+    if (s.type !== 'text') return
+    const md = blockText((s.content as { md?: unknown } | null)?.md)
+    if (md.trim()) {
+      mdIdx.push(i)
+      mdChunks.push(md)
+    }
+  })
+
+  const [translated, mdOut] = await Promise.all([
+    generateListTranslation(current, targetLang, { userId: session.userId, feature: 'translate' }),
+    generateTextTranslation(mdChunks, targetLang, { userId: session.userId, feature: 'translate' }),
+  ])
   if (!translated) return { error: 'aifail' }
+  // ВСЁ ИЛИ НИЧЕГО. Сохранить половину выглядит соблазнительно («врезки доберём
+  // потом»), но добирать было бы нечем: кнопка исчезает, как только у заголовка
+  // появился ключ языка, — и врезки остались бы на чужом языке навсегда. Отказ
+  // целиком человек видит тостом и жмёт ещё раз.
+  if (mdChunks.length && !mdOut) return { error: 'aifail' }
+  const mdByIndex = new Map<number, string>()
+  if (mdOut) mdIdx.forEach((rowIndex, k) => mdByIndex.set(rowIndex, mdOut[k] ?? ''))
+
+  // Язык оригинала — тот, из которого tr() читает заголовок: врезки писались
+  // вместе с ним. Нужен, чтобы старую одноязычную строку положить под верный
+  // ключ, а не потерять её при добавлении перевода.
+  const sourceLang: Lang = (trKey(tpl.title, 'en') as Lang | undefined) ?? 'en'
   // Модель обязана сохранить порядок и число шагов — иначе мёрж по индексу уедет.
   if (translated.items.length !== rows.length) return { error: 'mismatch' }
 
@@ -209,7 +248,12 @@ export async function translateList(templateId: string, targetLang: string): Pro
       // читало перевод как «всё удалено и всё добавлено» (ADR-0013).
       blockId: s.blockId ?? undefined,
       type: s.type,
-      content: s.content, // poll/quiz/product-контент в v1 не переводим (оставляем как есть)
+      // Текст-блок переводится (это основной носитель смысла в списках-разборах);
+      // poll/quiz/product-контент в v1 оставляем как есть.
+      content:
+        s.type === 'text' && mdByIndex.has(i)
+          ? { ...s.content, md: addBlockTranslation(s.content?.md, sourceLang, targetLang, mdByIndex.get(i) ?? '') }
+          : s.content,
       title: add(s.title, t.title),
       desc: add(s.desc, t.desc),
       command: s.command,

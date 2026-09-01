@@ -1,7 +1,7 @@
 // Типы блоков списка (всё-блочная модель). Чистый модуль без server-only —
 // используется и на сервере, и в редакторе. См. дизайн-док по блочному редактору.
 
-import type { Lang } from '@/shared/i18n'
+import { type Lang, type LocaleText, tr } from '@/shared/i18n'
 
 export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video', 'quiz', 'file', 'product'] as const
 export type BlockType = (typeof BLOCK_TYPES)[number]
@@ -32,11 +32,45 @@ export const goesToScript = (t: string, command?: string): boolean => t === 'ste
 // Payload не-step блоков (в колонке steps.content). Step-блок payload не использует
 // (его поля — в собственных колонках title/desc/command/…).
 export interface TextBlockContent {
-  md: string // markdown-врезка
+  /** Markdown-врезка. Строка — одноязычный блок (так хранились все блоки до
+   *  того, как перевод научился их видеть); LocaleText — блок на нескольких
+   *  языках, как остальные переводимые поля. Читать через blockText. */
+  md: string | LocaleText
 }
 export interface ImageBlockContent {
   ref?: string // storage_key картинки (как imageKey у шага)
-  caption?: string
+  caption?: string | LocaleText
+}
+
+/** Читает переводимое поле не-step блока.
+ *
+ *  Терпимо к двум формам, и это не временная поблажка: строка означает блок,
+ *  написанный до того, как у таких полей появился язык, и переписывать
+ *  историю версий ради формы записи незачем. Пишем строго (см. ниже), читаем
+ *  терпимо.
+ *
+ *  Без языка ведёт себя как tr(..., 'en'): английский, иначе первый
+ *  доступный. Так вызывающим, у которых языка зрителя под рукой нет —
+ *  экспорт, дифф, выдача агенту, — ничего передавать не нужно, и они
+ *  получают оригинал, а не пустоту. */
+export function blockText(v: unknown, lang: Lang = 'en'): string {
+  if (typeof v === 'string') return v
+  if (v && typeof v === 'object') return tr(v as LocaleText, lang)
+  return ''
+}
+
+/** Добавляет перевод, СОХРАНЯЯ оригинал. Строка при этом становится
+ *  LocaleText: язык оригинала здесь известен — его сообщает вызывающий,
+ *  который и определил, с какого языка переводит. */
+export function addBlockTranslation(
+  v: unknown,
+  sourceLang: Lang,
+  targetLang: Lang,
+  value: string,
+): string | LocaleText {
+  if (!value.trim()) return (v ?? '') as string | LocaleText
+  const base: LocaleText = typeof v === 'string' ? (v ? { [sourceLang]: v } : {}) : ((v ?? {}) as LocaleText)
+  return { ...base, [targetLang]: value.trim() }
 }
 // Poll-блок: варианты (в git, версионируются) + голоса ВНЕ git (таблица poll_votes).
 // Расширяемо под тесты/курсы: correct?, explanation, kind можно добавить позже.

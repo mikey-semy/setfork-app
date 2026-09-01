@@ -363,6 +363,78 @@ Translate the list above into ${langName} and return the full JSON list in the s
   return runListModel(system, prompt, current.title, 'translate', { ...opts, web: false })
 }
 
+/** Перевод markdown-врезок текстовых блоков.
+ *
+ *  Отдельным вызовом, а не полем внутри JSON шагов, и на то две причины.
+ *  Первая: форма шага общая с генерацией и правкой — добавив туда поле, мы
+ *  меняем промпты, которые к переводу отношения не имеют. Вторая, важнее:
+ *  врезка это проза, иногда на экран, и модель, разбирая её внутри большого
+ *  JSON, охотно переносит строки, ломает списки и таблицы. Отдельная задача
+ *  «переведи эти куски, верни столько же» держится куда крепче.
+ *
+ *  null — если модель вернула другое количество кусков: молча склеить перевод
+ *  не с тем блоком хуже, чем не перевести вовсе. */
+export async function generateTextTranslation(
+  chunks: string[],
+  targetLang: Lang,
+  opts: GenerateOptions = {},
+): Promise<string[] | null> {
+  if (chunks.length === 0) return []
+  const langName = langEnName(targetLang)
+  const sp = spotlight()
+  const system = `You TRANSLATE Markdown fragments into ${langName}.
+Return STRICT JSON: {"items":["…","…"]} — one string per input fragment, SAME order, SAME count.
+Preserve Markdown structure exactly: headings, lists, tables, block quotes, line breaks.
+Do NOT translate code inside fenced blocks or inline backticks, URLs, or identifiers — copy them verbatim.
+Quoted source material (lines starting with >) IS translated, but keep the quote marker.
+Translate nothing else: no commentary, no added or removed fragments.
+${sp.rule()}`
+  const prompt = `${sp.wrap('FRAGMENTS (JSON)', JSON.stringify({ items: chunks }).slice(0, MAX_PROMPT_CHARS))}
+
+Translate every fragment into ${langName} and return {"items":[…]} with exactly ${chunks.length} strings in the same order.`
+
+  const client = await getAiChatClient()
+  if (!client) return null
+  const settings = await getAiSettings()
+  if (!settings.enabled) return null
+  if (!(await globalBudgetOk())) return null
+
+  const { base: model } = await pickChatModels(settings)
+  const startedAt = Date.now()
+  try {
+    const result = await generateText({
+      model: client.chat(model),
+      system,
+      prompt,
+      temperature: 0.2,
+    })
+    const u = extractUsage(result)
+    await recordUsage({
+      userId: opts.userId,
+      feature: 'translate',
+      model,
+      input: u.input,
+      output: u.output,
+      total: u.total,
+      cost: u.cost,
+      refType: opts.refType,
+      refId: opts.refId,
+      outcome: 'ok',
+      durationMs: Date.now() - startedAt,
+      provider: client.cfg.provider,
+    })
+    const cleaned = result.text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
+    const obj = JSON.parse(cleaned) as { items?: unknown }
+    // Число кусков обязано совпасть: перевод, приклеенный не к тому блоку, хуже
+    // непереведённого — он выглядит правильным.
+    if (!Array.isArray(obj.items) || obj.items.length !== chunks.length) return null
+    return obj.items.map((v) => String(v ?? ''))
+  } catch (e) {
+    console.warn('[translate-text] failed', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
 /**
  * Правка ОДНОГО пункта по инструкции — то же, что refine, но в границах блока.
  *

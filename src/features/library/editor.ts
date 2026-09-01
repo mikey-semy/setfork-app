@@ -3,7 +3,7 @@
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ProposedItem, StepLevel } from '@/shared/db'
 import { blankCount, type QuizKind } from '@/core'
-import { asBlockType, isBlockType, isBlockUuid, newBlockId, newOptionId, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
+import { asBlockType, isBlockType, isBlockUuid, newBlockId, newOptionId, PRODUCT_TIERS, type BlockType, type ProductTier, blockText } from './blocks'
 import { safeHref } from '@/shared/lib/safe-url'
 
 const QUIZ_KINDS: QuizKind[] = ['choice', 'text', 'number', 'blank', 'match', 'sort', 'code']
@@ -130,6 +130,11 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
       const sec: LocaleText = it.section.trim() ? { [lang]: it.section.trim() } : {}
       // bid — стабильный id блока (для merge), кладём в content; гарантируем наличие.
       if (it.type === 'text') {
+        // Пишем строкой, одним языком, — как и остальные поля формы (title
+        // ниже). Редактор одноязычный, и придумывать врезке языковой код по
+        // языку интерфейса значило бы записать догадку как факт.
+        // Перевод при этом не теряется: языки возвращает translation-carry на
+        // единой точке записи версии, одинаково для всех полей.
         return { ...base, section: sec, type: 'text', content: { md: it.text.trim(), bid: it.bid || newBlockId() } }
       }
       if (it.type === 'image') {
@@ -317,7 +322,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     const blockId = it.blockId || ''
     const section = it.section ? tr(it.section, lang) : '' // секция/урок — у любого блока
     if (type === 'text') {
-      return { ...emptyItem(), type: 'text', bid, blockId, section, text: typeof it.content?.md === 'string' ? it.content.md : '' }
+      return { ...emptyItem(), type: 'text', bid, blockId, section, text: blockText(it.content?.md) }
     }
     if (type === 'image') {
       const ref = typeof it.content?.ref === 'string' ? it.content.ref : ''

@@ -10,6 +10,7 @@ import { aiQuota, globalBudgetOk } from '@/shared/quota'
 import { rateLimit } from '@/shared/rate-limit'
 import { getAiSettings } from '@/shared/settings/ai'
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { blockText } from '@/features/library/blocks'
 
 /**
  * Мини-чат раскопки (HQ §8, редизайн по фидбеку владельца): вместо статичных
@@ -76,8 +77,7 @@ export async function digChatAsk(input: {
   // одинаков во всех поверхностях. Раскопка лишь передаёт контекст пункта.
   // Текст-блок хранит markdown в content.md (не в desc) — без этого кирка на
   // «Тексте» отдала бы гному пустой контекст.
-  const blockMd =
-    row.type === 'text' && typeof (row.content as { md?: string } | null)?.md === 'string' ? (row.content as { md: string }).md : ''
+  const blockMd = row.type === 'text' ? blockText((row.content as { md?: unknown } | null)?.md, input.lang) : ''
   const stepCtx = [
     `List: ${tr(tpl.title as LocaleText, input.lang)}`,
     tpl.tags.length ? `Tags: ${tpl.tags.join(', ')}` : '',

@@ -6,6 +6,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { cardClass } from '@/shared/ui/card-style'
+import { blockText } from './blocks'
 
 /**
  * ИТОГ ПРАВКИ — как список будет выглядеть, ЕСЛИ её принять.
@@ -89,7 +90,7 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
         const isStep = (it.type ?? 'step') === 'step'
         const num = isStep ? ++seq : 0
         const refs = (it.refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url }))
-        const md = typeof it.content?.md === 'string' ? it.content.md : ''
+        const md = blockText(it.content?.md, lang)
         return (
           <div key={i} className={cardClass()}>
             {!isStep && md ? (

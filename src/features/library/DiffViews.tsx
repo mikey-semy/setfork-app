@@ -11,6 +11,7 @@ import { ViewedToggle } from './ViewedToggle'
 import { blockFingerprint, isStaleMark } from './viewed-fingerprint'
 import { cardClass } from '@/shared/ui/card-style'
 import { badgeClass } from '@/shared/ui/badge'
+import { blockText } from './blocks'
 
 // Два вида диффа версий — ОДИН источник правды для сравнения версий И для правки
 // (PR). Раньше «код»/«список» жили локальными функциями внутри страницы
@@ -115,7 +116,7 @@ export function ListDiff({
           // У презентационного блока title пуст, а содержимое лежит в content —
           // берём подпись и тело оттуда, иначе карточка выходит безымянной и пустой.
           const block = !isStepBlock(e)
-          const body = block ? (e.type === 'text' ? String(e.content?.md ?? '') : '') : e.desc
+          const body = block ? (e.type === 'text' ? blockText(e.content?.md, lang) : '') : e.desc
           // Цвет рамки приходит инлайновым style по статусу блока диффа и потому
           // перекрывает тон карточки — сам рецепт при этом общий.
           const cardCls = cardClass({ className: `group relative ${comments ? 'pr-12' : ''} ${st.color ? '' : 'opacity-60'}` })
