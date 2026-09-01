@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { GitFork } from 'lucide-react'
 import { LIST_VISIBILITY_BADGE } from '@/shared/list-visibility'
+import { DensityToggle } from '@/shared/ui/DensityToggle'
+import type { ListDensity } from '@/shared/lib/list-density'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
@@ -19,6 +21,7 @@ export function ListsToolbar({
   isOwner,
   q,
   type,
+  density,
   sort,
   catalogs = [],
   catalog,
@@ -30,6 +33,8 @@ export function ListsToolbar({
   isOwner: boolean
   q: string
   type: 'all' | 'public' | 'private' | 'draft' | 'forks'
+  /** Плотность строк — выбор зрителя из куки; переключатель стоит здесь же, у фильтров. */
+  density: ListDensity
   sort: 'recent' | 'name' | 'stars'
   /** Полки владельца со счётчиками; у чужого профиля фильтр не показываем. */
   catalogs?: { name: string; title: string; count: number }[]
@@ -134,6 +139,11 @@ export function ListsToolbar({
           </SelectContent>
         </Select>
       )}
+
+      {/* Плотность — рядом с фильтрами, как у GitHub над перечнем репозиториев:
+          она относится к тому же списку, что и отбор, и искать её в другом месте
+          пришлось бы отдельно. */}
+      <DensityToggle value={density} lang={lang} />
 
       <Select value={sort} onValueChange={(v) => navigate({ sort: v === 'recent' ? '' : v })}>
         <SelectTrigger className="w-auto min-w-26 gap-1.5">

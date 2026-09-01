@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render as rtlRender, screen } from '@testing-library/react'
+import { TooltipProvider } from '@/shared/ui/Tooltip'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ProfileLists } from '@/app/[handle]/ProfileLists'
@@ -38,7 +39,15 @@ const emptyProps = {
   catalogs: [],
   catalogFilter: undefined,
   unfiledCount: 0,
+  density: 'comfy' as const,
 }
+
+/**
+ * Панель показывает иконочные кнопки с тултипами (переключатель плотности), а провайдер
+ * тултипов в бою живёт в layout. Без него Radix падает ещё на рендере — оборачиваем
+ * здесь, а не в каждом вызове.
+ */
+const render = (ui: React.ReactElement) => rtlRender(<TooltipProvider delay={0}>{ui}</TooltipProvider>)
 
 describe('панель списков профиля', () => {
   it('не показывает бесполезные поиск и фильтры на действительно пустой вкладке', () => {
@@ -64,7 +73,7 @@ describe('панель списков профиля', () => {
         isOwner={false}
         q=""
         type="all"
-        sort="recent"
+        sort="recent" density="comfy"
       />,
     )
 
@@ -84,7 +93,7 @@ describe('панель списков профиля', () => {
     const user = userEvent.setup()
     render(
       <SelectionProvider>
-        <ListsToolbar tab="lists" lang="en" isOwner q="" type="all" sort="recent" actions={<SelectionToggle lang="en" />} />
+        <ListsToolbar tab="lists" lang="en" isOwner q="" type="all" density="comfy" sort="recent" actions={<SelectionToggle lang="en" />} />
         <SelectableCard id="one" label="Example list">
           <div>Example list</div>
         </SelectableCard>
@@ -117,7 +126,7 @@ describe('смена отбора и номер страницы', () => {
     currentParams = new URLSearchParams('tab=lists&sort=recent&page=5')
     push.mockClear()
     const user = userEvent.setup()
-    render(<ListsToolbar tab="lists" lang="en" isOwner={false} q="" type="all" sort="recent" />)
+    render(<ListsToolbar tab="lists" lang="en" isOwner={false} q="" type="all" sort="recent" density="comfy" />)
 
     // Через поиск, а не через выпадающий список: оба идут одним и тем же `navigate`,
     // но поле — нативное, и проверка не зависит от внутренностей Select.

@@ -1,4 +1,6 @@
 import 'server-only'
+import { cookies } from 'next/headers'
+import { DENSITY_COOKIE, densityFrom } from '@/shared/lib/list-density'
 import { notFound } from 'next/navigation'
 import { redirectIfUserMoved } from '@/shared/db/moved-list'
 import { getSession } from '@/shared/auth/session'
@@ -148,6 +150,9 @@ export async function loadProfilePage({ handle, sp: raw, lang }: { handle: strin
   const sort: Sort = SORTS.find((s) => s === sp.sort) ?? 'recent'
   // Вкладка «Списки»: поиск + фильтр по типу + сортировка (тулбар как у репо GitHub).
   const listType: ListType = LIST_TYPES.find((t) => t === sp.type) ?? 'all'
+  // Плотность — выбор ЗРИТЕЛЯ, а не свойство адреса: она приходит кукой и потому не
+  // уезжает в ссылке, которой делятся (см. shared/lib/list-density).
+  const density = densityFrom((await cookies()).get(DENSITY_COOKIE)?.value)
   // Фильтр по полке: имя каталога или NO_CATALOG. Неизвестное имя фильтром не считаем —
   // иначе опечатка в адресе показывает пустую библиотеку без объяснения.
   const catalogFilter = sp.catalog === NO_CATALOG ? NO_CATALOG : catalogs.find((c) => c.name === sp.catalog)?.name
@@ -213,6 +218,7 @@ export async function loadProfilePage({ handle, sp: raw, lang }: { handle: strin
   const pageHref = buildPageHref(`/${handle}`, { ...sp, e: undefined, tab, catalog: catalogFilter })
 
   return {
+    density,
     handle,
     lang,
     user,

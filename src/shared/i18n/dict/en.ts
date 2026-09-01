@@ -195,6 +195,9 @@ export const en = {
   // Отписка от писем (заголовок List-Unsubscribe и страница по ссылке из письма).
   'profile.catalogAll': 'All catalogs',
   'profile.typeAll': 'All types',
+  'density.label': 'List density',
+  'density.comfy': 'Comfortable',
+  'density.compact': 'Compact',
   'profile.newList': 'New',
   'profile.findList': 'Find a list…',
   'profile.findListAria': 'Find a list',

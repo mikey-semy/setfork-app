@@ -10,46 +10,48 @@ const card = (code: string) => (
 )
 
 /**
- * ⚠️ СТРОКИ КОДА — ОДНОЙ ШИРИНЫ. Отступ под служебный угол получала только первая
- * строка, «чтобы не терять сотню пикселей на каждой». Цена оказалась выше экономии:
- * строка 1 переносилась там, где строки 2 и 3 такой же длины помещались целиком.
- * Перенос выглядел случайным, а главное — рвалось ВЫРАВНИВАНИЕ, которое в коде несёт
- * смысл: колонки «состояние → результат» переставали читаться (снимок владельца
- * 01.09.2026). Место возвращено иначе: номера строк и бейдж языка на телефоне скрыты.
+ * ⚠️ СТРОКИ КОДА — ОДНОЙ ШИРИНЫ, И ВСЁ СЛУЖЕБНОЕ ЖИВЁТ ВНЕ ИХ ПОЛОСЫ.
+ *
+ * Пройдено два неверных размена. Сначала отступ под угол получала только первая строка:
+ * она переносилась там, где соседние такой же длины помещались целиком, и рвалось
+ * выравнивание, которое в коде несёт смысл. Потом отступ выдали всем строкам, а место
+ * отняли у номеров и имени языка — владелец сразу спросил, куда они делись.
+ *
+ * Итог: служебное вынесено в полосу над кодом (28px один раз на блок), а код идёт во всю
+ * ширину. Номера и язык видны везде.
  */
 const CODE = 'активный        -> ДОСТУП ЕСТЬ\nзаблокирован    -> ДОСТУП ЕСТЬ'
 
+/** Строки кода: второй блок карточки — первый занят служебной полосой. */
 const rows = (code = CODE) => {
   const { container } = render(card(code))
-  return [...container.querySelectorAll('.sf-code-card > div > div')] as HTMLElement[]
+  return [...container.querySelectorAll('.sf-code-card > div:last-child > div')] as HTMLElement[]
 }
 
 describe('карточка кода', () => {
-  it('правый отступ одинаков у всех строк', () => {
-    const pads = rows().map((r) =>
-      r.className
-        .split(/\s+/)
-        .filter((c) => /^(sm:)?pr-/.test(c))
-        .sort()
-        .join(' '),
-    )
-    expect(pads.length).toBeGreaterThan(1)
-    expect(new Set(pads).size, `отступы разъехались: ${JSON.stringify(pads)}`).toBe(1)
+  it('правый отступ у строк одинаков — и его нет вовсе: код во всю ширину', () => {
+    const pads = rows().map((r) => r.className.split(/\s+/).filter((c) => /^(sm:|print:)?pr-/.test(c)))
+    expect(rows().length).toBeGreaterThan(1)
+    expect(pads.flat(), 'место под служебный угол снова отнимают у кода').toEqual([])
   })
 
-  it('на телефоне номера строк скрыты, а на печати и на широком экране — нет', () => {
+  it('номера строк на месте — на любой ширине', () => {
     const num = rows()[0].querySelector('span') as HTMLElement
     expect(num.textContent).toBe('1')
-    expect(num.className).toMatch(/\bhidden\b/)
-    expect(num.className).toMatch(/sm:inline-block/)
-    expect(num.className).toMatch(/print:inline-block/)
+    expect(num.className, 'номера прятали на телефоне ради ширины — так больше не платим').not.toMatch(/\bhidden\b/)
   })
 
-  it('бейдж языка на телефоне скрыт: он служебный и стоит места у каждой строки', () => {
+  it('имя языка показано и не спрятано за ширину', () => {
     const { container } = render(card(CODE))
-    const badge = [...container.querySelectorAll('span')].find((s) => s.textContent === 'bash') as HTMLElement
-    expect(badge.className).toMatch(/\bhidden\b/)
-    expect(badge.className).toMatch(/sm:inline/)
+    const badge = [...container.querySelectorAll('span')].find((x) => x.textContent === 'bash') as HTMLElement
+    expect(badge, 'язык блока не показан вовсе').toBeTruthy()
+    expect(badge.className).not.toMatch(/\bhidden\b/)
+  })
+
+  it('служебная полоса на печать не идёт: там нечего копировать', () => {
+    const { container } = render(card(CODE))
+    const bar = container.querySelector('.sf-code-card > div') as HTMLElement
+    expect(bar.className).toMatch(/print:hidden/)
   })
 
   it('перенос длинных строк остаётся: код показывают в своей форме, без бокового скролла', () => {
