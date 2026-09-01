@@ -20,6 +20,12 @@ const HOVER_LIFT = 14
  * ними — повтор предыдущего типа (самый частый выбор). Пальцем это работает лучше
  * выпадающего списка, поэтому вариант остался и на тач.
  *
+ * ⚠️ ВЫСОТА ПОЛОСЫ (`h-6`) ВЫВЕДЕНА ИЗ ТАЧ-ЦЕЛИ, А НЕ ВЫБРАНА НА ГЛАЗ. На грубом
+ * указателе кнопка занимает 44px (`TOUCH_BOX`), и в полосе 16px она не помещалась:
+ * при зазоре списка `gap-3` между карточками оставалось 40px, и цель выходила за
+ * него по 2px в каждую сторону — палец попадал по краю карточки. 12 + 24 + 12 = 48
+ * ≥ 44: кнопка целиком живёт в зазоре и ничего не накрывает.
+ *
  * `between` — тонкий разделитель между карточками: кнопка появляется по наведению,
  * а на тач-экране (наведения нет) стоит видимой сразу.
  */
@@ -51,7 +57,7 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
   }
 
   return (
-    <div ref={rootRef} className={`relative flex items-center justify-center ${between ? 'group h-4 w-full' : ''}`}>
+    <div ref={rootRef} className={`relative flex items-center justify-center ${between ? 'group h-6 w-full' : ''}`}>
       {between && !open && <span className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border opacity-0 transition-opacity group-hover:opacity-100" />}
       {BLOCK_TYPES.map((type, k) => {
         const deg = BLOCK_TYPES.length > 1 ? startDeg - (SPREAD_DEG / (BLOCK_TYPES.length - 1)) * k : 90

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Fragment, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { TEXT } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import { toProposedItems, type EditorItem } from '../editor'
@@ -170,8 +170,8 @@ export function ListEditor({
           </div>
         )}
         {list.items.map((item, i) => (
+          <Fragment key={list.uids[i]}>
           <BlockCard
-            key={list.uids[i]}
             item={item}
             index={i}
             uid={list.uids[i]}
@@ -192,10 +192,21 @@ export function ListEditor({
             chatActive={chatUid === list.uids[i]}
             isUploading={(kind) => uploads.isBusy(list.uids[i], kind)}
             onUpload={(kind, file) => void uploads.upload(list.uids[i], kind, file)}
-            // Инсертер после ПОСЛЕДНЕГО блока не рисуем: конец списка покрывает
-            // главный инсертер ниже. «Повторить» = тип блока, под которым он стоит.
-            insertAfter={i < list.items.length - 1 ? <BlockInserter onInsert={(type) => list.insertAt(i + 1, type)} repeatType={item.type} lang={lang} between /> : undefined}
           />
+          {/* ⚠️ ИНСЕРТЕР ЖИВЁТ МЕЖДУ КАРТОЧКАМИ, А НЕ ВНУТРИ. Внутри карточки (куда он
+              переехал при разрезании редактора на файлы, #696) круглый «+» садился на
+              её нижнюю границу и накрывал содержимое: сам он 28px в полосе 16px, а на
+              грубом указателе к нему добавляется невидимая тач-зона 44px — она и
+              перехватывала касания по карточке. Найдено владельцем на телефоне
+              01.09.2026; проверено пробником: клик по кнопке блока уходил в «Добавить
+              блок». После ПОСЛЕДНЕГО не рисуем — конец списка покрывает главный
+              инсертер ниже. «Повторить» = тип блока, под которым он стоит. */}
+          {i < list.items.length - 1 && (
+            <div className="flex justify-center">
+              <BlockInserter onInsert={(type) => list.insertAt(i + 1, type)} repeatType={item.type} lang={lang} between />
+            </div>
+          )}
+          </Fragment>
         ))}
       </div>
 
