@@ -28,12 +28,31 @@ import { cn } from '@/shared/lib/cn'
  * фокусируемыми, Firefox и Safari — нет, поэтому `tabIndex` проставлен явно. Так же
  * сделано у GitHub (`<pre tabindex="0">`).
  *
+ * ⚠️ ВНУТРИ КНОПКИ ФОКУС ОТКЛЮЧАЮТ (`focusable={false}`). Содержимое `<button>` не
+ * вправе иметь свою точку остановки: разметка становится невалидной, а обход с
+ * клавиатуры — непредсказуемым. Место вызова обязано это назвать; сейчас такое одно —
+ * карточка кандидата, которая целиком кнопка (находка авто-ревью #850).
+ *
+ * ⚠️ НА ПЕЧАТИ БЛОК ПЕРЕНОСИТСЯ. Прокрутки на бумаге нет: `whitespace-pre` обрезал бы
+ * всё правее видимой ширины. Там, где рядом стоит полноценная `CodeCard` (страница
+ * списка, предложение), этот блок из печати убран целиком — но прямые применения
+ * (`CandidateCard`, `DiffViews`) печатались бы обрезанными.
+ *
  * ⚠️ ПОЛОСА ПРОКРУТКИ ВИДНА ПО УМОЛЧАНИЮ — это единственный признак, что строка
  * продолжается. Прятать её позволено там, где текст целиком забирает соседняя кнопка
  * копирования и где высота зажата ступенью шкалы (`CopyRow` передаёт `no-scrollbar`):
  * классическая полоса Windows съела бы там половину строки.
  */
-export function CommandText({ value, className }: { value: string; className?: string }) {
+export function CommandText({
+  value,
+  className,
+  focusable = true,
+}: {
+  value: string
+  className?: string
+  /** `false` — блок внутри `<button>`: своя точка остановки там недопустима. */
+  focusable?: boolean
+}) {
   return (
     <code
       // Правило считает элемент неинтерактивным и не знает про прокрутку: спрятанный
@@ -41,9 +60,10 @@ export function CommandText({ value, className }: { value: string; className?: s
       // GitHub (<pre tabindex="0">). Подавление одно на продукт — здесь, а не в
       // каждом месте показа.
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-      tabIndex={0}
+      tabIndex={focusable ? 0 : undefined}
       className={cn(
         'block min-w-0 select-text overflow-x-auto whitespace-pre font-mono outline-offset-2',
+        'print:overflow-visible print:whitespace-pre-wrap',
         className,
       )}
     >

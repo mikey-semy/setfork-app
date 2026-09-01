@@ -96,7 +96,10 @@ export function CandidateCard({
                     // Перенос был выбран не решением, а как следствие «раз кнопки нет».
                     // Поведение теперь общее: прокрутка внутри блока, как везде.
                     <div className="relative mt-1 rounded-md bg-surface-2 px-2 py-1 pr-14">
-                      <CommandText value={it.command} className="text-body-sm text-ink" />
+                      {/* focusable={false}: карточка сама <button>, а её содержимое не
+                          вправе иметь свою точку остановки — обход с клавиатуры стал бы
+                          непредсказуемым. Прокрутку здесь ведут мышью и жестом. */}
+                      <CommandText value={it.command} focusable={false} className="text-body-sm text-ink" />
                       <SectionLabel as="span" className="absolute right-1.5 top-1 font-mono">
                         {LANG_LABEL[detectLang(it.command)]}
                       </SectionLabel>
