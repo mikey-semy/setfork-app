@@ -22,12 +22,28 @@ import { cn } from '@/shared/lib/cn'
  *
  * Печать не использует этот компонент: там `CodeCard` с переносом и номерами строк —
  * названное исключение, а не забытое место.
+ *
+ * ⚠️ ПРОКРУЧИВАЕМЫЙ БЛОК ОБЯЗАН БЫТЬ ДОСТИЖИМ КЛАВИАТУРОЙ. Спрятанный вправо текст
+ * иначе недоступен без мыши (WCAG 2.1.1): Chrome сам делает прокручиваемые области
+ * фокусируемыми, Firefox и Safari — нет, поэтому `tabIndex` проставлен явно. Так же
+ * сделано у GitHub (`<pre tabindex="0">`).
+ *
+ * ⚠️ ПОЛОСА ПРОКРУТКИ ВИДНА ПО УМОЛЧАНИЮ — это единственный признак, что строка
+ * продолжается. Прятать её позволено там, где текст целиком забирает соседняя кнопка
+ * копирования и где высота зажата ступенью шкалы (`CopyRow` передаёт `no-scrollbar`):
+ * классическая полоса Windows съела бы там половину строки.
  */
 export function CommandText({ value, className }: { value: string; className?: string }) {
   return (
     <code
+      // Правило считает элемент неинтерактивным и не знает про прокрутку: спрятанный
+      // вправо текст без фокуса недоступен без мыши (WCAG 2.1.1). Так же сделано у
+      // GitHub (<pre tabindex="0">). Подавление одно на продукт — здесь, а не в
+      // каждом месте показа.
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
       className={cn(
-        'no-scrollbar block min-w-0 select-text overflow-x-auto whitespace-pre font-mono',
+        'block min-w-0 select-text overflow-x-auto whitespace-pre font-mono outline-offset-2',
         className,
       )}
     >
