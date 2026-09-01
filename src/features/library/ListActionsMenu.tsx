@@ -50,16 +50,28 @@ interface MenuAction {
  *
  * Теперь у подсказки две части. Точка на КНОПКЕ зовёт открыть меню и гаснет от
  * открытия — свою работу она сделала. Точки на ПУНКТАХ показывают, что именно
- * доступно, и держатся, пока действие не применили: пока черновик не опубликован,
- * «Опубликовать» помечено. Кнопка при этом больше не мигает — иначе черновик,
- * лежащий месяцами, дёргал бы на каждой странице.
+ * доступно, и держатся, пока действие не применили. Кнопка при этом больше не мигает —
+ * иначе черновик, лежащий месяцами, дёргал бы на каждой странице.
+ *
+ * ⚠️ ПАМЯТЬ — НА КАЖДУЮ ПОДСКАЗКУ, А НЕ НА СПИСОК. Заглянувший в меню ради перевода
+ * иначе никогда не увидел бы точку у появившейся позже публикации: список уже
+ * «просмотрен».
+ *
+ * ⚠️ ПОДСКАЗКА ПУНКТА ГАСНЕТ ОТ ПРИМЕНЕНИЯ, А НЕ ОТ КЛИКА. Публикация ничего не
+ * возвращает (`publishList: Promise<void>`, молчаливые ранние выходы), поэтому «принял»
+ * для неё не записывается вовсе: удавшаяся публикация убирает и сам пункт — черновик
+ * перестаёт быть черновиком. Провалившаяся оставляет пункт помеченным, и это верно:
+ * действие не применено. Перевод сообщает об ошибке явно — его подсказка гаснет в
+ * успешной ветке.
  */
 type Hint = 'publish' | 'translate'
-type HintState = { templateId: string; pending: Set<Hint>; menuSeen: boolean } | null
-/** Ключ на КАЖДОЕ действие: принятая публикация не должна гасить подсказку перевода. */
-const hintKey = (h: Hint, templateId: string) => `sf:hint:${h}:${templateId}`
-/** Отдельно — «меню открывали»: это про кнопку, а не про действие внутри. */
-const menuSeenKey = (templateId: string) => `sf:hint-seen:${templateId}`
+type HintState = { templateId: string; accepted: Set<Hint>; shown: Set<Hint> } | null
+/** Подсказка применена. */
+const acceptedKey = (h: Hint, templateId: string) => `sf:hint:${h}:${templateId}`
+/** Точку на кнопке для этой подсказки уже показывали. */
+const shownKey = (h: Hint, templateId: string) => `sf:hint-seen:${h}:${templateId}`
+/** До 01.09.2026 память была одна на список и только про публикацию. */
+const legacyKey = (templateId: string) => `sf:publish-hint:${templateId}`
 const readFlag = (key: string) => {
   try {
     return window.localStorage.getItem(key) === '1'
@@ -72,7 +84,7 @@ const writeFlag = (key: string) => {
   try {
     window.localStorage.setItem(key, '1')
   } catch {
-    // Даже без хранилища подсказка уходит в текущем просмотре — состояние ниже.
+    // Даже без хранилища подсказка уходит в текущем просмотре — состоянием ниже.
   }
 }
 
@@ -102,26 +114,43 @@ export function ListActionsMenu({
   const publishHintLabel = t('publishAvailableHint', lang)
   const translateHintLabel = t('translateAvailableHint', lang)
 
-  // Подсказки читаются для КАЖДОГО черновика отдельно: новый список снова заслуживает
-  // ненавязчивого указателя, уже разобранный — молчит. Через rAF, а не синхронный
-  // setState внутри эффекта: первый SSR/гидрационный кадр одинаковый, затем клиент
-  // безопасно читает localStorage.
+  // Читается ОДИН раз на список и больше не пересобирается: иначе смена `canPublish`
+  // (например, сразу после публикации) затирала бы то, что подтверждено в этом
+  // просмотре, — а это единственный запасной путь при заблокированном хранилище.
+  // Через rAF, а не синхронный setState внутри эффекта: первый SSR/гидрационный кадр
+  // одинаковый, затем клиент безопасно читает localStorage.
   useEffect(() => {
     const id = window.requestAnimationFrame(() => {
-      const pending = new Set<Hint>()
-      if (canPublish && !readFlag(hintKey('publish', templateId))) pending.add('publish')
-      if (canTranslate && !readFlag(hintKey('translate', templateId))) pending.add('translate')
-      setHints({ templateId, pending, menuSeen: readFlag(menuSeenKey(templateId)) })
+      const accepted = new Set<Hint>()
+      const shown = new Set<Hint>()
+      for (const h of ['publish', 'translate'] as const) {
+        if (readFlag(acceptedKey(h, templateId))) accepted.add(h)
+        if (readFlag(shownKey(h, templateId))) shown.add(h)
+      }
+      // Старая память: точку публикации этому человеку уже показывали. Без переноса
+      // она вернулась бы на каждом давно разобранном черновике.
+      if (readFlag(legacyKey(templateId))) {
+        shown.add('publish')
+        writeFlag(shownKey('publish', templateId))
+        try {
+          window.localStorage.removeItem(legacyKey(templateId))
+        } catch {
+          // Не смогли убрать — не беда: выше уже записан новый ключ.
+        }
+      }
+      setHints({ templateId, accepted, shown })
     })
     return () => window.cancelAnimationFrame(id)
-  }, [canPublish, canTranslate, templateId])
+  }, [templateId])
 
   const state = hints?.templateId === templateId ? hints : null
-  const isPending = (h: Hint) => !!state?.pending.has(h)
-  // Точка на кнопке — пока есть хоть одна неприменённая подсказка И меню ещё не
-  // открывали: дальше зовёт уже сам пункт внутри.
+  const available = (h: Hint) => (h === 'publish' ? canPublish : canTranslate)
+  /** Подсказка ещё не отработала: действие доступно и не применено. */
+  const isPending = (h: Hint) => available(h) && !!state && !state.accepted.has(h)
+  const hintsToShow = (['publish', 'translate'] as const).filter((h) => isPending(h))
+  // Точка на кнопке — пока есть подсказка, которую в меню ещё не показывали.
   const [burstingTrigger, setBurstingTrigger] = useState(false)
-  const triggerHint = !!state && state.pending.size > 0 && !state.menuSeen
+  const triggerHint = !!state && hintsToShow.some((h) => !state.shown.has(h))
   // animationend может не прийти, если вкладка ушла в фон или пользовательская
   // таблица стилей отключила animation. Таймер гарантирует, что «лопнувшая» точка
   // не зависнет прозрачным DOM-узлом.
@@ -133,29 +162,26 @@ export function ListActionsMenu({
 
   const openedMenu = () => {
     if (!triggerHint) return
-    writeFlag(menuSeenKey(templateId))
+    for (const h of hintsToShow) writeFlag(shownKey(h, templateId))
     setBurstingTrigger(true)
-    setHints((h) => (h ? { ...h, menuSeen: true } : h))
+    setHints((s) => (s ? { ...s, shown: new Set([...s.shown, ...hintsToShow]) } : s))
   }
 
-  // Подсказка пункта расходуется применением действия, а не взглядом на него:
-  // «Опубликовать» перестаёт быть помеченным, когда список опубликован.
-  const acknowledge = (h: Hint) => {
-    if (!isPending(h)) return
-    writeFlag(hintKey(h, templateId))
-    setHints((s) => {
-      if (!s) return s
-      const pending = new Set(s.pending)
-      pending.delete(h)
-      return { ...s, pending }
-    })
+  const accept = (h: Hint) => {
+    writeFlag(acceptedKey(h, templateId))
+    setHints((s) => (s ? { ...s, accepted: new Set([...s.accepted, h]) } : s))
   }
 
   const doTranslate = () =>
     start(async () => {
       const res = await translateList(templateId, targetLang)
-      if ('error' in res) toast.error(t('translateFailed', lang))
-      else router.refresh()
+      if ('error' in res) {
+        // Подсказка НЕ гаснет: перевода не случилось, действие всё ещё ждёт.
+        toast.error(t('translateFailed', lang))
+      } else {
+        accept('translate')
+        router.refresh()
+      }
     })
 
   // Пока точка на кнопке есть — подпись её расшифровывает: сама по себе точка не
@@ -179,10 +205,7 @@ export function ListActionsMenu({
       label: translateLabel,
       Icon: Languages,
       hint: 'translate',
-      onSelect: () => {
-        acknowledge('translate')
-        doTranslate()
-      },
+      onSelect: doTranslate,
     })
   if (canPublish) {
     actions.push({
@@ -192,10 +215,8 @@ export function ListActionsMenu({
       // в опасной зоне настроек — здесь только быстрый путь.
       Icon: Rocket,
       hint: 'publish',
-      onSelect: () => {
-        acknowledge('publish')
-        start(() => publishList(templateId))
-      },
+      // Подсказка не гасится здесь: удавшаяся публикация уносит и сам пункт.
+      onSelect: () => start(() => publishList(templateId)),
     })
   }
 

@@ -13,8 +13,15 @@ import { walkSrc, relSrc } from '../helpers/walk-src'
  * Признак нарушения — круглый кружок размером со ступень подсказки мимо `HintDot`.
  */
 const ALLOWED = new Set(['src/shared/ui/HintDot.tsx'])
-/** `size-1.5 … rounded-full` в любом порядке: это и есть рукописная точка. */
-const HANDMADE = /size-1\.5[^"'`]*rounded-full|rounded-full[^"'`]*size-1\.5/
+/**
+ * Кружок ступени подсказки в любом написании. `h-1.5 w-1.5` — не выдумка ради полноты:
+ * ровно так была написана четвёртая копия (индикатор связи в админке), и правило,
+ * знавшее только `size-1.5`, её не видело.
+ */
+const DOT_SIZE = /\bsize-1\.5\b|\bh-1\.5\b[^"'`]*\bw-1\.5\b/
+const HANDMADE = new RegExp(
+  `(${DOT_SIZE.source})[^"'\`]*\\brounded-full\\b|\\brounded-full\\b[^"'\`]*(${DOT_SIZE.source})`,
+)
 
 describe('точка-подсказка рисуется одним примитивом', () => {
   it('рукописных кружков вне HintDot нет', () => {

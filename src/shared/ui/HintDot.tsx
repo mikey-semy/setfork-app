@@ -18,8 +18,8 @@ export function HintDot({
   className,
   ...rest
 }: {
-  /** `warn` — «требуется твоё действие», `accent` — «тут уже что-то есть». */
-  tone?: 'warn' | 'accent'
+  /** `warn` — «требуется твоё действие», `accent` — «тут уже что-то есть», `ok` — «связь жива». */
+  tone?: 'warn' | 'accent' | 'ok'
   /** `corner` — угол иконочной кнопки (родителю нужен `relative`); `inline` — в строке. */
   place?: 'corner' | 'inline'
   /** Точка лопается и исчезает: подсказку приняли. */
@@ -31,7 +31,7 @@ export function HintDot({
       aria-hidden
       className={cn(
         'size-1.5 shrink-0 rounded-full',
-        tone === 'warn' ? 'bg-warn' : 'bg-accent',
+        tone === 'warn' ? 'bg-warn' : tone === 'ok' ? 'bg-ok' : 'bg-accent',
         place === 'corner' && 'absolute right-0.5 top-0.5',
         bursting && 'animate-sf-hint-burst',
         className,
