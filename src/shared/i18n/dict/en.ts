@@ -1737,6 +1737,7 @@ export const en = {
   'common.reporter': 'Reporter',
   'common.save': 'Save',
   'dig.aIBudgetExhaustedToday': 'AI budget is exhausted for today.',
+  'dig.historyLoadFailed': 'Could not load the conversation',
   'dig.anyAlternatives': 'Any alternatives?',
   'dig.askAnythingAboutStep': 'Ask anything about this step — reasons, pitfalls, alternatives. The master digs where you point.',
   'dig.autoByTopic': 'Auto by topic',

@@ -46,8 +46,31 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   const [thanked, setThanked] = useState<Set<number>>(new Set()) // индексы реплик, за которые сказали спасибо
   const [text, setText] = useState('')
   const [err, setErr] = useState('')
+  const [historyFailed, setHistoryFailed] = useState(false)
   const [pending, start] = useTransition()
   const ctxRef = useRef<DigChatOpenDetail | null>(null) // актуальный ctx без stale-замыкания в слушателе
+
+  /**
+   * ⚠️ НЕ УДАВШУЮСЯ ЗАГРУЗКУ ПОКАЗЫВАЕМ КАК СБОЙ, А НЕ КАК ПУСТУЮ БЕСЕДУ. Обрыв связи
+   * (VPN, потерянная сеть) раньше приводил к пустому чату: человек видел, что метка
+   * «здесь копали» стоит, а разговора нет, и решал, что история потеряна. Она была
+   * жива — молчал интерфейс.
+   */
+  const loadHistory = async (detail: DigChatOpenDetail) => {
+    setHistoryFailed(false)
+    try {
+      const res = await getDigChatHistory(detail.templateId, detail.stepN)
+      if (!res.ok) {
+        setHistoryFailed(true)
+        return
+      }
+      // Начатую в этом окне беседу не перетираем.
+      setMessages((m) => (m.length === 0 ? res.messages : m))
+    } catch {
+      // Сюда попадает уже не ошибка запроса, а недоставленный вызов — тот самый обрыв.
+      setHistoryFailed(true)
+    }
+  }
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -61,9 +84,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
         setMessages([])
         setFollowups([])
         setErr('')
-        void getDigChatHistory(detail.templateId, detail.stepN)
-          .then((h) => setMessages((m) => (m.length === 0 ? h : m))) // не перетираем начатую сессию
-          .catch(() => {})
+        void loadHistory(detail)
       }
     }
     window.addEventListener(DIG_CHAT_EVENT, onOpen)
@@ -174,7 +195,9 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
       chips={chips}
       pending={pending}
       pendingLabel={t('dig.digging', lang)}
-      error={err}
+      error={err || (historyFailed ? t('dig.historyLoadFailed', lang) : '')}
+      onRetry={historyFailed && ctx ? () => void loadHistory(ctx) : undefined}
+      retryLabel={t('tryAgain', lang)}
       value={text}
       onChange={setText}
       onSend={(preset) => send(preset)}

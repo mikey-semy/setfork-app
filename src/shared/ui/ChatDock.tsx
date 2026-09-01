@@ -36,6 +36,8 @@ export function ChatDock({
   pending,
   pendingLabel,
   error,
+  onRetry,
+  retryLabel,
   value,
   onChange,
   onSend,
@@ -58,6 +60,9 @@ export function ChatDock({
   pending: boolean
   pendingLabel: string
   error?: string
+  /** Дан — рядом с причиной появляется повтор: сбой связи не должен требовать перезагрузки страницы. */
+  onRetry?: () => void
+  retryLabel?: string
   value: string
   onChange: (v: string) => void
   onSend: (preset?: string) => void
@@ -130,7 +135,16 @@ export function ChatDock({
             <Spinner size="sm" /> {pendingLabel}
           </div>
         )}
-        {error && <p className="text-body-sm text-warn">{error}</p>}
+        {error && (
+          <p className="flex flex-wrap items-center gap-2 text-body-sm text-warn">
+            {error}
+            {onRetry && (
+              <button type="button" onClick={onRetry} className="underline underline-offset-2 hover:no-underline">
+                {retryLabel}
+              </button>
+            )}
+          </p>
+        )}
         {chips && chips.length > 0 && !pending && (
           <div className="flex flex-wrap gap-1.5">
             {chips.map((q) => (

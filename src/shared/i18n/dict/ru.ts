@@ -1727,6 +1727,7 @@ export const ru: Record<DictKey, string> = {
   'common.reporter': 'Репортёр',
   'common.save': 'Сохранить',
   'dig.aIBudgetExhaustedToday': 'Дневной бюджет ИИ исчерпан.',
+  'dig.historyLoadFailed': 'Не удалось загрузить беседу',
   'dig.anyAlternatives': 'Какие есть альтернативы?',
   'dig.askAnythingAboutStep': 'Спрашивай что угодно про этот пункт — причины, подводные камни, альтернативы. Мастер копает туда, куда покажешь.',
   'dig.autoByTopic': 'Авто по теме',
