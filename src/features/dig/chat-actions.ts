@@ -1,6 +1,7 @@
 'use server'
 
 import { and, asc, eq } from 'drizzle-orm'
+import { captureError } from '@/shared/observability'
 import { db, digChatMessages, gnomeThanks, steps, templates, templateVersions } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
@@ -108,13 +109,15 @@ export async function digChatAsk(input: {
   if (!replies.length) return { error: 'aifail' }
 
   // Сессия: пишем вопрос + ВСЕ реплики гномов (созванный тоже сохраняется).
+  // Ответ не задерживаем — но и потерю не прячем: молчаливый `.catch(() => {})`
+  // означал бы, что беседа «сохранена» ровно до следующего открытия кирки.
   void db
     .insert(digChatMessages)
     .values([
       { templateId: tpl.id, stepN: input.stepN, userId: session.userId, role: 'user' as const, text: question },
       ...replies.map((r) => ({ templateId: tpl.id, stepN: input.stepN, userId: session.userId, role: 'gnome' as const, who: r.who, text: r.text })),
     ])
-    .catch(() => {})
+    .catch((e) => captureError(e, { where: 'digChatAsk.save', templateId: tpl.id, stepN: input.stepN }))
   return { replies }
 }
 
@@ -122,15 +125,20 @@ export async function digChatAsk(input: {
  * История беседы по пункту для текущего пользователя (сессия): при повторном
  * открытии кирки разговор восстанавливается. Проверяем доступ к списку. Хвост
  * 40 реплик — беседа личная и обычно короткая.
+ *
+ * ⚠️ СБОЙ ОТЛИЧАЕТСЯ ОТ ПУСТОТЫ, И ЭТО НЕ ПЕДАНТИЗМ. Раньше любая беда — обрыв связи,
+ * упавший запрос — возвращала пустой массив, и человек видел чат без единого
+ * сообщения, будто беседы никогда не было. Владелец на этом и попался: «спрашивал,
+ * метка стоит, а истории нет» — на самом деле был сбой сети, история жива.
+ * Пустая беседа и недоступная беседа — разные вещи, и говорить о них надо разное.
  */
-export async function getDigChatHistory(templateId: string, stepN: number): Promise<DigChatMsg[]> {
+export type DigChatHistory = { ok: true; messages: DigChatMsg[] } | { ok: false }
+
+export async function getDigChatHistory(templateId: string, stepN: number): Promise<DigChatHistory> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: eq(templates.id, templateId) })
-  if (!tpl || !canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return []
-  // История — НЕ критичный путь: любой сбой запроса (нет таблицы на не-мигрированной
-  // дев-БД, транзиент) должен дать пустую сессию, а НЕ ронять страницу в 500
-  // (инцидент дев-среды: relation dig_chat_messages does not exist). Запись обёрнута
-  // так же — чтение теперь симметрично.
+  // Нет доступа к списку — беседы для этого зрителя и правда нет.
+  if (!tpl || !canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return { ok: true, messages: [] }
   try {
     const rows = await db
       .select({ role: digChatMessages.role, who: digChatMessages.who, text: digChatMessages.text })
@@ -138,9 +146,16 @@ export async function getDigChatHistory(templateId: string, stepN: number): Prom
       .where(and(eq(digChatMessages.templateId, templateId), eq(digChatMessages.stepN, stepN), eq(digChatMessages.userId, session.userId)))
       .orderBy(asc(digChatMessages.createdAt))
       .limit(40)
-    return rows.map((r) => ({ role: r.role === 'gnome' ? 'gnome' : 'user', who: r.who ?? undefined, text: r.text }))
-  } catch {
-    return []
+    return {
+      ok: true,
+      messages: rows.map((r) => ({ role: r.role === 'gnome' ? 'gnome' : 'user', who: r.who ?? undefined, text: r.text })),
+    }
+  } catch (e) {
+    // Не роняем страницу (на не-мигрированной дев-БД таблицы может не быть), но и не
+    // выдаём сбой за пустую беседу: причина уходит в лог, зритель получает «не
+    // удалось загрузить» с кнопкой повтора.
+    captureError(e, { where: 'getDigChatHistory', templateId, stepN })
+    return { ok: false }
   }
 }
 

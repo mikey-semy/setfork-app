@@ -46,8 +46,40 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   const [thanked, setThanked] = useState<Set<number>>(new Set()) // индексы реплик, за которые сказали спасибо
   const [text, setText] = useState('')
   const [err, setErr] = useState('')
+  const [historyFailed, setHistoryFailed] = useState(false)
   const [pending, start] = useTransition()
   const ctxRef = useRef<DigChatOpenDetail | null>(null) // актуальный ctx без stale-замыкания в слушателе
+
+  /**
+   * ⚠️ НЕ УДАВШУЮСЯ ЗАГРУЗКУ ПОКАЗЫВАЕМ КАК СБОЙ, А НЕ КАК ПУСТУЮ БЕСЕДУ. Обрыв связи
+   * (VPN, потерянная сеть) раньше приводил к пустому чату: человек видел, что метка
+   * «здесь копали» стоит, а разговора нет, и решал, что история потеряна. Она была
+   * жива — молчал интерфейс.
+   */
+  const loadHistory = async (detail: DigChatOpenDetail) => {
+    setHistoryFailed(false)
+    // ⚠️ Ответ ОБОГНАВШЕГО запроса выбрасываем. Открыли шаг A, следом B — и пришедший
+    // позже отказ по A иначе пометил бы сбоем уже загруженную беседу B.
+    const stillHere = () => {
+      const cur = ctxRef.current
+      return !!cur && cur.templateId === detail.templateId && cur.stepN === detail.stepN
+    }
+    try {
+      const res = await getDigChatHistory(detail.templateId, detail.stepN)
+      if (!stillHere()) return
+      if (!res.ok) {
+        setHistoryFailed(true)
+        return
+      }
+      // ⚠️ История встаёт ПЕРЕД тем, что успели написать. Пока загрузка не удалась,
+      // спрашивать не запрещено — и удавшийся повтор не имеет права выбросить ни
+      // старую беседу (было бы «повтор стёр историю»), ни новые реплики.
+      setMessages((m) => [...res.messages, ...m])
+    } catch {
+      // Сюда попадает уже не ошибка запроса, а недоставленный вызов — тот самый обрыв.
+      if (stillHere()) setHistoryFailed(true)
+    }
+  }
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -61,9 +93,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
         setMessages([])
         setFollowups([])
         setErr('')
-        void getDigChatHistory(detail.templateId, detail.stepN)
-          .then((h) => setMessages((m) => (m.length === 0 ? h : m))) // не перетираем начатую сессию
-          .catch(() => {})
+        void loadHistory(detail)
       }
     }
     window.addEventListener(DIG_CHAT_EVENT, onOpen)
@@ -174,7 +204,12 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
       chips={chips}
       pending={pending}
       pendingLabel={t('dig.digging', lang)}
-      error={err}
+      // Повтор принадлежит ИМЕННО ошибке загрузки истории. Ошибка вопроса (лимит,
+      // квота) старше по приоритету и своего повтора не имеет: нажатие перечитывало
+      // бы беседу, никак не относясь к тому, о чём говорит текст рядом.
+      error={err || (historyFailed ? t('dig.historyLoadFailed', lang) : '')}
+      onRetry={!err && historyFailed && ctx ? () => void loadHistory(ctx) : undefined}
+      retryLabel={t('tryAgain', lang)}
       value={text}
       onChange={setText}
       onSend={(preset) => send(preset)}
