@@ -47,7 +47,11 @@ export function ListSettingsSheet({ lang, defaultOpen = false, children }: { lan
           09.08.2026). */}
       <Tooltip label={t('listSettings', lang)}>
         <SheetTrigger asChild>
-          <IconButton variant="outline" label={t('listSettings', lang)}>
+          {/* ⚠️ РАЗМЕР — ПО СОСЕДНЕМУ ПОЛЮ, А НЕ ПО УМОЛЧАНИЮ. Кнопка стоит в одном ряду
+              с полем `size="lg"` (40px), а сама шла ступенью `md` (32px) — в ряду это
+              читается как разнобой, даже когда центры совпадают (замечание владельца
+              01.09.2026: «кнопка настроек должна быть по высоте поля»). */}
+          <IconButton variant="outline" size="lg" label={t('listSettings', lang)}>
             <SlidersHorizontal size={iconSizeFor()} />
           </IconButton>
         </SheetTrigger>

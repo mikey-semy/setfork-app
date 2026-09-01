@@ -1,12 +1,12 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { cn } from '@/shared/lib/cn'
 import { Sparkles } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { generateChangeNoteAction } from './actions/ai'
 import { buttonClass } from '@/shared/ui/button-style'
-import { TOUCH_HIT } from '@/shared/ui/control'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Input } from '@/shared/ui/input'
 
@@ -18,6 +18,7 @@ export function ChangeNoteField({
   placeholder,
   required = true,
   initial = '',
+  className,
 }: {
   templateId: string
   lang: Lang
@@ -28,6 +29,8 @@ export function ChangeNoteField({
   /** Обязательна ли заметка. У черновика — нет: он копится, а описывают правку при
    *  публикации. Обязательное поле здесь просто не давало сохранить черновик. */
   required?: boolean
+  /** Для места вызова: поле встаёт в ряд с кнопкой настроек и собственный отступ снизу там лишний. */
+  className?: string
 }) {
   const [note, setNote] = useState(initial)
   const [busy, setBusy] = useState(false)
@@ -55,7 +58,7 @@ export function ChangeNoteField({
   }
 
   return (
-    <div className="mb-4">
+    <div className={cn('mb-4', className)}>
       <div className="relative">
         <Input
           ref={ref}
@@ -78,14 +81,21 @@ export function ChangeNoteField({
           size="lg"
           className={`pr-11 ${invalid ? 'border-danger focus:border-danger' : ''}`}
         />
-        {/* Иконка-генерация внутри инпута справа, как commit-message в VSCode */}
+        {/* Иконка-генерация внутри инпута справа, как commit-message в VSCode.
+            ⚠️ ЗОНА НАЖАТИЯ — ЧЕРЕЗ ПРОП `touch`, А НЕ КОНСТАНТОЙ В className. Строка
+            `TOUCH_HIT` начинается с `pointer-coarse:relative`, и подставленная руками
+            она побеждала здешний `absolute` — но ТОЛЬКО на грубом указателе. Кнопка
+            выпадала в поток и оказывалась слева под полем: на телефоне владельца
+            именно так, на десктопе всё выглядело правильно (снимок 01.09.2026).
+            `buttonClass` этот случай знает и при собственном позиционировании берёт
+            зону БЕЗ `relative` — если сказать ему `touch`, а не обходить его. */}
         <Tooltip label={t('generateFromChanges', lang)}>
           <button
             type="button"
             onClick={generate}
             disabled={busy}
             aria-label={t('generateFromChanges', lang)}
-            className={`${buttonClass({ variant: 'ghost', size: 'sm', className: `absolute right-1.5 top-1/2 size-7 -translate-y-1/2 p-0 ${TOUCH_HIT}` })} hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2`}
+            className={`${buttonClass({ variant: 'ghost', size: 'sm', touch: 'hit', className: 'absolute right-1.5 top-1/2 size-7 -translate-y-1/2 p-0' })} hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2`}
           >
             {busy ? <Spinner size="md" /> : <Sparkles size={15} />}
           </button>

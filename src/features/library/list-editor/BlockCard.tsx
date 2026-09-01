@@ -1,6 +1,6 @@
 'use client'
 
-import type { PointerEvent, ReactNode } from 'react'
+import type { PointerEvent } from 'react'
 import { Heading } from 'lucide-react'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { TEXT, iconSizeFor } from '@/shared/ui/control'
@@ -53,8 +53,6 @@ type BlockCardProps = {
   chatActive?: boolean
   isUploading: (kind: DropKind) => boolean
   onUpload: (kind: DropKind, file: File) => void
-  /** Инсертер следующего блока — стоит внутри карточки, под её содержимым. */
-  insertAfter?: ReactNode
 }
 
 /** Тело карточки — по типу блока. Каждый вид живёт своим файлом; здесь только выбор. */
@@ -110,7 +108,7 @@ function BlockBody({
  * Стрелки и Alt+↑/↓ не вспомогательные, а полноценный путь: перенос указателем удобен,
  * но с клавиатуры он недоступен по своей природе.
  */
-export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, onInsertBelow, onRetype, isUploading, onUpload, insertAfter, onChat, chatActive }: BlockCardProps) {
+export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, onInsertBelow, onRetype, isUploading, onUpload, onChat, chatActive }: BlockCardProps) {
   return (
     // `group/card` — для жёлоба: он проявляется, когда указатель на ЭТОЙ карточке.
     <div data-i={index} data-uid={uid} className={cardClass({ className: `group/card relative ${drag.dragging ? 'opacity-50' : ''}` })}>
@@ -155,7 +153,6 @@ export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang,
       </div>
 
       <BlockBody item={item} index={index} onPatch={onPatch} onRetype={onRetype} lang={lang} isUploading={isUploading} onUpload={onUpload} />
-      {insertAfter}
     </div>
   )
 }
