@@ -27,6 +27,9 @@ import { PAGE_NARROW } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
 import { cardClass } from '@/shared/ui/card-style'
 import { Pagination } from '@/shared/ui/Pagination'
+import { getIssueEvents } from '@/features/issues/events'
+import { IssueEventRow } from '@/features/issues/IssueEventRow'
+import { mergeThread } from '@/features/issues/thread'
 import { Badge } from '@/shared/ui/badge'
 import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
 
@@ -69,6 +72,10 @@ export default async function IssueThreadPage({
   ])
   const comments = thread.items
   const path = `/${owner}/${slug}/issues/${issue.number}`
+  // События ленты (закрыл, переоткрыл, закрыта правкой) — все сразу: их единицы, зато
+  // вклеить их между нужными репликами можно только имея все (см. features/issues/thread).
+  const events = await getIssueEvents(issue.id)
+  const pieces = mergeThread(comments, events, { isFirst: !thread.prev, isLast: !thread.next })
   const [issueR, cmtR, assignees, milestoneOpts, custom, participants] = await Promise.all([
     getReactionsFor('issue', [issue.id], session?.userId),
     getReactionsFor('issue_comment', comments.map((c) => c.id), session?.userId),
@@ -169,30 +176,36 @@ export default async function IssueThreadPage({
 
         {/* Комментарии */}
         <div className="mt-3 flex flex-col gap-3">
-          {comments.map((c) => (
-            <CommentCard
-              key={c.id}
-              handle={c.authorHandle}
-              avatarUrl={c.authorAvatarUrl}
-              date={c.createdAt}
-              meta={t('commentedOn', lang)}
-              actions={<EditHistory revisions={edits[c.id] ?? []} authorOf={handleById} lang={lang} />}
-              refBase={`/${owner}/${slug}/issues`}
-              lang={lang}
-              // Чужую реплику не правит никто, включая владельца списка: это было бы
-              // переписыванием за человека (так же у GitHub — только скрыть).
-              bodySlot={
-                <EditableText
-                  body={c.body}
-                  refBase={`/${owner}/${slug}/issues`}
-                  canEdit={session?.userId === c.authorId}
-                  action={editCommentForm.bind(null, owner, slug, issue.number, c.id)}
-                  lang={lang}
-                />
-              }
-              reactions={<Reactions targetType="issue_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />}
-            />
-          ))}
+          {pieces.map((piece) => {
+            // Событие — строкой, реплика — карточкой: у события нет ни текста, ни правок,
+            // ни реакций, и ставить их вровень значило бы обещать то же самое.
+            if (piece.event) return <IssueEventRow key={piece.event.id} event={piece.event} listPath={`/${owner}/${slug}`} lang={lang} />
+            const c = piece.comment!
+            return (
+              <CommentCard
+                key={c.id}
+                handle={c.authorHandle}
+                avatarUrl={c.authorAvatarUrl}
+                date={c.createdAt}
+                meta={t('commentedOn', lang)}
+                actions={<EditHistory revisions={edits[c.id] ?? []} authorOf={handleById} lang={lang} />}
+                refBase={`/${owner}/${slug}/issues`}
+                lang={lang}
+                // Чужую реплику не правит никто, включая владельца списка: это было бы
+                // переписыванием за человека (так же у GitHub — только скрыть).
+                bodySlot={
+                  <EditableText
+                    body={c.body}
+                    refBase={`/${owner}/${slug}/issues`}
+                    canEdit={session?.userId === c.authorId}
+                    action={editCommentForm.bind(null, owner, slug, issue.number, c.id)}
+                    lang={lang}
+                  />
+                }
+                reactions={<Reactions targetType="issue_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />}
+              />
+            )
+          })}
         </div>
 
         {/* Шаги треда. Номеров нет: порядок показа обратный ленте, но механика та же —

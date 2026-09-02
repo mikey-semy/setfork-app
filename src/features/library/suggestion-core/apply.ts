@@ -73,7 +73,7 @@ export async function applySuggestion(
     .set({ status: 'accepted', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
   // «closes #12» в заметке закрывает задачи — но только теперь, когда изменения приняты.
-  await closeLinkedIssues(tpl.id, sug.note, actorUserId, prs.autoCloseIssues)
+  await closeLinkedIssues(tpl.id, sug.note, actorUserId, prs.autoCloseIssues, { id: sug.id })
   await notify({ recipientId: sug.authorId, actorId: actorUserId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   await notifyWatchersNewVersion(tpl.id, actorUserId)
   await enqueueReindex(tpl.id)

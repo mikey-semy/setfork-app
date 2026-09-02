@@ -92,6 +92,8 @@ export const notificationType = pgEnum('notification_type', [
   'issue_new',
   'issue_comment',
   'issue_closed_by_merge', // твою задачу закрыли принятым предложением
+  'issue_closed', // твою задачу закрыли руками
+  'issue_reopened', // твою задачу открыли заново
   'new_version',
   'star',
   'fork',
@@ -1402,6 +1404,48 @@ export const issueAssignees = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
   },
   (t) => [uniqueIndex('issue_assignees_uq').on(t.issueId, t.userId), index('issue_assignees_issue_idx').on(t.issueId)],
+)
+
+/**
+ * СОБЫТИЯ ЛЕНТЫ ЗАДАЧИ: закрыл, переоткрыл, закрыто правкой №N.
+ *
+ * Раньше закрытие не оставляло следа вовсе. Задача просто оказывалась закрытой — кем,
+ * когда и почему, узнать было негде; а закрытая принятой правкой не показывала, какой
+ * именно, хотя это первое, что спрашивают: «что там поменяли-то?»
+ *
+ * ⚠️ ОТДЕЛЬНАЯ ТАБЛИЦА, А НЕ ТИП У КОММЕНТАРИЯ, И ЭТО ОСОЗНАННОЕ РАСХОЖДЕНИЕ С GITEA.
+ * У неё всё лежит в `comment` с полем `type` (CommentTypeClose=2, CommentTypeReopen=1,
+ * CommentTypePullRef=6) и ссылками `RefIssueID`/`RefAction`, а лента читает записи всех
+ * типов. У нас `issue_comments` заводилась как таблица ЛЮДСКИХ реплик, и на это
+ * опирается всё вокруг: счётчик комментариев в выдаче, поиск по репликам (#874), список
+ * участников, листание треда ключом, реакции, история правок. Добавь мы туда тип —
+ * каждое из этих мест обязано было бы его учесть, и промах любого был бы ТИХИМ:
+ * «закрыл» пошёл бы в счётчик ответов, а поиск по слову «закрыл» начал бы возвращать
+ * все закрытые задачи подряд. Событий мало, и они без текста, автора-редактора и
+ * реакций — им нечего делить с репликами, кроме порядка в ленте.
+ *
+ * `suggestionId` — та самая правка, из-за которой задача закрылась. `set null` при её
+ * удалении: событие остаётся («задачу закрыли»), пропадает лишь ссылка.
+ */
+export const issueEventKind = pgEnum('issue_event_kind', ['closed', 'reopened', 'closed_by_suggestion'])
+
+export const issueEvents = pgTable(
+  'issue_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    issueId: uuid('issue_id')
+      .notNull()
+      .references(() => issues.id, { onDelete: 'cascade' }),
+    actorId: uuid('actor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: issueEventKind('kind').notNull(),
+    suggestionId: uuid('suggestion_id').references(() => suggestions.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  // Тот же порядок, что у реплик: лента читается с начала, события в неё вклеиваются
+  // по времени (см. issue_comments_issue_idx).
+  (t) => [index('issue_events_issue_idx').on(t.issueId, t.createdAt, t.id)],
 )
 
 export const issueComments = pgTable(
