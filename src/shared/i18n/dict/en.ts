@@ -95,7 +95,7 @@ export const en = {
   noOpenIssues: 'No open issues.',
   noClosedIssues: 'No closed issues.',
   noIssuesMatch: 'No issues match your filters.',
-  searchIssuesPh: 'Search issues by title…',
+  searchIssuesPh: 'Search issues and replies…',
   sortLabel: 'Sort',
   issueTitlePh: 'Title',
   'issue.saveEdit': 'Save',

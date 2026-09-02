@@ -91,7 +91,7 @@ export const ru: Record<DictKey, string> = {
   noOpenIssues: 'Нет открытых задач.',
   noClosedIssues: 'Нет закрытых задач.',
   noIssuesMatch: 'Ничего не найдено по фильтрам.',
-  searchIssuesPh: 'Поиск задач по заголовку…',
+  searchIssuesPh: 'Поиск по задачам и ответам…',
   sortLabel: 'Сортировка',
   issueTitlePh: 'Заголовок',
   'issue.saveEdit': 'Сохранить',
