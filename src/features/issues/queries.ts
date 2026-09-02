@@ -1,6 +1,8 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import { db, issueAssignees, issueComments, issues, listLabels, milestones, users } from '@/shared/db'
+import { resolveListBySlug } from '@/shared/db/resolve-list'
+import { isFeatureEnabled } from '@/core'
 import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
 import { likeContains } from '@/shared/db/like'
 import { feedWindow } from '@/shared/lib/paging'
@@ -327,4 +329,33 @@ export async function getIssueCommentsPage(
     next,
     prev,
   }
+}
+
+/**
+ * Задача по адресу «владелец/слаг/номер» вместе со списком — общая загрузка для всех
+ * действий над задачей. Жила приватно в `actions.ts`, но правка задачи (`edit-actions`)
+ * нуждается в том же, а из файла с `'use server'` брать что-либо нельзя: там каждый
+ * экспорт становится вызываемым с клиента.
+ *
+ * Выбираем и текст: он нужен и правке (сравнить, изменилось ли), и истории (сохранить
+ * прежнее значение).
+ */
+export async function loadIssue(owner: string, slug: string, number: number) {
+  const tpl = await resolveListBySlug(owner, slug)
+  // Выключенный раздел не отдаёт задачу вовсе: всё, что ниже по этому пути, — записи
+  // (комментарий, статус, метки, исполнитель) в раздел, которого в списке больше нет.
+  if (!tpl || !isFeatureEnabled(tpl, 'issues')) return null
+  const [iss] = await db
+    .select({
+      id: issues.id,
+      authorId: issues.authorId,
+      status: issues.status,
+      title: issues.title,
+      body: issues.body,
+    })
+    .from(issues)
+    .where(and(eq(issues.templateId, tpl.id), eq(issues.number, number)))
+    .limit(1)
+  if (!iss) return null
+  return { tpl, iss }
 }

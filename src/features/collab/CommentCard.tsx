@@ -14,6 +14,7 @@ export function CommentCard({
   date,
   meta,
   body,
+  bodySlot,
   refBase,
   reactions,
   actions,
@@ -25,7 +26,9 @@ export function CommentCard({
   avatarUrl: string | null
   date: Date
   meta?: string
-  body: string
+  body?: string
+  /** Тело карточки целиком — когда его умеют править на месте (клиентский слот). */
+  bodySlot?: ReactNode
   refBase: string
   reactions?: ReactNode
   /** Меню «...» (клиентский слот) — карточка остаётся серверной. */
@@ -42,7 +45,7 @@ export function CommentCard({
         {actions}
       </div>
       <div className="px-4 py-3">
-        {body ? <Markdown refBase={refBase}>{body}</Markdown> : <p className="text-body italic text-muted">—</p>}
+        {bodySlot ?? (body ? <Markdown refBase={refBase}>{body}</Markdown> : <p className="text-body italic text-muted">—</p>)}
         {reactions && <div className="mt-2">{reactions}</div>}
       </div>
     </div>

@@ -13,6 +13,10 @@ import { LabelEditor } from '@/features/issues/LabelEditor'
 import { AssigneePicker } from '@/features/issues/AssigneePicker'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
 import { addIssueComment, setIssueStatus } from '@/features/issues/actions'
+import { editCommentForm, editIssueForm } from '@/features/issues/edit-actions'
+import { contentHistoryFor } from '@/features/issues/edit-history'
+import { EditHistory } from '@/features/issues/EditHistory'
+import { EditableText } from '@/features/issues/EditableText'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { getReactionsFor } from '@/features/reactions/queries'
@@ -52,6 +56,16 @@ export default async function IssueThreadPage({
   // сначала», а не пятисотка.
   const { cursor, dir } = readCursor(sp)
   const thread = await getIssueCommentsPage(issue.id, COMMENTS_PER_PAGE, cursor, dir)
+
+  // Ник правившего: ревизия хранит только id, а участники страницы уже известны.
+  const handleById: Record<string, string> = { [issue.authorId]: issue.authorHandle }
+  for (const c of thread.items) handleById[c.authorId] = c.authorHandle
+  // История правок задачи и реплик — ОДНИМ заходом на страницу, а не по запросу на
+  // карточку: на треде из двадцати реплик это был бы N+1.
+  const edits = await contentHistoryFor([
+    { kind: 'issue' as const, id: issue.id },
+    ...thread.items.map((c) => ({ kind: 'comment' as const, id: c.id })),
+  ])
   const comments = thread.items
   const path = `/${owner}/${slug}/issues/${issue.number}`
   const [issueR, cmtR, assignees, milestoneOpts, custom, participants] = await Promise.all([
@@ -121,9 +135,21 @@ export default async function IssueThreadPage({
           avatarUrl={issue.authorAvatarUrl}
           date={issue.createdAt}
           meta={t('openedThis', lang)}
-          body={issue.body}
+          actions={<EditHistory revisions={edits[issue.id] ?? []} authorOf={handleById} lang={lang} />}
           refBase={`/${owner}/${slug}/issues`}
           lang={lang}
+          // Правка на месте: текст задачи правит автор, а также владелец списка —
+          // те же права, что у смены статуса. История ведётся всегда.
+          bodySlot={
+            <EditableText
+              body={issue.body}
+              refBase={`/${owner}/${slug}/issues`}
+              canEdit={isAuthor || isOwner}
+              action={editIssueForm.bind(null, owner, slug, issue.number)}
+              titleField={issue.title}
+              lang={lang}
+            />
+          }
           reactions={<Reactions targetType="issue" targetId={issue.id} reactions={issueR[issue.id] ?? []} canReact={!!session} path={path} lang={lang} />}
         />
 
@@ -136,9 +162,20 @@ export default async function IssueThreadPage({
               avatarUrl={c.authorAvatarUrl}
               date={c.createdAt}
               meta={t('commentedOn', lang)}
-              body={c.body}
+              actions={<EditHistory revisions={edits[c.id] ?? []} authorOf={handleById} lang={lang} />}
               refBase={`/${owner}/${slug}/issues`}
               lang={lang}
+              // Чужую реплику не правит никто, включая владельца списка: это было бы
+              // переписыванием за человека (так же у GitHub — только скрыть).
+              bodySlot={
+                <EditableText
+                  body={c.body}
+                  refBase={`/${owner}/${slug}/issues`}
+                  canEdit={session?.userId === c.authorId}
+                  action={editCommentForm.bind(null, owner, slug, issue.number, c.id)}
+                  lang={lang}
+                />
+              }
               reactions={<Reactions targetType="issue_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />}
             />
           ))}
