@@ -35,9 +35,16 @@ export function MaintenanceSection({ initialOn, envOverride, lang }: { initialOn
           type="button"
           onClick={flip}
           disabled={pending}
-          className={`${buttonClass()} disabled:opacity-50 ${
-            on ? 'bg-primary text-primary-fg' : 'bg-danger text-white hover:opacity-90'
-          }`}
+          // ⚠️ ВАРИАНТОМ, А НЕ ДОПИСАННЫМИ КЛАССАМИ. Раньше цвет дописывали строкой
+          // поверх `buttonClass()`: строка склеивается как есть, без tailwind-merge,
+          // поэтому у кнопки оставались ОБА набора — `bg-surface-2 text-ink` из
+          // варианта по умолчанию и `bg-danger text-white` сверху. Кто победит,
+          // решает порядок правил в собранном CSS, а не порядок в строке: вышло
+          // белым по белому, текста не видно (снимок владельца 02.09.2026).
+          className={buttonClass({
+            variant: on ? 'primary' : 'dangerSolid',
+            className: 'disabled:opacity-50',
+          })}
         >
           {pending && <Spinner size="md" />}
           {on ? t('maintenanceDisable', lang) : t('maintenanceEnable', lang)}

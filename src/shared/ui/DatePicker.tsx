@@ -42,9 +42,10 @@ export function DatePicker({
           <button
             type="button"
             onClick={toggle}
-            className={`${buttonClass({ size: 'sm' })} ${
-              open ? 'border-border-strong' : 'border-border'
-            } ${label ? 'text-ink' : 'text-muted'} hover:border-border-strong`}
+            className={buttonClass({
+              size: 'sm',
+              className: `hover:border-border-strong ${open ? 'border-border-strong' : 'border-border'} ${label ? 'text-ink' : 'text-muted'}`,
+            })}
           >
             <CalendarDays size={13} className="text-muted" />
             {label || placeholder || (ru ? 'выбрать дату' : 'pick a date')}
