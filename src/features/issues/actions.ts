@@ -11,6 +11,7 @@ import { requireSession } from '@/shared/auth/session'
 import { canWriteToFeature, isFeatureEnabled } from '@/core'
 import { isCollaborator } from '@/features/collab/queries'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
+import { recordIssueEvent } from './events'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { collabStore, issueCommenterIds } from '@/features/collab-store/store'
@@ -123,6 +124,21 @@ export async function setIssueStatus(owner: string, slug: string, number: number
   const { tpl, iss } = loaded
   if (session.userId !== iss.authorId && session.userId !== tpl.ownerId) redirect(`/${owner}/${slug}/issues/${number}`)
   await collabStore.setIssueStatus(iss.id, status)
+  // След в ленте — сразу за статусом (о порядке см. ./events).
+  await recordIssueEvent(db, { issueId: iss.id, actorId: session.userId, kind: status === 'closed' ? 'closed' : 'reopened' })
+
+  // ⚠️ Об этом узнают ТЕ ЖЕ, кто узнаёт о новой реплике. Закрытие — не мелочь оформления:
+  // для автора это ответ «вопрос снят», для следящих — «тут больше ничего не будет».
+  // Раньше молчали вовсе, и человек узнавал о закрытии, случайно вернувшись на страницу.
+  // Себе не шлём: `notifyMany` отсекает автора действия.
+  const [commenters, watchers] = await Promise.all([issueCommenterIds(iss.id), getWatcherIds(tpl.id, 'issues')])
+  await notifyMany([iss.authorId, tpl.ownerId, ...commenters, ...watchers], {
+    actorId: session.userId,
+    type: status === 'closed' ? 'issue_closed' : 'issue_reopened',
+    templateId: tpl.id,
+    issueId: iss.id,
+  })
+
   revalidatePath(`/${owner}/${slug}/issues/${number}`)
   revalidatePath(`/${owner}/${slug}/issues`)
 }

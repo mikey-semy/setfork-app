@@ -185,7 +185,7 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
   // «closes #12» в тексте предложения закрывает задачу — но только теперь, когда
   // изменения действительно в main.
-  await closeLinkedIssues(tpl.id, sug.note, session.userId, prs.autoCloseIssues)
+  await closeLinkedIssues(tpl.id, sug.note, session.userId, prs.autoCloseIssues, { id: sug.id })
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }

@@ -7,6 +7,8 @@ import { notify, notifyMany } from '@/features/notifications/notify'
 // eslint-disable-next-line boundaries/dependencies -- список наблюдателей живёт в watch
 import { getWatcherIds } from '@/features/watch/queries'
 import { closingRefs } from './closing-refs'
+// eslint-disable-next-line boundaries/dependencies -- след в ленте задачи: тот же кросс-фич-паттерн, что уведомления выше
+import { recordIssueEvent } from '@/features/issues/events'
 
 // Побочные эффекты принятия правки, общие для страницы и для ядра.
 //
@@ -19,7 +21,14 @@ import { closingRefs } from './closing-refs'
  * Вызывается ПОСЛЕ успешного слияния: до него задача ещё не решена. Ошибки не
  * поднимаем — предложение уже влито, и падать из-за побочного эффекта нельзя.
  */
-export async function closeLinkedIssues(templateId: string, text: string, actorId: string, enabled: boolean): Promise<void> {
+export async function closeLinkedIssues(
+  templateId: string,
+  text: string,
+  actorId: string,
+  enabled: boolean,
+  /** Правка, которая закрывает задачи: попадёт в ленту задачи отметкой «закрыта правкой №N». */
+  suggestion?: { id: string },
+): Promise<void> {
   if (!enabled) return
   const nums = closingRefs(text)
   if (nums.length === 0) return
@@ -30,6 +39,14 @@ export async function closeLinkedIssues(templateId: string, text: string, actorI
       .where(and(eq(issues.templateId, templateId), inArray(issues.number, nums), eq(issues.status, 'open')))
     for (const iss of rows) {
       await db.update(issues).set({ status: 'closed', closedAt: new Date() }).where(eq(issues.id, iss.id))
+      // Отметка в ленте задачи: чем именно её закрыли. Без неё автор видит закрытую
+      // задачу и не знает, что поменялось, — а первый вопрос у него ровно этот.
+      await recordIssueEvent(db, {
+        issueId: iss.id,
+        actorId,
+        kind: 'closed_by_suggestion',
+        suggestionId: suggestion?.id,
+      })
       if (iss.authorId !== actorId) {
         await notify({ recipientId: iss.authorId, actorId, type: 'issue_closed_by_merge', templateId, issueId: iss.id })
       }

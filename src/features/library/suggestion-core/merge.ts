@@ -113,7 +113,7 @@ export async function mergeSuggestion(
   if (prs.autoDeleteBranch) await gitCore.deleteBranch({ owner, slug: tpl.slug }, sug.branchRef).catch(() => {})
 
   await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date(), mergedVersion }).where(eq(suggestions.id, sug.id))
-  await closeLinkedIssues(tpl.id, sug.note, actorUserId, prs.autoCloseIssues)
+  await closeLinkedIssues(tpl.id, sug.note, actorUserId, prs.autoCloseIssues, { id: sug.id })
   await notify({ recipientId: sug.authorId, actorId: actorUserId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   // git-merge создаёт версию МИМО listStore.addVersion → фасадный барьер её не ловит.
   if (tpl.visibility === 'public') await recheckList(tpl.id)

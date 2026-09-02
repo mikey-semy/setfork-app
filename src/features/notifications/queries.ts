@@ -17,6 +17,8 @@ export type NotificationType =
   | 'issue_new'
   | 'issue_comment'
   | 'issue_closed_by_merge'
+  | 'issue_closed'
+  | 'issue_reopened'
   | 'new_version'
   | 'star'
   | 'fork'
