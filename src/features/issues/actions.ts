@@ -14,6 +14,7 @@ import { notify, notifyMany, notifyMentions } from '@/features/notifications/not
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { collabStore, issueCommenterIds } from '@/features/collab-store/store'
+import { loadIssue } from './queries'
 import { cleanLabels, customId, isCustomKey, isLabelKey } from '@/shared/lib/labels'
 import { getListLabels } from './queries'
 
@@ -67,19 +68,6 @@ export async function createIssue(_prev: IssueRefusal | null, formData: FormData
   redirect(`/${owner}/${slug}/issues/${ins.number}`)
 }
 
-async function loadIssue(owner: string, slug: string, number: number) {
-  const tpl = await resolveListBySlug(owner, slug)
-  // Выключенный раздел не отдаёт задачу вовсе: всё, что ниже по этому пути, — записи
-  // (комментарий, статус, метки, исполнитель) в раздел, которого в списке больше нет.
-  if (!tpl || !isFeatureEnabled(tpl, 'issues')) return null
-  const [iss] = await db
-    .select({ id: issues.id, authorId: issues.authorId, status: issues.status })
-    .from(issues)
-    .where(and(eq(issues.templateId, tpl.id), eq(issues.number, number)))
-    .limit(1)
-  if (!iss) return null
-  return { tpl, iss }
-}
 
 export async function addIssueComment(formData: FormData): Promise<void> {
   const session = await requireSession()

@@ -1431,6 +1431,45 @@ export const issueComments = pgTable(
   (t) => [index('issue_comments_issue_idx').on(t.issueId, t.createdAt, t.id)],
 )
 
+/**
+ * ИСТОРИЯ ПРАВОК ЗАДАЧИ И КОММЕНТАРИЯ.
+ *
+ * Правка текста без истории — способ переписать сказанное задним числом, а в задачах
+ * лежат жалобы и споры: человек может отредактировать обвинение после ответа на него.
+ * Поэтому история появляется ВМЕСТЕ с правкой, а не «потом»: так у Gitea
+ * (`issue_content_history`, до 20 ревизий) и у GitHub (до 100, видна всем, у кого есть
+ * доступ на чтение).
+ *
+ * Хранится ПРЕЖНЕЕ содержимое — то, что было до правки. Текущее лежит в самой задаче
+ * или комментарии, и дублировать его сюда незачем.
+ *
+ * Одна таблица на оба вида: поля совпадают, а разные таблицы разошлись бы по правилам
+ * хранения — как это уже случилось у нас с тремя копиями конвертера блоков.
+ */
+export const contentKind = pgEnum('content_kind', ['issue', 'comment'])
+
+export const contentEdits = pgTable(
+  'content_edits',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    kind: contentKind('kind').notNull(),
+    /** id задачи или комментария. Внешним ключом не связан: цель зависит от `kind`,
+     *  а чистку делает каскад владельца — обе таблицы уходят вместе со списком. */
+    targetId: uuid('target_id').notNull(),
+    /** Кто правил. Автор и владелец списка — единственные, кому это разрешено. */
+    editorId: uuid('editor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Заголовок ДО правки; у комментария его нет. */
+    prevTitle: text('prev_title'),
+    /** Тело ДО правки. */
+    prevBody: text('prev_body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('content_edits_target_idx').on(t.kind, t.targetId, t.createdAt)],
+)
+
+
 // ── Discussions (форум-треды на список, как GitHub Discussions) ──────
 // Категория — app-level пресет (general | ideas | q-a | show), не enum БД.
 export const discussions = pgTable(
