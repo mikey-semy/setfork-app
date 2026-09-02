@@ -71,7 +71,7 @@ export function StepBlockBody({
       {/* Описание — Markdown со всплывающей панелью форматирования (выдели текст →
           мини-тулбар). Картинки и файлы кладутся отдельными блоками, не сюда. */}
       <BubbleTextEditor value={item.desc} onChange={(desc) => onPatch({ desc })} rows={3} lang={lang} ariaLabel={nth('editor.itemDescN')} placeholder={t('editor.itemDescPh', lang)} />
-      <CodeEditor value={item.command || ''} onChange={(command) => onPatch({ command })} ariaLabel={nth('editor.itemCommandN')} placeholder={t('editor.itemCommandPh', lang)} />
+      <CodeEditor lang={lang} value={item.command || ''} onChange={(command) => onPatch({ command })} ariaLabel={nth('editor.itemCommandN')} placeholder={t('editor.itemCommandPh', lang)} />
 
       {/* Уровень — ОДИН контрол с текущим значением, а не три кнопки в ряд: так это
           устроено у Linear и Jira, и так оно занимает одну цель вместо трёх. Ряд из
