@@ -446,6 +446,7 @@ export const ru: Record<DictKey, string> = {
   copyUrl: 'Копировать URL',
   copy: 'Копировать',
   'oauth.title': 'Подключение к SetFork',
+  'auth.oauthStateLost': 'Вход не завершился: запрос устарел или был начат дважды. Попробуйте ещё раз.',
   'oauth.intro': '{client} просит доступ к вашему аккаунту SetFork.',
   'oauth.scopeRead': 'Читать ваши списки — включая приватные.',
   'oauth.scopeWrite': 'Читать и менять ваши списки: создавать, править, публиковать.',

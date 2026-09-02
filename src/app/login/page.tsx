@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { safeNext } from "@/shared/auth/safe-next";
+import { peekNext } from "@/features/auth/oauth-next";
 import { getSession } from "@/shared/auth/session";
 import { oauthEnabled, demoLoginEnabled } from "@/shared/auth/oauth";
 import { getLang } from "@/shared/i18n/server";
@@ -41,6 +42,14 @@ export default async function LoginPage({
   // самом demo-сайте эту переменную НЕ задаём — там обычный demo-вход. (Серверный
   // компонент читает рантайм-env, поэтому НЕ NEXT_PUBLIC — меняется без пересборки.)
   const demoSite = process.env.DEMO_URL;
+
+  // Цель поездки уезжает и во внешнего провайдера: через него параметры не проходят,
+  // поэтому маршрут провайдера кладёт её в куку и забирает на возврате.
+  // При возврате с ошибкой параметров в адресе нет — цель поездки лежит в куке,
+  // поставленной перед уходом к провайдеру. Иначе повтор входа снова высадил бы
+  // человека на главную, потеряв начатое подключение.
+  const nextTarget = safeNext(sp.next, "") || (await peekNext());
+  const nextQuery = nextTarget ? `?next=${encodeURIComponent(nextTarget)}` : "";
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
@@ -87,7 +96,7 @@ export default async function LoginPage({
 
         {oauth.yandex && (
           <Link
-            href="/api/auth/yandex"
+            href={`/api/auth/yandex${nextQuery}`}
             className={buttonClass({ variant: "primary", size: "lg", className: "mb-3 w-full" })}
           >
             <YandexMark /> {t("signInYandex", lang)}
@@ -114,7 +123,7 @@ export default async function LoginPage({
 
         {oauth.github && (
           <Link
-            href="/api/auth/github"
+            href={`/api/auth/github${nextQuery}`}
             className={buttonClass({ variant: "primary", size: "lg", className: "mb-3 w-full" })}
           >
             <GithubMark /> {t("signInGithub", lang)}
@@ -151,7 +160,9 @@ export default async function LoginPage({
               ? lang === "ru"
                 ? "Этот способ входа не настроен — выберите другой."
                 : "This sign-in method is not configured — pick another one."
-              : sp.e === "2fa_throttled"
+              : sp.e === "oauth_state"
+                ? t("auth.oauthStateLost", lang)
+                : sp.e === "2fa_throttled"
                 ? lang === "ru"
                   ? "Слишком много попыток кода 2FA — войди заново через несколько минут."
                   : "Too many 2FA attempts — sign in again in a few minutes."

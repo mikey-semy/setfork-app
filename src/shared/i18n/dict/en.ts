@@ -454,6 +454,7 @@ export const en = {
   copyUrl: 'Copy URL',
   copy: 'Copy',
   'oauth.title': 'Connect to SetFork',
+  'auth.oauthStateLost': 'Sign-in did not finish — the request expired or was opened twice. Try again.',
   'oauth.intro': '{client} asks for access to your SetFork account.',
   'oauth.scopeRead': 'Read your lists — including private ones.',
   'oauth.scopeWrite': 'Read and change your lists: create, edit, publish.',
