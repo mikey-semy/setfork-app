@@ -2,11 +2,14 @@
 
 import { useState } from 'react'
 import { startRegistration } from '@simplewebauthn/browser'
-import { Fingerprint, Plus, Trash2 } from 'lucide-react'
+import { Fingerprint, Plus, Trash2, Usb } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { beginPasskeyRegistration, deletePasskey, finishPasskeyRegistration, listPasskeys } from '@/features/auth/passkeys'
+import { passkeyErrorKey, type PasskeyKind } from '@/shared/auth/passkey-error'
+import { Alert } from '@/shared/ui/Alert'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 type Row = { id: string; name: string; createdAt: Date; lastUsedAt: Date | null }
 
@@ -14,32 +17,33 @@ type Row = { id: string; name: string; createdAt: Date; lastUsedAt: Date | null 
 export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang }) {
   const ru = lang === 'ru'
   const [list, setList] = useState<Row[]>(initial)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<PasskeyKind | null>(null)
   const [err, setErr] = useState('')
 
-  async function add() {
+  async function add(kind: PasskeyKind) {
     setErr('')
-    setBusy(true)
+    setBusy(kind)
     try {
-      const options = await beginPasskeyRegistration()
+      const options = await beginPasskeyRegistration(kind)
       const response = await startRegistration({ optionsJSON: options })
       const name = `Passkey · ${new Intl.DateTimeFormat(ru ? 'ru' : 'en', { day: 'numeric', month: 'short' }).format(new Date())}`
       const res = await finishPasskeyRegistration(response, name)
       if ('error' in res) {
         setErr(
-          res.error === 'exists'
-            ? ru ? 'Этот ключ уже добавлен.' : 'This key is already registered.'
-            : res.error === 'expired'
-              ? ru ? 'Время вышло — попробуй ещё раз.' : 'Timed out — try again.'
-              : ru ? 'Не удалось подтвердить ключ.' : 'Could not verify the key.',
+          t(
+            res.error === 'exists' ? 'auth.passkey.alreadyOnDevice' : res.error === 'expired' ? 'auth.passkey.expired' : 'auth.passkey.failed',
+            lang,
+          ),
         )
       } else {
         setList(await listPasskeys())
       }
-    } catch {
-      setErr(ru ? 'Отменено или не поддерживается браузером.' : 'Cancelled or not supported by the browser.')
+    } catch (e) {
+      // Отказ браузера НАЗЫВАЕМ: «уже есть на устройстве» — самый частый случай на
+      // телефоне, и прежнее общее «не поддерживается» уводило человека в сторону.
+      setErr(t(passkeyErrorKey(e), lang))
     } finally {
-      setBusy(false)
+      setBusy(null)
     }
   }
 
@@ -87,17 +91,28 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
         </div>
       )}
 
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={add}
-          disabled={busy}
-          className={buttonClass({ className: 'disabled:opacity-60' })}
-        >
-          {busy ? <Spinner size="md" /> : <Plus size={14} />} {ru ? 'Добавить passkey' : 'Add a passkey'}
+      {/* Ряд кнопок: обе одной высоты (шкала CONTROL_H), подпись аппаратного ключа
+          прячется на узком экране — остаётся значок с НАШЕЙ подсказкой. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => add('device')} disabled={!!busy} className={buttonClass({ className: 'disabled:opacity-60' })}>
+          {busy === 'device' ? <Spinner size="md" /> : <Plus size={14} />} {t('auth.passkey.addDevice', lang)}
         </button>
-        {err && <span className="text-body-sm text-danger">{err}</span>}
+        <Tooltip label={t('auth.passkey.addKeyHint', lang)}>
+          <button
+            type="button"
+            onClick={() => add('securityKey')}
+            disabled={!!busy}
+            aria-label={t('auth.passkey.addKey', lang)}
+            className={buttonClass({ variant: 'ghost', className: 'disabled:opacity-60' })}
+          >
+            {busy === 'securityKey' ? <Spinner size="md" /> : <Usb size={14} />}
+            <span className="hidden md:inline">{t('auth.passkey.addKey', lang)}</span>
+          </button>
+        </Tooltip>
       </div>
+      {/* Отказ — отдельной полосой под кнопками: рядом с ними на 390px он сдавливал
+          подписи в перенос, а перенесённая подпись не влезает в высоту кнопки. */}
+      {err && <Alert variant="danger">{err}</Alert>}
     </div>
   )
 }

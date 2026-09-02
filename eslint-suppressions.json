@@ -499,7 +499,7 @@
       "count": 1
     },
     "no-restricted-syntax": {
-      "count": 9
+      "count": 4
     }
   },
   "src/features/settings/TwoFactorSection.tsx": {
