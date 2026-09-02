@@ -8,7 +8,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { SearchField } from '@/shared/ui/SearchField'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
-import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/features/library/list-visibility'
+import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/shared/list-visibility'
 import { buttonClass } from '@/shared/ui/button-style'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
 

@@ -1,7 +1,7 @@
 import 'server-only'
 import { NextResponse, type NextRequest } from 'next/server'
 import { requireViewableMeta } from '@/features/library/guard'
-import { listVisibilityState } from '@/features/library/list-visibility'
+import { listVisibilityState } from '@/shared/list-visibility'
 
 // Title и приватность текущего списка для бредкрамба в топ-баре (клиентский TopNav
 // дёргает по смене пути). Авторизация — тот же чокпоинт requireViewableMeta

@@ -3,7 +3,7 @@
 import { requireSession } from '@/shared/auth/session'
 import { DASHBOARD_LISTS, pageWindow } from '@/shared/lib/paging'
 import { countUserTemplates, getUserTemplates, searchTemplatesByOwnerHandle } from '../queries'
-import { listVisibilityState } from '../list-visibility'
+import { listVisibilityState } from '@/shared/list-visibility'
 
 const panelItem = (l: Awaited<ReturnType<typeof getUserTemplates>>[number]) => ({
   handle: l.ownerHandle,

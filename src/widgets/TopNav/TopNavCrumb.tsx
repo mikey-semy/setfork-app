@@ -6,7 +6,7 @@ import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
-import { LIST_VISIBILITY_BADGE } from '@/features/library/list-visibility'
+import { LIST_VISIBILITY_BADGE } from '@/shared/list-visibility'
 import { ListSwitcher } from '../ListSwitcher'
 import type { Crumb, CrumbVisibility } from './use-crumb'
 
@@ -72,7 +72,7 @@ export function TopNavCrumb({
       {/* Значок состояния у названия — как бейдж Public/Private у GitHub, но только
           иконкой: слово в шапке съедает место, которое нужно самому названию.
           Подпись отдаём тултипом (и aria-label для скринридера). Черновик здесь —
-          третье состояние, а не «публичный»: см. features/library/list-visibility. */}
+          третье состояние, а не «публичный»: см. shared/list-visibility. */}
       {visBadge && (
         <Tooltip label={visLabel}>
           {/* span без роли не может нести aria-label (aria-prohibited-attr) — иконке нужна role="img". */}

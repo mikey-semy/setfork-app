@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { GitFork, PlayCircle, Tag } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { t, type Lang } from '@/shared/i18n'
-import { LIST_VISIBILITY_BADGE, listVisibilityState } from './list-visibility'
 import { VerificationBadge } from './VerificationBadge'
 import type { FeedItem } from './queries'
 
@@ -18,9 +17,6 @@ function fmt(n: number): string {
  */
 export function ListCardMeta({ item, lang, className }: { item: FeedItem; lang: Lang; className?: string }) {
   const base = `/${item.ownerHandle}/${item.slug}`
-  const visibility = LIST_VISIBILITY_BADGE[listVisibilityState(item)]
-  const VisibilityIcon = visibility.Icon
-
   return (
     <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-ink-2', className)}>
       <Link href={`${base}/releases`} className="inline-flex items-center gap-1.5 hover:text-accent">
@@ -29,10 +25,9 @@ export function ListCardMeta({ item, lang, className }: { item: FeedItem; lang: 
           v<b className="text-ink">{item.version}</b>
         </span>
       </Link>
-      <span className="inline-flex items-center gap-1.5">
-        <VisibilityIcon size={14} className="text-muted" />
-        {t(visibility.labelKey, lang)}
-      </span>
+      {/* Состояние списка переехало ПЛАШКОЙ К ИМЕНИ (`ListStateBadge`): среди чисел
+          «версия · форки · прогоны» его приходилось вычитывать, а у имени оно видно
+          сразу — как бейдж Private у GitHub. Двух мест быть не должно: разъедутся. */}
       {/* Значка «проверен» здесь НЕТ и быть не должно: решение 0006 от 07.07.2026
           («видимость = верификация») говорит прямо — публичного бейджа нет, потому что
           видимый публичный список и есть прошедший проверку, а отдельный значок обещал

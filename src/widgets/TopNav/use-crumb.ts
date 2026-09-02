@@ -4,7 +4,7 @@ import type { LocaleText } from '@/shared/i18n'
 // Роуты, чей первый сегмент — НЕ handle пользователя: общий список под тестом-синхроном
 // с src/app (разъезд давал «SF guilds»).
 import { RESERVED_TOP } from '@/shared/nav/reserved-top'
-import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/features/library/list-visibility'
+import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/shared/list-visibility'
 
 export interface Crumb {
   handle: string

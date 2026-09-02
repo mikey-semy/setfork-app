@@ -42,27 +42,33 @@ function renderFeedCard(overrides: Partial<FeedItem> = {}) {
 }
 
 describe('FeedCard', () => {
-  it('держит owner/title в одной строке, а состояние — после версии в метаданных', () => {
-    const { container } = renderFeedCard()
-    const title = screen.getByTitle('Очень длинный перевод заголовка списка')
-    const titleLine = title.parentElement
-    const version = screen.getByText((_, element) => element?.tagName === 'SPAN' && element.textContent === 'v4')
-    const status = screen.getByText('Черновик')
-
-    expect(titleLine).toHaveClass('truncate', 'whitespace-nowrap')
-    expect(version.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    // Значка «проверен» на карточке НЕТ, хотя флаг в фикстуре стоит: решение 0006
-    // («видимость = верификация») запрещает публичный бейдж, а этот тест раньше его
-    // закреплял. Проверяем при `verified: true` — иначе проверка проходила бы сама
-    // собой и ничего не сторожила.
-    expect(screen.queryByLabelText('проверен')).toBeNull()
-    expect(container.firstElementChild?.firstElementChild).toHaveClass('border-b')
-    expect(container.firstElementChild?.lastElementChild).toHaveClass('border-t')
+  /**
+   * ⚠️ ФОРМА ШАПКИ ИЗМЕНИЛАСЬ 01.09.2026 ПО РЕШЕНИЮ ВЛАДЕЛЬЦА, и прежние проверки здесь
+   * заменены, а не подкручены. Было: «owner / заголовок» одной обрезаемой строкой, а
+   * состояние — в строке показателей после версии. Стало: владелец и плашка состояния
+   * первой строкой, заголовок — своей и целиком. Причина: у нас заголовки длиннее имён
+   * репозиториев, и обрезалось на телефоне ровно самое важное, а состояние приходилось
+   * вычитывать среди чисел. Эталон — бейдж `Private` у GitHub, он стоит за именем.
+   */
+  it('значка «проверен» на карточке нет даже при verified: true', () => {
+    renderFeedCard()
+    // Решение 0006 («видимость = верификация») запрещает публичный бейдж. Проверяем
+    // именно при `verified: true` — иначе проверка проходила бы сама собой.
+    expect(screen.queryByText('Проверен')).toBeNull()
   })
 
-  it('показывает публичность опубликованного списка тем же мета-блоком', () => {
+  it('опубликованный публичный список плашкой не помечается: норма не нуждается в метке', () => {
     renderFeedCard({ status: 'published', verified: false })
-    expect(screen.getByText('Публичный')).toBeInTheDocument()
+    expect(screen.queryByText('Публичный')).toBeNull()
+    expect(screen.queryByText('Черновик')).toBeNull()
+  })
+
+  it('черновик помечен один раз — плашкой в шапке, а не в строке показателей', () => {
+    const { container } = renderFeedCard()
+    const badge = screen.getByText('Черновик')
+    const header = container.querySelector('.border-b') as HTMLElement
+    expect(header.contains(badge), 'плашка уехала из шапки — состояние снова придётся искать').toBe(true)
+    expect(screen.getAllByText('Черновик')).toHaveLength(1)
   })
 })
 
@@ -131,5 +137,71 @@ describe('карточка каталога в профиле', () => {
     // Было «2 списки» — тест закреплял ошибку согласования, а не проверял её. Словарное
     // `lists` это заголовок «Списки», у него нет падежей; формы берутся из plural().
     expect(screen.getByText('2 списка')).toBeInTheDocument()
+  })
+})
+
+describe('состояние списка и плотность', () => {
+  // ⚠️ С ОБЛОЖКОЙ: без неё проверка «плотный вид убирает обложку» была бы пустой —
+  // картинки нет в фикстуре, и `queryByRole('img')` вернул бы null при любом коде
+  // (поймано мутацией: снятие условия не роняло тест).
+  const withCover = { ...item, coverImage: 'https://example.com/cover.jpg' }
+  const card = (density?: 'comfy' | 'compact') =>
+    render(
+      <TooltipProvider delay={0}>
+        <FeedCard item={withCover} lang="en" density={density} />
+      </TooltipProvider>,
+    )
+
+  /**
+   * ⚠️ Состояние показывают ОДИН раз и у имени. Раньше метка жила в строке показателей,
+   * между версией и числом форков: чтобы понять, опубликован ли список, приходилось
+   * вычитывать её среди чисел. Эталон — бейдж `Private` у GitHub, он стоит за именем
+   * (решение владельца 01.09.2026).
+   */
+  it('состояние стоит плашкой у имени, а не среди чисел', () => {
+    card()
+    const badge = screen.getByText('Draft')
+    // Шапка — та, где стоит имя владельца: у обложки выше тоже есть нижняя граница,
+    // и селектор по классу брал бы её.
+    const header = screen.getByRole('link', { name: 'miki' }).closest('div')?.parentElement as HTMLElement
+    expect(header.contains(badge), 'плашка уехала из шапки — её снова придётся искать').toBe(true)
+    expect(screen.getAllByText('Draft')).toHaveLength(1)
+  })
+
+  it('публичный список плашкой не помечается: норма не нуждается в метке', () => {
+    render(
+      <TooltipProvider delay={0}>
+        <FeedCard item={{ ...item, status: 'published', visibility: 'public' }} lang="en" />
+      </TooltipProvider>,
+    )
+    expect(screen.queryByText('Public')).toBeNull()
+    expect(screen.queryByText('Draft')).toBeNull()
+  })
+
+  it('заголовок переносится, а не обрезается: у нас они длиннее имён репозиториев', () => {
+    card()
+    const title = screen.getByTitle('A very long translated list title')
+    expect(title.className).not.toMatch(/truncate/)
+    expect(title.className).toMatch(/overflow-wrap:anywhere/)
+  })
+
+  it('плотный вид убирает обложку, описание, теги и дату — то, что и занимает высоту', () => {
+    const { container } = card('compact')
+    expect(container.querySelector('img'), 'обложка осталась — она и есть самый крупный блок').toBeNull()
+    expect(container.querySelector('p.line-clamp-2'), 'описание осталось — экономии нет').toBeNull()
+    expect(screen.queryByText('test'), 'теги остались — проверка тегов была пустой').toBeNull()
+    expect(container.textContent).not.toMatch(/updated/i)
+  })
+
+  it('заголовок не бесконечен: две строки, дальше многоточие', () => {
+    const title = screen.getByTitle.bind(screen)
+    card()
+    expect((title('A very long translated list title') as HTMLElement).className).toMatch(/line-clamp-2/)
+  })
+
+  it('просторный вид — по умолчанию, и в нём всё это на месте', () => {
+    const { container } = card()
+    expect(container.querySelector('p.line-clamp-2')).toBeInTheDocument()
+    expect(container.textContent).toMatch(/updated/i)
   })
 })
