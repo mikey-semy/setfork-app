@@ -1,7 +1,7 @@
 'use client'
 import { Rows2, Rows3 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useOptimistic, useTransition } from 'react'
 import { t, type Lang } from '@/shared/i18n'
 import { DENSITY_COOKIE, type ListDensity } from '@/shared/lib/list-density'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -26,7 +26,12 @@ const YEAR = 60 * 60 * 24 * 365
  */
 export function DensityToggle({ value, lang }: { value: ListDensity; lang: Lang }) {
   const router = useRouter()
-  const [density, setDensity] = useState(value)
+  const [, start] = useTransition()
+  // ⚠️ НЕ `useState(value)`: копия пропа устаревает, когда сервер присылает другую
+  // плотность (соседняя вкладка переключила — кука общая), и кнопка показывала бы
+  // подсветку, не совпадающую с тем, что нарисовано. `useOptimistic` даёт мгновенный
+  // отклик и сам сбрасывается на серверное значение — тот же приём, что у PinButton.
+  const [density, setDensity] = useOptimistic(value, (_, next: ListDensity) => next)
 
   const pick = (next: ListDensity) => {
     if (next === density) return
@@ -35,8 +40,12 @@ export function DensityToggle({ value, lang }: { value: ListDensity; lang: Lang 
     // куках молча ничего не делает и не бросает, поэтому try/catch тут был бы мёртвым:
     // кнопка осталась бы подсвеченной, а сервер продолжал бы слать прежнюю плотность.
     if (!document.cookie.includes(`${DENSITY_COOKIE}=${next}`)) return
-    setDensity(next)
-    router.refresh()
+    // Оптимистичное значение живёт только внутри перехода — иначе React сбросит его
+    // сразу же, и подсветка мигнула бы обратно до прихода серверного кадра.
+    start(() => {
+      setDensity(next)
+      router.refresh()
+    })
   }
 
   const options = [
