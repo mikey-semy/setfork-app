@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { db, sessions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { MIN_PASSWORD_LENGTH } from '@/shared/auth/password-policy'
 import { hashPassword } from '@/shared/auth/password'
 import { appOrigin, clientIpFromHeaders } from '@/shared/auth/app-origin'
 import { rateLimit } from '@/shared/rate-limit'
@@ -154,7 +155,7 @@ export async function checkResetToken(token: string): Promise<boolean> {
 export async function performPasswordReset(_prev: { error?: string } | null, formData: FormData): Promise<{ error?: string }> {
   const token = String(formData.get('token') ?? '')
   const password = String(formData.get('password') ?? '')
-  if (password.length < 8) return { error: 'short' }
+  if (password.length < MIN_PASSWORD_LENGTH) return { error: 'short' }
   const p = await readToken(token)
   if (!p || p.purpose !== 'reset-password' || !p.uid) return { error: 'invalid' }
   const [u] = await db.select({ hash: users.passwordHash }).from(users).where(eq(users.id, p.uid)).limit(1)

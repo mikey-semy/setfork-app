@@ -2,6 +2,8 @@ import { KeyRound } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { ForgotPasswordForm } from '@/features/auth/PasswordResetForms'
+import { mailConfigured } from '@/shared/settings/email'
+import { Alert } from '@/shared/ui/Alert'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -9,7 +11,7 @@ export async function generateMetadata() {
 }
 
 export default async function ForgotPasswordPage() {
-  const lang = await getLang()
+  const [lang, canMail] = await Promise.all([getLang(), mailConfigured()])
   const ru = lang === 'ru'
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
@@ -25,7 +27,9 @@ export default async function ForgotPasswordPage() {
             ? 'Укажи почту аккаунта — пришлём ссылку для нового пароля.'
             : 'Enter your account email — we’ll send a link to set a new password.'}
         </p>
-        <ForgotPasswordForm lang={lang} />
+        {/* Формы нет, когда письму неоткуда взяться: пустая форма с ответом «проверьте
+            почту» — это обещание, которое стенд не может выполнить. */}
+        {canMail ? <ForgotPasswordForm lang={lang} /> : <Alert variant="warn">{t('auth.mailNotConfigured', lang)}</Alert>}
       </div>
     </div>
   )

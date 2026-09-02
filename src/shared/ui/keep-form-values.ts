@@ -29,7 +29,18 @@ import { useEffect, useRef } from 'react'
  * первого отказа он остаётся `true`, и ВТОРОЙ отказ подряд эффект бы не разбудил — поля
  * так и остались бы пустыми (тоже авто-ревью #832).
  */
-export function useKeepFormValues(refused: boolean, pending: boolean) {
+export function useKeepFormValues(
+  refused: boolean,
+  pending: boolean,
+  /**
+   * Поля, которые НЕ восстанавливаем по имени.
+   *
+   * Нужно паролям: после отказа их принято очищать — так у GitHub, и так же ведёт себя
+   * браузер при обычной отправке. Возвращённый пароль на экране это ещё и «войти
+   * повторно одним нажатием» на чужом устройстве.
+   */
+  opts?: { skip?: readonly string[] },
+) {
   const formRef = useRef<HTMLFormElement>(null)
   const snapshot = useRef<Map<string, string | boolean> | null>(null)
 
@@ -55,6 +66,7 @@ export function useKeepFormValues(refused: boolean, pending: boolean) {
       const field = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
       if (!field.name || field.tagName === 'BUTTON') continue
       const isCheck = field instanceof HTMLInputElement && (field.type === 'checkbox' || field.type === 'radio')
+      if (opts?.skip?.includes(field.name)) continue
       const was = values.get(isCheck ? `${field.name}:${(field as HTMLInputElement).value}` : field.name)
       if (was === undefined) continue
       if (isCheck) (field as HTMLInputElement).checked = Boolean(was)

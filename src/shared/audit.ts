@@ -31,6 +31,8 @@ export type AuditAction =
   | 'maintenance.off'
   | 'monetization.settings'
   | 'password.reset'
+  | 'password.set'
+  | 'password.change'
   | 'email.change-request'
   | 'email.change'
   | 'passkey.add'
