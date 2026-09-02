@@ -54,8 +54,34 @@ describe('карточка кода', () => {
     expect(bar.className).toMatch(/print:hidden/)
   })
 
-  it('перенос длинных строк остаётся: код показывают в своей форме, без бокового скролла', () => {
+  /**
+   * ⚠️ ЭКРАН И БУМАГА РАЗОШЛИСЬ НАМЕРЕННО. Перенос стоял всюду по правилу «код
+   * показывают в его форме» (#407), но на телефоне он рвал строку посреди выражения:
+   * `failures = append(failures,` и `common.Failure{` оказывались на разных строках.
+   * Структура кода — то, ради чего его читают, — рассыпалась (снимок владельца
+   * 02.09.2026). На бумаге прокрутки нет физически, там перенос остаётся.
+   */
+  it('на экране строка не рвётся: прокрутка вместо переноса', () => {
     const text = rows()[0].querySelector('span:last-child') as HTMLElement
-    expect(text.className).toMatch(/whitespace-pre-wrap/)
+    expect(text.className).toMatch(/whitespace-pre\b/)
+    expect(text.className).not.toMatch(/whitespace-pre-wrap(?!\s*print)/)
+  })
+
+  it('на печати строка переносится: прокрутить бумагу нельзя', () => {
+    const text = rows()[0].querySelector('span:last-child') as HTMLElement
+    expect(text.className).toMatch(/print:whitespace-pre-wrap/)
+  })
+
+  it('номера при прокрутке закреплены: уехавшая нумерация бесполезна', () => {
+    const num = rows()[0].querySelector('span') as HTMLElement
+    expect(num.className).toMatch(/\bsticky\b/)
+    expect(num.className).toMatch(/print:static/)
+  })
+
+  it('горизонтальный жест внутри блока не листает страницу', () => {
+    const { container } = render(card(CODE))
+    const body = container.querySelector('.sf-code-card > div:last-child') as HTMLElement
+    expect(body.className).toMatch(/overflow-x-auto/)
+    expect(body.className, 'без overscroll-contain свайп по коду листает страницу').toMatch(/overscroll-x-contain/)
   })
 })

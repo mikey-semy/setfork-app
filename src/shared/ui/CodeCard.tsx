@@ -5,8 +5,17 @@ import type { Lang } from '@/shared/i18n'
 
 /**
  * Карточка кода для ЧТЕНИЯ (не редактор): подсветка синтаксиса, номера строк, имя языка
- * и копирование. Перенос длинных строк вместо горизонтального скролла — правило
- * владельца: код показывают в его форме.
+ * и копирование.
+ *
+ * ⚠️ НА ЭКРАНЕ ПРОКРУТКА, НА ПЕЧАТИ ПЕРЕНОС. Перенос стоял везде по правилу «код
+ * показывают в его форме» (#407), но на телефоне он рвал строку посреди выражения:
+ * `failures = append(failures,` и `common.Failure{` оказывались на разных строках, и
+ * структура кода — то, ради чего его и читают, — рассыпалась (снимок владельца
+ * 02.09.2026). Прокрутка честнее: строка остаётся строкой. На бумаге прокрутки нет
+ * физически, поэтому там перенос остаётся.
+ *
+ * Номера при прокрутке закреплены слева (`sticky`): уехавшая нумерация бесполезна.
+ * `overscroll-x-contain` — чтобы горизонтальный жест внутри блока не листал страницу.
  *
  * ⚠️ ШАПКА ВЕРНУЛАСЬ, И ВОТ ПОЧЕМУ. Служебные элементы висели в правом верхнем углу
  * ПОВЕРХ кода, и под них приходилось резервировать место. Сначала отступ давали одной
@@ -36,14 +45,17 @@ export function CodeCard({ code, name, lang }: { code: string; name?: string; la
         <span className={`font-mono ${TEXT.caption} uppercase tracking-wide text-muted`}>{label}</span>
         <CopyButton text={code} lang={lang} size="sm" />
       </div>
-      <div className="py-2 font-mono text-body-sm leading-[1.55] text-ink">
+      <div className="overflow-x-auto overscroll-x-contain py-2 font-mono text-body-sm leading-[1.55] text-ink print:overflow-visible">
         {lines.map((tokens, i) => (
           // Ни отступа под служебный угол, ни исключений для первой строки: все строки
-          // равны и идут во всю ширину карточки — иначе рвётся выравнивание, а в коде
-          // колонки несут смысл.
-          <div key={i} className="flex gap-2 px-2.5">
-            <span className="w-5 shrink-0 select-none text-right text-caption leading-[1.7] text-muted">{i + 1}</span>
-            <span className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">
+          // равны — иначе рвётся выравнивание, а в коде колонки несут смысл.
+          // `w-max min-w-full`: строки одной системы координат, поэтому прокручиваются
+          // вместе, а не каждая сама по себе.
+          <div key={i} className="flex w-max min-w-full gap-2 px-2.5 print:w-auto">
+            <span className="sticky left-0 z-10 w-5 shrink-0 select-none bg-surface-2 text-right text-caption leading-[1.7] text-muted print:static">
+              {i + 1}
+            </span>
+            <span className="whitespace-pre print:whitespace-pre-wrap print:[overflow-wrap:anywhere]">
               {tokens.length === 0 ? ' ' : tokens.map((t, j) => (t.cls ? <span key={j} className={t.cls}>{t.text}</span> : <span key={j}>{t.text}</span>))}
             </span>
           </div>
