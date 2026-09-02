@@ -99,6 +99,7 @@ export const en = {
   sortLabel: 'Sort',
   issueTitlePh: 'Title',
   'issue.saveEdit': 'Save',
+  'issue.rateLimited': 'Too many requests in a minute — try again shortly.',
   'issue.edited': 'edited',
   'issue.editHistory': 'Edit history',
   'issue.revisionBy': 'edited by {who}',

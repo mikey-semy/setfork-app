@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Alert } from '@/shared/ui/Alert'
 import { notFound } from 'next/navigation'
 import { CircleCheck, CircleDot, MessageSquare, Milestone as MilestoneIcon, Plus } from 'lucide-react'
 import { SearchForm } from '@/shared/ui/SearchForm'
@@ -34,7 +35,7 @@ export default async function IssuesPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ status?: string; q?: string; label?: string; milestone?: string; sort?: string; page?: string }>
+  searchParams: Promise<{ e?: string; status?: string; q?: string; label?: string; milestone?: string; sort?: string; page?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
@@ -82,6 +83,13 @@ export default async function IssuesPage({
   return (
     <>
       <div className={PAGE}>
+        {/* ⚠️ ОТКАЗ ПО ЧАСТОТЕ НАЗЫВАЕТСЯ ВСЛУХ. Молчаливый редирект выглядел бы как
+            «кнопка не работает»: человек повторял бы попытку и упирался снова. */}
+        {sp.e === 'rate' && (
+          <Alert variant="danger" className="mb-3">
+            {t('issue.rateLimited', lang)}
+          </Alert>
+        )}
         {/* Поиск + New */}
         <div className="mb-3 flex items-center gap-2">
           <form action={base} method="get" className="flex-1">

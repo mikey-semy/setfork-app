@@ -15,6 +15,9 @@ import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { collabStore, issueCommenterIds } from '@/features/collab-store/store'
 import { loadIssue } from './queries'
+// `canComment` в этом файле уже занято проверкой ПРАВ — частота именуется иначе,
+// чтобы на месте вызова было видно, о чём речь.
+import { canComment as underCommentRate, canOpenIssue as underIssueRate } from './limits'
 import { cleanLabels, customId, isCustomKey, isLabelKey } from '@/shared/lib/labels'
 import { getListLabels } from './queries'
 
@@ -57,6 +60,11 @@ export async function createIssue(_prev: IssueRefusal | null, formData: FormData
     canWriteToFeature(tpl, 'issues', { isOwner, isCollaborator: await isCollaborator(tpl.id, session.userId) })
   if (!canWrite) redirect(`/${owner}/${slug}`)
 
+  // ⚠️ ЧАСТОТА — ПОСЛЕ ПРАВ, НО ДО ЗАПИСИ. Каждая задача рассылает уведомления автору,
+  // владельцу и наблюдателям, поэтому скрипт в цикле бьёт не только по базе. Ключей
+  // два — на человека и на список (см. `limits.ts`, там же выведены числа).
+  if (!(await underIssueRate(session.userId, tpl.id))) redirect(`/${owner}/${slug}/issues?e=rate`)
+
   const labels = cleanLabels(rawLabels, await customIdSet(tpl.id))
   const ins = await collabStore.openIssue(tpl.id, session.userId, title, body, labels)
 
@@ -91,6 +99,8 @@ export async function addIssueComment(formData: FormData): Promise<void> {
     canWriteToFeature(tpl, 'issues', { isOwner: isOwnerC }) ||
     canWriteToFeature(tpl, 'issues', { isOwner: isOwnerC, isCollaborator: await isCollaborator(tpl.id, session.userId) })
   if (!canComment) redirect(`/${owner}/${slug}`)
+
+  if (!(await underCommentRate(session.userId, tpl.id))) redirect(`${path}?e=rate`)
 
   await collabStore.addIssueComment(iss.id, session.userId, body)
   await ensureWatch(tpl.id) // комментатор начинает следить
