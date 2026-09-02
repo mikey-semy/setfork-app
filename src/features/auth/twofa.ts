@@ -1,6 +1,7 @@
 'use server'
 
 import { and, eq, isNull, lt, or, sql } from 'drizzle-orm'
+import { takeNext } from './oauth-next'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import QRCode from 'qrcode'
@@ -142,7 +143,9 @@ export async function verify2faLogin(_prev: { error?: string } | null, formData:
     name: user.name ?? undefined,
     avatarUrl: (await avatarSrc(user.avatarUrl, 64)) ?? undefined,
   })
-  redirect('/')
+  // Тот же возврат, что и на прочих путях входа: второй фактор — середина поездки, а
+  // не её конец. Без этого подключение MCP терялось именно у тех, у кого включён 2FA.
+  redirect((await takeNext()) || '/')
 }
 
 /** Есть ли живой pending (для guard страницы /login/2fa). */

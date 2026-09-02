@@ -2,6 +2,7 @@
 // Приложение: oauth.yandex.ru → «Создать приложение», redirect_uri = {APP_URL}/api/auth/yandex/callback.
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { rememberNext } from '@/features/auth/oauth-next'
 import { oauthEnabled } from '@/shared/auth/oauth'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { markLinkIntent } from '@/features/auth/oauth-entry'
@@ -17,6 +18,10 @@ export async function GET(req: Request) {
   }
 
   const state = crypto.randomUUID()
+
+  // Цель поездки — в куку: через провайдера параметры не проходят, и без этого
+  // человек возвращается на главную, потеряв начатое подключение.
+  await rememberNext(new URL(req.url).searchParams.get('next'))
   const c = await cookies()
   c.set('ya_oauth_state', state, {
     httpOnly: true,
