@@ -24,7 +24,7 @@
   },
   "src/app/[handle]/[slug]/issues/page.tsx": {
     "no-restricted-syntax": {
-      "count": 5
+      "count": 3
     }
   },
   "src/app/[handle]/[slug]/leaderboard/page.tsx": {

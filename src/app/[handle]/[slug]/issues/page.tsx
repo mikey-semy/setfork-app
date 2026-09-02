@@ -19,6 +19,8 @@ import { FilterMenu } from '@/shared/ui/FilterMenu'
 import { resolveChip } from '@/shared/lib/labels'
 import { isCollaborator } from '@/features/collab/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
+import { ISSUE_SORTS } from '@/features/issues/queries'
+import type { TKey } from '@/shared/i18n'
 import { Tag } from 'lucide-react'
 import { PAGE } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
@@ -35,7 +37,7 @@ export default async function IssuesPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ e?: string; status?: string; q?: string; label?: string; milestone?: string; sort?: string; page?: string }>
+  searchParams: Promise<{ e?: string; status?: string; q?: string; label?: string; milestone?: string; sort?: string; page?: string; who?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
@@ -48,17 +50,33 @@ export default async function IssuesPage({
   const q = sp.q?.trim() || undefined
   const label = sp.label || undefined
   const milestone = sp.milestone || undefined
-  const sort: IssueSort = sp.sort === 'oldest' ? 'oldest' : 'newest'
+  const sort: IssueSort = (ISSUE_SORTS as string[]).includes(sp.sort ?? '') ? (sp.sort as IssueSort) : 'newest'
+  // «Мои» и «назначено мне» — про ТЕКУЩЕГО зрителя, поэтому в адресе `who=mine`, а не ник:
+  // ссылку с чужим ником нельзя было бы дать другому человеку — она показала бы ему чужие
+  // задачи под видом его собственных. Гостю выбирать нечего, у него нет ни того, ни другого.
+  const who = session && (sp.who === 'mine' || sp.who === 'assigned') ? sp.who : undefined
+  // Ровно один человек, о котором вообще может идти речь, — тот, кто смотрит. `who` без
+  // сессии не выставляется, поэтому здесь он либо есть вместе с ней, либо нет вовсе.
+  const meId = who ? session?.userId : undefined
 
   // Номера страниц, а не курсор: задачи — каталог, по нему прыгают и его фильтруют.
   // Счёт идёт по ТОМУ ЖЕ отбору, что и выдача (countListIssues делит с ней условия), иначе
   // листалка нарисовала бы страницы, которых нет.
-  const query = { status, q, label, milestone, sort }
+  const query = {
+    status,
+    q,
+    label,
+    milestone,
+    sort,
+    authorId: who === 'mine' ? meId : undefined,
+    assigneeId: who === 'assigned' ? meId : undefined,
+  }
   const total = await countListIssues(meta.id, query)
   const totalPages = pageCount(total)
   const page = pageFromParam(sp.page, totalPages)
   const [counts, list, labels, mstones, custom] = await Promise.all([
-    getIssueCounts(meta.id),
+    // Счётчики — под тем же отбором, что и выдача: иначе «12 открытых» над двумя строками.
+    getIssueCounts(meta.id, query),
     getIssues(meta.id, query, pageWindow(page)),
     getIssueLabelsInUse(meta.id),
     getMilestonesForPicker(meta.id),
@@ -72,7 +90,7 @@ export default async function IssuesPage({
   // href с текущими параметрами + перекрытием (undefined убирает параметр).
   const hrefWith = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams()
-    const merged: Record<string, string | undefined> = { status, q, label, milestone, sort: sort === 'newest' ? undefined : sort, ...over }
+    const merged: Record<string, string | undefined> = { status, q, label, milestone, who, sort: sort === 'newest' ? undefined : sort, ...over }
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v)
     const s = p.toString()
     return s ? `${base}?${s}` : base
@@ -95,7 +113,8 @@ export default async function IssuesPage({
           <form action={base} method="get" className="flex-1">
             {status === 'closed' && <input type="hidden" name="status" value="closed" />}
             {label && <input type="hidden" name="label" value={label} />}
-            {sort === 'oldest' && <input type="hidden" name="sort" value="oldest" />}
+            {sort !== 'newest' && <input type="hidden" name="sort" value={sort} />}
+            {who && <input type="hidden" name="who" value={who} />}
             <SearchForm initial={q ?? ''} placeholder={t('searchIssuesPh', lang)} />
           </form>
           {session && (
@@ -152,12 +171,26 @@ export default async function IssuesPage({
                 ]}
               />
             )}
+            {session && (
+              <FilterMenu
+                label={t('issue.whoLabel', lang)}
+                items={[
+                  { label: t('issue.whoAll', lang), href: hrefWith({ who: undefined }), active: !who },
+                  { label: t('issue.whoMine', lang), href: hrefWith({ who: 'mine' }), active: who === 'mine' },
+                  { label: t('issue.whoAssigned', lang), href: hrefWith({ who: 'assigned' }), active: who === 'assigned' },
+                ]}
+              />
+            )}
             <FilterMenu
               label={t('sortLabel', lang)}
-              items={[
-                { label: lang === 'ru' ? 'Сначала новые' : 'Newest', href: hrefWith({ sort: undefined }), active: sort === 'newest' },
-                { label: lang === 'ru' ? 'Сначала старые' : 'Oldest', href: hrefWith({ sort: 'oldest' }), active: sort === 'oldest' },
-              ]}
+              items={ISSUE_SORTS.map((key) => ({
+                label: t(`issue.sort.${key}` as TKey, lang),
+                // `newest` — умолчание, и в адресе его нет: ссылка «сначала новые» обязана
+                // совпадать с адресом страницы без параметра, иначе она выглядит активной,
+                // а ведёт «куда-то ещё».
+                href: hrefWith({ sort: key === 'newest' ? undefined : key }),
+                active: sort === key,
+              }))}
             />
           </div>
         </div>
