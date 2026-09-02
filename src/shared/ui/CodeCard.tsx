@@ -1,6 +1,5 @@
-import { CopyButton } from './CopyButton'
 import { highlightLines } from './highlight-code'
-import { TEXT } from './control'
+import { CodeSurface } from './CodeSurface'
 import type { Lang } from '@/shared/i18n'
 
 /**
@@ -36,36 +35,13 @@ import type { Lang } from '@/shared/i18n'
  */
 export function CodeCard({ code, name, lang }: { code: string; name?: string; lang?: Lang }) {
   const label = name || 'code'
+  // Подсветка считается на СЕРВЕРЕ и уезжает клиенту готовыми токенами: highlight.js
+  // в бандл не попадает, а поверхность блока (перенос, копирование) клиентская —
+  // ей нужны измерения и память выбора.
   const lines = highlightLines(code, name)
   return (
     <div className="sf-code-card my-1.5 overflow-hidden rounded-md border border-border bg-surface-2">
-      {/* Полоса: имя языка слева, копирование справа. На печать не идёт — там ни
-          копировать нечего, ни языка спрашивать не у кого. */}
-      <div className="flex items-center justify-between gap-2 border-b border-border px-2.5 py-1 print:hidden">
-        <span className={`font-mono ${TEXT.caption} uppercase tracking-wide text-muted`}>{label}</span>
-        <CopyButton text={code} lang={lang} size="sm" />
-      </div>
-      <div className="overflow-x-auto overscroll-x-contain py-2 font-mono text-body-sm leading-[1.55] text-ink print:overflow-visible">
-        {/* ⚠️ ШИРИНА ЗАДАЁТСЯ ЗДЕСЬ, ОДНА НА ВСЕ СТРОКИ. Если её просить у каждой строки
-            отдельно (`w-max` на строке), короткая получает свою — по содержимому, — и
-            при прокрутке вправо уезжает из видимой области целиком, унося прилипший
-            номер: нумерация пропадает через строку (находка авто-ревью #858). Общая
-            обёртка шириной с самую длинную строку держит их в одной системе координат. */}
-        <div className="w-max min-w-full print:w-auto">
-        {lines.map((tokens, i) => (
-          // Ни отступа под служебный угол, ни исключений для первой строки: все строки
-          // равны — иначе рвётся выравнивание, а в коде колонки несут смысл.
-          <div key={i} className="flex w-full gap-2 px-2.5">
-            <span className="sticky left-0 z-10 w-5 shrink-0 select-none bg-surface-2 text-right text-caption leading-[1.7] text-muted print:static">
-              {i + 1}
-            </span>
-            <span className="whitespace-pre print:whitespace-pre-wrap print:[overflow-wrap:anywhere]">
-              {tokens.length === 0 ? ' ' : tokens.map((t, j) => (t.cls ? <span key={j} className={t.cls}>{t.text}</span> : <span key={j}>{t.text}</span>))}
-            </span>
-          </div>
-        ))}
-        </div>
-      </div>
+      <CodeSurface code={code} label={label} lines={lines} lang={lang} />
     </div>
   )
 }
