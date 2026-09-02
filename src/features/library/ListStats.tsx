@@ -3,7 +3,7 @@ import { VerificationBadge } from './VerificationBadge'
 import { Eye, GitBranch, GitFork, PlayCircle, Star, Tag } from 'lucide-react'
 import { fmtCount } from '@/shared/lib/count'
 import { plural, t, type Lang } from '@/shared/i18n'
-import { LIST_VISIBILITY_BADGE, listVisibilityState } from './list-visibility'
+import { LIST_VISIBILITY_BADGE, listVisibilityState } from '@/shared/list-visibility'
 
 /**
  * Показатели списка одной строкой (как сводка под описанием репозитория у GitHub):

@@ -27,6 +27,7 @@ type Props = Pick<
   | 'rawQuery'
   | 'sort'
   | 'listType'
+  | 'density'
   | 'catalogs'
   | 'catalogFilter'
   | 'unfiledCount'
@@ -58,6 +59,7 @@ export function ProfileLists({
   rawQuery,
   sort,
   listType,
+  density,
   unfilteredItemsCount,
 }: Props) {
   // Набор для пакетных действий собираем ЗДЕСЬ и один раз: и признак «можно», и данные для
@@ -84,6 +86,7 @@ export function ProfileLists({
         catalogs={catalogs.map((c) => ({ name: c.name, title: tr(c.title, lang), count: c.listCount }))}
         catalog={catalogFilter}
         unfiledCount={unfiledCount}
+        density={density}
         actions={isOwner && tab === 'lists' ? <SelectionToggle lang={lang} /> : null}
       />
     ) : null
@@ -156,12 +159,12 @@ export function ProfileLists({
         // публиковать можно лишь то, что твоё. «Все» — вся текущая выдача с фильтром, а не
         // одна страница: разбирать полтысячи списков по двадцать штук бессмысленно.
         <BulkSelection lang={lang} catalogs={bulk.catalogs} allIds={bulk.allIds} toolbar={toolbar}>
-          <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} selectable />
+          <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} density={density} selectable />
           <Pagination page={page} totalPages={totalPages} total={total} makeHref={pageHref} lang={lang} />
         </BulkSelection>
       ) : (
         <>
-          <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} />
+          <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} density={density} />
           <Pagination page={page} totalPages={totalPages} total={total} makeHref={pageHref} lang={lang} />
         </>
       )}

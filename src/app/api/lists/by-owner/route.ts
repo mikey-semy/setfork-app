@@ -2,7 +2,7 @@ import 'server-only'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSession } from '@/shared/auth/session'
 import { searchTemplatesByOwnerHandle } from '@/features/library/queries'
-import { listVisibilityState } from '@/features/library/list-visibility'
+import { listVisibilityState } from '@/shared/list-visibility'
 
 // Списки автора для переключателя в бредкрамбе шапки: открыт список человека —
 // показываем и ищем по ЕГО спискам. Приватные видит только он сам: гейт — единый

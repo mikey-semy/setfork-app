@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { ChevronDown, ListChecks } from 'lucide-react'
-import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/features/library/list-visibility'
+import { LIST_VISIBILITY_BADGE, type ListVisibilityState } from '@/shared/list-visibility'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Tooltip } from '@/shared/ui/Tooltip'

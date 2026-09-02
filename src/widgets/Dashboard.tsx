@@ -14,7 +14,7 @@ import { t, tr } from '@/shared/i18n'
 import { PromoCard } from './PromoCard'
 import { ChangelogCard } from './ChangelogCard'
 import { cardClass } from '@/shared/ui/card-style'
-import { listVisibilityState } from '@/features/library/list-visibility'
+import { listVisibilityState } from '@/shared/list-visibility'
 
 // Dashboard залогиненного (GitHub-стиль, full-width):
 //   слева — Your lists (переиспользуемая панель с фильтром),

@@ -1,6 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { GitFork } from 'lucide-react'
+import { LIST_VISIBILITY_BADGE } from '@/shared/list-visibility'
+import { DensityToggle } from '@/shared/ui/DensityToggle'
+import type { ListDensity } from '@/shared/lib/list-density'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
@@ -17,6 +21,7 @@ export function ListsToolbar({
   isOwner,
   q,
   type,
+  density,
   sort,
   catalogs = [],
   catalog,
@@ -27,7 +32,9 @@ export function ListsToolbar({
   lang: Lang
   isOwner: boolean
   q: string
-  type: 'all' | 'public' | 'private' | 'forks'
+  type: 'all' | 'public' | 'private' | 'draft' | 'forks'
+  /** Плотность строк — выбор зрителя из куки; переключатель стоит здесь же, у фильтров. */
+  density: ListDensity
   sort: 'recent' | 'name' | 'stars'
   /** Полки владельца со счётчиками; у чужого профиля фильтр не показываем. */
   catalogs?: { name: string; title: string; count: number }[]
@@ -37,7 +44,6 @@ export function ListsToolbar({
   /** Действия страницы в том же ряду контролов (например, пакетный Select). */
   actions?: React.ReactNode
 }) {
-  const ru = lang === 'ru'
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -72,8 +78,8 @@ export function ListsToolbar({
           }}
           size="md"
           touch="fixed"
-          placeholder={tab === 'starred' ? t('searchStarsPh', lang) : ru ? 'Найти список…' : 'Find a list…'}
-          ariaLabel={tab === 'starred' ? t('searchStarsPh', lang) : ru ? 'Найти список' : 'Find a list'}
+          placeholder={tab === 'starred' ? t('searchStarsPh', lang) : t('profile.findList', lang)}
+          ariaLabel={tab === 'starred' ? t('searchStarsPh', lang) : t('profile.findListAria', lang)}
         />
       </form>
 
@@ -106,22 +112,47 @@ export function ListsToolbar({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{ru ? 'Все типы' : 'All types'}</SelectItem>
-            <SelectItem value="public">{ru ? 'Публичные' : 'Public'}</SelectItem>
-            <SelectItem value="private">{ru ? 'Приватные' : 'Private'}</SelectItem>
-            <SelectItem value="forks">{ru ? 'Форки' : 'Forks'}</SelectItem>
+            <SelectItem value="all">{t('profile.typeAll', lang)}</SelectItem>
+            {/* ⚠️ ТРИ СОСТОЯНИЯ — ТЕ ЖЕ, ЧТО НА КАРТОЧКЕ. Значки и подписи берутся из
+                `LIST_VISIBILITY_BADGE`, потому что фильтр и метка обязаны говорить
+                одно и то же: пока отбор шёл по полю `visibility`, черновики попадали
+                в «Публичные», а «Приватные» отвечали пустотой владельцу, у которого
+                514 черновиков. Форк стоит отдельно: это происхождение, а не состояние,
+                и форк бывает любым из трёх. */}
+            {(['public', 'private', 'draft'] as const).map((state) => {
+              const badge = LIST_VISIBILITY_BADGE[state]
+              return (
+                <SelectItem key={state} value={state}>
+                  <span className="flex items-center gap-1.5">
+                    <badge.Icon size={13} className="text-muted" />
+                    {t(badge.labelKey, lang)}
+                  </span>
+                </SelectItem>
+              )
+            })}
+            <SelectItem value="forks">
+              <span className="flex items-center gap-1.5">
+                <GitFork size={13} className="text-muted" />
+                {t('profile.typeForks', lang)}
+              </span>
+            </SelectItem>
           </SelectContent>
         </Select>
       )}
+
+      {/* Плотность — рядом с фильтрами, как у GitHub над перечнем репозиториев:
+          она относится к тому же списку, что и отбор, и искать её в другом месте
+          пришлось бы отдельно. */}
+      <DensityToggle value={density} lang={lang} />
 
       <Select value={sort} onValueChange={(v) => navigate({ sort: v === 'recent' ? '' : v })}>
         <SelectTrigger className="w-auto min-w-26 gap-1.5">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="recent">{ru ? 'Недавние' : 'Recent'}</SelectItem>
-          <SelectItem value="name">{ru ? 'По имени' : 'Name'}</SelectItem>
-          <SelectItem value="stars">{ru ? 'По звёздам' : 'Stars'}</SelectItem>
+          <SelectItem value="recent">{t('profile.sortRecent', lang)}</SelectItem>
+          <SelectItem value="name">{t('profile.sortName', lang)}</SelectItem>
+          <SelectItem value="stars">{t('profile.sortStars', lang)}</SelectItem>
         </SelectContent>
       </Select>
 
@@ -130,7 +161,7 @@ export function ListsToolbar({
           href="/new"
           className={buttonClass({ variant: 'primary' })}
         >
-          <Plus size={15} /> {ru ? 'Создать' : 'New'}
+          <Plus size={15} /> {t('profile.newList', lang)}
         </Link>
       )}
 
