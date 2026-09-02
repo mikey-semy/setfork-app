@@ -448,6 +448,8 @@ export const en = {
   downloadBundle: 'Git bundle (.bundle)',
   copyUrl: 'Copy URL',
   copy: 'Copy',
+  'code.wrap': 'Wrap lines',
+  'code.noWrap': 'No wrap',
   exportHeading: 'Export',
   printPdf: 'Print / PDF',
   exportMd: 'Markdown (.md)',

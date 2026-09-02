@@ -440,6 +440,8 @@ export const ru: Record<DictKey, string> = {
   downloadBundle: 'Git bundle (.bundle)',
   copyUrl: 'Копировать URL',
   copy: 'Копировать',
+  'code.wrap': 'Переносить строки',
+  'code.noWrap': 'Не переносить',
   exportHeading: 'Экспорт',
   printPdf: 'Печать / PDF',
   exportMd: 'Markdown (.md)',
