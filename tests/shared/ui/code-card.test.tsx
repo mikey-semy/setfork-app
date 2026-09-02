@@ -10,78 +10,50 @@ const card = (code: string) => (
 )
 
 /**
- * ⚠️ СТРОКИ КОДА — ОДНОЙ ШИРИНЫ, И ВСЁ СЛУЖЕБНОЕ ЖИВЁТ ВНЕ ИХ ПОЛОСЫ.
- *
- * Пройдено два неверных размена. Сначала отступ под угол получала только первая строка:
- * она переносилась там, где соседние такой же длины помещались целиком, и рвалось
- * выравнивание, которое в коде несёт смысл. Потом отступ выдали всем строкам, а место
- * отняли у номеров и имени языка — владелец сразу спросил, куда они делись.
- *
- * Итог: служебное вынесено в полосу над кодом (28px один раз на блок), а код идёт во всю
- * ширину. Номера и язык видны везде.
+ * ⚠️ СТРОКИ КОДА — ОДНОЙ ШИРИНЫ. Отступ под служебный угол получала только первая
+ * строка, «чтобы не терять сотню пикселей на каждой». Цена оказалась выше экономии:
+ * строка 1 переносилась там, где строки 2 и 3 такой же длины помещались целиком.
+ * Перенос выглядел случайным, а главное — рвалось ВЫРАВНИВАНИЕ, которое в коде несёт
+ * смысл: колонки «состояние → результат» переставали читаться (снимок владельца
+ * 01.09.2026). Место возвращено иначе: номера строк и бейдж языка на телефоне скрыты.
  */
 const CODE = 'активный        -> ДОСТУП ЕСТЬ\nзаблокирован    -> ДОСТУП ЕСТЬ'
 
-/** Строки кода: второй блок карточки — первый занят служебной полосой. */
 const rows = (code = CODE) => {
   const { container } = render(card(code))
-  return [...container.querySelectorAll('.sf-code-card > div:last-child > div')] as HTMLElement[]
+  return [...container.querySelectorAll('.sf-code-card > div > div')] as HTMLElement[]
 }
 
 describe('карточка кода', () => {
-  it('правый отступ у строк одинаков — и его нет вовсе: код во всю ширину', () => {
-    const pads = rows().map((r) => r.className.split(/\s+/).filter((c) => /^(sm:|print:)?pr-/.test(c)))
-    expect(rows().length).toBeGreaterThan(1)
-    expect(pads.flat(), 'место под служебный угол снова отнимают у кода').toEqual([])
+  it('правый отступ одинаков у всех строк', () => {
+    const pads = rows().map((r) =>
+      r.className
+        .split(/\s+/)
+        .filter((c) => /^(sm:)?pr-/.test(c))
+        .sort()
+        .join(' '),
+    )
+    expect(pads.length).toBeGreaterThan(1)
+    expect(new Set(pads).size, `отступы разъехались: ${JSON.stringify(pads)}`).toBe(1)
   })
 
-  it('номера строк на месте — на любой ширине', () => {
+  it('на телефоне номера строк скрыты, а на печати и на широком экране — нет', () => {
     const num = rows()[0].querySelector('span') as HTMLElement
     expect(num.textContent).toBe('1')
-    expect(num.className, 'номера прятали на телефоне ради ширины — так больше не платим').not.toMatch(/\bhidden\b/)
+    expect(num.className).toMatch(/\bhidden\b/)
+    expect(num.className).toMatch(/sm:inline-block/)
+    expect(num.className).toMatch(/print:inline-block/)
   })
 
-  it('имя языка показано и не спрятано за ширину', () => {
+  it('бейдж языка на телефоне скрыт: он служебный и стоит места у каждой строки', () => {
     const { container } = render(card(CODE))
-    const badge = [...container.querySelectorAll('span')].find((x) => x.textContent === 'bash') as HTMLElement
-    expect(badge, 'язык блока не показан вовсе').toBeTruthy()
-    expect(badge.className).not.toMatch(/\bhidden\b/)
+    const badge = [...container.querySelectorAll('span')].find((s) => s.textContent === 'bash') as HTMLElement
+    expect(badge.className).toMatch(/\bhidden\b/)
+    expect(badge.className).toMatch(/sm:inline/)
   })
 
-  it('служебная полоса на печать не идёт: там нечего копировать', () => {
-    const { container } = render(card(CODE))
-    const bar = container.querySelector('.sf-code-card > div') as HTMLElement
-    expect(bar.className).toMatch(/print:hidden/)
-  })
-
-  /**
-   * ⚠️ ЭКРАН И БУМАГА РАЗОШЛИСЬ НАМЕРЕННО. Перенос стоял всюду по правилу «код
-   * показывают в его форме» (#407), но на телефоне он рвал строку посреди выражения:
-   * `failures = append(failures,` и `common.Failure{` оказывались на разных строках.
-   * Структура кода — то, ради чего его читают, — рассыпалась (снимок владельца
-   * 02.09.2026). На бумаге прокрутки нет физически, там перенос остаётся.
-   */
-  it('на экране строка не рвётся: прокрутка вместо переноса', () => {
+  it('перенос длинных строк остаётся: код показывают в своей форме, без бокового скролла', () => {
     const text = rows()[0].querySelector('span:last-child') as HTMLElement
-    expect(text.className).toMatch(/whitespace-pre\b/)
-    expect(text.className).not.toMatch(/whitespace-pre-wrap(?!\s*print)/)
-  })
-
-  it('на печати строка переносится: прокрутить бумагу нельзя', () => {
-    const text = rows()[0].querySelector('span:last-child') as HTMLElement
-    expect(text.className).toMatch(/print:whitespace-pre-wrap/)
-  })
-
-  it('номера при прокрутке закреплены: уехавшая нумерация бесполезна', () => {
-    const num = rows()[0].querySelector('span') as HTMLElement
-    expect(num.className).toMatch(/\bsticky\b/)
-    expect(num.className).toMatch(/print:static/)
-  })
-
-  it('горизонтальный жест внутри блока не листает страницу', () => {
-    const { container } = render(card(CODE))
-    const body = container.querySelector('.sf-code-card > div:last-child') as HTMLElement
-    expect(body.className).toMatch(/overflow-x-auto/)
-    expect(body.className, 'без overscroll-contain свайп по коду листает страницу').toMatch(/overscroll-x-contain/)
+    expect(text.className).toMatch(/whitespace-pre-wrap/)
   })
 })
