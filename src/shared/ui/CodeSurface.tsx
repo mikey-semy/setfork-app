@@ -1,6 +1,7 @@
 'use client'
 import { WrapText } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCodeWrap } from '@/shared/lib/code-wrap'
 import { t, type Lang } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
 import { CopyButton } from './CopyButton'
@@ -8,9 +9,6 @@ import { Tooltip } from './Tooltip'
 import { TEXT } from './control'
 import { buttonClass } from './button-style'
 import type { CodeToken } from './highlight-code'
-
-/** Выбор помнится между блоками и переходами: разбор состоит из десятка врезок. */
-const WRAP_KEY = 'sf:code-wrap'
 
 /**
  * Поверхность блока кода: полоса с языком и действиями, тело со строками.
@@ -53,17 +51,10 @@ export function CodeSurface({
   lines: CodeToken[][]
   lang?: Lang
 }) {
-  const [wrap, setWrap] = useState(false)
+  // Выбор общий с редактором списка: и там, и тут это одно решение читателя.
+  const [wrap, toggle] = useCodeWrap()
   const [scrollable, setScrollable] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(WRAP_KEY) === '1') setWrap(true)
-    } catch {
-      // Заблокированное хранилище — просто без памяти между переходами.
-    }
-  }, [])
 
   // Измеряем сам блок, а не длину строк в символах: ширина зависит от шрифта, кегля и
   // экрана. Пересчёт на resize — поворот телефона меняет ответ.
@@ -83,16 +74,6 @@ export function CodeSurface({
     ro.observe(el)
     return () => ro.disconnect()
   }, [measure, wrap])
-
-  const toggle = () => {
-    const next = !wrap
-    setWrap(next)
-    try {
-      window.localStorage.setItem(WRAP_KEY, next ? '1' : '0')
-    } catch {
-      // Не запомнилось — но в этом просмотре всё равно переключилось.
-    }
-  }
 
   const wrapLabel = t(wrap ? 'code.noWrap' : 'code.wrap', lang ?? 'en')
 

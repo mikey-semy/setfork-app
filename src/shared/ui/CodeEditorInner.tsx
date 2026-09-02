@@ -1,6 +1,12 @@
 'use client'
 
 import { useMemo } from 'react'
+import { WrapText } from 'lucide-react'
+import { t, type Lang } from '@/shared/i18n'
+import { useCodeWrap } from '@/shared/lib/code-wrap'
+import { cn } from '@/shared/lib/cn'
+import { Tooltip } from './Tooltip'
+import { buttonClass } from './button-style'
 import CodeMirror, { EditorView, type Extension } from '@uiw/react-codemirror'
 import { StreamLanguage } from '@codemirror/language'
 import { javascript } from '@codemirror/lang-javascript'
@@ -51,12 +57,15 @@ export default function CodeEditorInner({
   placeholder,
   ariaLabel,
   maxHeightClass = 'max-h-64',
+  lang = 'en',
 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
   ariaLabel?: string
   maxHeightClass?: string
+  /** Язык интерфейса для подписей — тем же пропом, что у кнопки копирования рядом. */
+  lang?: Lang
 }) {
   const { resolvedTheme } = useTheme()
   const id = detectLang(value)
@@ -64,7 +73,17 @@ export default function CodeEditorInner({
   // но ОДНА длинная команда переносится (lineWrapping) и визуально занимает несколько
   // строк — номеров не было, хотя пользователь видит «больше одной строки».
   const hasCode = value.trim() !== ''
-  const extensions = useMemo(() => [langExt(id), appTheme, EditorView.lineWrapping], [id])
+  // ⚠️ ПЕРЕНОС ВЫКЛЮЧЕН ПО УМОЛЧАНИЮ — как у всех, кто правит код: CodeMirror без
+  // `lineWrapping` (наша же основа), VS Code с `editor.wordWrap: "off"`, редактор
+  // файлов GitHub. Перенос рвёт выражение посередине, и структура кода рассыпается —
+  // владелец увидел это и во врезке разбора, и здесь (02.09.2026). Выбор общий с
+  // просмотром: одно решение читателя на весь продукт, не две настройки.
+  const [wrap, toggleWrap] = useCodeWrap()
+  const wrapLabel = t(wrap ? 'code.noWrap' : 'code.wrap', lang)
+  const extensions = useMemo(
+    () => (wrap ? [langExt(id), appTheme, EditorView.lineWrapping] : [langExt(id), appTheme]),
+    [id, wrap],
+  )
 
   return (
     <div className="relative" role="group" aria-label={ariaLabel}>
@@ -75,7 +94,19 @@ export default function CodeEditorInner({
           <span className={`pointer-events-none font-mono ${TEXT.caption} uppercase tracking-wide text-muted/80`}>
             {LANG_LABEL[id]}
           </span>
-          <CopyButton text={value} />
+          {/* Тумблер переноса рядом с копированием — там же, где во врезке разбора. */}
+          <Tooltip label={wrapLabel}>
+            <button
+              type="button"
+              onClick={toggleWrap}
+              aria-pressed={wrap}
+              aria-label={wrapLabel}
+              className={buttonClass({ variant: 'ghost', size: 'sm', className: cn('px-1.5', wrap && 'text-accent') })}
+            >
+              <WrapText size={14} />
+            </button>
+          </Tooltip>
+          <CopyButton text={value} lang={lang} />
         </span>
       )}
       <CodeMirror

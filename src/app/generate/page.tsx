@@ -3,7 +3,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { hasAiEnvConfig } from '@/shared/settings/ai'
-import { sampleListTitles } from '@/features/library/sample-titles'
+import { promptExamples } from '@/features/generation/prompt-examples'
 import { GenerateForm } from '@/features/generation/GenerateForm'
 
 export async function generateMetadata() {
@@ -17,7 +17,12 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (!session) redirect('/login')
   const aiOn = hasAiEnvConfig()
-  const suggestions = await sampleListTitles(lang, 6)
+  // ⚠️ ПРИМЕРЫ ЗАДАЧ, А НЕ ЗАГОЛОВКИ СУЩЕСТВУЮЩИХ СПИСКОВ. Раньше здесь стояли
+  // живые названия из корпуса, и человеку предлагали создать то, что уже есть, — в том
+  // числе его собственные списки (замечание владельца 02.09.2026). Витрина «что уже
+  // есть» живёт на главной, там заголовки ведут на сами списки; здесь же клик означает
+  // «сгенерировать», и предлагать существующее бессмысленно.
+  const suggestions = promptExamples(lang, 6)
 
   return <GenerateForm lang={lang} aiOn={aiOn} defaultQuery={sp.q ?? ''} suggestions={suggestions} errorKind={sp.e} />
 }
