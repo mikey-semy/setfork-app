@@ -6,6 +6,7 @@ import { inExploreSection } from '@/shared/nav/explore-section'
 import { ChevronLeft, Compass, Home, ListChecks, PlayCircle, X } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { t, type Lang } from '@/shared/i18n'
+import { searchMyLists } from '@/features/library/actions/my-lists'
 import { ListsPanel, type ListsPanelItem } from './ListsPanel'
 import { useSidebar } from './sidebar-context'
 import { buttonClass } from '@/shared/ui/button-style'
@@ -74,6 +75,14 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
             collapsible
             storageKey="sf.sidebar.topLists"
             searchable
+            // ⚠️ ИЩЕМ НА СЕРВЕРЕ, А НЕ СРЕДИ ПОКАЗАННЫХ. В рейке лежат последние
+            // SIDEBAR_LISTS списков, и поле без этого фильтровало ровно их: список,
+            // не попавший в десятку недавних, отвечал «ничего не найдено», хотя
+            // прекрасно находился обычным поиском. Владелец поймал это на «Гно»
+            // (02.09.2026) и приложил снимок GitHub, где то же поле в том же месте
+            // ищет по всем репозиториям. Панель уже умеет: задержка ввода, состояние
+            // «ищу» и отличие отказа от «не найдено» — не хватало только этой строки.
+            remoteSearch={searchMyLists}
             // Без showOwner: в этом рейке лежат СВОИ списки зрителя (layout берёт их
             // getUserTemplates по нему же), поэтому «ник/» повторялся в каждой строке и
             // съедал больше половины ширины — от названия оставалось «Приготовле…».

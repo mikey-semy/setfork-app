@@ -62,6 +62,22 @@ export function OverlayPanel({
   const titleId = useId()
   useEffect(() => setMounted(true), [])
 
+  // ⚠️ ОБРАБОТЧИК ЗАКРЫТИЯ — В REF, А НЕ В ЗАВИСИМОСТЯХ ЭФФЕКТА.
+  //
+  // Вызывающие передают его стрелкой прямо в разметке (`onClose={() => setOpen(false)}`),
+  // то есть НОВОЙ функцией на каждый рендер. Стоя в зависимостях, он перезапускал эффект
+  // на каждый набранный символ: уборка возвращала фокус на кнопку, открывшую окно, и
+  // эффект тут же уводил его обратно в поле. На мыши это незаметно, а на телефоне
+  // возврат фокуса СВОРАЧИВАЕТ КЛАВИАТУРУ — владелец 02.09.2026: «невозможно ввести
+  // слова — каждая новая буква сворачивает клавиатуру».
+  //
+  // Ловушка фокуса ставится ОДИН РАЗ на открытие; свежий обработчик берётся из ref в
+  // момент вызова, поэтому устаревшего замыкания тут не возникает.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
+
   useEffect(() => {
     if (!open) return
     const opener = document.activeElement as HTMLElement | null
@@ -76,7 +92,7 @@ export function OverlayPanel({
     ;(first ?? panelRef.current)?.focus()
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') return onClose()
+      if (e.key === 'Escape') return onCloseRef.current()
       if (e.key !== 'Tab') return
       const items = focusable()
       if (items.length === 0) {
@@ -97,7 +113,7 @@ export function OverlayPanel({
       // в начале страницы и ищет своё место заново.
       opener?.focus?.()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open || !mounted) return null
 
