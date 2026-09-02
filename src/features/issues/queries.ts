@@ -4,7 +4,7 @@ import { db, issueAssignees, issueComments, issues, listLabels, milestones, user
 import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { isFeatureEnabled } from '@/core'
 import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
-import { likeContains } from '@/shared/db/like'
+import { issueKeywordCond } from './keyword'
 import { feedWindow } from '@/shared/lib/paging'
 import { probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
@@ -56,7 +56,8 @@ export interface IssueQuery {
 function issueConds(templateId: string, opts: IssueQuery): SQL[] {
   const conds: SQL[] = [eq(issues.templateId, templateId), eq(issues.status, opts.status)]
   const q = opts.q?.trim()
-  if (q) conds.push(sql`${issues.title} ilike ${likeContains(q)}`)
+  // Заголовок, тело и реплики — одно правило на все поиски задач (см. ./keyword).
+  if (q) conds.push(issueKeywordCond(q))
   if (opts.label) conds.push(sql`${opts.label} = any(${issues.labels})`)
   if (opts.milestone) conds.push(eq(issues.milestoneId, opts.milestone))
   return conds

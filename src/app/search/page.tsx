@@ -90,16 +90,16 @@ export default async function SearchPage({
 
   const [lang, session] = await Promise.all([getLang(), getSession()])
   // Бейджи scope-переключателя считаем всегда; полную выдачу — только активного scope.
-  const [tags, counts, listsPage, people, issueRows] = await Promise.all([
+  const [tags, counts, listsPage, people, issuesPage] = await Promise.all([
     getPopularTags(),
-    Promise.all([countLists(listOpts, session?.userId), countPeople(text), countIssues(text, 'all')]).then(
+    Promise.all([countLists(listOpts, session?.userId), countPeople(text), countIssues(text, issueState)]).then(
       ([lists, ppl, iss]) => ({ lists, people: ppl, issues: iss }),
     ),
     scope === 'lists'
       ? getSearchPage({ ...listOpts, sort }, session?.userId, lang, pageWindow(rawPage))
       : Promise.resolve({ items: [], total: 0 }),
     scope === 'people' ? searchPeople({ q: text, sort: peopleSort }) : Promise.resolve([]),
-    scope === 'issues' ? searchIssues({ q: text, state: issueState }) : Promise.resolve([]),
+    scope === 'issues' ? searchIssues({ q: text, state: issueState, window: pageWindow(rawPage) }) : Promise.resolve({ items: [], total: 0 }),
   ])
   // Выдача и её объём приезжают вместе: число страниц обязано считаться по ТОМУ ЖЕ
   // набору, который показан (см. getSearchPage).
@@ -260,13 +260,22 @@ export default async function SearchPage({
 
         {/* ── Issues ── */}
         {scope === 'issues' &&
-          (issueRows.length === 0 ? (
+          (issuesPage.items.length === 0 ? (
             <div className="py-6">
               <EmptyState icon={<SearchX size={36} strokeWidth={1.5} />} title={t('noIssuesFound', lang)} />
             </div>
           ) : (
             <div className="py-3">
-              <IssueResults issues={issueRows} lang={lang} />
+              <IssueResults issues={issuesPage.items} lang={lang} />
+              {/* Та же листалка, что у списков: счётчик над выдачей и её объём считаются
+                  по ОДНОМУ отбору, иначе цифра обещает страницы, которых нет. */}
+              <Pagination
+                page={pageFromParam(sp.page, pageCount(issuesPage.total))}
+                totalPages={pageCount(issuesPage.total)}
+                total={issuesPage.total}
+                makeHref={(p) => scopeTab({ scope: 'issues', state: issueState, page: p > 1 ? String(p) : undefined })}
+                lang={lang}
+              />
             </div>
           ))}
         </div>

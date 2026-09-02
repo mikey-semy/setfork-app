@@ -1,7 +1,8 @@
 import 'server-only'
-import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
+import { and, desc, eq, sql, type SQL } from 'drizzle-orm'
 import { db, issueComments, issues, templates, users, publiclyVisible } from '@/shared/db'
-import { likeContains } from '@/shared/db/like'
+import { feedWindow } from '@/shared/lib/paging'
+import { issueKeywordCond } from './keyword'
 import type { LocaleText } from '@/shared/i18n'
 
 export type IssueStateFilter = 'open' | 'closed' | 'all'
@@ -25,15 +26,18 @@ function issuesWhere(q?: string, state: IssueStateFilter = 'open'): SQL {
   ]
   if (state !== 'all') conds.push(eq(issues.status, state))
   const term = q?.trim()
-  if (term) {
-    const like = likeContains(term)
-    // Номер #N ищем только если весь токен — цифры (иначе "12abc" всплывал бы issue #12).
-    conds.push(/^\d+$/.test(term) ? or(ilike(issues.title, like), eq(issues.number, Number(term)))! : ilike(issues.title, like))
-  }
+  // Где именно ищем слова — в одном месте на все поиски задач (см. ./keyword).
+  if (term) conds.push(issueKeywordCond(term))
   return and(...conds)!
 }
 
-/** Число issue под запрос (для бейджа scope-переключателя) — по всем статусам. */
+/**
+ * Число задач под запрос — ДЛЯ ТОГО ЖЕ ОТБОРА, что и выдача.
+ *
+ * ⚠️ Бейдж считался по всем статусам, а показывались открытые: на запрос, где одна
+ * задача открыта и семь закрыто, переключатель обещал восемь, а список показывал одну.
+ * Расхождение тихое — обе цифры по отдельности верны.
+ */
 export async function countIssues(q?: string, state: IssueStateFilter = 'all'): Promise<number> {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
@@ -45,16 +49,26 @@ export async function countIssues(q?: string, state: IssueStateFilter = 'all'): 
 
 const commentsCountExpr = sql<number>`(select count(*)::int from ${issueComments} where ${issueComments.issueId} = ${issues.id})`
 
-/** Глобальный кросс-списочный поиск issues. */
+/**
+ * Глобальный кросс-списочный поиск задач: СТРАНИЦА И ЕЁ ОБЪЁМ ВМЕСТЕ.
+ *
+ * Объём возвращается отсюда, а не считается отдельным вызовом на экране, ровно по той же
+ * причине, что и у списков (`getSearchPage`): число страниц обязано считаться по ТОМУ ЖЕ
+ * отбору, который показан. Разъедься они — листалка нарисует страницы, за которыми
+ * ничего нет, и ошибка будет тихой: обе цифры по отдельности верны.
+ */
 export async function searchIssues({
   q,
   state = 'open',
-  limit = 30,
+  window,
 }: {
   q?: string
   state?: IssueStateFilter
-  limit?: number
-}): Promise<IssueSearchRow[]> {
+  /** Окно страницы. Битый предел драйвер выбрасывает молча — см. `feedWindow`. */
+  window: { limit: number; offset?: number }
+}): Promise<{ items: IssueSearchRow[]; total: number }> {
+  const { limit, offset } = feedWindow(window)
+  const where = issuesWhere(q, state)
   const rows = await db
     .select({
       id: issues.id,
@@ -70,8 +84,14 @@ export async function searchIssues({
     .from(issues)
     .innerJoin(templates, eq(issues.templateId, templates.id))
     .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(issuesWhere(q, state))
+    .where(where)
     .orderBy(desc(issues.updatedAt))
     .limit(limit)
-  return rows as IssueSearchRow[]
+    .offset(offset)
+  const [count] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(issues)
+    .innerJoin(templates, eq(issues.templateId, templates.id))
+    .where(where)
+  return { items: rows as IssueSearchRow[], total: count?.n ?? 0 }
 }
