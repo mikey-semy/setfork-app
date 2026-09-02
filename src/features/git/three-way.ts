@@ -15,6 +15,7 @@
 // theirs-предшественника (или в конец).
 
 import { blockIdentity } from '@/core/domain/block-identity'
+import { trLoose } from '@/shared/i18n'
 
 export interface TwStep {
   // Не-step блоки несут type/content; у шага — undefined (byte-compat).
@@ -108,8 +109,12 @@ function blockKey(s: TwStep): string {
   if (legacy) return `${s.type ?? 'step'}#${legacy}`
   if (s.blockId) return `id#${s.blockId}`
   if (!s.type || s.type === 'step') return norm(s.title)
-  if (s.type === 'text') return `text:${norm(String(c.md ?? ''))}`
-  if (s.type === 'image') return `image:${String(c.ref ?? '')}:${norm(String(c.caption ?? ''))}`
+  // ⚠️ ЧЕРЕЗ `trLoose`: `md` и `caption` многоязычные (ADR-0025), и `String()` дал бы
+  // всем текстовым блокам ОДИН ключ `text:[object object]` — слияние сопоставило бы
+  // чужие блоки друг с другом. Ключ нужен только блокам без `blockId` (старым), но
+  // именно у них и нет другой опоры.
+  if (s.type === 'text') return `text:${norm(trLoose(c.md))}`
+  if (s.type === 'image') return `image:${String(c.ref ?? '')}:${norm(trLoose(c.caption))}`
   return `${s.type}:${norm(JSON.stringify(c))}`
 }
 

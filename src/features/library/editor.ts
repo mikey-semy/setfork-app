@@ -329,10 +329,10 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     }
     if (type === 'image') {
       const ref = typeof it.content?.ref === 'string' ? it.content.ref : ''
-      return { ...emptyItem(), type: 'image', bid, blockId, section, imageKey: ref, imagePreview: ref ? (previews[ref] ?? '') : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
+      return { ...emptyItem(), type: 'image', bid, blockId, section, imageKey: ref, imagePreview: ref ? (previews[ref] ?? '') : '', caption: blockText(it.content?.caption, lang) }
     }
     if (type === 'video') {
-      return { ...emptyItem(), type: 'video', bid, blockId, section, videoUrl: typeof it.content?.url === 'string' ? it.content.url : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
+      return { ...emptyItem(), type: 'video', bid, blockId, section, videoUrl: typeof it.content?.url === 'string' ? it.content.url : '', caption: blockText(it.content?.caption, lang) }
     }
     if (type === 'file') {
       return { ...emptyItem(), type: 'file', bid, blockId, section, fileUrl: typeof it.content?.url === 'string' ? it.content.url : '', fileName: typeof it.content?.name === 'string' ? it.content.name : '' }

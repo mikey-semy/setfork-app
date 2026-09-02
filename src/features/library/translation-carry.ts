@@ -95,11 +95,17 @@ const carryList = (next: LocaleText[], prev: LocaleText[] | null | undefined): L
   next.map((v, i) => carryField(v, (prev ?? [])[i]))
 
 /**
- * Markdown-врезка: у неё нет колонки, она лежит в content и до перевода
- * хранилась простой строкой. Языка интерфейса здесь взять негде, поэтому
- * «не изменилось» = строка совпала с ЛЮБЫМ из имеющихся языков.
+ * Поле внутри `content`: у него нет колонки, оно лежит в JSON и до перевода хранилось
+ * простой строкой. Языка интерфейса здесь взять негде, поэтому «не изменилось» =
+ * строка совпала с ЛЮБЫМ из имеющихся языков.
+ *
+ * ⚠️ ТАКИХ ПОЛЕЙ ДВА, А НЕ ОДНО. Перенос делали только для `md`, и подпись картинки
+ * или видео теряла перевод при первой же правке списка: редактор отдавал её строкой
+ * на одном языке, а прежние языки затирались. Найдено при разборе `[object Object]`
+ * в сводке изменений (02.09.2026) — тот же корень: многоязычное поле обработано не
+ * везде, где оно встречается.
  */
-function carryMd(next: unknown, prev: unknown): unknown {
+function carryLocalized(next: unknown, prev: unknown): unknown {
   if (typeof next !== 'string') return next // уже многоязычная (перевод) — не трогаем
   if (!next.trim()) return next
   if (typeof prev === 'string' || !prev) return next
@@ -123,8 +129,14 @@ export function carryTranslations<T extends NextStep>(next: readonly T[], prev: 
   return next.map((s) => {
     const p = s.blockId ? byId.get(s.blockId) : undefined
     if (!p) return s
-    const content =
-      s.type === 'text' && s.content ? { ...s.content, md: carryMd(s.content.md, (p.content ?? {}).md) } : s.content
+    const pc = (p.content ?? {}) as Record<string, unknown>
+    const content = !s.content
+      ? s.content
+      : s.type === 'text'
+        ? { ...s.content, md: carryLocalized(s.content.md, pc.md) }
+        : s.type === 'image' || s.type === 'video'
+          ? { ...s.content, caption: carryLocalized(s.content.caption, pc.caption) }
+          : s.content
     return {
       ...s,
       content,
