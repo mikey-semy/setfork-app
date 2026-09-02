@@ -124,6 +124,44 @@ export function searchCondition(q: string): SQL {
   )!
 }
 
+/**
+ * ПОРЯДОК ПРИ ЗАПРОСЕ СЛОВАМИ: точное совпадение выше частичного.
+ *
+ * Раньше найденное сортировалось выбранной сортировкой — по умолчанию «в тренде», то
+ * есть по звёздам и форкам. Совпадение заголовка не значило НИЧЕГО: владелец ввёл
+ * «Discourse: проект и люди» дословно и первым получил «graphile-worker: проект и люди»
+ * (02.09.2026). Популярность обошла точность.
+ *
+ * Три ступени, дальше — обычная сортировка:
+ *  1) заголовок (в любом из языков) или адрес совпал ЦЕЛИКОМ с запросом;
+ *  2) запрос входит в заголовок или адрес подстрокой;
+ *  3) остальное — по пословной похожести (`word_similarity`), чтобы найденное по
+ *     опечатке и по смыслу шло за буквальным, а не вперемешку с ним.
+ *
+ * Приём взят из соседнего проекта владельца (equiply-app, `features/questions/queries`:
+ * `desc(case when exactHit …)` и следом `desc(similarityScore(…))`) — там он уже прошёл
+ * авто-ревью на том же дефекте: найденное по слову из ответа получало нулевую похожесть
+ * и уходило за опечаточные совпадения.
+ *
+ * ⚠️ ВЫШЕ ЯЗЫКОВОГО ПРЕДПОЧТЕНИЯ. `langPref` поднимает списки с заголовком на языке
+ * читателя, и до этой правки он стоял первым — то есть точно названный английский список
+ * у русского читателя оказывался ниже любого русского. Для просмотра ленты это верно, для
+ * ПОИСКА — нет: человек назвал список по имени, а ему показали другой.
+ */
+export function relevanceOrder(q: string): SQL[] {
+  const term = q.trim()
+  const like = likeContains(term)
+  const exactWhole = sql`(lower(coalesce(${templates.title}->>'en','')) = lower(${term})
+    or lower(coalesce(${templates.title}->>'ru','')) = lower(${term})
+    or lower(${templates.slug}) = lower(${term}))`
+  const contains = sql`(${titleText} ilike ${like} or ${templates.slug} ilike ${like})`
+  return [
+    desc(sql`case when ${exactWhole} then 1 else 0 end`),
+    desc(sql`case when ${contains} then 1 else 0 end`),
+    desc(sql`coalesce(word_similarity(${term}, ${titleText}), 0)`),
+  ]
+}
+
 // В публичном доступе — только published + public + moderation='active'
 // (черновики/flagged/hidden не публикуются). Владелец видит свои списки в любом статусе.
 export function visibleFilter(viewerId?: string): SQL {
@@ -182,7 +220,9 @@ export async function keywordFeed(
     // `asc(id)` в хвосте — доопределение порядка. Без него на равных ключах (у trending
     // это звёзды+форки, у ленты — дата) соседние страницы вправе показать одну строку
     // дважды, а другую пропустить. Ключ уникальный, поэтому порядок становится строгим.
-    .orderBy(...(viewerLang ? [langPref(viewerLang)] : []), order, asc(templates.id))
+    // При запросе словами релевантность идёт ПЕРЕД языковым предпочтением и выбранной
+    // сортировкой: см. relevanceOrder. Без запроса порядок прежний.
+    .orderBy(...(q ? relevanceOrder(q) : []), ...(viewerLang ? [langPref(viewerLang)] : []), order, asc(templates.id))
   const w = window && feedWindow(window)
   const rows = w ? await base.limit(w.limit).offset(w.offset) : await base
   return rows as FeedItem[]

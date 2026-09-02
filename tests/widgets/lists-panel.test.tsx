@@ -254,3 +254,45 @@ describe('панель на втором языке', () => {
     await waitFor(() => expect(found()).toEqual(['/miki/starter-notes']))
   })
 })
+
+describe('поиск не ограничен показанными строками', () => {
+  /**
+   * ⚠️ ПОЛЕ ПОИСКА, ФИЛЬТРУЮЩЕЕ ЗАГРУЖЕННОЕ, ОТВЕЧАЕТ «НИЧЕГО НЕ НАЙДЕНО» ПРО ТО,
+   * ЧЕГО НЕ ИСКАЛО.
+   *
+   * В боковом меню лежат последние SIDEBAR_LISTS списков. Владелец ввёл «Гно»
+   * (02.09.2026), получил «Ничего не найдено» — а список с гномами существовал и
+   * находился обычным поиском: он просто не попал в десятку недавних. Форма из GitHub,
+   * снимок которого он приложил: то же поле в том же месте ищет по ВСЕМ репозиториям.
+   */
+  it('находит то, чего нет в загруженных строках', async () => {
+    const user = userEvent.setup()
+    const missing = { handle: 'miki', slug: 'gnomes', title: { ru: 'Гномы' }, avatarUrl: null }
+    const remoteSearch = vi.fn(async () => [missing])
+    render(<ListsPanel items={page(1)} lang="ru" title="Списки" searchable initialLimit={DASHBOARD_LISTS} remoteSearch={remoteSearch} />)
+
+    await user.type(screen.getByPlaceholderText('Найти список…'), 'Гно')
+
+    await waitFor(() => expect(screen.getByText('Гномы')).toBeInTheDocument())
+    expect(remoteSearch, 'запрос обязан уйти на сервер').toHaveBeenCalledWith('гно')
+    expect(screen.queryByText(/Ничего не найдено/)).not.toBeInTheDocument()
+  })
+
+  it('пока сервер отвечает, панель говорит «ищу», а не «не найдено»', async () => {
+    const user = userEvent.setup()
+    let release = (_: { handle: string; slug: string; title: { ru: string }; avatarUrl: null }[]) => {}
+    const remoteSearch = vi.fn(
+      () => new Promise<{ handle: string; slug: string; title: { ru: string }; avatarUrl: null }[]>((res) => (release = res)),
+    )
+    render(<ListsPanel items={page(1)} lang="ru" title="Списки" searchable initialLimit={DASHBOARD_LISTS} remoteSearch={remoteSearch} />)
+
+    await user.type(screen.getByPlaceholderText('Найти список…'), 'Гно')
+    await waitFor(() => expect(screen.getByText('Ищу…')).toBeInTheDocument())
+    expect(screen.queryByText(/Ничего не найдено/), 'ответа ещё нет — говорить нечего').not.toBeInTheDocument()
+
+    release([])
+    // ⚠️ Ищем ПОДСТРОКОЙ: в словаре у этой фразы есть точка, и точное совпадение молча
+    // не находило бы её — отрицательная проверка выше проходила бы вхолостую.
+    await waitFor(() => expect(screen.getByText(/Ничего не найдено/)).toBeInTheDocument())
+  })
+})
