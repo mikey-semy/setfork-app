@@ -1717,6 +1717,7 @@ export const en = {
   'admin.resume': 'Resume',
   'admin.role': 'Role',
   'admin.rowsVectorized': 'rows vectorized',
+  'admin.vectorizedSuffix': 'vectorized',
   'admin.run': 'Run',
   'admin.running': 'running',
   'admin.runs': 'Runs',

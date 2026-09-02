@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { Calendar, CircleCheck, CircleDot, Milestone as MilestoneIcon, Trash2 } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { plural, t } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Markdown } from '@/shared/ui/Markdown'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -85,10 +85,10 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
                     <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-body-sm text-muted">
                       <span className="font-semibold text-ink-2">{pct}%</span>
                       <span className="inline-flex items-center gap-1">
-                        <CircleDot size={12} /> {m.openCount} {t('openLabel', lang).toLowerCase()}
+                        <CircleDot size={12} /> {m.openCount} {plural(m.openCount, 'openIssues', lang)}
                       </span>
                       <span className="inline-flex items-center gap-1">
-                        <CircleCheck size={12} /> {m.closedCount} {t('closedLabel', lang).toLowerCase()}
+                        <CircleCheck size={12} /> {m.closedCount} {plural(m.closedCount, 'closedIssues', lang)}
                       </span>
                     </div>
                   </div>

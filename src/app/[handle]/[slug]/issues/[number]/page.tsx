@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { CircleDot, CircleCheck } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { plural, t } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
@@ -116,7 +116,9 @@ export default async function IssueThreadPage({
           </Badge>
           <span className="text-body text-ink-2">
             <span className="font-semibold text-ink">{issue.authorHandle}</span> {t('openedThis', lang)} ·{' '}
-            {comments.length} {t('commentBtn', lang).toLowerCase()}
+            {/* Раньше здесь стояла подпись КНОПКИ: «0 комментировать». Число требует
+                счётного слова со всеми тремя формами, а не глагола. */}
+            {comments.length} {plural(comments.length, 'comments', lang)}
           </span>
           <LabelEditor owner={owner} slug={slug} number={issue.number} labels={issue.labels} canEdit={canManage} lang={lang} custom={custom} />
         </div>

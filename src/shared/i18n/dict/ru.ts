@@ -1708,6 +1708,7 @@ export const ru: Record<DictKey, string> = {
   'admin.resume': 'Пустить',
   'admin.role': 'Роль',
   'admin.rowsVectorized': 'строк с векторами',
+  'admin.vectorizedSuffix': 'с векторами',
   'admin.run': 'Запустить',
   'admin.running': 'работает',
   'admin.runs': 'Прогонов',
