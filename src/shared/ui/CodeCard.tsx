@@ -46,12 +46,16 @@ export function CodeCard({ code, name, lang }: { code: string; name?: string; la
         <CopyButton text={code} lang={lang} size="sm" />
       </div>
       <div className="overflow-x-auto overscroll-x-contain py-2 font-mono text-body-sm leading-[1.55] text-ink print:overflow-visible">
+        {/* ⚠️ ШИРИНА ЗАДАЁТСЯ ЗДЕСЬ, ОДНА НА ВСЕ СТРОКИ. Если её просить у каждой строки
+            отдельно (`w-max` на строке), короткая получает свою — по содержимому, — и
+            при прокрутке вправо уезжает из видимой области целиком, унося прилипший
+            номер: нумерация пропадает через строку (находка авто-ревью #858). Общая
+            обёртка шириной с самую длинную строку держит их в одной системе координат. */}
+        <div className="w-max min-w-full print:w-auto">
         {lines.map((tokens, i) => (
           // Ни отступа под служебный угол, ни исключений для первой строки: все строки
           // равны — иначе рвётся выравнивание, а в коде колонки несут смысл.
-          // `w-max min-w-full`: строки одной системы координат, поэтому прокручиваются
-          // вместе, а не каждая сама по себе.
-          <div key={i} className="flex w-max min-w-full gap-2 px-2.5 print:w-auto">
+          <div key={i} className="flex w-full gap-2 px-2.5">
             <span className="sticky left-0 z-10 w-5 shrink-0 select-none bg-surface-2 text-right text-caption leading-[1.7] text-muted print:static">
               {i + 1}
             </span>
@@ -60,6 +64,7 @@ export function CodeCard({ code, name, lang }: { code: string; name?: string; la
             </span>
           </div>
         ))}
+        </div>
       </div>
     </div>
   )

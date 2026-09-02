@@ -22,10 +22,14 @@ const card = (code: string) => (
  */
 const CODE = 'активный        -> ДОСТУП ЕСТЬ\nзаблокирован    -> ДОСТУП ЕСТЬ'
 
-/** Строки кода: второй блок карточки — первый занят служебной полосой. */
+/**
+ * Строки кода. Второй блок карточки — первый занят служебной полосой; внутри него
+ * обёртка, задающая общую ширину всем строкам (без неё короткие уезжают из видимой
+ * области при прокрутке и уносят прилипшие номера).
+ */
 const rows = (code = CODE) => {
   const { container } = render(card(code))
-  return [...container.querySelectorAll('.sf-code-card > div:last-child > div')] as HTMLElement[]
+  return [...container.querySelectorAll('.sf-code-card > div:last-child > div > div')] as HTMLElement[]
 }
 
 describe('карточка кода', () => {
@@ -76,6 +80,16 @@ describe('карточка кода', () => {
     const num = rows()[0].querySelector('span') as HTMLElement
     expect(num.className).toMatch(/\bsticky\b/)
     expect(num.className).toMatch(/print:static/)
+  })
+
+  it('ширина одна на все строки: короткая не уезжает и не уносит свой номер', () => {
+    const { container } = render(card('x\nочень длинная строка кода, которая и задаёт ширину прокрутки'))
+    const track = container.querySelector('.sf-code-card > div:last-child > div') as HTMLElement
+    expect(track.className, 'ширину просят у каждой строки — короткая получит свою').toMatch(/w-max/)
+    for (const row of rows('x\nочень длинная строка кода, которая и задаёт ширину прокрутки')) {
+      expect(row.className).toMatch(/\bw-full\b/)
+      expect(row.className).not.toMatch(/\bw-max\b/)
+    }
   })
 
   it('горизонтальный жест внутри блока не листает страницу', () => {
