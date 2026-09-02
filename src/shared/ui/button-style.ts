@@ -65,8 +65,18 @@ export function buttonClass({
   touch = 'hit',
   className,
 }: { variant?: ButtonVariant; size?: ButtonSize; touch?: ButtonTouch; className?: string } = {}): string {
-  /** Вызывающий позиционировал кнопку сам — значит `relative` от зоны ей не нужен и вреден. */
-  const positioned = /(^|\s)(absolute|fixed|sticky)(\s|$)/.test(className ?? '')
+  /** Вызывающий позиционировал кнопку сам — значит `relative` от зоны ей не нужен и вреден.
+   *
+   * ⚠️ `sr-only` СЧИТАЕТСЯ ПОЗИЦИОНИРОВАНИЕМ: он и есть `position: absolute` — просто
+   * записанный одним словом. Не узнав его, зона подмешивала `pointer-coarse:relative`,
+   * оно перебивало `absolute` (одно свойство, вариант сильнее) — и невидимая ссылка
+   * «перейти к содержимому» возвращалась в поток НА ТЕЛЕФОНЕ, отжимая шапку от верха.
+   * Замер 02.09.2026 на setfork.com/explore, iPhone 12: шапка стояла на 24px ниже
+   * верха до первой прокрутки; вернув ссылке `absolute` прямо в живой странице,
+   * шапка встаёт на 0. На мыши дефекта нет — вариант `pointer-coarse` там не
+   * применяется, поэтому и на глаз в браузере он не виден.
+   */
+  const positioned = /(^|\s)(absolute|fixed|sticky|sr-only)(\s|$)/.test(className ?? '')
   return cn(
     // `whitespace-nowrap` — НЕСУЩЕЕ, а не косметика. Высоту кнопки задаёт шкала
     // (CONTROL_H), и подпись, перенесённая на вторую строку, в эту высоту не влезает:
