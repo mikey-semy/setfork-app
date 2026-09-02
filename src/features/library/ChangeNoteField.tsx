@@ -95,7 +95,14 @@ export function ChangeNoteField({
             onClick={generate}
             disabled={busy}
             aria-label={t('generateFromChanges', lang)}
-            className={`${buttonClass({ variant: 'ghost', size: 'sm', touch: 'hit', className: 'absolute right-1.5 top-1/2 size-7 -translate-y-1/2 p-0' })} hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2`}
+            className={buttonClass({
+              variant: 'ghost',
+              size: 'sm',
+              touch: 'hit',
+              // Всё своё — ВНУТРЬ `className`: снаружи классы не сливаются с вариантом,
+              // и `hover:` из ghost остался бы спорить с этим в собранном CSS.
+              className: 'absolute right-1.5 top-1/2 size-7 -translate-y-1/2 p-0 hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2',
+            })}
           >
             {busy ? <Spinner size="md" /> : <Sparkles size={15} />}
           </button>

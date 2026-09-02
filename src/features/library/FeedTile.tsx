@@ -51,9 +51,10 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
             <Tooltip label={t('star', lang)}>
               <button
                 type="submit"
-                className={`${buttonClass({ size: 'sm' })} hover:border-border-strong ${
-                  starred ? 'border-warn text-warn' : 'border-border text-ink-2'
-                }`}
+                className={buttonClass({
+                  size: 'sm',
+                  className: `hover:border-border-strong ${starred ? 'border-warn text-warn' : 'border-border text-ink-2'}`,
+                })}
               >
                 <Star size={13} fill={starred ? 'currentColor' : 'none'} /> {fmt(item.starsCount)}
               </button>

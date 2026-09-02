@@ -185,9 +185,9 @@ export function ModerationTable({
                     onClick={() => start(() => void setVerified(it.id, !it.verified))}
                     disabled={pending}
                     aria-label={it.verified ? t('unverifyAction', lang) : t('verifyAction', lang)}
-                    className={`${buttonClass({ className: 'size-8 p-0' })} ${
-                      it.verified ? 'border-ok text-ok' : 'border-border text-ink-2 hover:text-ink'
-                    }`}
+                    className={buttonClass({
+                      className: `size-8 p-0 ${it.verified ? 'border-ok text-ok' : 'border-border text-ink-2 hover:text-ink'}`,
+                    })}
                   >
                     <BadgeCheck size={14} />
                   </button>
@@ -209,9 +209,9 @@ export function ModerationTable({
                     onClick={() => start(() => void setModeration(it.id, hidden ? 'active' : 'hidden'))}
                     disabled={pending}
                     aria-label={hidden ? t('unhideAction', lang) : t('hideAction', lang)}
-                    className={`${buttonClass({ className: 'size-8 p-0' })} ${
-                      hidden ? 'border-border text-ink-2 hover:text-ink' : 'border-danger/40 text-danger'
-                    }`}
+                    className={buttonClass({
+                      className: `size-8 p-0 ${hidden ? 'border-border text-ink-2 hover:text-ink' : 'border-danger/40 text-danger'}`,
+                    })}
                   >
                     {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
