@@ -72,7 +72,7 @@ export function TopNavCrumb({
       {/* Значок состояния у названия — как бейдж Public/Private у GitHub, но только
           иконкой: слово в шапке съедает место, которое нужно самому названию.
           Подпись отдаём тултипом (и aria-label для скринридера). Черновик здесь —
-          третье состояние, а не «публичный»: см. features/library/list-visibility. */}
+          третье состояние, а не «публичный»: см. shared/list-visibility. */}
       {visBadge && (
         <Tooltip label={visLabel}>
           {/* span без роли не может нести aria-label (aria-prohibited-attr) — иконке нужна role="img". */}
