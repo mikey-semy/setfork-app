@@ -91,8 +91,12 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
         </div>
       )}
 
-      {/* Ряд кнопок: обе одной высоты (шкала CONTROL_H), подпись аппаратного ключа
-          прячется на узком экране — остаётся значок с НАШЕЙ подсказкой. */}
+      {/* ⚠️ ПОДПИСЬ У ВТОРОЙ КНОПКИ ВИДНА ВСЕГДА. Сначала она пряталась ниже `md`, и
+          замер на 390px показал, во что это превращается: голый значок USB без рамки и
+          без подписи рядом с обычной кнопкой — его не опознать как кнопку вовсе, а
+          подсказка на телефоне не показывается сама (её надо удерживать пальцем).
+          Обе подписи умещаются: 142 + 150 из 316 доступных (замер на 390px), а на 320px
+          ряд переносится по `flex-wrap` — это читается, в отличие от загадочного значка. */}
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => add('device')} disabled={!!busy} className={buttonClass({ className: 'disabled:opacity-60' })}>
           {busy === 'device' ? <Spinner size="md" /> : <Plus size={14} />} {t('auth.passkey.addDevice', lang)}
@@ -103,10 +107,12 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
             onClick={() => add('securityKey')}
             disabled={!!busy}
             aria-label={t('auth.passkey.addKey', lang)}
-            className={buttonClass({ variant: 'ghost', className: 'disabled:opacity-60' })}
+            // Рамка, как у соседа: без неё кнопка не читается кнопкой, а «тихий»
+            // вариант оставляет её и вовсе невидимой на светлом фоне карточки.
+            className={buttonClass({ variant: 'outline', className: 'disabled:opacity-60' })}
           >
             {busy === 'securityKey' ? <Spinner size="md" /> : <Usb size={14} />}
-            <span className="hidden md:inline">{t('auth.passkey.addKey', lang)}</span>
+            {t('auth.passkey.addKey', lang)}
           </button>
         </Tooltip>
       </div>
