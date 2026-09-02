@@ -95,6 +95,7 @@ export const ru: Record<DictKey, string> = {
   sortLabel: 'Сортировка',
   issueTitlePh: 'Заголовок',
   'issue.saveEdit': 'Сохранить',
+  'issue.rateLimited': 'Слишком часто — попробуйте через минуту.',
   'issue.edited': 'изменено',
   'issue.editHistory': 'История правок',
   'issue.revisionBy': 'правил {who}',

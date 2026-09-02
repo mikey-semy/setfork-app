@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Alert } from '@/shared/ui/Alert'
 import { notFound } from 'next/navigation'
 import { CircleDot, CircleCheck } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
@@ -39,7 +40,7 @@ export default async function IssueThreadPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string; number: string }>
-  searchParams: Promise<{ after?: string; before?: string }>
+  searchParams: Promise<{ e?: string; after?: string; before?: string }>
 }) {
   const { handle: owner, slug, number: numStr } = await params
   const sp = await searchParams
@@ -128,6 +129,19 @@ export default async function IssueThreadPage({
             lang={lang}
           />
         </div>
+
+        {/* Отказ по частоте комментариев — там же, где человек его получил. */}
+
+        {sp.e === 'rate' && (
+
+          <Alert variant="danger" className="mb-3">
+
+            {t('issue.rateLimited', lang)}
+
+          </Alert>
+
+        )}
+
 
         {/* Тело issue */}
         <CommentCard
