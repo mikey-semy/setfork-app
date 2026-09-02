@@ -1,4 +1,5 @@
 import type { StepLevel } from '@/shared/db'
+import { trLoose } from '@/shared/i18n'
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { blockIdentities, matchBlocks } from './block-identity'
 
@@ -29,7 +30,17 @@ export const isStepBlock = (s: CmpStep): boolean => !s.type || s.type === 'step'
 /** Маркер презентационного блока в «кодовом» виде (у шага вместо него номер). */
 const BLOCK_MARK: Record<string, string> = { text: '¶', image: '🖼', poll: '📊', video: '🎬' }
 
-const firstLine = (v: unknown): string => String(v ?? '').split('\n')[0].trim()
+/**
+ * ⚠️ ЧЕРЕЗ `trLoose`, А НЕ `String()`. После ADR-0025 поля презентационных блоков
+ * (`md`, `caption`) стали многоязычными: `String({ ru: '…' })` даёт `[object Object]`,
+ * и владелец увидел ровно это — семь таких строк в списке изменений у коммита
+ * «translate → English» (02.09.2026). Одно место, семь строк: подпись блока собирают
+ * все поверхности через `blockLabel`.
+ *
+ * Язык здесь не спрашиваем: подпись уезжает в git-коммит и в сводку правки, а там у
+ * текста нет читателя — `trLoose` возьмёт английский, иначе первый доступный.
+ */
+const firstLine = (v: unknown): string => trLoose(v).split('\n')[0].trim()
 
 /**
  * Человекочитаемая подпись блока: у шага — заголовок, у презентационного — суть
@@ -49,7 +60,8 @@ export function blockLabel(s: CmpStep): string {
 /** Строки содержимого презентационного блока — тело для построчного диффа. */
 function blockBody(s: CmpStep): string[] {
   const c = s.content ?? {}
-  const str = (v: unknown) => String(v ?? '')
+  // Тот же случай, что и у подписи: значение может быть многоязычным.
+  const str = (v: unknown) => trLoose(v)
   if (s.type === 'text') return str(c.md).split('\n').slice(1)
   if (s.type === 'image') return [str(c.ref)].filter(Boolean)
   if (s.type === 'poll') {
