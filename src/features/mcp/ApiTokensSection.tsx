@@ -116,7 +116,13 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
         </Button>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-body-sm">
-        <div className="flex items-center gap-1.5">
+        {/* ⚠️ ПЕРЕНОС ЗДЕСЬ ОБЯЗАТЕЛЕН, а не «на всякий случай». Внешний ряд переносится,
+            внутренние — нет, а фишки внутри `shrink-0 whitespace-nowrap`: ряд «Истекает:»
+            из четырёх фишек по-русски длиннее экрана, и вся страница настроек уезжала
+            вбок. Замер 03.09.2026 на собранном приложении: 6px на 390px и 77px на 320px,
+            правый край кнопки «бессрочно» — 396 при ширине окна 390. По-английски подписи
+            короче, ряд умещался, и дефекта не было видно вовсе. */}
+        <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-muted">{ru ? 'Доступ:' : 'Access:'}</span>
           <Chip onClick={() => setScope('write')} selected={scope === 'write'}>
             {ru ? 'чтение+запись' : 'read + write'}
@@ -125,7 +131,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
             {ru ? 'только чтение' : 'read-only'}
           </Chip>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-muted">{ru ? 'Истекает:' : 'Expires:'}</span>
           {EXPIRY.map((e) => (
             <Chip key={e.d} onClick={() => setExpiryDays(e.d)} selected={expiryDays === e.d}>
