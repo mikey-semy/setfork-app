@@ -20,7 +20,23 @@ export async function getListLabels(templateId: string): Promise<CustomLabel[]> 
 }
 
 export type IssueFilter = 'open' | 'closed'
-export type IssueSort = 'newest' | 'oldest'
+/**
+ * Порядок в списке задач.
+ *
+ * Набор взят у Gitea (`models/issues/issue_search.go`, `applySorts`): oldest,
+ * recentupdate, leastupdate, mostcomment, leastcomment. Имена у нас читаемые, а не её
+ * склеенные, — в адресе их видит человек; соответствие такое:
+ * `updated` = recentupdate, `least-updated` = leastupdate, `most-commented` = mostcomment,
+ * `least-commented` = leastcomment.
+ *
+ * ⚠️ У КАЖДОГО ПОРЯДКА ЕСТЬ ДОВОДЧИК ДО СТРОГОГО. У Gitea каждая ветка заканчивается
+ * `issue.id`, и не для красоты: на равных ключах — а «обновлено» и «ответов» равны
+ * сплошь и рядом — соседние страницы вправе показать одну строку дважды, а другую
+ * пропустить. У нас доводчик — номер задачи: он уникален в пределах списка.
+ */
+export type IssueSort = 'newest' | 'oldest' | 'updated' | 'least-updated' | 'most-commented' | 'least-commented'
+
+export const ISSUE_SORTS: IssueSort[] = ['newest', 'oldest', 'updated', 'least-updated', 'most-commented', 'least-commented']
 
 export interface IssueRow {
   id: string
@@ -44,6 +60,10 @@ export interface IssueQuery {
   label?: string
   milestone?: string
   sort?: IssueSort
+  /** Автор задачи: id пользователя. «Мои» — это он же, подставленный страницей. */
+  authorId?: string
+  /** Исполнитель: id пользователя. «Назначено мне» — он же. */
+  assigneeId?: string
 }
 
 /**
@@ -53,14 +73,41 @@ export interface IssueQuery {
  * одно условие — листалка нарисует страницы, которых нет, либо спрячет существующие.
  * Ошибка при этом тихая: обе функции по отдельности выглядят верными.
  */
-function issueConds(templateId: string, opts: IssueQuery): SQL[] {
-  const conds: SQL[] = [eq(issues.templateId, templateId), eq(issues.status, opts.status)]
+function issueConds(templateId: string, opts: IssueQuery, withStatus = true): SQL[] {
+  const conds: SQL[] = [eq(issues.templateId, templateId)]
+  if (withStatus) conds.push(eq(issues.status, opts.status))
   const q = opts.q?.trim()
   // Заголовок, тело и реплики — одно правило на все поиски задач (см. ./keyword).
   if (q) conds.push(issueKeywordCond(q))
   if (opts.label) conds.push(sql`${opts.label} = any(${issues.labels})`)
   if (opts.milestone) conds.push(eq(issues.milestoneId, opts.milestone))
+  if (opts.authorId) conds.push(eq(issues.authorId, opts.authorId))
+  // Исполнителей у задачи несколько, поэтому `exists`, а не соединение: соединение
+  // размножило бы строку задачи по числу исполнителей, и счёт стал бы больше выдачи.
+  if (opts.assigneeId) {
+    conds.push(
+      sql`exists (select 1 from ${issueAssignees} where ${issueAssignees.issueId} = ${issues.id} and ${issueAssignees.userId} = ${opts.assigneeId})`,
+    )
+  }
   return conds
+}
+
+/** Порядок выдачи. Доводчик до строгого — номер: он уникален в пределах списка. */
+function issueOrder(sort: IssueSort | undefined): SQL[] {
+  switch (sort) {
+    case 'oldest':
+      return [asc(issues.number)]
+    case 'updated':
+      return [desc(issues.updatedAt), desc(issues.number)]
+    case 'least-updated':
+      return [asc(issues.updatedAt), asc(issues.number)]
+    case 'most-commented':
+      return [desc(commentCountSql), desc(issues.number)]
+    case 'least-commented':
+      return [asc(commentCountSql), desc(issues.number)]
+    default:
+      return [desc(issues.number)]
+  }
 }
 
 /** Сколько задач подходит под ТОТ ЖЕ отбор — для числа страниц. */
@@ -98,7 +145,7 @@ export async function getIssues(
   window?: { limit: number; offset?: number },
 ): Promise<IssueRow[]> {
   const conds = issueConds(templateId, opts)
-  const order = opts.sort === 'oldest' ? asc(issues.number) : desc(issues.number)
+  const order = issueOrder(opts.sort)
 
   const base = db
     .select({
@@ -117,7 +164,7 @@ export async function getIssues(
     .innerJoin(users, eq(issues.authorId, users.id))
     .leftJoin(milestones, eq(milestones.id, issues.milestoneId))
     .where(and(...conds))
-    .orderBy(order)
+    .orderBy(...order)
   const w = window && feedWindow(window)
   const rows = w ? await base.limit(w.limit).offset(w.offset) : await base
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
@@ -181,11 +228,20 @@ export async function getIssueAssigneesFor(issueIds: string[]): Promise<Record<s
   return out
 }
 
-export async function getIssueCounts(templateId: string): Promise<{ open: number; closed: number }> {
+/**
+ * Сколько открытых и закрытых — ПОД ДЕЙСТВУЮЩИМ ОТБОРОМ.
+ *
+ * ⚠️ Раньше считались все задачи списка, а показывались отобранные: включив «назначено
+ * мне», человек видел «12 открытых» и две строки под ними. Та же тихая ложь, что была у
+ * бейджа поиска (#874) — и с фильтрами «мои» она становится обычным делом, а не редким.
+ * Статус здесь НЕ условие: он и есть то, что считается по обе стороны.
+ */
+export async function getIssueCounts(templateId: string, opts?: IssueQuery): Promise<{ open: number; closed: number }> {
+  const conds = opts ? issueConds(templateId, opts, false) : [eq(issues.templateId, templateId)]
   const rows = await db
     .select({ status: issues.status, c: sql<number>`count(*)::int` })
     .from(issues)
-    .where(eq(issues.templateId, templateId))
+    .where(and(...conds))
     .groupBy(issues.status)
   let open = 0
   let closed = 0
