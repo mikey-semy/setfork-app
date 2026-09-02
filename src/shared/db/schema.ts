@@ -2503,6 +2503,69 @@ export const apiTokens = pgTable(
   (t) => [index('api_tokens_user_idx').on(t.userId)],
 )
 
+/**
+ * OAUTH ДЛЯ MCP: КОДЫ АВТОРИЗАЦИИ И ОБНОВЛЕНИЕ ТОКЕНА.
+ *
+ * Сам ДОСТУПНЫЙ токен живёт в `api_tokens` рядом со статическими: тогда проверка
+ * (`verifyApiToken`) остаётся одна на оба способа, и человек, вбивший токен руками,
+ * продолжает работать как раньше. Так же устроено у Sentry — их прямые токены живут
+ * рядом с выданными по OAuth.
+ *
+ * Здесь только то, чего у статических токенов нет: одноразовый код и обновление.
+ */
+export const oauthCodes = pgTable(
+  'oauth_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** SHA-256 кода: сам код существует секунды и в базе не хранится. */
+    codeHash: text('code_hash').notNull().unique(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Кто спрашивает. Для Claude это идентификатор из его метаданных. */
+    clientId: text('client_id').notNull(),
+    /** Куда возвращаемся. Сверяется ПОБАЙТОВО при обмене кода на токен. */
+    redirectUri: text('redirect_uri').notNull(),
+    /** PKCE: `S256`-хеш проверочного слова. Простой `plain` не принимаем. */
+    codeChallenge: text('code_challenge').notNull(),
+    scope: text('scope').notNull().default('read'),
+    /** Кому выдан доступ — адрес нашего MCP. Проверяется при выдаче токена. */
+    audience: text('audience').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    /** Код одноразовый: повторный обмен обязан отказать, а не выдать второй токен. */
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('oauth_codes_expires_idx').on(t.expiresAt)],
+)
+
+/**
+ * Обновление доступа. Без него человека выкидывает, как только истечёт токен, — а
+ * владелец пользуется MCP с телефона каждый день.
+ *
+ * ⚠️ РОТАЦИЯ: каждый обмен выдаёт НОВЫЙ refresh и гасит прежний. Украденный и уже
+ * использованный чужим клиентом токен обнаружится на первом же обмене законного —
+ * рекомендация OAuth 2.1 для публичных клиентов.
+ */
+export const oauthRefreshTokens = pgTable(
+  'oauth_refresh_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tokenHash: text('token_hash').notNull().unique(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Выданный по нему доступный токен — гасим вместе при ротации и отзыве. */
+    accessTokenId: uuid('access_token_id').references(() => apiTokens.id, { onDelete: 'set null' }),
+    clientId: text('client_id').notNull(),
+    scope: text('scope').notNull().default('read'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('oauth_refresh_user_idx').on(t.userId)],
+)
+
 // ── Audit log (кто что сделал: пуши, удаления, токены, модерация) ────
 export const auditLog = pgTable(
   'audit_log',

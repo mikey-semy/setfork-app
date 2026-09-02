@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { safeNext } from '@/shared/auth/safe-next'
 import { eq } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
 import { startSession } from '@/shared/auth/session'
@@ -57,7 +58,7 @@ export async function registerWithPassword(_prev: AuthResult | null, formData: F
   void sendVerificationEmail(created.id).catch(() => {})
 
   await beginSession(created)
-  redirect('/')
+  redirect(safeNext(String(formData.get('next') ?? '')))
 }
 
 export async function loginWithPassword(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
@@ -88,5 +89,7 @@ export async function loginWithPassword(_prev: AuthResult | null, formData: Form
   }
 
   await beginSession(user)
-  redirect('/')
+  // Возврат туда, откуда пришли: подключение MCP начинается на экране согласия, и без
+  // этого человек после входа оказывался на главной, теряя начатый поток.
+  redirect(safeNext(String(formData.get('next') ?? '')))
 }

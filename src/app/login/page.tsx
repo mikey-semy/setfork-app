@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { safeNext } from "@/shared/auth/safe-next";
 import { getSession } from "@/shared/auth/session";
 import { oauthEnabled, demoLoginEnabled } from "@/shared/auth/oauth";
 import { getLang } from "@/shared/i18n/server";
@@ -20,14 +21,14 @@ export async function generateMetadata() {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ e?: string; reset?: string }>;
+  searchParams: Promise<{ e?: string; reset?: string; next?: string }>;
 }) {
   const [lang, session, sp] = await Promise.all([
     getLang(),
     getSession(),
     searchParams,
   ]);
-  if (session) redirect("/");
+  if (session) redirect(safeNext(sp.next));
   // Провайдеры включаются кредами в env; AUTH_DISABLED_PROVIDERS скрывает не удаляя
   // (RU-прод: github выключен, на .com может остаться). См. shared/auth/oauth.
   const oauth = oauthEnabled();
@@ -61,7 +62,10 @@ export default async function LoginPage({
               : "Password changed — sign in with the new one."}
           </Alert>
         )}
-        <LoginForm lang={lang} />
+        {/* `next` — куда вернуть после входа. Нужен потоку подключения MCP:
+            он начинается на экране согласия, и без возврата человек оказывался
+            на главной с потерянным запросом. Значение проверяется на сервере. */}
+        <LoginForm lang={lang} next={safeNext(sp.next, "")} />
         <div className="mt-4 text-body-sm text-ink-2">
           {t("noAccount", lang)}{" "}
           <Link
