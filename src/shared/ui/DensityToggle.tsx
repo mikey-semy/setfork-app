@@ -53,8 +53,9 @@ export function DensityToggle({ value, lang }: { value: ListDensity; lang: Lang 
     { key: 'compact' as const, Icon: Rows3, label: t('density.compact', lang) },
   ]
 
+  // Ступень `md` — та же, что у поиска и селектов рядом: обойма стоит в их ряду.
   return (
-    <SegmentedControl label={t('density.label', lang)}>
+    <SegmentedControl label={t('density.label', lang)} size="md">
       {options.map(({ key, Icon, label }) => (
         <Tooltip key={key} label={label}>
           <Segment active={density === key} onClick={() => pick(key)} aria-label={label}>

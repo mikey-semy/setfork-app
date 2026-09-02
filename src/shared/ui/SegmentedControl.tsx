@@ -57,10 +57,20 @@ export function SegmentedControl({
       <div
         role="group"
         aria-label={label}
+        // ⚠️ ВЫСОТУ ЗАДАЁТ ОБОЙМА, А НЕ СЕГМЕНТЫ. Раньше сегмент брал ступень шкалы, а
+        // обойма добавляла поверх свой отступ и рамку — и в ряду с полем и селектами
+        // переключатель выходил на 38px против 32 у соседей (замер на проде, замечание
+        // владельца 02.09.2026). Теперь ступень принадлежит обойме: она и стоит в ряду,
+        // а сегменты растягиваются внутри неё.
         className={cardClass({
           tone: 'inset',
-          pad: 'xs',
-          className: cn('inline-flex w-fit items-center gap-0.5', shape === 'pill' && 'rounded-full', className),
+          pad: 'none',
+          className: cn(
+            'inline-flex w-fit items-center gap-0.5 p-0.5',
+            CONTROL_H[size],
+            shape === 'pill' && 'rounded-full',
+            className,
+          ),
         })}
       >
         {children}
@@ -83,7 +93,10 @@ export function Segment({
   const { size, shape } = React.useContext(Ctx)
   const cls = cn(
     'inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap font-medium outline-hidden transition-colors focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50',
-    CONTROL_H[size],
+    // Высота приходит от обоймы: сегмент занимает её целиком, иначе их сумма
+    // (сегмент + отступ + рамка) снова выйдет за ступень шкалы.
+    'h-full',
+
     CONTROL_PX[size],
     CONTROL_TEXT[size],
     shape === 'pill' ? 'rounded-full' : 'rounded-md',
