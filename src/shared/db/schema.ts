@@ -109,6 +109,21 @@ export const notificationType = pgEnum('notification_type', [
 
 export const issueStatus = pgEnum('issue_status', ['open', 'closed'])
 
+/**
+ * ПРИЧИНЫ ЗАПЕРТОГО ОБСУЖДЕНИЯ — ПЕРЕЧНЕМ, А НЕ СВОБОДНОЙ СТРОКОЙ.
+ *
+ * Набор из четырёх — как у GitHub. У Gitea он настраивается администратором инстанса, и
+ * там же, в исходниках, написано, чем за это плачено (`models/issues/issue_lock.go`):
+ * «customized reasons are not translatable… we do not do validation» — то есть причина
+ * становится непереводимой свободной строкой, и проверять её нельзя в принципе.
+ *
+ * У нас инстанс ОДИН, а интерфейс двуязычный, и на это есть узда в линте: строка,
+ * которую нельзя перевести, у нас не живёт. Настраиваемый список означал бы русскую
+ * причину на английском экране — ровно то, от чего мы уже уходили в И1/И2. Поэтому
+ * перечень: он переводится, проверяется и показывается значком.
+ */
+export const issueLockReason = pgEnum('issue_lock_reason', ['off_topic', 'too_heated', 'resolved', 'spam'])
+
 // Обратная связь с сайта: категория и статус обработки админом.
 export const feedbackCategory = pgEnum('feedback_category', ['bug', 'idea', 'content', 'legal', 'other'])
 export const feedbackStatus = pgEnum('feedback_status', ['new', 'seen', 'done'])
@@ -1345,6 +1360,11 @@ export const issues = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     body: text('body').notNull().default(''),
+    // Заперто ≠ закрыто: спор уходит в сторону и при нерешённой задаче, а закрывать её
+    // ради тишины — подмена (тот же довод, что у предложений, см. lockedAt там же).
+    lockedAt: timestamp('locked_at', { withTimezone: true }),
+    lockedById: uuid('locked_by_id').references(() => users.id, { onDelete: 'set null' }),
+    lockReason: issueLockReason('lock_reason'),
     status: issueStatus('status').notNull().default('open'),
     labels: jsonb('labels').notNull().default([]).$type<string[]>(),
     milestoneId: uuid('milestone_id').references(() => milestones.id, { onDelete: 'set null' }),
@@ -1427,7 +1447,7 @@ export const issueAssignees = pgTable(
  * `suggestionId` — та самая правка, из-за которой задача закрылась. `set null` при её
  * удалении: событие остаётся («задачу закрыли»), пропадает лишь ссылка.
  */
-export const issueEventKind = pgEnum('issue_event_kind', ['closed', 'reopened', 'closed_by_suggestion'])
+export const issueEventKind = pgEnum('issue_event_kind', ['closed', 'reopened', 'closed_by_suggestion', 'locked', 'unlocked'])
 
 export const issueEvents = pgTable(
   'issue_events',
@@ -1441,6 +1461,10 @@ export const issueEvents = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     kind: issueEventKind('kind').notNull(),
     suggestionId: uuid('suggestion_id').references(() => suggestions.id, { onDelete: 'set null' }),
+    // Причина запирания остаётся в ленте НАВСЕГДА, даже когда обсуждение отперли: «за что
+    // закрыли рот» — это часть разговора, а не текущее состояние. Так же у Gitea, где
+    // причина лежит в записи ленты, а не в поле задачи.
+    lockReason: issueLockReason('lock_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   // Тот же порядок, что у реплик: лента читается с начала, события в неё вклеиваются

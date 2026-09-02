@@ -18,7 +18,9 @@ import { db, issueEvents, suggestions, users, type Executor } from '@/shared/db'
  */
 export interface IssueEvent {
   id: string
-  kind: 'closed' | 'reopened' | 'closed_by_suggestion'
+  kind: 'closed' | 'reopened' | 'closed_by_suggestion' | 'locked' | 'unlocked'
+  /** Причина запирания — только у `locked`; в ленте она остаётся и после отпирания. */
+  lockReason?: 'off_topic' | 'too_heated' | 'resolved' | 'spam' | null
   createdAt: Date
   actorHandle: string
   actorAvatarUrl: string | null
@@ -28,13 +30,20 @@ export interface IssueEvent {
 
 export async function recordIssueEvent(
   exec: Executor,
-  event: { issueId: string; actorId: string; kind: IssueEvent['kind']; suggestionId?: string },
+  event: {
+    issueId: string
+    actorId: string
+    kind: IssueEvent['kind']
+    suggestionId?: string
+    lockReason?: IssueEvent['lockReason']
+  },
 ): Promise<void> {
   await exec.insert(issueEvents).values({
     issueId: event.issueId,
     actorId: event.actorId,
     kind: event.kind,
     suggestionId: event.suggestionId ?? null,
+    lockReason: event.lockReason ?? null,
   })
 }
 
@@ -54,6 +63,7 @@ export async function getIssueEvents(issueId: string): Promise<IssueEvent[]> {
       actorAvatarUrl: users.avatarUrl,
       suggestionId: issueEvents.suggestionId,
       suggestionNumber: suggestions.number,
+      lockReason: issueEvents.lockReason,
     })
     .from(issueEvents)
     .innerJoin(users, eq(issueEvents.actorId, users.id))
@@ -69,6 +79,7 @@ export async function getIssueEvents(issueId: string): Promise<IssueEvent[]> {
     createdAt: r.createdAt,
     actorHandle: r.actorHandle,
     actorAvatarUrl: r.actorAvatarUrl,
+    lockReason: r.lockReason,
     suggestion: r.suggestionId ? { id: r.suggestionId, number: r.suggestionNumber } : null,
   }))
 }

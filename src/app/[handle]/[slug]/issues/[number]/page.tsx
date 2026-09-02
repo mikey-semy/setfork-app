@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { Alert } from '@/shared/ui/Alert'
 import { notFound } from 'next/navigation'
-import { CircleDot, CircleCheck } from 'lucide-react'
+import { CircleDot, CircleCheck, Lock } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { plural, t } from '@/shared/i18n'
+import { fill, plural, t, type TKey } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
@@ -30,6 +30,7 @@ import { Pagination } from '@/shared/ui/Pagination'
 import { getIssueEvents } from '@/features/issues/events'
 import { IssueEventRow } from '@/features/issues/IssueEventRow'
 import { mergeThread } from '@/features/issues/thread'
+import { IssueLockControl } from '@/features/issues/IssueLockControl'
 import { Badge } from '@/shared/ui/badge'
 import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
 
@@ -100,6 +101,12 @@ export default async function IssueThreadPage({
   const isAuthor = session?.userId === issue.authorId
   const canToggle = isOwner || isAuthor
   const closed = issue.status === 'closed'
+  // Запирать и писать в запертое могут те же, кто ведёт раздел: владелец и коллаборанты
+  // (`canManage` уже посчитан выше — второй такой же запрос к базе не нужен). Автор задачи
+  // сюда НЕ входит: закрыть свою задачу он может, затыкать чужую речь — нет.
+  const canManageThread = canManage
+  const locked = !!issue.lockedAt
+  const lockReasonText = issue.lockReason ? t(`issue.lockReason.${issue.lockReason}` as TKey, lang) : ''
 
   return (
     <>
@@ -220,8 +227,16 @@ export default async function IssueThreadPage({
           }}
         />
 
+        {/* Полоса «заперто»: причина названа, и сказано, кто ещё может отвечать. Молча
+            убранная форма читалась бы как поломка. */}
+        {locked && (
+          <Alert variant="warn" icon={Lock} className="mt-5">
+            {fill(canManageThread ? 'issue.lockedNoticeOwner' : 'issue.lockedNotice', lang, { reason: lockReasonText })}
+          </Alert>
+        )}
+
         {/* Форма ответа */}
-        {session ? (
+        {session && (!locked || canManageThread) ? (
           <div className={cardClass({ className: 'mt-5' })}>
             {/* Отдельная форма смены статуса (сиблинг, не вложенная) — кнопка ниже привязана через form=… */}
             {canToggle && (
@@ -233,6 +248,9 @@ export default async function IssueThreadPage({
               <input type="hidden" name="number" value={issue.number} />
               <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} people={issuePeople} />
               <div className="flex flex-wrap items-center justify-end gap-3">
+                {canManageThread && (
+                  <IssueLockControl owner={owner} slug={slug} number={issue.number} locked={locked} lang={lang} />
+                )}
                 {canToggle && (
                   <Button type="submit" form="issue-status-form" size="md">
                     {closed ? <CircleDot size={14} className="text-ok" /> : <CircleCheck size={14} className="text-accent" />}
@@ -245,7 +263,7 @@ export default async function IssueThreadPage({
               </div>
             </form>
           </div>
-        ) : (
+        ) : locked ? null : (
           <div className="mt-5 rounded-lg border border-border bg-surface px-4 py-3 text-body text-ink-2">
             <Link href={`/login?next=/${owner}/${slug}/issues/${issue.number}`} className="font-semibold text-accent hover:underline">
               {t('signInToComment', lang)}

@@ -274,6 +274,9 @@ export interface IssueDetail {
   authorAvatarUrl: string | null
   milestoneId: string | null
   milestoneTitle: string | null
+  /** Заперто ли обсуждение и за что — страница показывает полосу и убирает форму. */
+  lockedAt: Date | null
+  lockReason: 'off_topic' | 'too_heated' | 'resolved' | 'spam' | null
 }
 
 export interface IssueComment {
@@ -301,6 +304,8 @@ export async function getIssue(templateId: string, number: number): Promise<Issu
       authorAvatarUrl: users.avatarUrl,
       milestoneId: issues.milestoneId,
       milestoneTitle: milestones.title,
+      lockedAt: issues.lockedAt,
+      lockReason: issues.lockReason,
     })
     .from(issues)
     .innerJoin(users, eq(issues.authorId, users.id))
@@ -409,6 +414,8 @@ export async function loadIssue(owner: string, slug: string, number: number) {
       status: issues.status,
       title: issues.title,
       body: issues.body,
+      // Запертость нужна КАЖДОМУ пишущему действию: форму можно обойти, адрес известен.
+      lockedAt: issues.lockedAt,
     })
     .from(issues)
     .where(and(eq(issues.templateId, tpl.id), eq(issues.number, number)))
