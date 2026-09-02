@@ -55,6 +55,9 @@ export default async function IssuesPage({
   // ссылку с чужим ником нельзя было бы дать другому человеку — она показала бы ему чужие
   // задачи под видом его собственных. Гостю выбирать нечего, у него нет ни того, ни другого.
   const who = session && (sp.who === 'mine' || sp.who === 'assigned') ? sp.who : undefined
+  // Ровно один человек, о котором вообще может идти речь, — тот, кто смотрит. `who` без
+  // сессии не выставляется, поэтому здесь он либо есть вместе с ней, либо нет вовсе.
+  const meId = who ? session?.userId : undefined
 
   // Номера страниц, а не курсор: задачи — каталог, по нему прыгают и его фильтруют.
   // Счёт идёт по ТОМУ ЖЕ отбору, что и выдача (countListIssues делит с ней условия), иначе
@@ -65,8 +68,8 @@ export default async function IssuesPage({
     label,
     milestone,
     sort,
-    authorId: who === 'mine' ? session!.userId : undefined,
-    assigneeId: who === 'assigned' ? session!.userId : undefined,
+    authorId: who === 'mine' ? meId : undefined,
+    assigneeId: who === 'assigned' ? meId : undefined,
   }
   const total = await countListIssues(meta.id, query)
   const totalPages = pageCount(total)
