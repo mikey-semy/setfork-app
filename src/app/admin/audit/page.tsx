@@ -34,6 +34,8 @@ const META: Record<AuditAction, { icon: typeof KeyRound; label: TKey; cls: strin
   '2fa.disable': { icon: ShieldX, label: 'audit.2faDisable', cls: 'text-warn' },
   '2fa.recovery-regenerate': { icon: KeyRound, label: 'audit.2faRecoveryRegenerate', cls: 'text-ink-2' },
   'password.reset': { icon: KeyRound, label: 'audit.passwordReset', cls: 'text-warn' },
+  'password.set': { icon: KeyRound, label: 'audit.passwordSet', cls: 'text-ok' },
+  'password.change': { icon: KeyRound, label: 'audit.passwordChange', cls: 'text-warn' },
   'email.change-request': { icon: Mail, label: 'audit.emailChangeRequest', cls: 'text-ink-2' },
   'email.change': { icon: AtSign, label: 'audit.emailChange', cls: 'text-warn' },
   'passkey.add': { icon: Fingerprint, label: 'audit.passkeyAdd', cls: 'text-ok' },

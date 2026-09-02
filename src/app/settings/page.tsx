@@ -15,6 +15,7 @@ import { ApiTokensSection } from '@/features/mcp/ApiTokensSection'
 import { SettingsForm } from '@/features/settings/SettingsForm'
 import { TwoFactorSection } from '@/features/settings/TwoFactorSection'
 import { PasskeysSection } from '@/features/settings/PasskeysSection'
+import { PasswordSection } from '@/features/settings/PasswordSection'
 import { SignInMethods } from '@/features/auth/SignInMethods'
 import { IDENTITIES, IDENTITY_PROVIDERS, linkedProviders } from '@/shared/auth/identities'
 import { oauthEnabled } from '@/shared/auth/oauth'
@@ -181,7 +182,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       keywords: ['sign in', 'login', 'oauth', 'link', 'github', 'yandex', 'vk', 'telegram', 'вход', 'привязка', 'аккаунты', 'способы'],
       content: (
         <SettingsSection title={t('auth.signInMethods', lang)} hint={t('auth.signInMethodsIntro', lang)}>
-          <SignInMethods rows={signInRows} lang={lang} notice={linkNotice} />
+          <SignInMethods rows={signInRows} lang={lang} notice={linkNotice} hasPassword={!!user.passwordHash} passkeys={userPasskeys.length} />
+        </SettingsSection>
+      ),
+    },
+    {
+      id: 'password',
+      title: t('auth.password.title', lang),
+      icon: <KeyRound size={15} />,
+      keywords: ['password', 'change password', 'set password', 'пароль', 'сменить', 'задать', 'восстановление', 'доступ'],
+      content: (
+        <SettingsSection title={t('auth.password.title', lang)} hint={t('auth.password.intro', lang)}>
+          <PasswordSection hasPassword={!!user.passwordHash} lang={lang} />
         </SettingsSection>
       ),
     },
