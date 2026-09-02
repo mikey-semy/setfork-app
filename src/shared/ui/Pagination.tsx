@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
-import { CONTROL_H, CONTROL_TEXT, TOUCH_MIN_BOX } from './control'
+import { CONTROL_H, CONTROL_TEXT, TOUCH_HIT, TOUCH_MIN_BOX } from './control'
 import { pageNumbers } from '@/shared/lib/paging'
 import { t, type Lang } from '@/shared/i18n'
 
@@ -118,7 +118,19 @@ export function Pagination({ page: rawPage, totalPages, hasNext, makeHref, onPag
   // Отступ и внешний класс живут НА ОБЁРТКЕ, когда она есть, иначе они удвоились бы.
   const rowClass = cn('flex items-center justify-center gap-1 tabular-nums pointer-coarse:gap-2', found ? null : cn('mt-4', className))
 
-  const box = cn('inline-flex min-w-8 items-center justify-center gap-1 rounded-md px-2', CONTROL_H.md, CONTROL_TEXT.md, TOUCH_MIN_BOX)
+  // ⚠️ ТАЧ-ЦЕЛЬ РАЗНАЯ У ДВУХ ВИДОВ, И ЭТО НЕ НЕБРЕЖНОСТЬ.
+  //
+  // Обычная листалка стоит РЯДОМ ЦЕЛЕЙ (номера страниц вплотную), и зона там не
+  // годится: `TOUCH_HIT_ZONE` растит только вверх-вниз, ширина осталась бы 32px, а
+  // зоны соседей налезали бы друг на друга. Поэтому кнопка растёт сама —
+  // `TOUCH_MIN_BOX`, как и было записано в control.ts.
+  //
+  // Компактная листалка виджета — две стрелки и номер между ними, соседей по
+  // горизонтали нет. Там рост давал третью высоту в ряду (поиск 24, «Фильтр» 32,
+  // листалка 44 — владелец увидел это на дашборде 02.09.2026), и цель честно
+  // добирается зоной, не меняя вид.
+  const touch = compact ? TOUCH_HIT : TOUCH_MIN_BOX
+  const box = cn('inline-flex min-w-8 items-center justify-center gap-1 rounded-md px-2', CONTROL_H.md, CONTROL_TEXT.md, touch)
   const idle = 'border border-border text-ink-2 hover:border-border-strong hover:text-ink'
   const off = 'border border-border/60 text-muted opacity-50'
   const now = 'border border-accent bg-accent/10 font-semibold text-ink'

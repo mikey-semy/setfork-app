@@ -214,7 +214,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             шапку и весь боковой список, прежде чем добраться до текста (WCAG 2.4.1
             «Обход блоков»). Ссылка не видна, пока не получит фокус — приём стандартный,
             так сделано у GitHub и в государственных дизайн-системах. */}
-        <a href="#main" className={buttonClass({ variant: 'outline', className: `sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 ${LAYER.toast}` })}>
+        {/* ⚠️ `sr-only` НЕ СЛИВАЕТСЯ с высотой из `buttonClass`: tailwind-merge не
+            считает их одной группой, поэтому у скрытой ссылки оставалась высота
+            ступени — 32×30px вместо 1×1 (замерено). Прятала её только обрезка, а
+            место в раскладке она занимала. Размер снимаем явно, пока ссылка не в
+            фокусе; при фокусе она становится `fixed` и берёт вид кнопки. */}
+        <a
+          href="#main"
+          className={buttonClass({
+            variant: 'outline',
+            className: `sr-only size-px focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:size-auto focus:h-8 ${LAYER.toast}`,
+          })}
+        >
           {t('skipToContent', lang)}
         </a>
         <HydrationSignal />

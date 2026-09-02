@@ -335,7 +335,11 @@ export function ListsPanel({
         <>
           {hasSearch && (
             <div className="mb-1.5">
-              <SearchField value={q} onValueChange={onSearchInput} placeholder={t('findList', lang)} clearLabel={t('clear', lang)} size="xs" />
+              {/* ⚠️ СТУПЕНЬ ТА ЖЕ, ЧТО У СОСЕДЕЙ ПО ВИДЖЕТУ. Поиск шёл ступенью `xs`
+                  (24px) рядом с «Фильтром» в 32px и пагинацией в 44px — три высоты в
+                  одном блоке, и владелец справедливо спросил, почему поиск такой
+                  узкий. Ступень выбирает не вкус места, а ряд, в котором оно стоит. */}
+              <SearchField value={q} onValueChange={onSearchInput} placeholder={t('findList', lang)} clearLabel={t('clear', lang)} size="md" />
             </div>
           )}
           {items.length === 0 ? (
