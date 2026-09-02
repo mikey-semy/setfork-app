@@ -39,12 +39,12 @@ export const LANDING_DEFAULTS: LandingContent = {
     heroTitle: 'Lists that get',
     heroTitleAccent: 'better together.',
     heroSub: 'Living, runnable lists — checklists, recipes, procedures, courses. A community keeps them accurate and up to date, and AI helps fill the gaps.',
-    stats: [
-      { num: '12k+', label: 'public lists' },
-      { num: '48k+', label: 'contributions' },
-      { num: '2.3k+', label: 'makers' },
-      { num: 'MCP', label: 'agent-ready' },
-    ],
+    // ⚠️ ЧИСЛА СЮДА НЕ ПИШУТ РУКАМИ. Здесь стояли «12k+ public lists», «48k+
+    // contributions», «2.3k+ makers» — величины, которых никогда не было: живой корпус
+    // на 02.09.2026 составлял 24 публичных списка. Счёт идёт по базе в
+    // `features/landing/stats.ts`, а при малом корпусе плиток с числами нет вовсе.
+    // Остаётся только то, что числом не является и потому не устаревает.
+    stats: [{ num: 'MCP', label: 'agent-ready' }],
     ctaTitle: 'Start your first list today',
     ctaSub: 'Free to browse, improve and run. Bring your agent along over MCP.',
     ctaPrimary: 'Get started free',
@@ -57,12 +57,8 @@ export const LANDING_DEFAULTS: LandingContent = {
     heroTitle: 'Списки, которые улучшаем',
     heroTitleAccent: 'вместе.',
     heroSub: 'Живые, исполняемые списки — чек-листы, рецепты, процедуры, курсы. Сообщество держит их актуальными, а ИИ помогает закрыть пробелы.',
-    stats: [
-      { num: '12k+', label: 'публичных списков' },
-      { num: '48k+', label: 'улучшений' },
-      { num: '2.3k+', label: 'авторов' },
-      { num: 'MCP', label: 'готов для агентов' },
-    ],
+    // См. комментарий у английского набора: числа считаются по базе, руками не пишутся.
+    stats: [{ num: 'MCP', label: 'готов для агентов' }],
     ctaTitle: 'Создай свой первый список сегодня',
     ctaSub: 'Смотреть, улучшать и запускать — бесплатно. Подключи своего агента по MCP.',
     ctaPrimary: 'Начать бесплатно',
