@@ -13,6 +13,7 @@ import {
 } from '@simplewebauthn/server'
 import { db, passkeys, users } from '@/shared/db'
 import { removePasskey, type PasskeyRemoval } from './passkey-core'
+import type { PasskeyKind } from '@/shared/auth/passkey-error'
 import { requireSession, startSession } from '@/shared/auth/session'
 import { secretKey } from '@/shared/auth/tokens'
 import { clientIpFromHeaders } from '@/shared/auth/app-origin'
@@ -49,7 +50,7 @@ async function clearChallenge(): Promise<void> {
 }
 
 // ── Регистрация passkey (в настройках, под сессией) ──────────────────
-export async function beginPasskeyRegistration() {
+export async function beginPasskeyRegistration(kind: PasskeyKind = 'device') {
   const session = await requireSession()
   const existing = await db.select({ credentialId: passkeys.credentialId, transports: passkeys.transports }).from(passkeys).where(eq(passkeys.userId, session.userId))
   const options = await generateRegistrationOptions({
@@ -59,7 +60,20 @@ export async function beginPasskeyRegistration() {
     userID: new TextEncoder().encode(session.userId),
     attestationType: 'none',
     excludeCredentials: existing.map((p) => ({ id: p.credentialId, transports: p.transports ? (p.transports.split(',') as never) : undefined })),
-    authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
+    // ⚠️ `required`, а не `preferred`: вход по passkey идёт БЕЗ allowCredentials —
+    // мы не знаем, кто пришёл, пока ключ сам не назовёт владельца. Ключ без
+    // discoverable-свойства регистрируется успешно, а потом не находится при входе:
+    // человек добавил ключ, и он молча не работает.
+    authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' },
+    // ⚠️ БЕЗ ЭТОГО iPhone ПРЕДЛАГАЕТ NFC/QR ВМЕСТО Face ID. Не указав, какой ключ
+    // нужен, мы просим «любой» — и Safari честно открывает выбор из всех, начиная с
+    // чужого устройства и аппаратного ключа. Владелец, 02.09.2026: вместо Face ID
+    // предложило приложить ключ или снять код.
+    //
+    // Библиотека раскладывает это в hints (`client-device`) и, для старых браузеров,
+    // в authenticatorAttachment. Аппаратный ключ отсюда не пропадает — под него
+    // отдельная кнопка, как в GitHub, где passkeys и security keys разведены.
+    preferredAuthenticatorType: kind === 'securityKey' ? 'securityKey' : 'localDevice',
   })
   await setChallenge('reg', options.challenge)
   return options
