@@ -10,8 +10,14 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { entryText, getChangelog } from '@/features/changelog/service'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { pageMeta } from '@/shared/seo/page-meta'
 
-export const metadata: Metadata = { title: 'Changelog' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  // Описание берём то же, что видит человек под заголовком страницы: карточка обязана
+  // обещать ровно то, что откроется по ссылке.
+  return pageMeta({ title: 'Changelog', description: t('changelogSub', lang), path: '/changelog' })
+}
 
 /**
  * Публичный changelog продукта (полный список; сайдбар-карточка — ChangelogCard).

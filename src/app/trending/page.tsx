@@ -12,13 +12,14 @@ import { getTrendingFeed, type TrendRange } from '@/features/library/queries'
 const TREND_TOP = 30
 import { ExploreNav } from '@/widgets/explore/ExploreNav'
 import { TrendScope, TrendRanges, readRange } from '@/widgets/explore/TrendControls'
+import { pageMeta } from '@/shared/seo/page-meta'
 
 // Популярные списки. Отдельный адрес, а не вкладка с параметрами: ссылку на
 // «популярное за месяц» человек диктует и кладёт в закладки, а поисковик — индексирует.
 // Так же разведены разделы у GitHub: /trending и /trending/developers.
 export async function generateMetadata() {
   const lang = await getLang()
-  return { title: t('trending', lang) }
+  return pageMeta({ title: t('trending', lang), path: '/trending' })
 }
 
 export default async function TrendingListsPage({

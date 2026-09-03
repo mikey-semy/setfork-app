@@ -33,10 +33,11 @@ import { mergeThread } from '@/features/issues/thread'
 import { IssueLockControl } from '@/features/issues/IssueLockControl'
 import { Badge } from '@/shared/ui/badge'
 import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
+import { pageMeta } from '@/shared/seo/page-meta'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
   const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
-  return { title: `${t('issueWord', lang)} #${number} · ${handle}/${slug}` }
+  return pageMeta({ title: `${t('issueWord', lang)} #${number} · ${handle}/${slug}`, path: `/${handle}/${slug}/issues/${number}` })
 }
 
 export default async function IssueThreadPage({

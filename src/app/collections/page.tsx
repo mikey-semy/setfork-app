@@ -5,13 +5,14 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { getCollections } from '@/features/collections/queries'
 import { CollectionCard } from '@/features/collections/CollectionCard'
 import { ExploreNav } from '@/widgets/explore/ExploreNav'
+import { pageMeta } from '@/shared/seo/page-meta'
 
 // Курируемые подборки. Раздел уже жил по адресу `/collections/<slug>`, а его
 // оглавление пряталось за `?tab=collections` на чужой странице — теперь оно на
 // своём месте.
 export async function generateMetadata() {
   const lang = await getLang()
-  return { title: t('catalogsTab', lang) }
+  return pageMeta({ title: t('catalogsTab', lang), path: '/collections' })
 }
 
 export default async function CollectionsPage() {
