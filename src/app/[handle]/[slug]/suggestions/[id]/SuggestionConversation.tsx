@@ -255,17 +255,22 @@ export function SuggestionConversation({
         {/* ⚠️ ЗАПЕРТО — ГОВОРИМ ОБ ЭТОМ. Раньше форма показывалась всегда, а экшен молча
             возвращался: человек писал ответ, жал кнопку и не получал ничего. Плашка
             называет причину, форма убирается — как на странице задачи. */}
+        {/* ⚠️ ПЛАШКА ГОВОРИТ РАЗНОЕ ТОМУ, КТО МОЖЕТ ОТВЕЧАТЬ, И ТОМУ, КТО НЕ МОЖЕТ.
+            Один текст на обоих означал бы, что ведущий раздел видит замок, решает «мне
+            тоже нельзя» — и не отвечает, хотя форма прямо под плашкой на месте. */}
         {locked && (
           <Alert variant="warn" icon={Lock} className="mt-4">
-            {/* ⚠️ ТЕКСТ СВОЙ, А НЕ ИЗ ЗАДАЧ. Там сказано «отвечать могут владелец и
-                участники с правом записи» — у правок это НЕПРАВДА: замок не обходит
-                никто, включая того, кто его повесил (см. actions/suggestion-comments).
-                Поймано живым прогоном: плашка обещала владельцу то, чего он не может. */}
-            {lockReasonText ? fill('pr.lockedNotice', lang, { reason: lockReasonText }) : t('pr.lockedNoticePlain', lang)}
+            {canManageState
+              ? lockReasonText
+                ? fill('pr.lockedNoticeOwner', lang, { reason: lockReasonText })
+                : t('pr.lockedNoticeOwnerPlain', lang)
+              : lockReasonText
+                ? fill('pr.lockedNotice', lang, { reason: lockReasonText })
+                : t('pr.lockedNoticePlain', lang)}
           </Alert>
         )}
 
-        {session && !locked ? (
+        {session && (!locked || canManageState) ? (
           <div className={cardClass({ className: 'mt-4' })}>
             <form action={addSuggestionComment} className="flex flex-col gap-3">
               <input type="hidden" name="suggestionId" value={sug.id} />

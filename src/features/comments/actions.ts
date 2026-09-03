@@ -7,6 +7,8 @@ import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 // eslint-disable-next-line boundaries/dependencies -- права коллаборатора из collab
 import { isCollaborator } from '@/features/collab/queries'
+// eslint-disable-next-line boundaries/dependencies -- правило замка ОДНО на все поверхности; живёт у предложений, тот же кросс-фич-паттерн, что у уведомлений
+import { canSpeakWhenLocked } from '@/features/library/lock-policy'
 // eslint-disable-next-line boundaries/dependencies -- гейт видимости списка из library
 import { requireViewableMeta } from '@/features/library/guard'
 // eslint-disable-next-line boundaries/dependencies -- предлагаемые блоки (ветка или items) — один источник
@@ -49,7 +51,9 @@ export async function createBlockThread(
 
   const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId) })
   if (!sug || sug.templateId !== meta.id) return
-  if (sug.lockedAt) return // обсуждение заперто — новых замечаний нет
+  // Заперто — замечания оставляют только ведущие раздел: то же правило, что у реплик
+  // предложения и у задач (см. features/library/lock-policy).
+  if (sug.lockedAt && !(await canSpeakWhenLocked(meta.ownerId, meta.id, session.userId))) return
 
   // Якорь снимаем по ПРЕДЛОЖЕННОМУ блоку: обсуждают то, что предлагают. У branch-PR
   // это tip ветки, а не items — иначе на ветке блок не находился и тред не создавался.
@@ -96,7 +100,7 @@ export async function replyToBlockThread(
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) return
 
-  const thread = await threadInList(threadId, meta.id)
+  const thread = await threadInList(threadId, meta.id, await canSpeakWhenLocked(meta.ownerId, meta.id, session.userId))
   if (!thread) return
 
   await db.insert(blockComments).values({ threadId, authorId: session.userId, body: text, pending, suggestedText })
@@ -114,7 +118,7 @@ export async function setBlockThreadResolved(owner: string, slug: string, thread
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) return
 
-  const thread = await threadInList(threadId, meta.id)
+  const thread = await threadInList(threadId, meta.id, await canSpeakWhenLocked(meta.ownerId, meta.id, session.userId))
   if (!thread) return
 
   const [first] = await db
@@ -145,7 +149,12 @@ export async function setBlockThreadResolved(owner: string, slug: string, thread
  * и ответ в тред, и resolve. Пропустить его в одном месте значило бы оставить
  * лазейку в запертом обсуждении.
  */
-async function threadInList(threadId: string, listId: string): Promise<{ suggestionId: string } | null> {
+async function threadInList(
+  threadId: string,
+  listId: string,
+  /** Может ли спрашивающий писать в запертое обсуждение (владелец/коллаборант). */
+  allowedWhenLocked: boolean,
+): Promise<{ suggestionId: string } | null> {
   const [row] = await db
     .select({
       suggestionId: blockCommentThreads.suggestionId,
@@ -156,7 +165,10 @@ async function threadInList(threadId: string, listId: string): Promise<{ suggest
     .innerJoin(suggestions, eq(suggestions.id, blockCommentThreads.suggestionId))
     .where(eq(blockCommentThreads.id, threadId))
     .limit(1)
-  if (!row || row.templateId !== listId || row.lockedAt) return null
+  if (!row || row.templateId !== listId) return null
+  // Замок пропускает ведущих раздел — и ответ в тред, и resolve. Кто именно спрашивает,
+  // знает вызывающий: сюда передаём готовый ответ, чтобы правило осталось одним.
+  if (row.lockedAt && !allowedWhenLocked) return null
   return { suggestionId: row.suggestionId }
 }
 
