@@ -1,0 +1,161 @@
+name: Граница суток
+
+# ПРОВЕРКА, КОТОРАЯ НЕ ЖДЁТ ПОЛУНОЧИ.
+#
+# 03.09.2026 интеграционный тест падал в 00:27 UTC: он ставил событие «час назад» и
+# спрашивал «сколько сегодня», а день база считает от своей полуночи — в первый час суток
+# событие попадало во вчера. Падало бы каждую ночь на любой ветке, и дважды за сутки мы
+# перезапустили этот красный, посчитав его случайным.
+#
+# Здесь тот же класс ловится нарочно: часовой пояс СЕССИИ базы сдвигается так, что «сейчас»
+# оказывается сразу после полуночи, и день-зависимые тесты гоняются в этот момент.
+#
+# ⚠️ ЗНАК В `Etc/GMT+N` ИНВЕРТИРОВАН — это ловушка, на которой обожжётся следующий.
+# `Etc/GMT+1` означает UTC−1 (местное время на час МЕНЬШЕ), `Etc/GMT-13` — UTC+13. Так в
+# базе зон POSIX, и наоборот, чем в привычной записи «UTC+3».
+#
+# ⚠️ ДЖОБА НЕ ВИСИТ НА ЧУЖИХ ВЕТКАХ. Она гоняет не тот код, который человек сейчас правит,
+# и блокировать им мерж значило бы завести второй `npm-audit` — красный, который все
+# листают. Поэтому только расписание и ручной запуск, а падение слышно тревогой в задачах.
+on:
+  schedule:
+    # Раз в неделю, ночью с воскресенья на понедельник: класс редкий, а прогон не бесплатный.
+    - cron: '23 2 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: day-boundary
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  boundary:
+    runs-on: [self-hosted, setfork]
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # Окружение поднимается своё, а не переиспользуется из ci.yml, и это осознанно:
+      # вынос общих шагов в composite-действие тронул бы работающую джобу, через которую
+      # проходит каждое предложение. Здесь нужен только Postgres — ядро день-зависимым
+      # тестам не нужно (проверено локально: 52 теста зелёные без него).
+      - name: Postgres (sibling-контейнер в сети раннера)
+        run: |
+          NET="day-${GITHUB_RUN_ID}"
+          docker network create "$NET" >/dev/null 2>&1 || true
+          docker rm -f "pg-$NET" >/dev/null 2>&1 || true
+          docker run -d --name "pg-$NET" --network "$NET" \
+            -e POSTGRES_USER=ci -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=ci \
+            pgvector/pgvector:pg16 >/dev/null
+          docker network connect "$NET" "$(hostname)" >/dev/null 2>&1 || true
+          for i in $(seq 1 60); do
+            docker exec "pg-$NET" pg_isready -U ci -d ci >/dev/null 2>&1 && break
+            sleep 1
+          done
+          echo "CI_NET=$NET" >> "$GITHUB_ENV"
+          echo "PG_HOST=pg-$NET" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Схема
+        run: |
+          npx tsx scripts/db-bootstrap.ts pre
+          npx drizzle-kit push --force
+          npx tsx scripts/db-bootstrap.ts post
+        env:
+          DATABASE_URL: postgresql://ci:ci@${{ env.PG_HOST }}:5432/ci
+      - name: День-зависимые тесты у самой границы суток
+        id: run
+        run: |
+          FILES="$(node scripts/day-sensitive-tests.mjs)"
+          if [ -z "$FILES" ]; then
+            echo "::notice::день-зависимых тестов не нашлось — проверять нечего"
+            exit 0
+          fi
+          echo "Файлы: $FILES"
+          # Пояс подбирается так, чтобы «сейчас» в базе попало в ПЕРВЫЙ ЧАС суток —
+          # ровно в окно, где ломался ai-watch.
+          #
+          # ⚠️ ДВЕ ЛОВУШКИ СРАЗУ. Первая: знак в `Etc/GMT+N` инвертирован, `+1` это UTC−1.
+          # Вторая: зон `Etc/GMT+13`…`+23` НЕ СУЩЕСТВУЕТ (диапазон −14…+12), а расписание
+          # тут не единственный запуск — руками джобу дёрнут в любой час, и несуществующий
+          # пояс дал бы отказ подключения, то есть ЛОЖНУЮ тревогу вместо проверки.
+          # Поэтому после полудня UTC берём зону с другой стороны: `Etc/GMT-(24−H)` даёт
+          # UTC+(24−H), и местное время попадает в полночь СЛЕДУЮЩИХ суток.
+          H=$(date -u +%-H)
+          if [ "$H" -eq 0 ]; then ZONE="UTC"
+          elif [ "$H" -le 12 ]; then ZONE="Etc/GMT+${H}"
+          else ZONE="Etc/GMT-$((24 - H))"
+          fi
+          echo "Пояс сессии: $ZONE (местное время в базе — первый час суток)"
+          TZOPT=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$ZONE")
+          DATABASE_URL="postgresql://ci:ci@${PG_HOST}:5432/ci?options=-c%20timezone%3D${TZOPT}" \
+            npx vitest run --config vitest.integration.config.ts $FILES
+      - name: Тревога, если граница суток ломает тесты
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const TITLE = 'Тесты ломаются на границе суток'
+            const LABEL = 'day-boundary'
+            const body = [
+              'Недельный прогон день-зависимых тестов со сдвинутым поясом базы упал.',
+              '',
+              `Прогон: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              'Что это значит: какой-то тест считает «сегодня» от текущего момента, а не от начала суток.',
+              'В обычном прогоне он зелёный и покраснеет ночью — на чужой ветке, где его перезапустят и забудут.',
+              '',
+              'Как воспроизвести у себя, не дожидаясь полуночи:',
+              '```',
+              'DATABASE_URL="postgresql://ci:ci@127.0.0.1:55432/ci?options=-c%20timezone%3DEtc%2FGMT%2B1" \\',
+              '  npx vitest run --config vitest.integration.config.ts $(node scripts/day-sensitive-tests.mjs)',
+              '```',
+              '`Etc/GMT+1` — это UTC−1 (знак в базе зон POSIX инвертирован).',
+            ].join('\n')
+            const { data: open } = await github.rest.issues.listForRepo({
+              ...context.repo, state: 'open', labels: LABEL, per_page: 10,
+            })
+            if (open.length) {
+              await github.rest.issues.update({ ...context.repo, issue_number: open[0].number, body })
+              return core.notice(`обновил тревогу #${open[0].number}`)
+            }
+            // Метка заводится явно: REST обещает лишь «тихо отбросить» неизвестную, и
+            // отброшенная означала бы, что следующая проверка заведёт вторую тревогу.
+            try {
+              await github.rest.issues.createLabel({
+                ...context.repo, name: LABEL, color: 'D93F0B', description: 'Тесты, зависящие от часа прогона',
+              })
+            } catch (e) {
+              if (e.status !== 422) throw e
+            }
+            const { data: made } = await github.rest.issues.create({ ...context.repo, title: TITLE, body, labels: [LABEL] })
+            core.notice(`завёл тревогу #${made.number}`)
+      - name: Снять тревогу, когда починили
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: open } = await github.rest.issues.listForRepo({
+              ...context.repo, state: 'open', labels: 'day-boundary', per_page: 10,
+            })
+            for (const i of open) {
+              await github.rest.issues.createComment({
+                ...context.repo, issue_number: i.number,
+                body: 'Недельный прогон у границы суток снова зелёный — тревога закрыта автоматически.',
+              })
+              await github.rest.issues.update({ ...context.repo, issue_number: i.number, state: 'closed' })
+              core.notice(`закрыл тревогу #${i.number}`)
+            }
+      - name: cleanup (контейнер и сеть)
+        if: always()
+        run: |
+          docker rm -f "pg-${CI_NET}" >/dev/null 2>&1 || true
+          docker network disconnect "${CI_NET}" "$(hostname)" >/dev/null 2>&1 || true
+          docker network rm "${CI_NET}" >/dev/null 2>&1 || true
