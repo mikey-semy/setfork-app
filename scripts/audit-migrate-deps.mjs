@@ -10,8 +10,15 @@
 // Здесь считаем замыкание зависимостей этих двух пакетов по lock-файлу и падаем, если
 // в нём есть high/critical из `npm audit`. Всё остальное dev-хозяйство по-прежнему
 // только печатается.
-import { execFileSync } from 'node:child_process'
+//
+// ⚠️ НЕДОСТУПНОСТЬ СЕРВИСА АУДИТА БОЛЬШЕ НЕ ВАЛИТ ЭТУ ДЖОБУ — она предупреждает.
+// Блокирует находка, а не молчание реестра: за сутки 02–03.09.2026 гейт дважды покраснел
+// при «found 0 vulnerabilities», и оба раза причина была на стороне сервиса. Красный,
+// который не про нас, приучает не читать красный вообще — а блокирующая половина от
+// этого обязана остаться настоящей. Поэтому: повторы, и только потом предупреждение,
+// которое НЕ выдаёт себя за «чисто» (см. scripts/lib/audit-report.mjs).
 import { readFileSync } from 'node:fs'
+import { fetchAuditReport, highOrCritical } from './lib/audit-report.mjs'
 
 /** Инструменты, которые прод-образ миграции реально запускает. */
 const ROOTS = ['tsx', 'drizzle-kit']
@@ -41,36 +48,14 @@ function closure(lock) {
 const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'))
 const reach = closure(lock)
 
-// npm audit возвращает ненулевой код, когда НАШЁЛ уязвимости, — поэтому читаем вывод, а
-// не статус. Но ненулевой код бывает и от операционного сбоя (403 реестра, нет сети): в
-// таком случае в stdout прилетает {message, statusCode} без vulnerabilities, и «пустой»
-// разбор молча означал бы «всё чисто» — гейт обходился бы сам собой (P2 из авто-ревью).
-// Поэтому отчёт проверяем на форму, а не доверяем факту наличия вывода.
-let raw = ''
-try {
-  raw = execFileSync('npm', ['audit', '--json'], { encoding: 'utf8', shell: process.platform === 'win32' })
-} catch (e) {
-  raw = e.stdout ?? ''
+const gate = fetchAuditReport()
+if (!gate.ok) {
+  // Технические литералы ниже уходят в лог CI, а не в интерфейс.
+  console.log(`::warning::сервис аудита не отдал отчёт (${gate.why}) — гейт инструментов миграции НЕ отработал; уязвимости при этом НЕ проверены`)
+  process.exit(0)
 }
 
-let report
-try {
-  report = JSON.parse(raw)
-} catch {
-  report = null
-}
-const looksLikeReport = !!report && typeof report.vulnerabilities === 'object' && report.vulnerabilities !== null && !!report.metadata
-if (!looksLikeReport) {
-  // Технический литерал для лога CI, не UI-текст: пользователю он не показывается.
-  // eslint-disable-next-line no-restricted-syntax -- строка уходит в вывод джобы, не в интерфейс
-  const why = report?.error?.summary ?? report?.message ?? (raw ? `неожиданный вывод: ${raw.slice(0, 200)}` : 'пустой вывод')
-  console.error(`::error::npm audit не дал отчёта (${why}) — гейт инструментов миграции НЕ отработал`)
-  process.exit(1)
-}
-
-const vulns = report.vulnerabilities
-const bad = Object.values(vulns).filter((v) => ['high', 'critical'].includes(v.severity) && reach.has(v.name))
-
+const bad = highOrCritical(gate.report, reach)
 if (!bad.length) {
   console.log(`Инструменты миграции (${ROOTS.join(', ')} и их ${reach.size - ROOTS.length} зависимостей): high/critical нет.`)
   process.exit(0)
