@@ -4,6 +4,8 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db, suggestions } from '@/shared/db'
+import { findDestructiveSteps } from '@/core/domain/destructive-command'
+import { captureError } from '@/shared/observability'
 import { requireSession } from '@/shared/auth/session'
 import { notify } from '@/features/notifications/notify'
 import { isCollaborator } from '@/features/collab/queries'
@@ -170,19 +172,61 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
     steps: final.steps.map((s, i) => ({ ...s, n: i + 1 })),
   }
 
+  // ⚠️ СТРАЖ ИСПОЛНЯЕМОГО ВЫХОДА — И ЗДЕСЬ ТОЖЕ. Он стоит в фасаде записи версии, но
+  // оба пути слияния пишут версию В ЯДРЕ и фасад минуют; на обычном пути его поэтому
+  // добавили руками (см. merge.ts), а тут — забыли. Дыра открывалась ровно так: положить
+  // исполняемую команду в ветку, СОЗДАТЬ КОНФЛИКТ (тронуть тот же шаг), и владелец,
+  // разрешая его, вливает команду в main мимо проверки — она уезжает в исполняемый /raw.
+  //
+  // Проверяем РЕЗУЛЬТАТ разрешения, а не входящую ветку: в main уедет именно он, и
+  // выбор «наше» на конфликтном шаге тоже может принести команду из чужой половины.
+  const destructive = findDestructiveSteps(content.steps)
+  if (destructive.length) {
+    const { index, match } = destructive[0]
+    // Отказ называет НОМЕР ШАГА И ПРИЧИНУ теми же параметрами, что редактор списка
+    // (`?blocked=<причина>&step=<n>`): у стража уже есть готовый текст с обоими полями.
+    // Свести это в общий `?e=` значило бы показать «не удалось» без объяснения — то
+    // самое «кнопка выглядит сломанной», от которого текст и заводили.
+    redirect(`${path}?blocked=${encodeURIComponent(match.reason)}&step=${index + 1}`)
+  }
+
+  let mergedVersion: number | null = null
   try {
     // Способ слияния — тот же, что у обычного пути: список, настроенный на squash, не
     // должен получать историю ветки только потому, что случился конфликт.
     const head = sug.note.split(/\r?\n/)[0].trim().slice(0, 120)
-    await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, content, {
+    const merged = await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, content, {
       mode: prs.mergeMethod,
       message: sug.number ? `${head || sug.branchRef} (#${sug.number})` : head || sug.branchRef,
     })
+    mergedVersion = merged.newVersion
+    // Пусто — не «версии нет», а сигнал: слияние прошло, а проекция в Postgres не легла.
+    // Тот же разбор, что на обычном пути (см. merge.ts): наблюдатель этого сигнала — мы.
+    if (mergedVersion === null) {
+      captureError(new Error('core merged the resolved branch but did not project the version'), {
+        where: 'resolveBranchPr',
+        templateId: tpl.id,
+        suggestionId: sug.id,
+        branch: sug.branchRef,
+      })
+    }
   } catch (e) {
     const code = e instanceof BranchOpError ? e.code : 'internal'
     redirect(`${path}?e=${code}`)
   }
-  await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
+  // Ветка после слияния не нужна — удаляем, если так настроено. Настройка одна на оба
+  // пути, а работала только на обычном: список с `autoDeleteBranch` копил ветки, слитые
+  // через резолвер. Ошибку глотаем — правка уже влита, падать из-за уборки нельзя.
+  if (prs.autoDeleteBranch) await gitCore.deleteBranch({ owner, slug: tpl.slug }, sug.branchRef).catch(() => {})
+
+  // ⚠️ ВЕРСИЯ ЗАПИСЫВАЕТСЯ И ЗДЕСЬ. Без неё откат отказывает («no version recorded»):
+  // правку, которую пришлось сливать вручную — то есть самую рискованную, — вернуть было
+  // нельзя. Число берём у ядра, а не считаем сами: `tpl.currentVersion + 1` — это то, что
+  // мы ПОПРОСИЛИ, а записать могли другое.
+  await db
+    .update(suggestions)
+    .set({ status: 'accepted', resolvedAt: new Date(), mergedVersion: mergedVersion ?? null })
+    .where(eq(suggestions.id, sug.id))
   // «closes #12» в тексте предложения закрывает задачу — но только теперь, когда
   // изменения действительно в main.
   await closeLinkedIssues(tpl.id, sug.note, session.userId, prs.autoCloseIssues, { id: sug.id })
