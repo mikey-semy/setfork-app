@@ -38,7 +38,15 @@ export async function closeLinkedIssues(
       .from(issues)
       .where(and(eq(issues.templateId, templateId), inArray(issues.number, nums), eq(issues.status, 'open')))
     for (const iss of rows) {
-      await db.update(issues).set({ status: 'closed', closedAt: new Date() }).where(eq(issues.id, iss.id))
+      // ⚠️ ИСХОД СТАВИТСЯ И ЗДЕСЬ. Без него у задач, закрытых принятой правкой, поле
+      // осталось бы пустым навсегда — а это как раз самый частый способ закрытия, и
+      // фильтр «сделано» их бы не показывал. Работа сделана: правка в main.
+      // Так же у GitHub: закрытие через PR ставит `state_reason: completed` — проверено
+      // на живых данных (50 закрытых задач vercel/next.js, у всех `completed`).
+      await db
+        .update(issues)
+        .set({ status: 'closed', closedAt: new Date(), closeReason: 'completed', duplicateOfId: null })
+        .where(eq(issues.id, iss.id))
       // Отметка в ленте задачи: чем именно её закрыли. Без неё автор видит закрытую
       // задачу и не знает, что поменялось, — а первый вопрос у него ровно этот.
       await recordIssueEvent(db, {
@@ -46,6 +54,7 @@ export async function closeLinkedIssues(
         actorId,
         kind: 'closed_by_suggestion',
         suggestionId: suggestion?.id,
+        closeReason: 'completed',
       })
       if (iss.authorId !== actorId) {
         await notify({ recipientId: iss.authorId, actorId, type: 'issue_closed_by_merge', templateId, issueId: iss.id })

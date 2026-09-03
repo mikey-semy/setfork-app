@@ -41,6 +41,21 @@ export function IssueEventRow({ event, listPath, lang }: { event: IssueEvent; li
               {number ? fill('issue.suggestionNumber', lang, { n: String(number) }) : t('issue.suggestionOne', lang)}
             </Link>
           </>
+        ) : event.kind === 'closed' && event.closeReason === 'duplicate' ? (
+          <>
+            {t('issue.closedAsDuplicate', lang)}
+            {event.duplicate ? (
+              <>
+                {' '}
+                <Link href={`${listPath}/issues/${event.duplicate.number}`} className="text-accent hover:underline">
+                  #{event.duplicate.number}
+                </Link>
+              </>
+            ) : null}
+          </>
+        ) : event.kind === 'closed' && event.closeReason ? (
+          // «Сделано» и «не будем делать» — разные новости, и читаются они здесь.
+          t(event.closeReason === 'completed' ? 'issue.closedAsCompleted' : 'issue.closedAsNotPlanned', lang)
         ) : event.kind === 'locked' && event.lockReason ? (
           // Причина названа прямо в ленте: «запер обсуждение» без причины читается как
           // произвол, а причина — это ответ на вопрос «за что».

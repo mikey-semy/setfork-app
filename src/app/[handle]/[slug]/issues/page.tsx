@@ -19,7 +19,7 @@ import { FilterMenu } from '@/shared/ui/FilterMenu'
 import { resolveChip } from '@/shared/lib/labels'
 import { isCollaborator } from '@/features/collab/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
-import { ISSUE_SORTS } from '@/features/issues/queries'
+import { CLOSE_REASONS, ISSUE_SORTS, type CloseReason } from '@/features/issues/queries'
 import type { TKey } from '@/shared/i18n'
 import { Tag } from 'lucide-react'
 import { PAGE } from '@/shared/ui/control'
@@ -37,7 +37,7 @@ export default async function IssuesPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ e?: string; status?: string; q?: string; label?: string; milestone?: string; sort?: string; page?: string; who?: string }>
+  searchParams: Promise<{ e?: string; status?: string; q?: string; label?: string; milestone?: string; sort?: string; page?: string; who?: string; outcome?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
@@ -55,6 +55,9 @@ export default async function IssuesPage({
   // ссылку с чужим ником нельзя было бы дать другому человеку — она показала бы ему чужие
   // задачи под видом его собственных. Гостю выбирать нечего, у него нет ни того, ни другого.
   const who = session && (sp.who === 'mine' || sp.who === 'assigned') ? sp.who : undefined
+  // Исход есть только у закрытых — на вкладке открытых фильтр не показываем и не
+  // применяем: он бы всегда давал пусто и выглядел сломанным.
+  const outcome = status === 'closed' && (CLOSE_REASONS as string[]).includes(sp.outcome ?? '') ? (sp.outcome as CloseReason) : undefined
   // Ровно один человек, о котором вообще может идти речь, — тот, кто смотрит. `who` без
   // сессии не выставляется, поэтому здесь он либо есть вместе с ней, либо нет вовсе.
   const meId = who ? session?.userId : undefined
@@ -68,6 +71,7 @@ export default async function IssuesPage({
     label,
     milestone,
     sort,
+    closeReason: outcome,
     authorId: who === 'mine' ? meId : undefined,
     assigneeId: who === 'assigned' ? meId : undefined,
   }
@@ -90,7 +94,7 @@ export default async function IssuesPage({
   // href с текущими параметрами + перекрытием (undefined убирает параметр).
   const hrefWith = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams()
-    const merged: Record<string, string | undefined> = { status, q, label, milestone, who, sort: sort === 'newest' ? undefined : sort, ...over }
+    const merged: Record<string, string | undefined> = { status, q, label, milestone, who, outcome, sort: sort === 'newest' ? undefined : sort, ...over }
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v)
     const s = p.toString()
     return s ? `${base}?${s}` : base
@@ -168,6 +172,20 @@ export default async function IssuesPage({
                 items={[
                   { label: lang === 'ru' ? 'Все вехи' : 'All milestones', href: hrefWith({ milestone: undefined }), active: !milestone },
                   ...mstones.map((m) => ({ label: m.title, href: hrefWith({ milestone: m.id }), active: milestone === m.id })),
+                ]}
+              />
+            )}
+            {/* Исход — только на закрытых: см. выше, на открытых он всегда пуст. */}
+            {status === 'closed' && (
+              <FilterMenu
+                label={t('issue.filterReason', lang)}
+                items={[
+                  { label: t('issue.filterReasonAll', lang), href: hrefWith({ outcome: undefined }), active: !outcome },
+                  ...CLOSE_REASONS.map((r) => ({
+                    label: t(`issue.closeReason.${r}` as TKey, lang).replace('…', ''),
+                    href: hrefWith({ outcome: r }),
+                    active: outcome === r,
+                  })),
                 ]}
               />
             )}

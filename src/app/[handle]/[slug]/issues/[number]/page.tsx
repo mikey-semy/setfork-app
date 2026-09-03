@@ -31,6 +31,7 @@ import { getIssueEvents } from '@/features/issues/events'
 import { IssueEventRow } from '@/features/issues/IssueEventRow'
 import { mergeThread } from '@/features/issues/thread'
 import { IssueLockControl } from '@/features/issues/IssueLockControl'
+import { IssueCloseControl } from '@/features/issues/IssueCloseControl'
 import { Badge } from '@/shared/ui/badge'
 import { AFTER_PARAM, BEFORE_PARAM, COMMENTS_PER_PAGE, cursorHref, readCursor } from '@/shared/lib/paging'
 
@@ -238,10 +239,6 @@ export default async function IssueThreadPage({
         {/* Форма ответа */}
         {session && (!locked || canManageThread) ? (
           <div className={cardClass({ className: 'mt-5' })}>
-            {/* Отдельная форма смены статуса (сиблинг, не вложенная) — кнопка ниже привязана через form=… */}
-            {canToggle && (
-              <form id="issue-status-form" action={setIssueStatus.bind(null, owner, slug, issue.number, closed ? 'open' : 'closed')} className="hidden" />
-            )}
             <form action={addIssueComment} className="flex flex-col gap-3">
               <input type="hidden" name="owner" value={owner} />
               <input type="hidden" name="slug" value={slug} />
@@ -251,12 +248,9 @@ export default async function IssueThreadPage({
                 {canManageThread && (
                   <IssueLockControl owner={owner} slug={slug} number={issue.number} locked={locked} lang={lang} />
                 )}
-                {canToggle && (
-                  <Button type="submit" form="issue-status-form" size="md">
-                    {closed ? <CircleDot size={14} className="text-ok" /> : <CircleCheck size={14} className="text-accent" />}
-                    {closed ? t('reopenIssue', lang) : t('closeIssue', lang)}
-                  </Button>
-                )}
+                {/* Смена статуса — своим элементом, а не скрытой формой: закрытие
+                    спрашивает ИСХОД, и «одна кнопка = одно действие» здесь кончилось. */}
+                {canToggle && <IssueCloseControl owner={owner} slug={slug} number={issue.number} closed={closed} lang={lang} />}
                 <Button type="submit" variant="primary" size="md">
                   {t('commentBtn', lang)}
                 </Button>

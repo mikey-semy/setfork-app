@@ -110,6 +110,29 @@ export const notificationType = pgEnum('notification_type', [
 export const issueStatus = pgEnum('issue_status', ['open', 'closed'])
 
 /**
+ * ЧЕМ КОНЧИЛАСЬ ЗАДАЧА — ОТДЕЛЬНО ОТ ТОГО, ОТКРЫТА ЛИ ОНА.
+ *
+ * «Закрыто» не отвечает на вопрос, сделали или отказались. Два эти исхода читаются
+ * одинаково — перечёркнутым номером, — а значат противоположное: у первого работа
+ * позади, у второго её не будет.
+ *
+ * Разделение статуса и исхода есть у всех, кого читали, и нигде оно не совмещено:
+ *  • GitHub (интроспекция его же схемы GraphQL, `IssueStateReason`): COMPLETED,
+ *    NOT_PLANNED, DUPLICATE, REOPENED;
+ *  • SourceHut, todo.sr.ht: две оси — `TicketStatus` (REPORTED…RESOLVED) и
+ *    `TicketResolution` (UNRESOLVED, FIXED, WONT_FIX, DUPLICATE, INVALID…), причём
+ *    исход ОБЯЗАТЕЛЕН при переходе в RESOLVED;
+ *  • Jira: «statuses indicate where work stands; resolutions explain how work was
+ *    completed» — те же две оси словами.
+ * ⚠️ У Gitea этого нет вовсе, и здесь мы её не копируем.
+ *
+ * Берём четвёрку GitHub без «reopened»: у нас причина живёт, пока задача закрыта, а
+ * «переоткрыта» — это уже событие ленты, и держать её ещё и здесь значило бы хранить
+ * одно и то же в двух местах, которые разъедутся.
+ */
+export const issueCloseReason = pgEnum('issue_close_reason', ['completed', 'not_planned', 'duplicate'])
+
+/**
  * ПРИЧИНЫ ЗАПЕРТОГО ОБСУЖДЕНИЯ — ПЕРЕЧНЕМ, А НЕ СВОБОДНОЙ СТРОКОЙ.
  *
  * Набор из четырёх — как у GitHub. У Gitea он настраивается администратором инстанса, и
@@ -1382,6 +1405,13 @@ export const issues = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     closedAt: timestamp('closed_at', { withTimezone: true }),
+    closeReason: issueCloseReason('close_reason'),
+    // ⚠️ ПРИЧИНА «ДУБЛИКАТ» БЕЗ ССЫЛКИ БЕСПОЛЕЗНА: она сообщает, что оригинал есть, и не
+    // говорит где. У GitHub поэтому два поля сразу — `stateReason: DUPLICATE` и
+    // `duplicateIssueId` (интроспекция `CloseIssueInput`), и здесь так же.
+    // `set null` при удалении оригинала: задача осталась закрытой как дубликат, потерялась
+    // только ссылка — это правда, а каскадное удаление стёрло бы чужую задачу.
+    duplicateOfId: uuid('duplicate_of_id').references((): AnyPgColumn => issues.id, { onDelete: 'set null' }),
   },
   (t) => [
     uniqueIndex('issues_tpl_number').on(t.templateId, t.number),
@@ -1471,6 +1501,11 @@ export const issueEvents = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     kind: issueEventKind('kind').notNull(),
+    // Причина закрытия остаётся в ленте НАВСЕГДА, даже после переоткрытия: «закрыли как
+    // не будем делать» — часть разговора, а не текущее состояние. Та же развилка, что у
+    // причины запирания выше.
+    closeReason: issueCloseReason('close_reason'),
+    duplicateOfId: uuid('duplicate_of_id').references((): AnyPgColumn => issues.id, { onDelete: 'set null' }),
     suggestionId: uuid('suggestion_id').references(() => suggestions.id, { onDelete: 'set null' }),
     // Причина запирания остаётся в ленте НАВСЕГДА, даже когда обсуждение отперли: «за что
     // закрыли рот» — это часть разговора, а не текущее состояние. Так же у Gitea, где
