@@ -12,6 +12,7 @@ import { getWatcherIds } from '@/features/watch/queries'
 import { collabStore, suggestionCommenterIds } from '@/features/collab-store/store'
 import { canViewList } from '@/core'
 import { ownerHandle } from './shared'
+import { canSpeakWhenLocked } from '../lock-policy'
 
 /**
  * Обсуждение предложения. Причина измениться одна — правила реплик: кто пишет,
@@ -65,18 +66,18 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   if (!canViewList(sug.template, { isOwner: sug.template.ownerId === session.userId })) return
   const handle = await ownerHandle(sug.template.ownerId)
   const path = `/${handle}/${sug.template.slug}/suggestions/${sug.id}`
-  // Заперто — новых реплик нет ни у кого, включая владельца: замок, который обходит
-  // тот, кто его повесил, ничего не значит для остальных.
+  // Заперто — отвечают только ведущие раздел: владелец списка и коллаборанты. Так же в
+  // задачах (#881) и у обоих изученных проектов; правило одно на все поверхности —
+  // см. features/library/lock-policy.
   //
-  // ⚠️ ОТКАЗ НАЗЫВАЕТСЯ ВСЛУХ, А НЕ МОЛЧА. Раньше здесь стоял голый `return`, а форма
-  // ответа на странице показывалась всегда: человек писал реплику, жал кнопку и не
-  // получал НИЧЕГО — ни ответа, ни объяснения. Он решит, что сломался сайт, а не что
-  // ему запретили писать. В задачах эта же ошибка чинилась вместе с запиранием (#881);
-  // здесь она осталась и была хуже — там форма хотя бы исчезала.
+  // ⚠️ ОТКАЗ НАЗЫВАЕТСЯ ВСЛУХ, А НЕ МОЛЧА: раньше здесь стоял голый `return`, а форма
+  // показывалась всегда — человек писал реплику и не получал ничего.
   //
   // Проверка стоит ПОСЛЕ права видеть список: постороннему незачем узнавать по коду
   // отказа, что за скрытым списком есть запертое обсуждение.
-  if (sug.lockedAt) redirect(`${path}?e=locked`)
+  if (sug.lockedAt && !(await canSpeakWhenLocked(sug.template.ownerId, sug.templateId, session.userId))) {
+    redirect(`${path}?e=locked`)
+  }
   // Анти-спам: комментарий рассылает уведомления автору+владельцу+комментаторам+watcher'ам.
   if (!(await rateLimit(`sugcomment:${session.userId}`, 20, 5 * 60_000)).ok) redirect(`${path}?e=ratelimited`)
   if (!body) redirect(path)

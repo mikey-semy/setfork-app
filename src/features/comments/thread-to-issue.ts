@@ -7,6 +7,8 @@ import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { resolveListBySlug } from '@/shared/db/resolve-list'
+// eslint-disable-next-line boundaries/dependencies -- правило замка ОДНО на все поверхности; живёт у предложений, тот же кросс-фич-паттерн, что у уведомлений
+import { canSpeakWhenLocked } from '@/features/library/lock-policy'
 // eslint-disable-next-line boundaries/dependencies -- открытие задачи через доменный порт
 import { collabStore } from '@/features/collab-store/store'
 
@@ -42,7 +44,7 @@ export async function threadToIssue(owner: string, slug: string, threadId: strin
     .innerJoin(suggestions, eq(suggestions.id, blockCommentThreads.suggestionId))
     .where(eq(blockCommentThreads.id, threadId))
     .limit(1)
-  if (!row || row.lockedAt) return // заперто — новых записей в тред не делаем
+  if (!row) return
 
   // Права — ТЕ ЖЕ, что у обычного создания задачи: `collabStore.openIssue` сам
   // ничего не проверяет, и без этого любой, кто видит предложение, заводил бы
@@ -53,6 +55,10 @@ export async function threadToIssue(owner: string, slug: string, threadId: strin
   const isOwner = tpl.ownerId === session.userId
   if (tpl.visibility === 'private' && !isOwner) return
   if (tpl.moderation !== 'active' && !isOwner) return
+  // Заперто — переносят только ведущие раздел: перенос дописывает в тред ответ «→ #N»,
+  // то есть это запись в обсуждение (см. features/library/lock-policy). Проверка стоит
+  // ПОСЛЕ разрешения списка: раньше не из чего было спросить про право.
+  if (row.lockedAt && !(await canSpeakWhenLocked(tpl.ownerId, tpl.id, session.userId))) return
 
   // Реплики треда — тело задачи. Черновики ревью НЕ берём: они ещё никому не
   // показаны, и вытаскивать их в публичную задачу нельзя.

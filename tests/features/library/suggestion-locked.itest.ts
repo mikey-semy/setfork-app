@@ -87,10 +87,14 @@ describe('замок у правки', () => {
     expect(await replies()).toBe(0)
   })
 
-  it('замок не обходит и тот, кто его повесил', async () => {
+  it('⚠️ ведущий раздел отвечать МОЖЕТ — замок останавливает спор, а не разговор с владельцем', async () => {
+    // Выровнено с задачами и с обоими проектами: Gitea — «limit commenting abilities to
+    // users with write access», GitLab — `rule { locked & ~is_container_member }
+    // .policy do prevent :create_note`. Раньше у правок замок молчал для всех, включая
+    // владельца: три разных ответа на один вопрос внутри одного продукта.
     await setSuggestionLocked(sugId, true, 'resolved')
-    expect(await attempt(() => addSuggestionComment(comment('а мне можно?')))).toContain('?e=locked')
-    expect(await replies()).toBe(0)
+    await attempt(() => addSuggestionComment(comment('итог обсуждения')))
+    expect(await replies()).toBe(1)
   })
 
   it('отперли — причина снимается, ответы снова идут', async () => {
