@@ -1,6 +1,10 @@
 import 'server-only'
 import { asc, eq } from 'drizzle-orm'
-import { db, issueEvents, suggestions, users, type Executor } from '@/shared/db'
+import { alias } from 'drizzle-orm/pg-core'
+import { db, issueEvents, issues, suggestions, users, type Executor } from '@/shared/db'
+
+/** Задача-оригинал при закрытии дубликатом: тот же `issues`, но вторым вхождением. */
+const dup = alias(issues, 'duplicate_of')
 
 /**
  * ЛЕНТА ЗАДАЧИ ПОМНИТ, КТО ЕЁ ЗАКРЫЛ И ЧЕМ.
@@ -21,6 +25,10 @@ export interface IssueEvent {
   kind: 'closed' | 'reopened' | 'closed_by_suggestion' | 'locked' | 'unlocked'
   /** Причина запирания — только у `locked`; в ленте она остаётся и после отпирания. */
   lockReason?: 'off_topic' | 'too_heated' | 'resolved' | 'spam' | null
+  /** Исход закрытия — только у `closed`; в ленте остаётся и после переоткрытия. */
+  closeReason?: 'completed' | 'not_planned' | 'duplicate' | null
+  /** Оригинал, если закрыли как дубликат: номер для подписи, id для ссылки. */
+  duplicate?: { id: string; number: number } | null
   createdAt: Date
   actorHandle: string
   actorAvatarUrl: string | null
@@ -36,6 +44,8 @@ export async function recordIssueEvent(
     kind: IssueEvent['kind']
     suggestionId?: string
     lockReason?: IssueEvent['lockReason']
+    closeReason?: IssueEvent['closeReason']
+    duplicateOfId?: string | null
   },
 ): Promise<void> {
   await exec.insert(issueEvents).values({
@@ -44,6 +54,8 @@ export async function recordIssueEvent(
     kind: event.kind,
     suggestionId: event.suggestionId ?? null,
     lockReason: event.lockReason ?? null,
+    closeReason: event.closeReason ?? null,
+    duplicateOfId: event.duplicateOfId ?? null,
   })
 }
 
@@ -64,12 +76,18 @@ export async function getIssueEvents(issueId: string): Promise<IssueEvent[]> {
       suggestionId: issueEvents.suggestionId,
       suggestionNumber: suggestions.number,
       lockReason: issueEvents.lockReason,
+      closeReason: issueEvents.closeReason,
+      duplicateOfId: issueEvents.duplicateOfId,
+      duplicateNumber: dup.number,
     })
     .from(issueEvents)
     .innerJoin(users, eq(issueEvents.actorId, users.id))
     // ⚠️ leftJoin: правку могли удалить, и тогда `suggestion_id` обнулился. Событие при
     // этом остаётся — задачу действительно закрыли, — и внутренний join потерял бы его.
     .leftJoin(suggestions, eq(issueEvents.suggestionId, suggestions.id))
+    // Оригинал дубликата — та же таблица задач под псевдонимом: без него в ленте
+    // осталась бы причина «дубликат» без указания, чего именно.
+    .leftJoin(dup, eq(issueEvents.duplicateOfId, dup.id))
     .where(eq(issueEvents.issueId, issueId))
     .orderBy(asc(issueEvents.createdAt), asc(issueEvents.id))
 
@@ -80,6 +98,8 @@ export async function getIssueEvents(issueId: string): Promise<IssueEvent[]> {
     actorHandle: r.actorHandle,
     actorAvatarUrl: r.actorAvatarUrl,
     lockReason: r.lockReason,
+    closeReason: r.closeReason,
+    duplicate: r.duplicateOfId && r.duplicateNumber !== null ? { id: r.duplicateOfId, number: r.duplicateNumber } : null,
     suggestion: r.suggestionId ? { id: r.suggestionId, number: r.suggestionNumber } : null,
   }))
 }

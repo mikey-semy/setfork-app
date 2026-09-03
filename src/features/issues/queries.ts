@@ -36,6 +36,10 @@ export type IssueFilter = 'open' | 'closed'
  */
 export type IssueSort = 'newest' | 'oldest' | 'updated' | 'least-updated' | 'most-commented' | 'least-commented'
 
+/** Исходы закрытия — тем же перечнем, что в схеме (см. issueCloseReason). */
+export type CloseReason = 'completed' | 'not_planned' | 'duplicate'
+export const CLOSE_REASONS: CloseReason[] = ['completed', 'not_planned', 'duplicate']
+
 export const ISSUE_SORTS: IssueSort[] = ['newest', 'oldest', 'updated', 'least-updated', 'most-commented', 'least-commented']
 
 export interface IssueRow {
@@ -64,6 +68,11 @@ export interface IssueQuery {
   authorId?: string
   /** Исполнитель: id пользователя. «Назначено мне» — он же. */
   assigneeId?: string
+  /**
+   * Чем кончилась задача. Поле есть только у закрытых, поэтому фильтр по нему на вкладке
+   * открытых ничего не значит — вызывающий его туда и не передаёт.
+   */
+  closeReason?: CloseReason
 }
 
 /**
@@ -82,6 +91,7 @@ function issueConds(templateId: string, opts: IssueQuery, withStatus = true): SQ
   if (opts.label) conds.push(sql`${opts.label} = any(${issues.labels})`)
   if (opts.milestone) conds.push(eq(issues.milestoneId, opts.milestone))
   if (opts.authorId) conds.push(eq(issues.authorId, opts.authorId))
+  if (opts.closeReason) conds.push(eq(issues.closeReason, opts.closeReason))
   // Исполнителей у задачи несколько, поэтому `exists`, а не соединение: соединение
   // размножило бы строку задачи по числу исполнителей, и счёт стал бы больше выдачи.
   if (opts.assigneeId) {

@@ -124,16 +124,65 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   redirect(path)
 }
 
-/** Закрыть/переоткрыть issue — автор issue или владелец списка. */
-export async function setIssueStatus(owner: string, slug: string, number: number, status: 'open' | 'closed'): Promise<void> {
+/**
+ * Закрыть/переоткрыть issue — автор issue или владелец списка.
+ *
+ * ⚠️ ЗАКРЫТО — НЕ ОТВЕТ. «Сделали» и «не будем делать» выглядят одинаково (перечёркнутый
+ * номер), а значат противоположное: у первого работа позади, у второго её не будет.
+ * Поэтому у закрытия есть ИСХОД, отдельный от состояния, — как у всех, кого читали
+ * (GitHub `IssueStateReason`, SourceHut `TicketResolution`, «statuses/resolutions» у Jira).
+ *
+ * Дубликат — исход И связь сразу: причина без ссылки сообщает, что оригинал есть, и не
+ * говорит где. У GitHub в `CloseIssueInput` ровно та же пара — `stateReason: DUPLICATE`
+ * и `duplicateIssueId`.
+ */
+export async function setIssueStatus(
+  owner: string,
+  slug: string,
+  number: number,
+  status: 'open' | 'closed',
+  reason?: 'completed' | 'not_planned' | 'duplicate',
+  /** Номер задачи-оригинала — только при `duplicate`. */
+  duplicateOfNumber?: number,
+): Promise<void> {
   const session = await requireSession()
   const loaded = await loadIssue(owner, slug, number)
   if (!loaded) redirect(`/${owner}/${slug}`)
   const { tpl, iss } = loaded
   if (session.userId !== iss.authorId && session.userId !== tpl.ownerId) redirect(`/${owner}/${slug}/issues/${number}`)
+
+  // Оригинал ищем ПО НОМЕРУ и в ТОМ ЖЕ списке: чужая задача дубликатом не объявляется, и
+  // ссылка на неё из другого списка читалась бы как «иди туда, где тебе нечего делать».
+  let duplicateOfId: string | null = null
+  if (status === 'closed' && reason === 'duplicate' && duplicateOfNumber && duplicateOfNumber !== number) {
+    const [orig] = await db
+      .select({ id: issues.id })
+      .from(issues)
+      .where(and(eq(issues.templateId, tpl.id), eq(issues.number, duplicateOfNumber)))
+      .limit(1)
+    duplicateOfId = orig?.id ?? null
+  }
+
   await collabStore.setIssueStatus(iss.id, status)
+  // Исход живёт, пока задача закрыта. При переоткрытии он снимается — иначе открытая
+  // задача носила бы отметку «сделано». В ЛЕНТЕ он при этом остаётся навсегда: «закрыли
+  // как не будем делать» — часть разговора, а не текущее состояние (та же развилка, что
+  // у причины запирания).
+  await db
+    .update(issues)
+    .set({
+      closeReason: status === 'closed' ? (reason ?? null) : null,
+      duplicateOfId: status === 'closed' ? duplicateOfId : null,
+    })
+    .where(eq(issues.id, iss.id))
   // След в ленте — сразу за статусом (о порядке см. ./events).
-  await recordIssueEvent(db, { issueId: iss.id, actorId: session.userId, kind: status === 'closed' ? 'closed' : 'reopened' })
+  await recordIssueEvent(db, {
+    issueId: iss.id,
+    actorId: session.userId,
+    kind: status === 'closed' ? 'closed' : 'reopened',
+    closeReason: status === 'closed' ? (reason ?? null) : null,
+    duplicateOfId: status === 'closed' ? duplicateOfId : null,
+  })
 
   // ⚠️ Об этом узнают ТЕ ЖЕ, кто узнаёт о новой реплике. Закрытие — не мелочь оформления:
   // для автора это ответ «вопрос снят», для следящих — «тут больше ничего не будет».

@@ -33,6 +33,10 @@ vi.mock('@/shared/db', () => ({
   users: {},
   steps: {},
   templateVersions: {},
+  // Появился с исходом закрытия: путь подачи правки тянет побочные эффекты слияния, а те
+  // теперь читают задачи. Мок обязан отдавать всё, что импортирует граф, — иначе падает
+  // не проверка, а загрузка модуля.
+  issues: {},
 }))
 
 const { submitSuggestion } = await import('@/features/library/actions/suggestion-submit')
