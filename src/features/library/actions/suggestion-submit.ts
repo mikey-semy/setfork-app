@@ -129,19 +129,71 @@ export async function editSuggestionNote(suggestionId: string, note: string): Pr
   return { ok: true }
 }
 // ── Автор списка: отклонить предложение ──────────────────────────────
+/**
+ * ЗАКРЫТЬ ПРЕДЛОЖЕНИЕ — ВЛАДЕЛЕЦ, КОЛЛАБОРАНТ ИЛИ АВТОР.
+ *
+ * Раньше автор своё предложение закрыть не мог: право требовало владельца списка. При
+ * этом СВОЮ ЗАДАЧУ автор закрывает — расхождение внутри одной вертикали, и оно было наше,
+ * а не заимствованное.
+ *
+ * Решение владельца (03.09.2026): «давай реализуем как это принято в других проектах».
+ * У обоих проектов, чьи исходники читали, автор закрывает своё:
+ *  • Gitea, `routers/web/repo/issue_comment.go`, `NewComment`:
+ *    `CanWriteIssuesOrPulls(...) || (ctx.IsSigned && issue.IsPoster(ctx.Doer.ID))` —
+ *    причём правило ОДНО на задачи и правки, они у неё в одной таблице;
+ *  • GitLab, `app/policies/issuable_policy.rb`: `assignee_or_author` получает
+ *    `update_merge_request` и `reopen_merge_request`.
+ */
 export async function rejectSuggestion(suggestionId: string): Promise<void> {
   const session = await requireSession()
   const sug = await db.query.suggestions.findFirst({
     where: (s) => eq(s.id, suggestionId),
     with: { template: true },
   })
-  if (!sug || sug.status !== 'open' || sug.template.ownerId !== session.userId) return
+  if (!sug || sug.status !== 'open') return
+  const isAuthor = sug.authorId === session.userId
+  const canManage = sug.template.ownerId === session.userId || (await isCollaborator(sug.templateId, session.userId))
+  if (!isAuthor && !canManage) return
 
   await db
     .update(suggestions)
     .set({ status: 'rejected', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
+  // Себе не шлём — `notify` отсекает автора действия; закрывший своё уведомления не ждёт.
   await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_rejected', templateId: sug.templateId, suggestionId: sug.id })
+  revalidatePath('/', 'layout')
+}
+
+/**
+ * ПЕРЕОТКРЫТЬ — ТОЛЬКО ОТКЛОНЁННОЕ, И НИКОГДА ПРИНЯТОЕ.
+ *
+ * ⚠️ Граница взята не на глаз. У Gitea переоткрытие закрыто ровно для слитого:
+ * `!(issue.IsPull && issue.PullRequest.HasMerged)` в том же условии, что и права. GitHub
+ * в документации ведёт к другому действию — «revert»: для слитого предлагается обратная
+ * правка, а не возврат в открытые (источник слабее, это документация, не код).
+ *
+ * И это верно по сути: принятое уже в main. «Открыть заново» означало бы, что правку
+ * можно слить второй раз, а откат у нас отдельное действие и делает НОВОЕ предложение.
+ *
+ * Право — как у закрытия: автор, владелец, коллаборант. Запертое обсуждение переоткрытию
+ * не мешает: замок — про речь, а не про состояние (у GitLab он запрещает `create_note`
+ * и только его, у Gitea — «limit commenting abilities»).
+ */
+export async function reopenSuggestion(suggestionId: string): Promise<void> {
+  const session = await requireSession()
+  const sug = await db.query.suggestions.findFirst({
+    where: (s) => eq(s.id, suggestionId),
+    with: { template: true },
+  })
+  if (!sug || sug.status !== 'rejected') return
+  const isAuthor = sug.authorId === session.userId
+  const canManage = sug.template.ownerId === session.userId || (await isCollaborator(sug.templateId, session.userId))
+  if (!isAuthor && !canManage) return
+
+  await db
+    .update(suggestions)
+    .set({ status: 'open', resolvedAt: null })
+    .where(eq(suggestions.id, sug.id))
   revalidatePath('/', 'layout')
 }
 

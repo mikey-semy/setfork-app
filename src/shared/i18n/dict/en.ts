@@ -304,6 +304,8 @@ export const en = {
   prCommitMerge: 'merge',
   prDraft: 'draft',
   prReadyForReview: 'Ready for review',
+  prCloseMine: 'Close suggestion',
+  prReopen: 'Reopen',
   prBackToDraft: 'Convert to draft',
   prDraftHint: 'A draft cannot be merged — mark it ready when the work is done.',
   prReviewers: 'Reviewers',

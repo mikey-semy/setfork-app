@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import { Check, GitMerge, Lock, RefreshCw, X } from 'lucide-react'
+import { Check, GitMerge, Lock, RefreshCw, RotateCcw, X } from 'lucide-react'
 import { Alert } from '@/shared/ui/Alert'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { fill, t, type Lang, type TKey } from '@/shared/i18n'
-import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr, updateBranchFromMain } from '@/features/library/actions/suggestions'
+import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, reopenSuggestion, resolveBranchPr, updateBranchFromMain } from '@/features/library/actions/suggestions'
 import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { CommentCard } from '@/features/collab/CommentCard'
 import { CommentActions } from '@/features/collab/CommentActions'
@@ -48,6 +48,9 @@ export function SuggestionConversation({
   const { sug, path, comments, threadSteps, cmtR, sugR, canMerge, isOwner, meta, items, prs, blockReasons, timeline, sugPeople, threeWay, hasConflicts, branchBehind, branchMissing, isDraft } = data
   const locked = !!sug.lockedAt
   const lockReasonText = sug.lockReason ? t(`issue.lockReason.${sug.lockReason}` as TKey, lang) : ''
+  // Кто вправе менять состояние правки: ведущий раздел — и автор своей правки.
+  const canManageState = sug.branchRef ? canMerge : isOwner
+  const isAuthorOnly = session?.userId === sug.authorId && !canManageState
   return (
     <>
         {/* Заметка правки — первое сообщение обсуждения (как тело PR у GitHub), а
@@ -186,9 +189,42 @@ export function SuggestionConversation({
                 </SubmitButton>
               </form>
             )}
+            {/* «Отклонить» показываем здесь только тем, кто и так видит этот ряд;
+                автору — отдельным рядом ниже, чтобы не притворяться, будто он может
+                ещё и слить. */}
+            {canManageState && (
+              <form action={rejectSuggestion.bind(null, sug.id)}>
+                <SubmitButton variant="outline">
+                  <X size={14} /> {t('reject', lang)}
+                </SubmitButton>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* ⚠️ АВТОР ЗАКРЫВАЕТ СВОЁ ПРЕДЛОЖЕНИЕ. Раньше не мог: право требовало владельца
+            списка — при том, что СВОЮ ЗАДАЧУ автор закрывает. Расхождение было наше, а не
+            заимствованное: у Gitea правило одно на задачи и правки и включает автора
+            (`issue.IsPoster`), у GitLab автор получает `update_merge_request`. */}
+        {sug.status === 'open' && isAuthorOnly && (
+          <div className="mt-3 flex gap-2.5">
             <form action={rejectSuggestion.bind(null, sug.id)}>
               <SubmitButton variant="outline">
-                <X size={14} /> {t('reject', lang)}
+                <X size={14} /> {t('prCloseMine', lang)}
+              </SubmitButton>
+            </form>
+          </div>
+        )}
+
+        {/* Переоткрыть можно ТОЛЬКО отклонённое. Принятое уже в main: «открыть заново»
+            означало бы, что его можно слить второй раз, а возврат у нас — отдельное
+            действие и делает новое предложение. Та же граница у Gitea
+            (`!(issue.IsPull && issue.PullRequest.HasMerged)`). */}
+        {sug.status === 'rejected' && (canManageState || isAuthorOnly) && (
+          <div className="mt-3 flex gap-2.5">
+            <form action={reopenSuggestion.bind(null, sug.id)}>
+              <SubmitButton variant="outline">
+                <RotateCcw size={14} /> {t('prReopen', lang)}
               </SubmitButton>
             </form>
           </div>
