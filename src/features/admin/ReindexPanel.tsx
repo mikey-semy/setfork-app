@@ -5,7 +5,7 @@ import { Eraser, Sparkles } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { getEmbedSpaceInfo, getReindexStatus, purgeEmbeddings, setEmbedTarget, startReindex } from './actions'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { t, type Lang } from '@/shared/i18n'
+import { plural, t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { Badge } from '@/shared/ui/badge'
@@ -140,7 +140,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
                 </Tooltip>
               </div>
               <div className="mt-0.5 text-body-sm text-muted">
-                {space.vectorized}/{space.rows} {t('admin.rowsVectorized', lang)}
+                {space.vectorized}/{space.rows} {plural(space.rows, 'rows', lang)} {t('admin.vectorizedSuffix', lang)}
                 {space.index.at ? ` · ${t('admin.reindexed', lang)} ${new Date(space.index.at).toLocaleString()}` : ''}
               </div>
             </div>
