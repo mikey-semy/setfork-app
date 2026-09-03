@@ -296,6 +296,8 @@ export const ru: Record<DictKey, string> = {
   prCommitMerge: 'слияние',
   prDraft: 'черновик',
   prReadyForReview: 'Готово к ревью',
+  prCloseMine: 'Закрыть предложение',
+  prReopen: 'Открыть заново',
   prBackToDraft: 'Вернуть в черновик',
   prDraftHint: 'Черновик нельзя слить — отметь готовность, когда предложение дописано.',
   prReviewers: 'Рецензенты',
