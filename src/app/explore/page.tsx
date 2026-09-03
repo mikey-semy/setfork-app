@@ -12,6 +12,7 @@ import { searchPeople } from '@/features/profile/search'
 import { ExploreNav } from '@/widgets/explore/ExploreNav'
 import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
+import { pageMeta } from '@/shared/seo/page-meta'
 
 // Витрина-открытие (не поиск!). Соседние разделы — теги, популярное и подборки —
 // живут по СВОИМ адресам (/tags, /trending, /collections), как у GitHub; здесь
@@ -30,7 +31,7 @@ export async function generateMetadata() {
   // Canonical у обзора — по той же причине, что у корня: страница принимает параметры
   // (прежние `?tab=` перенаправляет middleware), и каждый из них без этой строки
   // выглядел бы для обходчика отдельной страницей с тем же содержимым.
-  return { title: t('explore', lang), alternates: { canonical: '/explore' } }
+  return pageMeta({ title: t('explore', lang), description: t('heroSub', lang), path: '/explore' })
 }
 
 export default async function ExplorePage() {

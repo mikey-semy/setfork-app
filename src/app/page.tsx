@@ -6,6 +6,7 @@ import { buttonClass } from '@/shared/ui/button-style'
 import { HeroSearch } from '@/features/library/HeroSearch'
 import { sampleListTitles } from '@/features/library/sample-titles'
 import { Dashboard } from '@/widgets/Dashboard'
+import { pageMeta } from '@/shared/seo/page-meta'
 
 // Запасные подсказки — только если публичных списков ещё нет (пустая база/стенд).
 const FALLBACK_CHIPS = [
@@ -34,7 +35,11 @@ export async function generateMetadata() {
   // Canonical у корня. Его не было: адрес отдаётся и как `/`, и с любым мусорным
   // параметром (метки рекламных переходов, `?ref=`), и без канонического указания
   // обходчик считает их разными страницами с одинаковым содержимым.
-  return { title: { absolute: `SetFork — ${t('homeTagline', lang)}` }, alternates: { canonical: '/' } }
+  // ⚠️ Заголовок ЗДЕСЬ был локализован, а карточка наследовалась от корня — английская.
+  // То есть у русского читателя вкладка называлась по-русски, а ссылка, отправленная им
+  // в мессенджер, разворачивалась по-английски (замер 03.09.2026).
+  const title = `SetFork — ${t('homeTagline', lang)}`
+  return { ...pageMeta({ title, description: t('heroSub', lang), path: '/' }), title: { absolute: title } }
 }
 
 export default async function HomePage() {

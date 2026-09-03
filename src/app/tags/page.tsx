@@ -7,10 +7,11 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE } from '@/shared/ui/control'
 import { ExploreNav } from '@/widgets/explore/ExploreNav'
+import { pageMeta } from '@/shared/seo/page-meta'
 
 export async function generateMetadata() {
   const lang = await getLang()
-  return { title: t('tags', lang) }
+  return pageMeta({ title: t('tags', lang), description: t('tags.browseListsByTag', lang), path: '/tags' })
 }
 
 // Популярные теги считаются по реально видимым публичным спискам. Реестр тегов

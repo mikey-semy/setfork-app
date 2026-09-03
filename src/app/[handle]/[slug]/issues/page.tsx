@@ -26,10 +26,11 @@ import { PAGE } from '@/shared/ui/control'
 import { isFeatureEnabled } from '@/core'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
+import { pageMeta } from '@/shared/seo/page-meta'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
-  return { title: `${t('issuesTab', lang)} · ${handle}/${slug}` }
+  return pageMeta({ title: `${t('issuesTab', lang)} · ${handle}/${slug}`, path: `/${handle}/${slug}/issues` })
 }
 
 export default async function IssuesPage({
