@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, starFolderItems, stars, templates, users } from '@/shared/db'
 import { feedWindow } from '@/shared/lib/paging'
 import type { FeedItem } from './list'
@@ -50,6 +50,18 @@ export interface ProfileListFilter {
    */
   catalogId?: string | null
   /**
+   * Отбор ПО СПИСКУ ID — сверх остальных условий, а не вместо них.
+   *
+   * Нужен сохранённым запросам («Мои списки», `?sq=`): их правила считаются отдельным
+   * механизмом и отдают готовый набор id. Без этого поля страница, перешедшая на общую
+   * выборку, ТИХО перестала бы применять сохранённый запрос — набор бы просто не сузился,
+   * и человек увидел бы всю библиотеку вместо своей выборки.
+   *
+   * Пустой массив — это «ничего не подошло», а не «фильтра нет»: `undefined` и `[]` здесь
+   * разные ответы.
+   */
+  ids?: string[]
+  /**
    * id папки звёзд. Только для `starred`. Разрешает имя в id ВЫЗЫВАЮЩИЙ — у него список
    * папок уже загружен для карточек, и второй запрос за тем же id блокировал бы пару
    * «строки + счёт». Там же живёт и правило «неизвестное имя фильтром не считается»:
@@ -75,6 +87,7 @@ const conditions = (f: ProfileListFilter): SQL[] => {
   if (f.tab === 'lists') c.push(eq(templates.ownerId, f.ownerId))
   const q = f.query?.trim()
   if (q) c.push(searchLike(q))
+  if (f.ids) c.push(f.ids.length ? inArray(templates.id, f.ids) : sql`false`)
   if (f.tab === 'lists' && f.listType && f.listType !== 'all') {
     // Форк — это происхождение, а не видимость: их нельзя смешивать в одном поле фильтра.
     if (f.listType === 'forks') c.push(eq(templates.origin, 'forked'))
