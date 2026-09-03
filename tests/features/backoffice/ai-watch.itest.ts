@@ -24,12 +24,31 @@ const { channelDown, channelState } = await import('@/features/backoffice/ai-wat
 const { ERROR_STREAK_TRIP } = await import('@/shared/agents/canary')
 
 /** Вызов модели в журнале. Порядок задаётся сдвигом времени: считаем именно «подряд с конца». */
-const call = async (outcome: string, opts: { minutesAgo?: number; feature?: string; model?: string; refType?: string; actor?: 'user' | 'company' } = {}) => {
+/**
+ * ⚠️ «ЧАС НАЗАД» — ЭТО НЕ «СЕГОДНЯ». Тесты про счёт за календарный день ставили вызовы
+ * относительно ТЕКУЩЕГО момента (`minutesAgo`), а день база отсчитывает от своей полуночи
+ * (`date_trunc('day', now())`). В первый час суток «час назад» попадает во ВЧЕРА, и счёт
+ * дня выходил нулевым: 03.09.2026 в 00:27 UTC прогон падал на `{calls: 0, failed: 0}`
+ * вместо `{calls: 2, failed: 1}` — и падал бы каждую ночь в этот час, на любой ветке.
+ *
+ * Поэтому у дня своя привязка: `inDay` ставит вызов ВНУТРЬ нужных суток, отсчитывая от их
+ * начала, а не от «сейчас». `minutesAgo` остаётся там, где смысл именно в свежести
+ * (серия отказов, окно молчания) — там час дня ни на что не влияет.
+ */
+const call = async (
+  outcome: string,
+  opts: { minutesAgo?: number; inDay?: number; feature?: string; model?: string; refType?: string; actor?: 'user' | 'company' } = {},
+) => {
   const [row] = await db
     .insert(aiUsage)
     .values({ feature: (opts.feature ?? 'refine') as 'refine', model: opts.model ?? 'openrouter/auto', outcome, actor: opts.actor ?? 'company', ...(opts.refType ? { refType: opts.refType } : {}) } as never)
     .returning({ id: aiUsage.id })
-  if (opts.minutesAgo) {
+  if (opts.inDay !== undefined) {
+    // Полчаса после полуночи ТЕХ суток: внутри окна `callsOnDay` при любом часе прогона.
+    await db.execute(
+      sql`update ${aiUsage} set created_at = date_trunc('day', now()) - (${opts.inDay}::int * interval '1 day') + interval '30 minutes' where id = ${row.id}`,
+    )
+  } else if (opts.minutesAgo) {
     await db.execute(sql`update ${aiUsage} set created_at = now() - (${opts.minutesAgo}::int * interval '1 minute') where id = ${row.id}`)
   }
 }
@@ -201,9 +220,9 @@ describe('сторож канала к модели', () => {
 
   it('счёт за календарный день отделяет неудачи от успешных вызовов', async () => {
     const { callsOnDay } = await import('@/features/backoffice/ai-watch')
-    await call('error', { minutesAgo: 5 })
-    await call('ok', { minutesAgo: 5 })
-    await call('timeout', { minutesAgo: 60 * 30 }) // позавчерашний — в счёт дня не идёт
+    await call('error', { inDay: 0 })
+    await call('ok', { inDay: 0 })
+    await call('timeout', { inDay: 2 }) // позавчерашний — в счёт дня не идёт
 
     const today = await callsOnDay(0)
 
@@ -280,15 +299,15 @@ describe('служебные отметки не путаются с вызов�
 describe('день компании и чужие вызовы', () => {
   it('пользовательские вызовы в счёт дня не идут', async () => {
     const { callsOnDay } = await import('@/features/backoffice/ai-watch')
-    for (let i = 0; i < 5; i++) await call('error', { minutesAgo: 60, actor: 'user' })
+    for (let i = 0; i < 5; i++) await call('error', { inDay: 0, actor: 'user' })
 
     expect(await callsOnDay(0)).toEqual({ calls: 0, failed: 0 })
   })
 
   it('вызовы компании идут', async () => {
     const { callsOnDay } = await import('@/features/backoffice/ai-watch')
-    await call('ok', { minutesAgo: 60 })
-    await call('error', { minutesAgo: 60 })
+    await call('ok', { inDay: 0 })
+    await call('error', { inDay: 0 })
 
     expect(await callsOnDay(0)).toEqual({ calls: 2, failed: 1 })
   })
