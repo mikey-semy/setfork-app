@@ -101,6 +101,14 @@ export async function addIssueComment(formData: FormData): Promise<void> {
     canWriteToFeature(tpl, 'issues', { isOwner: isOwnerC, isCollaborator: await isCollaborator(tpl.id, session.userId) })
   if (!canComment) redirect(`/${owner}/${slug}`)
 
+  // ⚠️ ЗАПЕРТОЕ ОБСУЖДЕНИЕ ПРОВЕРЯЕТСЯ ЗДЕСЬ, а не только пряча форму. Форма — это
+  // вежливость, а не запрет: адрес действия известен, и отправить в него можно из чего
+  // угодно. Пускаем тех же, кто может запирать: владельца и коллаборантов.
+  if (iss.lockedAt) {
+    const canManage = session.userId === tpl.ownerId || (await isCollaborator(tpl.id, session.userId))
+    if (!canManage) redirect(path)
+  }
+
   if (!(await underCommentRate(session.userId, tpl.id))) redirect(`${path}?e=rate`)
 
   await collabStore.addIssueComment(iss.id, session.userId, body)
@@ -141,6 +149,60 @@ export async function setIssueStatus(owner: string, slug: string, number: number
 
   revalidatePath(`/${owner}/${slug}/issues/${number}`)
   revalidatePath(`/${owner}/${slug}/issues`)
+}
+
+/**
+ * ЗАПЕРЕТЬ ИЛИ ОТПЕРЕТЬ ОБСУЖДЕНИЕ ЗАДАЧИ — владелец списка или коллаборант.
+ *
+ * ⚠️ ЗАПЕРТО ≠ ЗАКРЫТО, и это не игра словами. Спор уходит в сторону и при нерешённой
+ * задаче; закрывать её ради тишины значит записать «сделано» там, где не сделано. Тот же
+ * довод, по которому запирание отдельно от закрытия у предложений.
+ *
+ * Причина — из перечня, а не свободной строкой (см. issueLockReason в схеме): у Gitea она
+ * настраивается инстансом, и её же исходники честно называют цену — «customized reasons
+ * are not translatable… we do not do validation». У нас двуязычный интерфейс и узда на
+ * непереводимые строки.
+ *
+ * Автор задачи запереть её НЕ может, хотя закрыть — может. Закрытие — про свою задачу
+ * («вопрос снят»), запирание — про чужую речь, и такое право у владельца раздела.
+ */
+export async function setIssueLocked(
+  owner: string,
+  slug: string,
+  number: number,
+  locked: boolean,
+  reason?: 'off_topic' | 'too_heated' | 'resolved' | 'spam',
+): Promise<void> {
+  const session = await requireSession()
+  const loaded = await loadIssue(owner, slug, number)
+  if (!loaded) redirect(`/${owner}/${slug}`)
+  const { tpl, iss } = loaded
+  const path = `/${owner}/${slug}/issues/${number}`
+  const canManage = session.userId === tpl.ownerId || (await isCollaborator(tpl.id, session.userId))
+  if (!canManage) redirect(path)
+  // Повтор того же состояния — не ошибка, но и записи в ленту не заслуживает: иначе
+  // двойное нажатие оставляет два одинаковых следа (так же поступает Gitea).
+  if (!!iss.lockedAt === locked) redirect(path)
+
+  await db
+    .update(issues)
+    .set({
+      lockedAt: locked ? new Date() : null,
+      lockedById: locked ? session.userId : null,
+      lockReason: locked ? (reason ?? null) : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(issues.id, iss.id))
+  await recordIssueEvent(db, {
+    issueId: iss.id,
+    actorId: session.userId,
+    kind: locked ? 'locked' : 'unlocked',
+    lockReason: locked ? (reason ?? null) : null,
+  })
+
+  revalidatePath(path)
+  revalidatePath(`/${owner}/${slug}/issues`)
+  redirect(path)
 }
 
 /** Изменить метки issue — владелец списка ИЛИ коллаборатор (как assignees/milestones). */

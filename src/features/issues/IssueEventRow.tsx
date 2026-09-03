@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CircleDot, CircleCheckBig, GitMerge } from 'lucide-react'
+import { CircleDot, CircleCheckBig, GitMerge, Lock, LockOpen } from 'lucide-react'
 import { fill, t, type Lang, type TKey } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import type { IssueEvent } from './events'
@@ -16,6 +16,8 @@ const KIND: Record<IssueEvent['kind'], { icon: typeof CircleDot; tone: string; l
   closed: { icon: CircleCheckBig, tone: 'text-danger', label: 'issue.eventClosed' },
   reopened: { icon: CircleDot, tone: 'text-ok', label: 'issue.eventReopened' },
   closed_by_suggestion: { icon: GitMerge, tone: 'text-accent', label: 'issue.eventClosedBySuggestion' },
+  locked: { icon: Lock, tone: 'text-warn', label: 'issue.eventLocked' },
+  unlocked: { icon: LockOpen, tone: 'text-ink-2', label: 'issue.eventUnlocked' },
 }
 
 export function IssueEventRow({ event, listPath, lang }: { event: IssueEvent; listPath: string; lang: Lang }) {
@@ -38,6 +40,12 @@ export function IssueEventRow({ event, listPath, lang }: { event: IssueEvent; li
                   записей: тогда показываем общее слово, а ссылка всё равно ведёт куда надо. */}
               {number ? fill('issue.suggestionNumber', lang, { n: String(number) }) : t('issue.suggestionOne', lang)}
             </Link>
+          </>
+        ) : event.kind === 'locked' && event.lockReason ? (
+          // Причина названа прямо в ленте: «запер обсуждение» без причины читается как
+          // произвол, а причина — это ответ на вопрос «за что».
+          <>
+            {t('issue.eventLockedAs', lang)} <span className="font-medium text-ink">{t(`issue.lockReason.${event.lockReason}` as TKey, lang)}</span>
           </>
         ) : (
           t(spec.label, lang)
