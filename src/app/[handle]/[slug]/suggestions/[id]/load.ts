@@ -33,6 +33,9 @@ import { getWatchCount, getWatchState } from '@/features/watch/queries'
 // Почему merge не прошёл — по коду из ?e=. Тексты в словаре: это то, что человек
 // читает, а не техническая метка.
 const MERGE_ERR: Record<string, TKey> = {
+  // Ответ не ушёл, потому что обсуждение заперли: раньше это был молчаливый `return`,
+  // и человек не получал вообще ничего (см. actions/suggestion-comments).
+  locked: 'pr.lockedRefused',
   conflict: 'prMergeErrConflict',
   'nothing-to-merge': 'prMergeErrNothing',
   'not-linear': 'prMergeErrNotLinear',

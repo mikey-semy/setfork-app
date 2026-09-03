@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { Check, GitMerge, RefreshCw, X } from 'lucide-react'
+import { Check, GitMerge, Lock, RefreshCw, X } from 'lucide-react'
 import { Alert } from '@/shared/ui/Alert'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
-import { t, type Lang } from '@/shared/i18n'
+import { fill, t, type Lang, type TKey } from '@/shared/i18n'
 import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr, updateBranchFromMain } from '@/features/library/actions/suggestions'
 import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { CommentCard } from '@/features/collab/CommentCard'
@@ -46,6 +46,8 @@ export function SuggestionConversation({
   reviewPanel: ReactNode
 }) {
   const { sug, path, comments, threadSteps, cmtR, sugR, canMerge, isOwner, meta, items, prs, blockReasons, timeline, sugPeople, threeWay, hasConflicts, branchBehind, branchMissing, isDraft } = data
+  const locked = !!sug.lockedAt
+  const lockReasonText = sug.lockReason ? t(`issue.lockReason.${sug.lockReason}` as TKey, lang) : ''
   return (
     <>
         {/* Заметка правки — первое сообщение обсуждения (как тело PR у GitHub), а
@@ -214,7 +216,20 @@ export function SuggestionConversation({
 
         {reviewPanel}
 
-        {session ? (
+        {/* ⚠️ ЗАПЕРТО — ГОВОРИМ ОБ ЭТОМ. Раньше форма показывалась всегда, а экшен молча
+            возвращался: человек писал ответ, жал кнопку и не получал ничего. Плашка
+            называет причину, форма убирается — как на странице задачи. */}
+        {locked && (
+          <Alert variant="warn" icon={Lock} className="mt-4">
+            {/* ⚠️ ТЕКСТ СВОЙ, А НЕ ИЗ ЗАДАЧ. Там сказано «отвечать могут владелец и
+                участники с правом записи» — у правок это НЕПРАВДА: замок не обходит
+                никто, включая того, кто его повесил (см. actions/suggestion-comments).
+                Поймано живым прогоном: плашка обещала владельцу то, чего он не может. */}
+            {lockReasonText ? fill('pr.lockedNotice', lang, { reason: lockReasonText }) : t('pr.lockedNoticePlain', lang)}
+          </Alert>
+        )}
+
+        {session && !locked ? (
           <div className={cardClass({ className: 'mt-4' })}>
             <form action={addSuggestionComment} className="flex flex-col gap-3">
               <input type="hidden" name="suggestionId" value={sug.id} />

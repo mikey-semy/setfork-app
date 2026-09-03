@@ -122,7 +122,15 @@ export const issueStatus = pgEnum('issue_status', ['open', 'closed'])
  * причину на английском экране — ровно то, от чего мы уже уходили в И1/И2. Поэтому
  * перечень: он переводится, проверяется и показывается значком.
  */
-export const issueLockReason = pgEnum('issue_lock_reason', ['off_topic', 'too_heated', 'resolved', 'spam'])
+/**
+ * ⚠️ ИМЯ ТИПА В БАЗЕ ИСТОРИЧЕСКОЕ. Перечень завёлся вместе с запиранием ЗАДАЧ, а теперь
+ * тем же набором пользуются и предложения: причины у них те же, и разводить два
+ * одинаковых перечня значило бы завести расхождение на ровном месте. Переименовать сам
+ * тип в базе (`issue_lock_reason` → `lock_reason`) через `db:push` нельзя без риска:
+ * он не умеет переименование и предложил бы удалить тип вместе с колонками, которые на
+ * нём стоят. Цена красивого имени — потерянные причины на проде; имя того не стоит.
+ */
+export const lockReasonEnum = pgEnum('issue_lock_reason', ['off_topic', 'too_heated', 'resolved', 'spam'])
 
 // Обратная связь с сайта: категория и статус обработки админом.
 export const feedbackCategory = pgEnum('feedback_category', ['bug', 'idea', 'content', 'legal', 'other'])
@@ -1163,6 +1171,9 @@ export const suggestions = pgTable('suggestions', {
    */
   lockedAt: timestamp('locked_at', { withTimezone: true }),
   lockedById: uuid('locked_by_id').references(() => users.id, { onDelete: 'set null' }),
+  // Причина — тем же перечнем, что у задач (см. lockReasonEnum). Замок без причины
+  // читается как произвол: человек видит, что ему закрыли рот, и не знает за что.
+  lockReason: lockReasonEnum('lock_reason'),
   note: text('note').notNull().default(''),
   baseVersion: integer('base_version').notNull(),
   items: jsonb('items').notNull().default([]).$type<ProposedItem[]>(),
@@ -1364,7 +1375,7 @@ export const issues = pgTable(
     // ради тишины — подмена (тот же довод, что у предложений, см. lockedAt там же).
     lockedAt: timestamp('locked_at', { withTimezone: true }),
     lockedById: uuid('locked_by_id').references(() => users.id, { onDelete: 'set null' }),
-    lockReason: issueLockReason('lock_reason'),
+    lockReason: lockReasonEnum('lock_reason'),
     status: issueStatus('status').notNull().default('open'),
     labels: jsonb('labels').notNull().default([]).$type<string[]>(),
     milestoneId: uuid('milestone_id').references(() => milestones.id, { onDelete: 'set null' }),
@@ -1464,7 +1475,7 @@ export const issueEvents = pgTable(
     // Причина запирания остаётся в ленте НАВСЕГДА, даже когда обсуждение отперли: «за что
     // закрыли рот» — это часть разговора, а не текущее состояние. Так же у Gitea, где
     // причина лежит в записи ленты, а не в поле задачи.
-    lockReason: issueLockReason('lock_reason'),
+    lockReason: lockReasonEnum('lock_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   // Тот же порядок, что у реплик: лента читается с начала, события в неё вклеиваются
