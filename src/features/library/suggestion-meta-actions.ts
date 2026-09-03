@@ -79,13 +79,22 @@ export async function toggleClosingRef(suggestionId: string, number: number): Pr
  * Отдельно от закрытия правки: спор может уйти в сторону, когда решение уже
  * принято, и закрывать правку ради тишины — подмена. Заперто ≠ решено.
  */
-export async function setSuggestionLocked(suggestionId: string, locked: boolean): Promise<void> {
+export async function setSuggestionLocked(
+  suggestionId: string,
+  locked: boolean,
+  /** Причина — из перечня, как у задач: замок без причины читается как произвол. */
+  reason?: 'off_topic' | 'too_heated' | 'resolved' | 'spam',
+): Promise<void> {
   const loaded = await loadForManage(suggestionId)
   if (!loaded) return
   const { sug, session } = loaded
   await db
     .update(suggestions)
-    .set({ lockedAt: locked ? new Date() : null, lockedById: locked ? session.userId : null })
+    .set({
+      lockedAt: locked ? new Date() : null,
+      lockedById: locked ? session.userId : null,
+      lockReason: locked ? (reason ?? null) : null,
+    })
     .where(eq(suggestions.id, sug.id))
   await revalidateSuggestion(sug.template.ownerId, sug.template.slug, sug.number ?? sug.id)
 }

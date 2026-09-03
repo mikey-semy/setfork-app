@@ -180,6 +180,13 @@ export function SuggestionAside({
               suggestionId={sug.id}
               locked={!!sug.lockedAt}
               labels={{ lock: t('prLock', lang), unlock: t('prUnlock', lang), hint: t('prLockHint', lang) }}
+              // Подписи причин — из того же словаря, что у задач: перечень общий.
+              reasonLabels={{
+                off_topic: t('issue.lockReason.off_topic', lang),
+                too_heated: t('issue.lockReason.too_heated', lang),
+                resolved: t('issue.lockReason.resolved', lang),
+                spam: t('issue.lockReason.spam', lang),
+              }}
             />
           </AsideCard>
         )}
