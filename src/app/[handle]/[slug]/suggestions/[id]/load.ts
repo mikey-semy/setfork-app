@@ -74,7 +74,7 @@ export async function loadSuggestionPage({
   owner: string
   slug: string
   id: string
-  sp: { e?: string; tab?: string; view?: string; commit?: string; after?: string; before?: string }
+  sp: { e?: string; tab?: string; view?: string; commit?: string; after?: string; before?: string; blocked?: string; step?: string }
   lang: Lang
   session: { userId: string; handle: string } | null
 }) {
@@ -183,6 +183,10 @@ export async function loadSuggestionPage({
   const hasConflicts = !!threeWay && (threeWay.conflicts.length > 0 || threeWay.metaConflicts.length > 0)
 
   const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? 'prMergeErrGeneric') : null
+  // Отказ стража исполняемых команд приходит теми же параметрами, что у редактора
+  // списка: причина и номер шага. Показывается своим текстом — общий «не удалось»
+  // тут ничего не объясняет, а страж как раз и заводился, чтобы объяснять.
+  const destructiveBlock = sp.blocked ? { reason: sp.blocked, step: sp.step ?? '?' } : null
 
   // Участники для @mention: автор правки + комментаторы, без дублей.
   const sugSeen = new Set<string>()
@@ -398,6 +402,7 @@ export async function loadSuggestionPage({
     branchBehind,
     hasConflicts,
     mergeErr,
+    destructiveBlock,
     sugPeople,
     fmt,
     isDraft,

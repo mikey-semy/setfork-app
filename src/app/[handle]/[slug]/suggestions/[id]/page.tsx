@@ -30,7 +30,7 @@ export default async function SuggestionThreadPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string; id: string }>
-  searchParams: Promise<{ e?: string; tab?: string; view?: string; commit?: string }>
+  searchParams: Promise<{ e?: string; tab?: string; view?: string; commit?: string; blocked?: string; step?: string }>
 }) {
   const [{ handle: owner, slug, id }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const loaded = await loadSuggestionPage({ owner, slug, id, sp, lang, session })
