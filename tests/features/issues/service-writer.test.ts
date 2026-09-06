@@ -17,7 +17,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * уведомления и след в ленте у службы ровно те же, что у человека, — в том и смысл
  * общего пути.
  */
-const h = vi.hoisted(() => ({ rateKeys: [] as string[], subscribed: [] as string[], notified: [] as string[] }))
+const h = vi.hoisted(() => ({
+  rateKeys: [] as string[],
+  subscribed: [] as string[],
+  notified: [] as string[],
+  mentionTexts: [] as string[],
+}))
 
 const TPL = { id: 'l1', ownerId: 'owner', visibility: 'public', status: 'published', moderation: 'ok', issuesEnabled: true }
 
@@ -33,7 +38,7 @@ vi.mock('@/core', () => ({ canWriteToFeature: () => true, isFeatureEnabled: () =
 vi.mock('@/features/collab/queries', () => ({ isCollaborator: async () => false }))
 vi.mock('@/features/notifications/notify', () => ({
   notifyMany: async (_ids: string[], p: { type: string }) => void h.notified.push(p.type),
-  notifyMentions: async () => {},
+  notifyMentions: async (p: { text: string }) => void h.mentionTexts.push(p.text),
 }))
 vi.mock('@/features/watch/subscribe', () => ({ subscribeToList: async (id: string) => void h.subscribed.push(id) }))
 vi.mock('@/features/watch/queries', () => ({ getWatcherIds: async () => [] }))
@@ -46,10 +51,13 @@ vi.mock('@/features/issues/events', () => ({ recordIssueEvent: async () => {} })
 
 const { openIssueOn } = await import('@/features/issues/core')
 
-const open = (writer: 'person' | 'service') =>
-  openIssueOn(TPL as never, 'gardener', { title: 'битые ссылки' }, writer)
+/** Тело садовника — ЧУЖОЙ текст: битые ссылки, взятые из списка его автора. */
+const LINK_WITH_HANDLE = 'Мёртвые ссылки:\n- https://site.example/p?user=@alice'
 
-beforeEach(() => Object.assign(h, { rateKeys: [], subscribed: [], notified: [] }))
+const open = (writer: 'person' | 'service') =>
+  openIssueOn(TPL as never, 'gardener', { title: 'битые ссылки', body: LINK_WITH_HANDLE }, writer)
+
+beforeEach(() => Object.assign(h, { rateKeys: [], subscribed: [], notified: [], mentionTexts: [] }))
 
 describe('служебный писатель', () => {
   it('⚠️ личный порог службе не считают — иначе ночной обход обрежется на двадцатом списке', async () => {
@@ -70,8 +78,22 @@ describe('служебный писатель', () => {
     expect(h.subscribed).toEqual(['l1'])
   })
 
-  it('уведомления одинаковы: владелец узнаёт о задаче, кто бы её ни завёл', async () => {
+  it('уведомления о самой задаче одинаковы: владелец узнаёт, кто бы её ни завёл', async () => {
     await open('service')
     expect(h.notified).toContain('issue_new')
+  })
+
+  it('⚠️ служба не рассылает УПОМИНАНИЙ — иначе автор списка пингует кого угодно от её имени', async () => {
+    // Тело садовника собрано из чужого содержимого: битые ссылки берутся из списка,
+    // то есть текст выбирает его автор. Адрес `…?user=@alice` проходит разбор упоминаний
+    // (перед `@` стоит `=`, а не `/`), и рассылка пошла бы живым людям от имени службы.
+    await open('service')
+    expect(h.mentionTexts, 'тело службы не должно попадать в разбор упоминаний').toEqual([])
+  })
+
+  it('у человека упоминания работают как работали', async () => {
+    await open('person')
+    expect(h.mentionTexts).toHaveLength(1)
+    expect(h.mentionTexts[0]).toContain('@alice')
   })
 })
