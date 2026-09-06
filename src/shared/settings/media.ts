@@ -92,9 +92,6 @@ export async function isS3Configured(): Promise<boolean> {
   return Boolean(s.s3Endpoint && s.s3Bucket && s.s3AccessKey && s.s3SecretKey)
 }
 
-/** «sk-…abcd» — для показа секрета в UI без раскрытия. */
-export function maskSecret(v: string): string {
-  if (!v) return ''
-  if (v.length <= 8) return '•'.repeat(6)
-  return `${v.slice(0, 4)}${'•'.repeat(8)}${v.slice(-4)}`
-}
+/** Маска секрета — общая на проект (`shared/lib/mask-secret`), НИЧЕГО не раскрывает.
+ *  Прежняя копия здесь показывала края и длину; разбор — в общем модуле. */
+export { maskSecret } from '@/shared/lib/mask-secret'

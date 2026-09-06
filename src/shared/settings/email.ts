@@ -54,12 +54,9 @@ export async function emailEnabled(): Promise<boolean> {
   return Boolean((await getEmailSettings()).host)
 }
 
-/** «ab••••••••yz» — для показа секрета в UI без раскрытия. */
-export function maskSecret(v: string): string {
-  if (!v) return ''
-  if (v.length <= 8) return '•'.repeat(6)
-  return `${v.slice(0, 2)}${'•'.repeat(8)}${v.slice(-2)}`
-}
+/** Маска секрета — общая на проект (`shared/lib/mask-secret`), НИЧЕГО не раскрывает.
+ *  Прежняя копия здесь показывала края и длину; разбор — в общем модуле. */
+export { maskSecret } from '@/shared/lib/mask-secret'
 
 /**
  * УМЕЕТ ЛИ ЭТОТ СТЕНД ОТПРАВЛЯТЬ ПИСЬМА.

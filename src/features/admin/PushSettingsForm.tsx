@@ -3,6 +3,7 @@
 import { t, type Lang } from '@/shared/i18n'
 import { useState } from 'react'
 import { KeyRound } from 'lucide-react'
+import { ActionResult } from '@/shared/ui/ActionResult'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import { useConfirm } from '@/shared/ui/use-confirm'
@@ -21,7 +22,9 @@ export function PushSettingsForm({ lang, v }: { lang: Lang; v: PushFormValues })
   const ru = lang === 'ru'
   const [pub, setPub] = useState(v.publicKey)
   const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
+  // Не строка, а исход + текст: до этого успех и отказ показывались ОДИНАКОВО,
+  // нейтральным цветом — человек не отличал «сгенерировано» от «не вышло».
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const { confirm, confirmDialog } = useConfirm()
 
   async function gen() {
@@ -42,10 +45,10 @@ export function PushSettingsForm({ lang, v }: { lang: Lang; v: PushFormValues })
       const r = await generateVapidKeys()
       if ('ok' in r) {
         setPub(r.publicKey)
-        setMsg(ru ? 'Ключи сгенерированы ✅' : 'Keys generated ✅')
-      } else setMsg(r.error)
+        setMsg({ ok: true, text: ru ? 'Ключи сгенерированы' : 'Keys generated' })
+      } else setMsg({ ok: false, text: r.error })
     } catch {
-      setMsg(ru ? 'Ошибка.' : 'Failed.')
+      setMsg({ ok: false, text: ru ? 'Ошибка.' : 'Failed.' })
     } finally {
       setBusy(false)
     }
@@ -73,7 +76,7 @@ export function PushSettingsForm({ lang, v }: { lang: Lang; v: PushFormValues })
           {busy ? <Spinner size="md" /> : <KeyRound size={14} />}
           {pub ? (ru ? 'Перегенерировать ключи' : 'Regenerate keys') : ru ? 'Сгенерировать ключи' : 'Generate keys'}
         </button>
-        {msg && <span className="text-body-sm text-ink-2">{msg}</span>}
+        {msg && <ActionResult ok={msg.ok}>{msg.text}</ActionResult>}
       </div>
 
       <form action={setPushSubject} className="flex flex-col gap-2 border-t border-border pt-4">
