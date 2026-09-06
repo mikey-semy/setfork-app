@@ -422,6 +422,9 @@ export async function loadIssue(owner: string, slug: string, number: number) {
       id: issues.id,
       authorId: issues.authorId,
       status: issues.status,
+      // Исход нужен там же, где статус: повторное закрытие УЖЕ закрытой задачи не должно
+      // писать событие заново, а сказать в ответе «уже закрыта как…» можно только зная чем.
+      closeReason: issues.closeReason,
       title: issues.title,
       body: issues.body,
       // Запертость нужна КАЖДОМУ пишущему действию: форму можно обойти, адрес известен.

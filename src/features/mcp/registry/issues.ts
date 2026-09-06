@@ -46,11 +46,12 @@ export function registerIssues({ readTool, writeTool }: ToolKit) {
     {
       title: 'Read an issue with its thread',
       description:
-        'Read one issue: title, body, state, labels and the THREAD — replies and events (closed, reopened, locked, closed by a suggestion) in one chronological list. If the discussion is locked, the answer says so and why, so you know before writing.',
+        'Read one issue: title, body, state, labels and the THREAD — replies and events (closed, reopened, locked, closed by a suggestion) in one chronological list. Long threads come in pages: if the answer carries a nextCursor, call again with it to get the rest. If the discussion is locked, the answer says so and why, so you know before writing.',
       inputSchema: {
         list,
         number,
         limit: z.number().int().min(1).max(200).optional().describe('Max replies to include (default 50)'),
+        cursor: z.string().optional().describe('Continue a long thread: pass the nextCursor from the previous get_issue answer'),
       },
     },
     async (userId, args) => {

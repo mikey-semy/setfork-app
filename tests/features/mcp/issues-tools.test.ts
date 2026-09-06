@@ -29,6 +29,8 @@ const h = vi.hoisted(() => ({
   notified: [] as string[],
   originals: [] as { id: string }[],
   locked: null as Date | null,
+  issueStatus: 'open' as 'open' | 'closed',
+  issueCloseReason: null as string | null,
   canView: true,
 }))
 
@@ -72,7 +74,10 @@ vi.mock('@/features/collab-store/store', () => ({
 }))
 vi.mock('@/features/issues/queries', () => ({
   getListLabels: async () => [],
-  loadIssue: async () => ({ tpl: TPL, iss: { id: 'i1', authorId: 'author', status: 'open', title: 'т', body: 'б', lockedAt: h.locked } }),
+  loadIssue: async () => ({
+    tpl: TPL,
+    iss: { id: 'i1', authorId: 'author', status: h.issueStatus, closeReason: h.issueCloseReason, title: 'т', body: 'б', lockedAt: h.locked },
+  }),
   getIssue: async () => null,
   getIssues: async () => [],
   getIssueCommentsPage: async () => ({ items: [], next: null, prev: null }),
@@ -101,6 +106,8 @@ beforeEach(() => {
     notified: [],
     originals: [{ id: 'orig' }],
     locked: null,
+    issueStatus: 'open',
+    issueCloseReason: null,
     canView: true,
   })
 })
@@ -163,6 +170,20 @@ describe('закрытие говорит, чем кончилось, и не т
     const res = await mcpCloseIssue('author', { list: 'owner-user/spisok', number: 7, stateReason: 'duplicate' })
     expect('error' in res && res.error).toMatch(/duplicateOf/)
     expect(h.statuses).toEqual([])
+  })
+
+  it('⚠️ повторное закрытие закрытой задачи не пишет НИЧЕГО и никого не будит', async () => {
+    // У статуса счётчика частоты нет: каждая такая запись — новое уведомление всем
+    // участникам и ещё одна одинаковая строка в ленте. Из браузера это двойное нажатие,
+    // через MCP — цикл.
+    h.issueStatus = 'closed'
+    h.issueCloseReason = 'completed'
+    const res = await mcpCloseIssue('author', { list: 'owner-user/spisok', number: 7, stateReason: 'not_planned' })
+    expect(res).toMatchObject({ changed: false, state: 'closed', stateReason: 'completed' })
+    expect('note' in res && res.note, 'агенту надо сказать, как сменить исход').toMatch(/already closed/i)
+    expect(h.statuses, 'в хранилище ничего не уходит').toEqual([])
+    expect(h.events, 'и в ленте не появляется второго «закрыл»').toEqual([])
+    expect(h.notified, 'и никому не летит уведомление').toEqual([])
   })
 
   it('успешное закрытие сообщает ИСХОД и оригинал, а не просто «ок»', async () => {

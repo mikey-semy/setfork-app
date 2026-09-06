@@ -41,8 +41,13 @@ beforeAll(async () => {
     .insert(users)
     .values([{ handle: OWNER }, { handle: 'mi-stranger' }])
     .returning({ id: users.id, handle: users.handle })
-  ownerId = rows.find((r) => r.handle === OWNER)!.id
-  strangerId = rows.find((r) => r.handle === 'mi-stranger')!.id
+  const byHandle = (handle: string) => {
+    const row = rows.find((r) => r.handle === handle)
+    if (!row) throw new Error(`не завёлся пользователь ${handle}`)
+    return row.id
+  }
+  ownerId = byHandle(OWNER)
+  strangerId = byHandle('mi-stranger')
 })
 
 beforeEach(async () => {
@@ -88,6 +93,46 @@ describe('круг работы агента с задачей', () => {
     const [row] = await db.select({ status: issues.status }).from(issues).where(eq(issues.templateId, templateId))
     expect(row.status, 'задача осталась открытой').toBe('open')
     expect(await db.select().from(issueEvents), 'и в ленте пусто').toEqual([])
+  })
+})
+
+describe('длинный тред листается, а не обрезается', () => {
+  it('⚠️ порция говорит, чем продолжить, — и продолжение не повторяет показанного', async () => {
+    await mcpCreateIssue(ownerId, { list: LIST, title: 'долгий разговор' })
+    for (const body of ['первая', 'вторая', 'третья']) {
+      const said = await mcpAddIssueComment(ownerId, { list: LIST, number: 1, body })
+      expect('error' in said, JSON.stringify(said)).toBe(false)
+    }
+
+    const head = await mcpGetIssue(ownerId, { list: LIST, number: 1, limit: 2 })
+    const first = ('thread' in head ? head.thread : []) ?? []
+    expect(first.map((p) => ('body' in p ? p.body : p.kind))).toEqual(['первая', 'вторая'])
+    const cursor = 'nextCursor' in head ? head.nextCursor : undefined
+    expect(cursor, 'без курсора реплики после второй недостижимы вовсе').toBeTruthy()
+
+    const tail = await mcpGetIssue(ownerId, { list: LIST, number: 1, limit: 2, cursor })
+    const rest = ('thread' in tail ? tail.thread : []) ?? []
+    expect(rest.map((p) => ('body' in p ? p.body : p.kind))).toEqual(['третья'])
+  })
+
+  it('битый курсор — отказ словами, а не молчаливое начало треда', async () => {
+    await mcpCreateIssue(ownerId, { list: LIST, title: 'разговор' })
+    const res = await mcpGetIssue(ownerId, { list: LIST, number: 1, cursor: 'не-курсор' })
+    expect('error' in res && res.error).toMatch(/cursor/i)
+  })
+})
+
+describe('повтор состояния не будит людей', () => {
+  it('⚠️ закрыть закрытую — ни второй записи в ленте, ни уведомлений', async () => {
+    await mcpCreateIssue(strangerId, { list: LIST, title: 'закроем дважды' })
+    const first = await mcpCloseIssue(strangerId, { list: LIST, number: 1, stateReason: 'completed' })
+    expect(first).toMatchObject({ changed: true })
+
+    const again = await mcpCloseIssue(strangerId, { list: LIST, number: 1, stateReason: 'not_planned' })
+    expect(again).toMatchObject({ changed: false, stateReason: 'completed' })
+
+    const events = await db.select().from(issueEvents)
+    expect(events.length, 'событие о закрытии должно быть ровно одно').toBe(1)
   })
 })
 

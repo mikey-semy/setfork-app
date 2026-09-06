@@ -178,11 +178,34 @@ export async function changeIssueStatus(
   reason?: CloseReason,
   /** Номер задачи-оригинала — только при `duplicate`. */
   duplicateOfNumber?: number,
-): Promise<IssueResult<{ issueId: string; templateId: string; status: 'open' | 'closed'; closeReason: CloseReason | null; duplicateOf: number | null }>> {
+): Promise<
+  IssueResult<{
+    issueId: string
+    templateId: string
+    status: 'open' | 'closed'
+    closeReason: CloseReason | null
+    duplicateOf: number | null
+    /** Была ли запись. `false` — задача уже была в этом состоянии, и её не трогали. */
+    changed: boolean
+  }>
+> {
   const loaded = await loadIssue(owner, slug, number)
   if (!loaded) return { ok: false, reason: 'not_found' }
   const { tpl, iss } = loaded
   if (userId !== iss.authorId && userId !== tpl.ownerId) return { ok: false, reason: 'forbidden' }
+
+  // ⚠️ ПОВТОР ТОГО ЖЕ СОСТОЯНИЯ — НЕ РАБОТА. Закрыть закрытую и открыть открытую можно
+  // сколько угодно раз: у статуса счётчика частоты нет, а каждая такая запись шлёт
+  // ВСЕМ — автору, владельцу, собеседникам, наблюдателям — новое уведомление и кладёт в
+  // ленту ещё одну одинаковую строку. Из браузера это видно как двойное нажатие, через
+  // MCP — как цикл. Так же поступает запирание обсуждения (и Gitea), поэтому и здесь
+  // тихий «ничего не изменилось», а не отказ: просить закрыть закрытое — не ошибка.
+  //
+  // Сменить ИСХОД у закрытой задачи этим путём нельзя: для нового исхода её надо сперва
+  // открыть заново. Иначе в ленте появилось бы второе «закрыл» без «открыл» между ними.
+  if (iss.status === status) {
+    return { ok: true, changed: false, issueId: iss.id, templateId: tpl.id, status: iss.status, closeReason: iss.closeReason, duplicateOf: null }
+  }
 
   // Оригинал ищем ПО НОМЕРУ и в ТОМ ЖЕ списке: чужая задача дубликатом не объявляется, и
   // ссылка на неё из другого списка читалась бы как «иди туда, где тебе нечего делать».
@@ -234,6 +257,7 @@ export async function changeIssueStatus(
 
   return {
     ok: true,
+    changed: true,
     issueId: iss.id,
     templateId: tpl.id,
     status,

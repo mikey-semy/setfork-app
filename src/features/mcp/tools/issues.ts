@@ -1,12 +1,11 @@
 import 'server-only'
 import { isFeatureEnabled } from '@/core'
 import { resolveListBySlug, type ResolvedList } from '@/shared/db/resolve-list'
-/* eslint-disable no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии), ворота — те же функции, что у формы */
+import { decodeCursor } from '@/shared/lib/paging'
 import { changeIssueStatus, commentOnIssue, openIssue, type IssueRefusal } from '@/features/issues/core'
 import { getIssue, getIssueCommentsPage, getIssues, type CloseReason, type IssueSort } from '@/features/issues/queries'
 import { getIssueEvents } from '@/features/issues/events'
 import { mergeThread } from '@/features/issues/thread'
-/* eslint-enable no-restricted-imports */
 import { SITE_URL, mcpCanView, resolveListRefOrMoved } from './shared'
 
 /**
@@ -135,7 +134,12 @@ export async function mcpCloseIssue(
     stateReason: res.closeReason,
     duplicateOf: res.duplicateOf ?? undefined,
     url: issueUrl(found.ownerHandle, found.slug, input.number),
-    note: 'Closed — the author and everyone in the thread were notified. The outcome stays visible in the issue timeline.',
+    // «Уже была закрыта» — не то же, что «закрыл»: повторный вызов НИЧЕГО не написал и
+    // никого не разбудил, и агент обязан это различать, иначе будет звать в цикле.
+    changed: res.changed,
+    note: res.changed
+      ? 'Closed — the author and everyone in the thread were notified. The outcome stays visible in the issue timeline.'
+      : `Nothing changed: the issue was already closed${res.closeReason ? ` as ${res.closeReason}` : ''}. Reopen it first if you need a different outcome.`,
   }
 }
 
@@ -150,25 +154,37 @@ export async function mcpReopenIssue(userId: string, input: { list: string; numb
     number: input.number,
     state: res.status,
     url: issueUrl(found.ownerHandle, found.slug, input.number),
-    note: 'Reopened — the previous outcome was cleared from the issue and stays in its timeline.',
+    changed: res.changed,
+    note: res.changed
+      ? 'Reopened — the previous outcome was cleared from the issue and stays in its timeline.'
+      : 'Nothing changed: the issue was already open.',
   }
 }
 
 /** ЗАДАЧА ЦЕЛИКОМ: описание, состояние и ЛЕНТА — реплики вперемешку с событиями. */
-export async function mcpGetIssue(userId: string, input: { list: string; number: number; limit?: number }) {
+export async function mcpGetIssue(userId: string, input: { list: string; number: number; limit?: number; cursor?: string }) {
   const found = await readableList(userId, input.list)
   if (!found) return { error: 'list not found' }
   const iss = await getIssue(found.tpl.id, input.number)
   if (!iss) return { error: 'issue not found' }
 
+  // ⚠️ ТРЕД ЛИСТАЕТСЯ, а не «берётся побольше». Предел здесь такой же, как у страницы, и
+  // за ним тред не кончается: без курсора реплики после первой порции были бы недоступны
+  // вовсе, сколько ни поднимай limit. Курсор — тот же непрозрачный ключ, что в адресе
+  // страницы; битый разбирается в null, и мы говорим об этом, а не молча отдаём начало.
+  const cursor = input.cursor ? decodeCursor(input.cursor) : null
+  if (input.cursor && !cursor) return { error: 'invalid cursor — pass back the nextCursor from a previous get_issue call' }
+
   const limit = input.limit ?? 50
   const [{ items: comments, next }, events] = await Promise.all([
-    getIssueCommentsPage(iss.id, limit),
+    getIssueCommentsPage(iss.id, limit, cursor),
     getIssueEvents(iss.id),
   ])
   // Порядок склейки — тот же, что на странице: событие показывается между репликами, а
   // не отдельным хвостом, иначе «закрыл» встанет после разговора, который был позже.
-  const thread = mergeThread(comments, events, { isFirst: true, isLast: !next })
+  // Окно честное: события до первой реплики показываются только на ПЕРВОЙ порции, после
+  // последней — только на последней, иначе каждая порция повторяла бы «закрыл задачу».
+  const thread = mergeThread(comments, events, { isFirst: !cursor, isLast: !next })
 
   return {
     ref: `${found.ownerHandle}/${found.slug}`,
@@ -199,8 +215,10 @@ export async function mcpGetIssue(userId: string, input: { list: string; number:
             suggestion: p.event!.suggestion?.number ?? undefined,
           },
     ),
-    // Тред длиннее показанного — говорим прямо, чтобы агент не принял часть за целое.
-    more: next ? `${comments.length} replies shown; there are more — raise limit` : undefined,
+    // Тред длиннее показанного — говорим прямо и даём чем продолжить, чтобы агент не
+    // принял часть за целое и не упёрся в потолок limit.
+    nextCursor: next ?? undefined,
+    more: next ? `${comments.length} replies shown; call get_issue again with this nextCursor for the rest` : undefined,
   }
 }
 
