@@ -9,12 +9,12 @@ import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { Textarea } from '@/shared/ui/textarea'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { timeAgo } from '@/shared/ui/timeAgo'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 // eslint-disable-next-line boundaries/dependencies -- review-комментарии предложения из comments
 import { createBlockThread, replyToBlockThread, setBlockThreadResolved } from '@/features/comments/actions'
 import { applySuggestedEdit } from './actions'
 // eslint-disable-next-line boundaries/dependencies -- перенос треда в задачу живёт с комментариями
-import { threadToIssue } from '@/features/comments/thread-to-issue'
+import { threadToIssue, type ThreadToIssueRefusal } from '@/features/comments/thread-to-issue'
 // eslint-disable-next-line boundaries/dependencies -- тип треда из comments
 import type { BlockThread } from '@/features/comments/queries'
 // eslint-disable-next-line boundaries/dependencies -- тип состояния якоря из comments
@@ -263,6 +263,9 @@ function ThreadCard({
   onReply: () => void
 }) {
   const [pending, startTransition] = useTransition()
+  // Почему перенос в задачу не вышел — рядом с кнопкой: без этого нажатие выглядит
+  // как поломка, страница ведь остаётся прежней.
+  const [toIssueRefused, setToIssueRefused] = useState<ThreadToIssueRefusal | null>(null)
   const { thread, state } = row
   const orphaned = state.state === 'orphaned'
   const quote = orphaned ? thread.anchorOriginal.exact : state.quote
@@ -351,11 +354,21 @@ function ThreadCard({
               variant="ghost"
               aria-label={labels.toIssue}
               disabled={pending}
-              onClick={() => startTransition(async () => void (await threadToIssue(owner, slug, thread.id)))}
+              onClick={() =>
+                startTransition(async () => {
+                  setToIssueRefused(null)
+                  // Отказ приезжает значением: без него нажатие на «перенести в задачу»
+                  // выглядело бы как поломка — страница та же, задачи нет, причины нет.
+                  setToIssueRefused(await threadToIssue(owner, slug, thread.id))
+                })
+              }
             >
               <CircleDot size={14} />
             </Button>
           </Tooltip>
+          {toIssueRefused && (
+            <span className="text-body-sm text-danger">{t(toIssueRefused === 'rate' ? 'issue.rateLimited' : 'issue.cannotOpen', lang)}</span>
+          )}
           <Tooltip label={labels.resolve}>
             <Button
               variant="ghost"

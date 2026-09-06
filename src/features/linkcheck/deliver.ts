@@ -1,18 +1,15 @@
 import 'server-only'
 import { and, eq, sql } from 'drizzle-orm'
 import { db, issues, linkChecks, linkOccurrences, templates, publiclyVisible } from '@/shared/db'
+import { resolveListById } from '@/shared/db/resolve-list'
 import { dominantLang } from '@/shared/ai/gardener-policies'
 import { t, type LocaleText } from '@/shared/i18n'
 import { getLinkcheckSettings } from '@/shared/settings/linkcheck'
 import { log } from '@/shared/observability'
 // eslint-disable-next-line boundaries/dependencies -- сервисный аккаунт садовника = автор issue
 import { ensureGardenerUser } from '@/features/gardener/service'
-// eslint-disable-next-line boundaries/dependencies -- открытие issue через канонический порт CollabStore
-import { collabStore } from '@/features/collab-store/store'
-// eslint-disable-next-line boundaries/dependencies -- уведомить владельца о доставке (как обычный issue_new)
-import { notifyMany } from '@/features/notifications/notify'
-// eslint-disable-next-line boundaries/dependencies -- список подписчиков issues списка
-import { getWatcherIds } from '@/features/watch/queries'
+// eslint-disable-next-line boundaries/dependencies -- задача заводится тем же ядром, что и у людей (там же уведомления и ворота раздела)
+import { openIssueOn } from '@/features/issues/core'
 
 // Ж1b «живые списки»: доставка результата link-checker'а. По накопленным
 // verdict='broken' садовник открывает ОДИН открытый issue на список с перечнем
@@ -100,11 +97,24 @@ export async function deliverBrokenLinks(): Promise<{ opened: number }> {
     const title = t('gardenerIssueBrokenTitle', lang).replace('{n}', String(urls.length))
     const body = `${t('gardenerIssueBrokenIntro', lang)}\n\n${lines.join('\n')}`
 
-    const iss = await collabStore.openIssue(templateId, gardener.id, title, body, [BROKEN_LABEL])
-    const watchers = await getWatcherIds(templateId, 'issues')
-    await notifyMany([g.ownerId, ...watchers], { actorId: gardener.id, type: 'issue_new', templateId })
+    // ⚠️ ЗАВОДИМ ТЕМ ЖЕ ЯДРОМ, ЧТО И ЛЮДИ, но писателем «служба»: у садовника нет
+    // своего темпа (он ходит по расписанию), поэтому личный порог ему не считают —
+    // иначе ночной обход обрезался бы на двадцатом списке МОЛЧА, а в журнале стояло бы
+    // «доставлено». Порог на список при этом остаётся: он и защищает от цикла в одну
+    // цель. И садовник НЕ подписывается на списки, к которым прикоснулся: ответа он не
+    // ждёт, а подписка сделала бы его вечным получателем чужих разговоров.
+    //
+    // Заодно уходит тихая пропажа: раздел «Вопросы», выключенный владельцем, здесь не
+    // проверялся вовсе — садовник заводил задачу в разделе, которого в списке нет.
+    const tpl = await resolveListById(templateId)
+    if (!tpl) continue
+    const res = await openIssueOn(tpl, gardener.id, { title, body, labels: [BROKEN_LABEL] }, 'service')
+    if (!res.ok) {
+      log.info('linkcheck: broken-link issue refused', { templateId, reason: res.reason })
+      continue
+    }
     opened++
-    log.info('linkcheck: broken-link issue opened', { templateId, issue: iss.number, urls: urls.length })
+    log.info('linkcheck: broken-link issue opened', { templateId, issue: res.number, urls: urls.length })
   }
   if (opened) log.info('linkcheck deliver done', { opened })
   return { opened }

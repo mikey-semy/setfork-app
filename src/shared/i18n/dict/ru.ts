@@ -138,6 +138,7 @@ export const ru: Record<DictKey, string> = {
   'issue.lockedNoticeOwner': 'Обсуждение заперто: {reason}. Другие ответить не смогут.',
   'issue.lockHint': 'Задача останется открытой — заперто не значит решено.',
   'issue.rateLimited': 'Слишком часто — попробуйте через минуту.',
+  'issue.cannotOpen': 'Задачу завести не вышло: список не принимает вопросы.',
   'issue.duplicateNotFound': 'Задачи с таким номером в этом списке нет — ничего не закрыли.',
   'issue.edited': 'изменено',
   'issue.editHistory': 'История правок',

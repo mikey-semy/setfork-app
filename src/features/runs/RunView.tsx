@@ -17,7 +17,7 @@ import { ProductBlock, type ProductLinkVM } from '@/shared/ui/ProductBlock'
 // eslint-disable-next-line boundaries/dependencies -- кирка/dig-чат из features/dig
 import { DIG_SAVED_EVENT, DigChatHost, DigChatOpen, type GnomeOption } from '@/features/dig/DigChat'
 import { linkLabel } from '@/shared/lib/link-label'
-import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
+import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep, type ReportRefusal } from './actions'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { buttonClass } from '@/shared/ui/button-style'
 import { cardClass } from '@/shared/ui/card-style'
@@ -89,6 +89,9 @@ export function RunView({
   const [, start] = useTransition()
   const { confirm, confirmDialog } = useConfirm()
   const [blockingId, setBlockingId] = useState<string | null>(null)
+  // Почему «сообщить в список» не сработало — рядом с той самой кнопкой, а не молча:
+  // страница после отказа выглядит точно так же, как до нажатия.
+  const [reportRefused, setReportRefused] = useState<{ stepId: string; reason: ReportRefusal } | null>(null)
   const [reasonDraft, setReasonDraft] = useState('')
   // Точку на кирке зажигаем СРАЗУ при сохранении сессии (событие dig-saved), а не
   // только после перезагрузки (серверный digSteps — начальный снимок).
@@ -423,7 +426,15 @@ export function RunView({
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => start(() => reportBlockedStep(runId, s.id))}
+                        onClick={() =>
+                          start(async () => {
+                            setReportRefused(null)
+                            const refusal = await reportBlockedStep(runId, s.id)
+                            // Успех уходит переходом на страницу задачи и сюда не
+                            // возвращается; значение приезжает только у отказа.
+                            if (refusal) setReportRefused({ stepId: s.id, reason: refusal })
+                          })
+                        }
                         className={buttonClass()}
                       >
                         <Flag size={12} /> {t('runReport', lang)}
@@ -434,6 +445,11 @@ export function RunView({
                         </button>
                       )}
                     </div>
+                    {reportRefused?.stepId === s.id && (
+                      <div className="mt-2 text-body-sm text-danger">
+                        {t(reportRefused.reason === 'rate' ? 'issue.rateLimited' : 'issue.cannotOpen', lang)}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

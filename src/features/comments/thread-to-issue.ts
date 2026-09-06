@@ -9,8 +9,8 @@ import { t } from '@/shared/i18n'
 import { resolveListBySlug } from '@/shared/db/resolve-list'
 // eslint-disable-next-line boundaries/dependencies -- правило замка ОДНО на все поверхности; живёт у предложений, тот же кросс-фич-паттерн, что у уведомлений
 import { canSpeakWhenLocked } from '@/features/library/lock-policy'
-// eslint-disable-next-line boundaries/dependencies -- открытие задачи через доменный порт
-import { collabStore } from '@/features/collab-store/store'
+// eslint-disable-next-line boundaries/dependencies -- задача заводится тем же ядром, что и форма «Новый вопрос»
+import { openIssue } from '@/features/issues/core'
 
 /**
  * ТРЕД → ЗАДАЧА одной кнопкой.
@@ -26,7 +26,15 @@ import { collabStore } from '@/features/collab-store/store'
  * Тред при этом НЕ закрывается автоматически: решение «вопрос снят» принимает
  * человек, а перенос в задачу его не снимает — он лишь меняет место.
  */
-export async function threadToIssue(owner: string, slug: string, threadId: string): Promise<void> {
+/**
+ * Почему перенос не вышел — ЗНАЧЕНИЕМ. Молчаливых отказов у кнопки и так хватало;
+ * два новых (частота и «список не принимает вопросы») человек обязан увидеть, иначе
+ * нажатие выглядит как поломка. Остальные ветки остаются тихими осознанно: у них
+ * ответ виден в самом треде («→ #N» уже стоит) или кнопки просто нет.
+ */
+export type ThreadToIssueRefusal = 'rate' | 'noissue'
+
+export async function threadToIssue(owner: string, slug: string, threadId: string): Promise<ThreadToIssueRefusal | null> {
   // Сессия и язык друг от друга не зависят — берём разом.
   const [session, lang] = await Promise.all([requireSession(), getLang()])
 
@@ -44,21 +52,19 @@ export async function threadToIssue(owner: string, slug: string, threadId: strin
     .innerJoin(suggestions, eq(suggestions.id, blockCommentThreads.suggestionId))
     .where(eq(blockCommentThreads.id, threadId))
     .limit(1)
-  if (!row) return
+  if (!row) return null
 
-  // Права — ТЕ ЖЕ, что у обычного создания задачи: `collabStore.openIssue` сам
-  // ничего не проверяет, и без этого любой, кто видит предложение, заводил бы
-  // задачи в приватном списке. Заодно сверяем, что owner/slug из адреса — это
-  // действительно список треда, а не чужой, подставленный в аргументы.
+  // Сверяем, что owner/slug из адреса — это действительно список треда, а не чужой,
+  // подставленный в аргументы. ПРАВА при этом больше не считаются здесь: своя пара
+  // проверок (приватность + модерация) жила рядом и повторяла ту, что была у формы
+  // «Новый вопрос», — вместе с её же дырой: про ЧЕРНОВИК обе забывали, а про
+  // выключенный раздел «Вопросы» не знала ни одна. Теперь их считает ядро задач.
   const tpl = await resolveListBySlug(owner, slug)
-  if (!tpl || tpl.id !== row.templateId) return
-  const isOwner = tpl.ownerId === session.userId
-  if (tpl.visibility === 'private' && !isOwner) return
-  if (tpl.moderation !== 'active' && !isOwner) return
+  if (!tpl || tpl.id !== row.templateId) return null
   // Заперто — переносят только ведущие раздел: перенос дописывает в тред ответ «→ #N»,
   // то есть это запись в обсуждение (см. features/library/lock-policy). Проверка стоит
   // ПОСЛЕ разрешения списка: раньше не из чего было спросить про право.
-  if (row.lockedAt && !(await canSpeakWhenLocked(tpl.ownerId, tpl.id, session.userId))) return
+  if (row.lockedAt && !(await canSpeakWhenLocked(tpl.ownerId, tpl.id, session.userId))) return null
 
   // Реплики треда — тело задачи. Черновики ревью НЕ берём: они ещё никому не
   // показаны, и вытаскивать их в публичную задачу нельзя.
@@ -69,10 +75,10 @@ export async function threadToIssue(owner: string, slug: string, threadId: strin
     .where(eq(blockComments.threadId, threadId))
     .orderBy(asc(blockComments.createdAt))
   const visible = replies.filter((r) => !r.pending)
-  if (visible.length === 0) return
+  if (visible.length === 0) return null
   // Уже переносили — второй раз не заводим. Кнопка остаётся на месте, и без этой
   // проверки повторный клик плодил бы задачи-двойники с тем же обсуждением.
-  if (visible.some((r) => /^→ #\d+$/.test(r.body.trim()))) return
+  if (visible.some((r) => /^→ #\d+$/.test(r.body.trim()))) return null
 
   const sugPath = `/${owner}/${slug}/suggestions/${row.sugNumber ?? row.suggestionId}`
   const first = visible[0].body.replace(/\s+/g, ' ').trim()
@@ -86,17 +92,21 @@ export async function threadToIssue(owner: string, slug: string, threadId: strin
     .join('\n')
     .slice(0, 20000)
 
-  const ins = await collabStore.openIssue(row.templateId, session.userId, title, body, [])
-  if (!ins) return
+  // Задача заводится ТЕМ ЖЕ ядром, что и форма «Новый вопрос»: вместе с ним приезжают
+  // права, счётчик частоты и — главное — уведомления. Раньше их тут не было вовсе:
+  // разговор переносили в задачу, а владелец списка об этом не узнавал.
+  const res = await openIssue(session.userId, owner, slug, { title, body })
+  if (!res.ok) return res.reason === 'rate' ? 'rate' : 'noissue'
 
   // Ответ в тред — чтобы связь была видна и отсюда, а не только из задачи.
   await db.insert(blockComments).values({
     threadId,
     authorId: session.userId,
-    body: `→ #${ins.number}`,
+    body: `→ #${res.number}`,
   })
   await db.update(blockCommentThreads).set({ updatedAt: new Date() }).where(eq(blockCommentThreads.id, threadId))
 
   revalidatePath(sugPath)
   revalidatePath(`/${owner}/${slug}/issues`)
+  return null
 }
