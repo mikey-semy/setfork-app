@@ -119,9 +119,16 @@ export default async function IssueThreadPage({
           </h1>
         </div>
         <div className="mb-4 flex flex-wrap items-center gap-3">
+          {/* ⚠️ ИСХОД СТОИТ В САМОМ ЗНАЧКЕ, а не только строкой в ленте: «сделано» и «не
+              будем делать» выглядят одинаково — закрытой задачей, — а значат
+              противоположное, и в длинном треде строка ленты уезжает на последнюю
+              порцию. Так же у GitHub: «Closed as completed» прямо у состояния.
+              У задач, закрытых до появления исхода, его нет — значок остаётся прежним. */}
           <Badge size="md" variant={closed ? 'accentSolid' : 'okSolid'} className="gap-1.5 px-3">
             {closed ? <CircleCheck size={14} /> : <CircleDot size={14} />}
-            {closed ? t('issueClosedBadge', lang) : t('issueOpenBadge', lang)}
+            {closed
+              ? t(issue.closeReason ? (`issue.closedBadge.${issue.closeReason}` as TKey) : 'issueClosedBadge', lang)
+              : t('issueOpenBadge', lang)}
           </Badge>
           <span className="text-body text-ink-2">
             <span className="font-semibold text-ink">{issue.authorHandle}</span> {t('openedThis', lang)} ·{' '}

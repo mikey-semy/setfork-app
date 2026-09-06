@@ -27,7 +27,8 @@ const h = vi.hoisted(() => ({
   events: [] as Record<string, unknown>[],
   updates: [] as Record<string, unknown>[],
   notified: [] as string[],
-  originals: [] as { id: string }[],
+  originals: [] as { id: string; number?: number }[],
+  issue: null as null | Record<string, unknown>,
   locked: null as Date | null,
   issueStatus: 'open' as 'open' | 'closed',
   issueCloseReason: null as string | null,
@@ -44,7 +45,12 @@ vi.mock('@/shared/rate-limit', () => ({
 }))
 vi.mock('@/shared/db', () => ({
   db: {
-    select: () => ({ from: () => ({ where: () => ({ limit: async () => h.originals }) }) }),
+    // Оба запроса ядра над `issues` одинаковой формы: поиск оригинала по номеру и
+    // добор номера оригинала у уже закрытого дубликата (тот со стыковкой).
+    select: () => {
+      const tail = { where: () => ({ limit: async () => h.originals }) }
+      return { from: () => ({ ...tail, leftJoin: () => tail }) }
+    },
     update: () => ({ set: (v: Record<string, unknown>) => ({ where: async () => void h.updates.push(v) }) }),
   },
   issues: {},
@@ -78,7 +84,7 @@ vi.mock('@/features/issues/queries', () => ({
     tpl: TPL,
     iss: { id: 'i1', authorId: 'author', status: h.issueStatus, closeReason: h.issueCloseReason, title: 'т', body: 'б', lockedAt: h.locked },
   }),
-  getIssue: async () => null,
+  getIssue: async () => h.issue,
   getIssues: async () => [],
   getIssueCommentsPage: async () => ({ items: [], next: null, prev: null }),
 }))
@@ -92,7 +98,7 @@ vi.mock('@/features/mcp/tools/shared', () => ({
   resolveListRefOrMoved: async (ref: string) => ({ id: 'l1', slug: 'spisok', ownerHandle: 'owner-user', ownerId: 'owner', movedTo: null, ref }),
 }))
 
-const { mcpAddIssueComment, mcpCloseIssue, mcpCreateIssue, mcpSearchIssues } = await import('@/features/mcp/tools/issues')
+const { mcpAddIssueComment, mcpCloseIssue, mcpCreateIssue, mcpGetIssue, mcpSearchIssues } = await import('@/features/mcp/tools/issues')
 
 beforeEach(() => {
   Object.assign(h, {
@@ -104,7 +110,8 @@ beforeEach(() => {
     events: [],
     updates: [],
     notified: [],
-    originals: [{ id: 'orig' }],
+    originals: [{ id: 'orig', number: 3 }],
+    issue: null,
     locked: null,
     issueStatus: 'open',
     issueCloseReason: null,
@@ -157,6 +164,30 @@ describe('ворота задач одинаковы для агента и дл
   })
 })
 
+describe('чем кончилась задача, видно СРАЗУ', () => {
+  it('⚠️ исход стоит полем задачи, а не только строкой в ленте', async () => {
+    // Событие «закрыл» лежит после последней реплики: в длинном треде оно доезжает лишь
+    // до последней порции, и до неё агент видел бы «закрыта» без единого слова чем.
+    h.issue = {
+      id: 'i1',
+      number: 7,
+      title: 'т',
+      body: 'б',
+      status: 'closed',
+      labels: [],
+      createdAt: new Date(),
+      closedAt: new Date(),
+      authorHandle: 'author-user',
+      lockedAt: null,
+      lockReason: null,
+      closeReason: 'not_planned',
+      duplicateNumber: null,
+    }
+    const res = await mcpGetIssue('u1', { list: 'owner-user/spisok', number: 7 })
+    expect(res).toMatchObject({ state: 'closed', stateReason: 'not_planned' })
+  })
+})
+
 describe('закрытие говорит, чем кончилось, и не теряет ссылку молча', () => {
   it('⚠️ дубликат с несуществующим номером — отказ, статус не меняется', async () => {
     h.originals = []
@@ -184,6 +215,15 @@ describe('закрытие говорит, чем кончилось, и не т
     expect(h.statuses, 'в хранилище ничего не уходит').toEqual([])
     expect(h.events, 'и в ленте не появляется второго «закрыл»').toEqual([])
     expect(h.notified, 'и никому не летит уведомление').toEqual([])
+  })
+
+  it('повтор у закрытой ДУБЛИКАТОМ называет и номер оригинала', async () => {
+    // Иначе рядом с честным исходом стоял бы пустой оригинал, и «не указан» было бы не
+    // отличить от «не потрудились достать».
+    h.issueStatus = 'closed'
+    h.issueCloseReason = 'duplicate'
+    const res = await mcpCloseIssue('author', { list: 'owner-user/spisok', number: 7, stateReason: 'completed' })
+    expect(res).toMatchObject({ changed: false, stateReason: 'duplicate', duplicateOf: 3 })
   })
 
   it('успешное закрытие сообщает ИСХОД и оригинал, а не просто «ок»', async () => {

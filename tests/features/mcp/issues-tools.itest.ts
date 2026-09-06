@@ -115,6 +115,23 @@ describe('длинный тред листается, а не обрезаетс
     expect(rest.map((p) => ('body' in p ? p.body : p.kind))).toEqual(['третья'])
   })
 
+  it('⚠️ ПЕРВАЯ порция уже называет исход, хотя «закрыл» лежит в конце ленты', async () => {
+    // Сценарий отказа целиком: задача закрыта как «не будем делать», реплик больше, чем
+    // в порции. Событие закрытия стоит ПОСЛЕ последней реплики — значит в окно первой
+    // порции не попадает, — и без исхода полем агент три вызова подряд видел бы
+    // «закрыта» и не знал, чем кончилось. Ровно то, ради чего исход и заводили (#892).
+    await mcpCreateIssue(ownerId, { list: LIST, title: 'долгая и закрытая' })
+    for (const body of ['раз', 'два', 'три']) {
+      await mcpAddIssueComment(ownerId, { list: LIST, number: 1, body })
+    }
+    await mcpCloseIssue(ownerId, { list: LIST, number: 1, stateReason: 'not_planned' })
+
+    const head = await mcpGetIssue(ownerId, { list: LIST, number: 1, limit: 2 })
+    expect(head).toMatchObject({ state: 'closed', stateReason: 'not_planned' })
+    const shown = ('thread' in head ? head.thread : []) ?? []
+    expect(shown.every((p) => p.kind === 'comment'), 'события закрытия в первой порции и не должно быть').toBe(true)
+  })
+
   it('битый курсор — отказ словами, а не молчаливое начало треда', async () => {
     await mcpCreateIssue(ownerId, { list: LIST, title: 'разговор' })
     const res = await mcpGetIssue(ownerId, { list: LIST, number: 1, cursor: 'не-курсор' })

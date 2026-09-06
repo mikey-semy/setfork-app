@@ -193,6 +193,11 @@ export async function mcpGetIssue(userId: string, input: { list: string; number:
     title: iss.title,
     body: iss.body,
     state: iss.status,
+    // ⚠️ ЧЕМ КОНЧИЛОСЬ — РЯДОМ С «ЗАКРЫТА», а не только строкой в ленте. Событие
+    // `closed` лежит после последней реплики, то есть в длинном треде доезжает лишь до
+    // ПОСЛЕДНЕЙ порции: агент три вызова подряд видел бы «закрыта» и не знал, чем.
+    stateReason: iss.closeReason ?? undefined,
+    duplicateOf: iss.duplicateNumber ?? undefined,
     labels: iss.labels,
     author: iss.authorHandle,
     createdAt: iss.createdAt,

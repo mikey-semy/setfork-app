@@ -1,5 +1,6 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { db, issues } from '@/shared/db'
 import { resolveListBySlug, type ResolvedList } from '@/shared/db/resolve-list'
 import { canWriteToFeature } from '@/core'
@@ -69,6 +70,18 @@ async function canWriteIssues(tpl: ResolvedList, userId: string): Promise<boolea
     canWriteToFeature(tpl, 'issues', { isOwner }) ||
     canWriteToFeature(tpl, 'issues', { isOwner, isCollaborator: await isCollaborator(tpl.id, userId) })
   )
+}
+
+/** Номер задачи-оригинала у уже закрытого дубликата: наружу нужен номер, в задаче лежит id. */
+async function duplicateNumber(issueId: string): Promise<number | null> {
+  const orig = alias(issues, 'closed_duplicate_of')
+  const [row] = await db
+    .select({ number: orig.number })
+    .from(issues)
+    .leftJoin(orig, eq(orig.id, issues.duplicateOfId))
+    .where(eq(issues.id, issueId))
+    .limit(1)
+  return row?.number ?? null
 }
 
 /** Кто узнаёт о событии в задаче: автор, владелец, прежние собеседники, наблюдатели. */
@@ -204,7 +217,12 @@ export async function changeIssueStatus(
   // Сменить ИСХОД у закрытой задачи этим путём нельзя: для нового исхода её надо сперва
   // открыть заново. Иначе в ленте появилось бы второе «закрыл» без «открыл» между ними.
   if (iss.status === status) {
-    return { ok: true, changed: false, issueId: iss.id, templateId: tpl.id, status: iss.status, closeReason: iss.closeReason, duplicateOf: null }
+    // Исход берём из базы — и НОМЕР ОРИГИНАЛА тоже, а не подставляем null рядом с честным
+    // `closeReason`: ответ «уже закрыта как дубликат» без номера отличить от «оригинал не
+    // указан» нельзя. Лишний запрос стоит здесь и только здесь — в ветке, куда попадают
+    // повторные вызовы, и лишь когда исход и есть «дубликат».
+    const duplicateOf = iss.closeReason === 'duplicate' ? await duplicateNumber(iss.id) : null
+    return { ok: true, changed: false, issueId: iss.id, templateId: tpl.id, status: iss.status, closeReason: iss.closeReason, duplicateOf }
   }
 
   // Оригинал ищем ПО НОМЕРУ и в ТОМ ЖЕ списке: чужая задача дубликатом не объявляется, и
