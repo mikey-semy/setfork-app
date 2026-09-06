@@ -26,6 +26,22 @@ describe('extractHandles', () => {
     expect(extractHandles('double @@ghost')).toEqual([])
   })
 
+  it('⚠️ не считает упоминанием «@» ВНУТРИ АДРЕСА', () => {
+    // Запрет `/@` спасал только от пути. Адрес с параметром разбор проходил — перед «@»
+    // стоит «=», — и уведомление уходило живому тёзке, хотя текст ссылки выбирал не тот,
+    // от чьего имени оно приходило (садовник цитирует чужой список, человек — чужую
+    // страницу). Правило теперь про МЕСТО: внутри адреса упоминаний не бывает.
+    expect(extractHandles('битая ссылка: https://site.example/p?user=@alice')).toEqual([])
+    expect(extractHandles('www.site.example/x?u=@bob&y=1')).toEqual([])
+    expect(extractHandles('[архив](https://web.archive.org/web/*/https://x.io/@carol)')).toEqual([])
+  })
+
+  it('обращение РЯДОМ с адресом остаётся обращением', () => {
+    // Вырезаем адрес, а не строку с адресом: иначе «почини это, @dev» под ссылкой
+    // перестало бы кого-либо звать.
+    expect(extractHandles('см. https://site.example/a — почини, @dev-two')).toEqual(['dev-two'])
+  })
+
   it('ignores too-short handles', () => {
     expect(extractHandles('@ab is too short but @abc is fine')).toEqual(['abc'])
   })

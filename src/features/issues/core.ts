@@ -84,6 +84,23 @@ async function duplicateNumber(issueId: string): Promise<number | null> {
   return row?.number ?? null
 }
 
+/**
+ * ЕДИНСТВЕННАЯ ТОЧКА РАССЫЛКИ УПОМИНАНИЙ В ЗАДАЧАХ — и она спрашивает, кто пишет.
+ *
+ * Развилка стояла только у создания задачи, потому что служебный писатель сегодня только
+ * заводит и не отвечает. То есть путь комментирования был закрыт не свойством, а
+ * ОТСУТСТВИЕМ ВЫЗЫВАЮЩЕГО: появись служба, отвечающая в треде, — и рассылка чужим
+ * текстом вернулась бы тем же способом. Теперь спрашивают оба пути, а узда
+ * `issue-write-one-path` следит, чтобы `notifyMentions` в этом файле остался один.
+ */
+async function mentionFromWriter(
+  writer: IssueWriter,
+  input: { text: string; actorId: string; templateId: string; issueId: string },
+): Promise<void> {
+  if (writer !== 'person') return
+  await notifyMentions(input)
+}
+
 /** Кто узнаёт о событии в задаче: автор, владелец, прежние собеседники, наблюдатели. */
 async function issueAudience(issueId: string, templateId: string, authorId: string, ownerId: string) {
   const [commenters, watchers] = await Promise.all([issueCommenterIds(issueId), getWatcherIds(templateId, 'issues')])
@@ -158,10 +175,7 @@ export async function openIssueOn(
   if (writer === 'person') await subscribeToList(tpl.id, userId) // автор issue следит за списком
   const watchers = await getWatcherIds(tpl.id, 'issues')
   await notifyMany([tpl.ownerId, ...watchers], { actorId: userId, type: 'issue_new', templateId: tpl.id })
-  // Упоминания — только у человека: см. развилку у `IssueWriter`.
-  if (writer === 'person') {
-    await notifyMentions({ text: `${title}\n${body}`, actorId: userId, templateId: tpl.id, issueId: ins.id })
-  }
+  await mentionFromWriter(writer, { text: `${title}\n${body}`, actorId: userId, templateId: tpl.id, issueId: ins.id })
   return { ok: true, id: ins.id, number: ins.number, templateId: tpl.id }
 }
 
@@ -180,6 +194,9 @@ export async function commentOnIssue(
   slug: string,
   number: number,
   rawBody: string,
+  /** Служебных комментаторов сегодня нет — но правило принадлежит пути, а не наличию
+   *  вызывающего: см. `mentionFromWriter`. */
+  writer: IssueWriter = 'person',
 ): Promise<IssueResult<{ id: string; issueId: string; templateId: string }>> {
   const body = rawBody.trim().slice(0, 20000)
   if (!body) return { ok: false, reason: 'empty' }
@@ -201,11 +218,11 @@ export async function commentOnIssue(
   if (!(await underCommentRate(userId, tpl.id))) return { ok: false, reason: 'rate' }
 
   const added = await collabStore.addIssueComment(iss.id, userId, body)
-  await subscribeToList(tpl.id, userId) // комментатор начинает следить
+  if (writer === 'person') await subscribeToList(tpl.id, userId) // комментатор начинает следить
 
   const recipients = await issueAudience(iss.id, tpl.id, iss.authorId, tpl.ownerId)
   await notifyMany(recipients, { actorId: userId, type: 'issue_comment', templateId: tpl.id, issueId: iss.id })
-  await notifyMentions({ text: body, actorId: userId, templateId: tpl.id, issueId: iss.id })
+  await mentionFromWriter(writer, { text: body, actorId: userId, templateId: tpl.id, issueId: iss.id })
   return { ok: true, id: added.id, issueId: iss.id, templateId: tpl.id }
 }
 
