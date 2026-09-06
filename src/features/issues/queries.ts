@@ -1,5 +1,6 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { db, issueAssignees, issueComments, issues, listLabels, milestones, users } from '@/shared/db'
 import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { isFeatureEnabled } from '@/core'
@@ -287,6 +288,10 @@ export interface IssueDetail {
   /** Заперто ли обсуждение и за что — страница показывает полосу и убирает форму. */
   lockedAt: Date | null
   lockReason: 'off_topic' | 'too_heated' | 'resolved' | 'spam' | null
+  /** Чем кончилась задача. Есть только у закрытых; у закрытых до #892 — null. */
+  closeReason: CloseReason | null
+  /** Номер задачи-оригинала, если закрыта как дубликат (оригинал мог быть удалён). */
+  duplicateNumber: number | null
 }
 
 export interface IssueComment {
@@ -297,6 +302,9 @@ export interface IssueComment {
   authorHandle: string
   authorAvatarUrl: string | null
 }
+
+/** Задача-оригинал при закрытии дубликатом: та же таблица вторым вхождением. */
+const duplicateOf = alias(issues, 'issue_duplicate_of')
 
 export async function getIssue(templateId: string, number: number): Promise<IssueDetail | null> {
   const [row] = await db
@@ -316,10 +324,19 @@ export async function getIssue(templateId: string, number: number): Promise<Issu
       milestoneTitle: milestones.title,
       lockedAt: issues.lockedAt,
       lockReason: issues.lockReason,
+      // ⚠️ ИСХОД — ПОЛЕ ЗАДАЧИ, А НЕ ТОЛЬКО СТРОКА В ЛЕНТЕ. Пока он жил лишь событием,
+      // в длинном треде его не было видно на первой порции: «закрыл» стоит после
+      // последней реплики, а до неё листать три страницы. То есть исход завели, чтобы
+      // отвечать (#892), а на вопрос «чем кончилось» ни человек, ни агент ответа не
+      // получали, хотя в базе он лежал заполненный.
+      closeReason: issues.closeReason,
+      duplicateNumber: duplicateOf.number,
     })
     .from(issues)
     .innerJoin(users, eq(issues.authorId, users.id))
     .leftJoin(milestones, eq(milestones.id, issues.milestoneId))
+    // leftJoin: оригинал могли удалить — тогда исход «дубликат» остаётся, а номера нет.
+    .leftJoin(duplicateOf, eq(duplicateOf.id, issues.duplicateOfId))
     .where(and(eq(issues.templateId, templateId), eq(issues.number, number)))
     .limit(1)
   if (!row) return null
@@ -422,6 +439,9 @@ export async function loadIssue(owner: string, slug: string, number: number) {
       id: issues.id,
       authorId: issues.authorId,
       status: issues.status,
+      // Исход нужен там же, где статус: повторное закрытие УЖЕ закрытой задачи не должно
+      // писать событие заново, а сказать в ответе «уже закрыта как…» можно только зная чем.
+      closeReason: issues.closeReason,
       title: issues.title,
       body: issues.body,
       // Запертость нужна КАЖДОМУ пишущему действию: форму можно обойти, адрес известен.

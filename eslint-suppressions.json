@@ -280,7 +280,7 @@
   },
   "src/features/issues/actions.ts": {
     "boundaries/dependencies": {
-      "count": 5
+      "count": 2
     }
   },
   "src/features/issues/label-actions.ts": {

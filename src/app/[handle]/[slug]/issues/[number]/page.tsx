@@ -119,9 +119,25 @@ export default async function IssueThreadPage({
           </h1>
         </div>
         <div className="mb-4 flex flex-wrap items-center gap-3">
+          {/* ⚠️ ИСХОД СТОИТ В САМОМ ЗНАЧКЕ, а не только строкой в ленте: «сделано» и «не
+              будем делать» выглядят одинаково — закрытой задачей, — а значат
+              противоположное, и в длинном треде строка ленты уезжает на последнюю
+              порцию. Так же у GitHub: «Closed as completed» прямо у состояния.
+              У задач, закрытых до появления исхода, его нет — значок остаётся прежним.
+
+              ⚠️ ЦВЕТ ПОКА ОДИН НА ВСЕ ИСХОДЫ — и это названное отклонение, а не недосмотр.
+              У GitHub «сделано» и «не будем делать» отличаются ещё и тоном, и довод
+              понятен: беглый взгляд читает цвет раньше слов. У нас в шкале значка нет
+              ТИХОЙ ЗАЛИТОЙ ступени: `soft` — это подложка, и рядом с залитым значком она
+              читается как другой вид элемента, а не как тот же значок иным тоном. Заводить
+              ступень — правка общей шкалы (ui-parity, весь набор значков), а не этой
+              страницы, и ехать она должна отдельно и с живым проходом по мобиле. Пока
+              различие несут слова: «Закрыто: сделано» и «Закрыто: не будем делать». */}
           <Badge size="md" variant={closed ? 'accentSolid' : 'okSolid'} className="gap-1.5 px-3">
             {closed ? <CircleCheck size={14} /> : <CircleDot size={14} />}
-            {closed ? t('issueClosedBadge', lang) : t('issueOpenBadge', lang)}
+            {closed
+              ? t(issue.closeReason ? (`issue.closedBadge.${issue.closeReason}` as TKey) : 'issueClosedBadge', lang)
+              : t('issueOpenBadge', lang)}
           </Badge>
           <span className="text-body text-ink-2">
             <span className="font-semibold text-ink">{issue.authorHandle}</span> {t('openedThis', lang)} ·{' '}
@@ -148,16 +164,12 @@ export default async function IssueThreadPage({
           />
         </div>
 
-        {/* Отказ по частоте комментариев — там же, где человек его получил. */}
-
-        {sp.e === 'rate' && (
-
+        {/* Отказы, случившиеся ПО ДОРОГЕ СЮДА, — там же, где человек нажимал: слишком
+            частый ответ и закрытие дубликатом с номером, которого в списке нет. */}
+        {(sp.e === 'rate' || sp.e === 'dup') && (
           <Alert variant="danger" className="mb-3">
-
-            {t('issue.rateLimited', lang)}
-
+            {t(sp.e === 'rate' ? 'issue.rateLimited' : 'issue.duplicateNotFound', lang)}
           </Alert>
-
         )}
 
 
