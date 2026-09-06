@@ -6,14 +6,14 @@ import { revalidatePath } from 'next/cache'
 import { db, runStepState, runs, steps, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
-import { canViewList } from '@/core'
 import { tr, type LocaleText } from '@/shared/i18n'
 import { getLang } from '@/shared/i18n/server'
 import { getAiSettings } from '@/shared/settings/ai'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { aiQuota } from '@/shared/quota'
 import { assistOnStep } from '@/shared/ai/assist'
-import { collabStore } from '@/features/collab-store/store'
+// eslint-disable-next-line boundaries/dependencies -- задача заводится тем же ядром, что и форма «Новый вопрос»
+import { openIssue } from '@/features/issues/core'
 import { isCollaborator } from '@/features/collab/queries'
 import { recordRunCompletionIfDone } from '@/shared/completion'
 import { stepStuckStats } from './queries'
@@ -220,19 +220,23 @@ export async function failRun(runId: string): Promise<void> {
 }
 
 // ── Петля обратной связи: заблокированный шаг → issue на список ───────
-export async function reportBlockedStep(runId: string, stepId: string): Promise<void> {
+
+/**
+ * Почему сообщить не вышло — ЗНАЧЕНИЕМ, чтобы кнопка могла это показать.
+ *
+ * Раньше отказ уводил обратно в прогон молча: человек нажимал «сообщить», страница
+ * моргала, и ничего не происходило — ни задачи, ни объяснения.
+ */
+export type ReportRefusal = 'rate' | 'noissue'
+
+export async function reportBlockedStep(runId: string, stepId: string): Promise<ReportRefusal | null> {
   const session = await requireSession()
   const run = await db.query.runs.findFirst({
     where: (r) => eq(r.id, runId),
     with: { template: { with: { owner: true } } },
   })
-  if (!run || run.userId !== session.userId) return
+  if (!run || run.userId !== session.userId) return 'noissue'
   const tpl = run.template
-  // issue открываем только там, где список доступен пишущему: свой, либо публичный+
-  // активный. Раньше проверялась только модерация — приватный список (ставший приватным
-  // после старта прогона) пропускался. canViewList закрывает private/draft/moderation.
-  const isOwner = tpl.ownerId === session.userId
-  if (!canViewList(tpl, { isOwner })) redirect(`/runs/${runId}`)
 
   const [st] = await db
     .select({ n: steps.n, title: steps.title, state: runStepState.note })
@@ -240,7 +244,7 @@ export async function reportBlockedStep(runId: string, stepId: string): Promise<
     .leftJoin(runStepState, and(eq(runStepState.stepId, steps.id), eq(runStepState.runId, runId)))
     .where(eq(steps.id, stepId))
     .limit(1)
-  if (!st) redirect(`/runs/${runId}`)
+  if (!st) return 'noissue'
 
   const stepTitle = tr(st.title as LocaleText, 'en') || `#${st.n}`
   const reason = (st.state ?? '').trim()
@@ -250,8 +254,23 @@ export async function reportBlockedStep(runId: string, stepId: string): Promise<
     `**Step ${st.n}: ${stepTitle}** could not be completed.` +
     (reason ? `\n\n**What went wrong:** ${reason}` : '')
 
-  const ins = await collabStore.openIssue(tpl.id, session.userId, title, body.slice(0, 20000), ['bug'])
-  redirect(`/${tpl.owner.handle}/${tpl.slug}/issues/${ins.number}`)
+  // ⚠️ ЗАВОДИМ ЗАДАЧУ ТЕМ ЖЕ ПУТЁМ, ЧТО И ФОРМА «Новый вопрос».
+  //
+  // Раньше здесь стоял прямой вызов хранилища с собственной проверкой видимости — и
+  // мимо ехало всё остальное: раздел «Вопросы», выключенный владельцем (задача
+  // заводилась в разделе, которого в списке нет и который никому не показан), правило
+  // «кто может писать», счётчик частоты и, главное, УВЕДОМЛЕНИЯ. Человек сообщал о
+  // вставшем шаге, а владелец списка об этом не узнавал вовсе, пока сам не заглянет
+  // в трекер.
+  const res = await openIssue(session.userId, tpl.owner.handle, tpl.slug, {
+    title,
+    body: body.slice(0, 20000),
+    labels: ['bug'],
+  })
+  // Отказ возвращается ЗНАЧЕНИЕМ: страницы задачи не появилось, вести некуда, а
+  // причину человек должен увидеть там, где нажимал.
+  if (!res.ok) return res.reason === 'rate' ? 'rate' : 'noissue'
+  redirect(`/${tpl.owner.handle}/${tpl.slug}/issues/${res.number}`)
 }
 
 // ── «Помощь на шаге»: AI-подсказка застрявшему ────────────────────────

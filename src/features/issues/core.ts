@@ -18,7 +18,7 @@ import { getListLabels, loadIssue, type CloseReason } from './queries'
 import { recordIssueEvent } from './events'
 // `canComment` здесь занято проверкой ПРАВ — частота именуется иначе, чтобы на месте
 // вызова было видно, о чём речь.
-import { canComment as underCommentRate, canOpenIssue as underIssueRate } from './limits'
+import { canComment as underCommentRate, canOpenIssue as underIssueRate, canOpenIssueForList as underListIssueRate } from './limits'
 
 /**
  * ЧТО ЗНАЧИТ «ЗАВЕСТИ ЗАДАЧУ», «ОТВЕТИТЬ» И «ЗАКРЫТЬ» — ОДИН РАЗ НА ВСЕ ПОВЕРХНОСТИ.
@@ -100,29 +100,68 @@ export async function openIssue(
   slug: string,
   input: { title: string; body?: string; labels?: string[] },
 ): Promise<IssueResult<{ id: string; number: number; templateId: string }>> {
+  const tpl = await resolveListBySlug(owner, slug)
+  if (!tpl) return { ok: false, reason: 'not_found' }
+  return openIssueOn(tpl, userId, input)
+}
+
+/**
+ * КТО ПИШЕТ — ЧЕЛОВЕК ИЛИ СЛУЖБА. Различие в трёх местах, и все три следуют из одного:
+ * у службы нет ни своего темпа, ни своего интереса, ни своей речи.
+ *
+ *  • частота: человеку считаем личный ключ и ключ списка, службе — только список
+ *    (почему — в `limits.ts`, у `canOpenIssueForList`);
+ *  • подписка: человек, заведя задачу, начинает следить за списком — он ждёт ответа.
+ *    Садовник ответа не ждёт и следить не должен: иначе он подпишется на всё, к чему
+ *    прикоснулся, и будет получать уведомления о чужих разговорах вечно;
+ *  • ⚠️ УПОМИНАНИЯ: служба их не рассылает вовсе. Упоминание — это ОБРАЩЕНИЕ, у машины
+ *    его не бывает: тело она собирает из чужого содержимого, а не пишет от себя. Разница
+ *    не умозрительная. Садовник кладёт в задачу битые ссылки ИЗ СПИСКА, то есть текст,
+ *    который выбрал автор списка; ссылка вида `https://site/p?user=@alice` проходит
+ *    разбор упоминаний (перед `@` стоит `=`, а не `/`), и автор списка мог бы рассылать
+ *    уведомления кому угодно ОТ ИМЕНИ садовника, просто добавив к себе битые адреса.
+ *    До переезда на общее ядро этого пути не было: доставка уведомляла владельца и
+ *    наблюдателей и никого больше.
+ */
+export type IssueWriter = 'person' | 'service'
+
+/**
+ * То же открытие задачи, но для тех, у кого список уже на руках (садовник приходит по
+ * id, страница прогона — по своей связи). Ворота ровно те же: отдельного пути «мимо» не
+ * появляется, меняется только способ добраться до списка.
+ */
+export async function openIssueOn(
+  tpl: ResolvedList,
+  userId: string,
+  input: { title: string; body?: string; labels?: string[] },
+  writer: IssueWriter = 'person',
+): Promise<IssueResult<{ id: string; number: number; templateId: string }>> {
   const title = input.title.trim().slice(0, 200)
   const body = (input.body ?? '').trim().slice(0, 20000)
   if (!title) return { ok: false, reason: 'empty' }
 
-  const tpl = await resolveListBySlug(owner, slug)
-  if (!tpl) return { ok: false, reason: 'not_found' }
   // Раздел, выключенный владельцем, проверяется ЗДЕСЬ, а не только на странице:
-  // сохранённая форма, прямой вызов action и запрос MCP страницу не проходят.
+  // сохранённая форма, прямой вызов action, запрос MCP и фоновый писатель страницу не
+  // проходят — а задача в выключенном разделе не видна никому, даже владельцу.
   if (!(await canWriteIssues(tpl, userId))) return { ok: false, reason: 'forbidden' }
 
   // ⚠️ ЧАСТОТА — ПОСЛЕ ПРАВ, НО ДО ЗАПИСИ. Каждая задача рассылает уведомления автору,
   // владельцу и наблюдателям, поэтому скрипт в цикле бьёт не только по базе. Ключей
   // два — на человека и на список (см. `limits.ts`, там же выведены числа). Через MCP
   // это тем более не украшение: там пишет как раз программа.
-  if (!(await underIssueRate(userId, tpl.id))) return { ok: false, reason: 'rate' }
+  const underRate = writer === 'service' ? underListIssueRate(tpl.id) : underIssueRate(userId, tpl.id)
+  if (!(await underRate)) return { ok: false, reason: 'rate' }
 
   const labels = cleanLabels(input.labels ?? [], await customIdSet(tpl.id))
   const ins = await collabStore.openIssue(tpl.id, userId, title, body, labels)
 
-  await subscribeToList(tpl.id, userId) // автор issue следит за списком
+  if (writer === 'person') await subscribeToList(tpl.id, userId) // автор issue следит за списком
   const watchers = await getWatcherIds(tpl.id, 'issues')
   await notifyMany([tpl.ownerId, ...watchers], { actorId: userId, type: 'issue_new', templateId: tpl.id })
-  await notifyMentions({ text: `${title}\n${body}`, actorId: userId, templateId: tpl.id, issueId: ins.id })
+  // Упоминания — только у человека: см. развилку у `IssueWriter`.
+  if (writer === 'person') {
+    await notifyMentions({ text: `${title}\n${body}`, actorId: userId, templateId: tpl.id, issueId: ins.id })
+  }
   return { ok: true, id: ins.id, number: ins.number, templateId: tpl.id }
 }
 

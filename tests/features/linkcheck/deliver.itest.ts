@@ -102,6 +102,19 @@ describe('deliverBrokenLinks', () => {
     expect(await db.select().from(issues).where(eq(issues.templateId, templateId))).toHaveLength(1)
   })
 
+  it('⚠️ раздел «Вопросы» выключен — садовник туда не пишет', async () => {
+    // Проверки раздела здесь не было вовсе: садовник заводил задачу в разделе, которого
+    // в списке нет и который не показан никому — ни владельцу, ни читателю. Теперь
+    // задача идёт тем же ядром, что и у людей, и упирается в ту же дверь.
+    await db.delete(issues).where(eq(issues.templateId, templateId))
+    await db.update(templates).set({ issuesEnabled: false }).where(eq(templates.id, templateId))
+    await setDeadVerdict('broken')
+    const r = await deliverBrokenLinks()
+    expect(r.opened).toBe(0)
+    expect(await db.select().from(issues)).toHaveLength(0)
+    await db.update(templates).set({ issuesEnabled: true }).where(eq(templates.id, templateId))
+  })
+
   it('unreachable НЕ доставляется (ТСПУ/бот-блок ≠ мёртвая ссылка)', async () => {
     await db.delete(issues).where(eq(issues.templateId, templateId))
     await setDeadVerdict('unreachable')

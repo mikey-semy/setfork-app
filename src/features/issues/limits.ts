@@ -53,6 +53,22 @@ export function canOpenIssue(userId: string, listId: string): Promise<boolean> {
   )
 }
 
+/**
+ * ЧАСТОТА ДЛЯ СЛУЖЕБНОГО ПИСАТЕЛЯ — ТОЛЬКО ПО СПИСКУ.
+ *
+ * Личный ключ пасует темп ЧЕЛОВЕКА: он пишет рывками, и двадцать задач подряд — это
+ * его пик. У сервисного аккаунта своего темпа нет вовсе — он ходит по расписанию и за
+ * один свип может законно завести по задаче в полусотне списков; личный порог обрезал
+ * бы такой свип на двадцатом, причём МОЛЧА: тридцать списков остались бы без находки,
+ * а в журнале стояло бы «доставлено».
+ *
+ * Ключ списка при этом остаётся: он и защищает от того, ради чего счётчик заводили —
+ * от цикла, бьющего в ОДИН список.
+ */
+export function canOpenIssueForList(listId: string): Promise<boolean> {
+  return rateLimit(`issue:new:l:${listId}`, ISSUE_LIMITS.issuePerList, MINUTE).then((r) => r.ok)
+}
+
 export function canComment(userId: string, listId: string): Promise<boolean> {
   return allowed(
     `issue:cmt:u:${userId}`,

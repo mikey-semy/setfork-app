@@ -61,7 +61,18 @@ function up() {
      'pgvector/pgvector:pg16'],
     false,
   )
-  waitFor('Postgres', () => spawnSync('docker', ['exec', PG, 'pg_isready', '-U', 'ci', '-d', 'ci']).status === 0)
+  // ⚠️ ЖДЁМ ДВА РАЗА ПОДРЯД, И НЕ pg_isready. Официальный образ поднимает ВРЕМЕННЫЙ
+  // сервер, чтобы создать базу и пользователя, а потом гасит его и стартует настоящий.
+  // В это окно pg_isready отвечает «готов», db:init начинает катить схему и падает на
+  // «Connection terminated unexpectedly» — сегодня дважды. Поэтому проверяем НАСТОЯЩИМ
+  // запросом и требуем двух успехов подряд с паузой: временный сервер между ними
+  // успевает исчезнуть, а настоящий — нет.
+  const query = () => spawnSync('docker', ['exec', PG, 'psql', '-U', 'ci', '-d', 'ci', '-c', 'select 1']).status === 0
+  let steady = 0
+  waitFor('Postgres', () => {
+    steady = query() ? steady + 1 : 0
+    return steady >= 2
+  })
 
   // Схема накатывается ДО ядра: на старте оно ходит в базу.
   out('схема (db:init)…')
