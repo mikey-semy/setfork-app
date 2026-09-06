@@ -38,6 +38,19 @@ export async function resolveListBySlug(owner: string, slug: string) {
 export type ResolvedList = NonNullable<Awaited<ReturnType<typeof resolveListBySlug>>>
 
 /**
+ * Тот же список, но по id — для тех, у кого адреса на руках нет.
+ *
+ * Понадобился фоновым писателям: садовник приходит к списку по `template_id` из своей
+ * таблицы находок, и просить у него ник владельца значило бы гонять лишний запрос ради
+ * того, чтобы тут же разобрать строку обратно. Проекция ОДНА с адресным резолвом:
+ * права считаются по одним и тем же полям, кто бы ни пришёл.
+ */
+export async function resolveListById(templateId: string): Promise<ResolvedList | null> {
+  const [row] = await db.select(listProjection).from(templates).where(eq(templates.id, templateId)).limit(1)
+  return row ?? null
+}
+
+/**
  * Пользователь по нику — текущему или ПРЕЖНЕМУ.
  *
  * Ник стоит первым сегментом в адресе каждого списка человека, поэтому его смена
