@@ -6,33 +6,29 @@ import { redirect } from 'next/navigation'
 import { councilExperts, db, issueAssignees, issues, users } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { getLang } from '@/shared/i18n/server'
-import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { requireSession } from '@/shared/auth/session'
-import { canWriteToFeature, isFeatureEnabled } from '@/core'
 import { isCollaborator } from '@/features/collab/queries'
-import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
+import { notify } from '@/features/notifications/notify'
 import { recordIssueEvent } from './events'
-import { ensureWatch } from '@/features/watch/actions'
-import { getWatcherIds } from '@/features/watch/queries'
-import { collabStore, issueCommenterIds } from '@/features/collab-store/store'
-import { loadIssue } from './queries'
-// `canComment` в этом файле уже занято проверкой ПРАВ — частота именуется иначе,
-// чтобы на месте вызова было видно, о чём речь.
-import { canComment as underCommentRate, canOpenIssue as underIssueRate } from './limits'
-import { cleanLabels, customId, isCustomKey, isLabelKey } from '@/shared/lib/labels'
-import { getListLabels } from './queries'
+import { changeIssueStatus, commentOnIssue, openIssue } from './core'
+import { cleanLabels } from '@/shared/lib/labels'
+import { getListLabels, loadIssue, type CloseReason } from './queries'
 
 const customIdSet = async (templateId: string) => new Set((await getListLabels(templateId)).map((l) => l.id))
 
-/** Открыть issue. Любой залогиненный на видимом списке; приватный/черновик/снятый
- *  модерацией — владелец и коллабораторы (те, кто список и так видит). */
 /**
- * Отказ ввода — ЗНАЧЕНИЕМ, а не адресом `?e=`.
+ * ФОРМА «НОВЫЙ ВОПРОС» — сессия, ворота из ./core, переход.
  *
- * Форма проверяет заголовок на клиенте, и туда переход не доходил. Проверено живьём:
- * без JS ветка тоже недостижима — `required` не даёт браузеру отправить форму. Значит
- * это УНИФИКАЦИЯ, а не починка наблюдаемой потери: ветка остаётся страховкой на прямой
- * POST и теперь отказывает так же, как остальные формы (#832), вместо перехода.
+ * Сами ворота (право писать в раздел, частота, уведомления) живут в ядре: у задач
+ * теперь две поверхности, сайт и MCP, и вторая копия правил разошлась бы с первой.
+ * Здесь остаётся только то, чего у MCP нет: cookie-сессия, обновление кэша страниц и
+ * адрес, куда отправить браузер.
+ *
+ * Отказ ввода — ЗНАЧЕНИЕМ, а не адресом `?e=`. Форма проверяет заголовок на клиенте, и
+ * туда переход не доходил. Проверено живьём: без JS ветка тоже недостижима — `required`
+ * не даёт браузеру отправить форму. Значит это УНИФИКАЦИЯ, а не починка наблюдаемой
+ * потери: ветка остаётся страховкой на прямой POST и теперь отказывает так же, как
+ * остальные формы (#832), вместо перехода.
  */
 export type IssueRefusal = 'empty'
 
@@ -40,41 +36,18 @@ export async function createIssue(_prev: IssueRefusal | null, formData: FormData
   const session = await requireSession()
   const owner = String(formData.get('owner') ?? '')
   const slug = String(formData.get('slug') ?? '')
-  const title = String(formData.get('title') ?? '').trim().slice(0, 200)
-  const body = String(formData.get('body') ?? '').trim().slice(0, 20000)
-  const rawLabels = formData.getAll('labels').map(String)
-  if (!title) return 'empty'
-
-  const tpl = await resolveListBySlug(owner, slug)
-  if (!tpl) redirect(`/${owner}/${slug}`)
-  // Единый предикат, а не своя пара проверок: копия здесь забывала про ЧЕРНОВИК —
-  // посторонний открывал задачу в чужом неопубликованном списке (слаг предсказуем по
-  // заголовку), владельцу летело уведомление, notifyMentions рассылал упоминания
-  // (линза 02, F4). Заодно уходит перекос: коллаборатор приватного списка, который
-  // список видит, теперь может завести в нём задачу.
-  // Раздел, выключенный владельцем, тоже проверяется ЗДЕСЬ, а не только на странице:
-  // сохранённая форма и прямой вызов action страницу не проходят, и задачи заводились
-  // в списке, где раздел «Вопросы» отключён и не показывается никому.
-  const isOwner = tpl.ownerId === session.userId
-  const canWrite =
-    canWriteToFeature(tpl, 'issues', { isOwner }) ||
-    canWriteToFeature(tpl, 'issues', { isOwner, isCollaborator: await isCollaborator(tpl.id, session.userId) })
-  if (!canWrite) redirect(`/${owner}/${slug}`)
-
-  // ⚠️ ЧАСТОТА — ПОСЛЕ ПРАВ, НО ДО ЗАПИСИ. Каждая задача рассылает уведомления автору,
-  // владельцу и наблюдателям, поэтому скрипт в цикле бьёт не только по базе. Ключей
-  // два — на человека и на список (см. `limits.ts`, там же выведены числа).
-  if (!(await underIssueRate(session.userId, tpl.id))) redirect(`/${owner}/${slug}/issues?e=rate`)
-
-  const labels = cleanLabels(rawLabels, await customIdSet(tpl.id))
-  const ins = await collabStore.openIssue(tpl.id, session.userId, title, body, labels)
-
-  await ensureWatch(tpl.id) // автор issue следит за списком
-  const watchers = await getWatcherIds(tpl.id, 'issues')
-  await notifyMany([tpl.ownerId, ...watchers], { actorId: session.userId, type: 'issue_new', templateId: tpl.id })
-  await notifyMentions({ text: `${title}\n${body}`, actorId: session.userId, templateId: tpl.id, issueId: ins.id })
+  const res = await openIssue(session.userId, owner, slug, {
+    title: String(formData.get('title') ?? ''),
+    body: String(formData.get('body') ?? ''),
+    labels: formData.getAll('labels').map(String),
+  })
+  if (!res.ok) {
+    if (res.reason === 'empty') return 'empty'
+    if (res.reason === 'rate') redirect(`/${owner}/${slug}/issues?e=rate`)
+    redirect(`/${owner}/${slug}`)
+  }
   revalidatePath(`/${owner}/${slug}/issues`)
-  redirect(`/${owner}/${slug}/issues/${ins.number}`)
+  redirect(`/${owner}/${slug}/issues/${res.number}`)
 }
 
 
@@ -83,120 +56,45 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   const owner = String(formData.get('owner') ?? '')
   const slug = String(formData.get('slug') ?? '')
   const number = Number(formData.get('number') ?? 0)
-  const body = String(formData.get('body') ?? '').trim().slice(0, 20000)
   const path = `/${owner}/${slug}/issues/${number}`
-  if (!body) redirect(path)
 
-  const loaded = await loadIssue(owner, slug, number)
-  if (!loaded) redirect(`/${owner}/${slug}`)
-  const { tpl, iss } = loaded
-  // Комментарий — запись в тред списка: нельзя к issue приватного/скрытого/черновика
-  // (иначе инъекция в приватную ветку + пинги владельцу + оракул по перебору номеров).
-  // Коллаборатор проходит так же, как при СОЗДАНИИ задачи выше: иначе он открывал бы
-  // задачу в приватном списке, видел форму ответа и не мог отправить ни одного
-  // комментария — тред, доступный только на запись первой строки (P2 авто-ревью #582).
-  const isOwnerC = tpl.ownerId === session.userId
-  const canComment =
-    canWriteToFeature(tpl, 'issues', { isOwner: isOwnerC }) ||
-    canWriteToFeature(tpl, 'issues', { isOwner: isOwnerC, isCollaborator: await isCollaborator(tpl.id, session.userId) })
-  if (!canComment) redirect(`/${owner}/${slug}`)
-
-  // ⚠️ ЗАПЕРТОЕ ОБСУЖДЕНИЕ ПРОВЕРЯЕТСЯ ЗДЕСЬ, а не только пряча форму. Форма — это
-  // вежливость, а не запрет: адрес действия известен, и отправить в него можно из чего
-  // угодно. Пускаем тех же, кто может запирать: владельца и коллаборантов.
-  if (iss.lockedAt) {
-    const canManage = session.userId === tpl.ownerId || (await isCollaborator(tpl.id, session.userId))
-    if (!canManage) redirect(path)
+  const res = await commentOnIssue(session.userId, owner, slug, number, String(formData.get('body') ?? ''))
+  if (!res.ok) {
+    if (res.reason === 'rate') redirect(`${path}?e=rate`)
+    // «Нет списка» и «нет прав» уводят на список: страницы задачи для этого человека
+    // не существует. «Пусто» и «заперто» — обратно в тред, там видно почему.
+    if (res.reason === 'not_found' || res.reason === 'forbidden') redirect(`/${owner}/${slug}`)
+    redirect(path)
   }
-
-  if (!(await underCommentRate(session.userId, tpl.id))) redirect(`${path}?e=rate`)
-
-  await collabStore.addIssueComment(iss.id, session.userId, body)
-  await ensureWatch(tpl.id) // комментатор начинает следить
-
-  // Участники: автор issue + владелец + прежние комментаторы + наблюдатели.
-  const [commenters, watchers] = await Promise.all([issueCommenterIds(iss.id), getWatcherIds(tpl.id, 'issues')])
-  const recipients = [iss.authorId, tpl.ownerId, ...commenters, ...watchers]
-  await notifyMany(recipients, { actorId: session.userId, type: 'issue_comment', templateId: tpl.id, issueId: iss.id })
-  await notifyMentions({ text: body, actorId: session.userId, templateId: tpl.id, issueId: iss.id })
 
   revalidatePath(path)
   redirect(path)
 }
 
 /**
- * Закрыть/переоткрыть issue — автор issue или владелец списка.
- *
- * ⚠️ ЗАКРЫТО — НЕ ОТВЕТ. «Сделали» и «не будем делать» выглядят одинаково (перечёркнутый
- * номер), а значат противоположное: у первого работа позади, у второго её не будет.
- * Поэтому у закрытия есть ИСХОД, отдельный от состояния, — как у всех, кого читали
- * (GitHub `IssueStateReason`, SourceHut `TicketResolution`, «statuses/resolutions» у Jira).
- *
- * Дубликат — исход И связь сразу: причина без ссылки сообщает, что оригинал есть, и не
- * говорит где. У GitHub в `CloseIssueInput` ровно та же пара — `stateReason: DUPLICATE`
- * и `duplicateIssueId`.
+ * Закрыть/переоткрыть задачу — правила в ./core, здесь сессия и переход.
  */
 export async function setIssueStatus(
   owner: string,
   slug: string,
   number: number,
   status: 'open' | 'closed',
-  reason?: 'completed' | 'not_planned' | 'duplicate',
+  reason?: CloseReason,
   /** Номер задачи-оригинала — только при `duplicate`. */
   duplicateOfNumber?: number,
 ): Promise<void> {
   const session = await requireSession()
-  const loaded = await loadIssue(owner, slug, number)
-  if (!loaded) redirect(`/${owner}/${slug}`)
-  const { tpl, iss } = loaded
-  if (session.userId !== iss.authorId && session.userId !== tpl.ownerId) redirect(`/${owner}/${slug}/issues/${number}`)
-
-  // Оригинал ищем ПО НОМЕРУ и в ТОМ ЖЕ списке: чужая задача дубликатом не объявляется, и
-  // ссылка на неё из другого списка читалась бы как «иди туда, где тебе нечего делать».
-  let duplicateOfId: string | null = null
-  if (status === 'closed' && reason === 'duplicate' && duplicateOfNumber && duplicateOfNumber !== number) {
-    const [orig] = await db
-      .select({ id: issues.id })
-      .from(issues)
-      .where(and(eq(issues.templateId, tpl.id), eq(issues.number, duplicateOfNumber)))
-      .limit(1)
-    duplicateOfId = orig?.id ?? null
+  const path = `/${owner}/${slug}/issues/${number}`
+  const res = await changeIssueStatus(session.userId, owner, slug, number, status, reason, duplicateOfNumber)
+  if (!res.ok) {
+    if (res.reason === 'not_found') redirect(`/${owner}/${slug}`)
+    // Номер оригинала назвали, а такой задачи в списке нет: молчать нельзя — человек
+    // уверен, что поставил ссылку, а её бы не было.
+    if (res.reason === 'duplicate_not_found') redirect(`${path}?e=dup`)
+    redirect(path)
   }
 
-  await collabStore.setIssueStatus(iss.id, status)
-  // Исход живёт, пока задача закрыта. При переоткрытии он снимается — иначе открытая
-  // задача носила бы отметку «сделано». В ЛЕНТЕ он при этом остаётся навсегда: «закрыли
-  // как не будем делать» — часть разговора, а не текущее состояние (та же развилка, что
-  // у причины запирания).
-  await db
-    .update(issues)
-    .set({
-      closeReason: status === 'closed' ? (reason ?? null) : null,
-      duplicateOfId: status === 'closed' ? duplicateOfId : null,
-    })
-    .where(eq(issues.id, iss.id))
-  // След в ленте — сразу за статусом (о порядке см. ./events).
-  await recordIssueEvent(db, {
-    issueId: iss.id,
-    actorId: session.userId,
-    kind: status === 'closed' ? 'closed' : 'reopened',
-    closeReason: status === 'closed' ? (reason ?? null) : null,
-    duplicateOfId: status === 'closed' ? duplicateOfId : null,
-  })
-
-  // ⚠️ Об этом узнают ТЕ ЖЕ, кто узнаёт о новой реплике. Закрытие — не мелочь оформления:
-  // для автора это ответ «вопрос снят», для следящих — «тут больше ничего не будет».
-  // Раньше молчали вовсе, и человек узнавал о закрытии, случайно вернувшись на страницу.
-  // Себе не шлём: `notifyMany` отсекает автора действия.
-  const [commenters, watchers] = await Promise.all([issueCommenterIds(iss.id), getWatcherIds(tpl.id, 'issues')])
-  await notifyMany([iss.authorId, tpl.ownerId, ...commenters, ...watchers], {
-    actorId: session.userId,
-    type: status === 'closed' ? 'issue_closed' : 'issue_reopened',
-    templateId: tpl.id,
-    issueId: iss.id,
-  })
-
-  revalidatePath(`/${owner}/${slug}/issues/${number}`)
+  revalidatePath(path)
   revalidatePath(`/${owner}/${slug}/issues`)
 }
 

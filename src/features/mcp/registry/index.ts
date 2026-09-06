@@ -6,6 +6,7 @@ import { registerSuggestions } from './suggestions'
 import { registerChecks } from './checks'
 import { registerSources } from './sources'
 import { registerRuns } from './runs'
+import { registerIssues } from './issues'
 
 export { serverOptions } from './server-info'
 
@@ -30,4 +31,5 @@ export function registerTools(server: Parameters<typeof toolKit>[0]) {
   registerChecks(kit)
   registerSources(kit)
   registerRuns(kit)
+  registerIssues(kit)
 }

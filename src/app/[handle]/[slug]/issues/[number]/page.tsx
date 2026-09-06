@@ -148,16 +148,12 @@ export default async function IssueThreadPage({
           />
         </div>
 
-        {/* Отказ по частоте комментариев — там же, где человек его получил. */}
-
-        {sp.e === 'rate' && (
-
+        {/* Отказы, случившиеся ПО ДОРОГЕ СЮДА, — там же, где человек нажимал: слишком
+            частый ответ и закрытие дубликатом с номером, которого в списке нет. */}
+        {(sp.e === 'rate' || sp.e === 'dup') && (
           <Alert variant="danger" className="mb-3">
-
-            {t('issue.rateLimited', lang)}
-
+            {t(sp.e === 'rate' ? 'issue.rateLimited' : 'issue.duplicateNotFound', lang)}
           </Alert>
-
         )}
 
 

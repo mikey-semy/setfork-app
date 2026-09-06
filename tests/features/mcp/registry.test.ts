@@ -38,6 +38,8 @@ const EXPECTED = [
   'pending_suggestions', 'apply_suggestion', 'suggest_edit', 'review_suggestion', 'merge_suggestion', 'revert_suggestion', 'report_check',
   // источники и прогоны
   'register_source', 'list_sources', 'start_run', 'check_step', 'report_run',
+  // задачи: заметил и сказал, не берясь чинить
+  'search_issues', 'get_issue', 'create_issue', 'add_issue_comment', 'close_issue', 'reopen_issue',
 ]
 
 describe('реестр MCP: состав', () => {
@@ -72,6 +74,7 @@ const READ_ONLY = [
   'search_lists', 'get_list', 'get_script', 'get_run',
   'list_gnomes', 'get_council_draft',
   'pending_suggestions', 'list_sources',
+  'search_issues', 'get_issue',
   // «что у меня лежит неопубликованным» и «какие у меня полки» — чтение: ничего не
   // меняют и денег не тратят
   'my_catalogs', 'my_drafts',
