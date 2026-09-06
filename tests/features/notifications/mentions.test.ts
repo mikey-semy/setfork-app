@@ -36,6 +36,13 @@ describe('extractHandles', () => {
     expect(extractHandles('[архив](https://web.archive.org/web/*/https://x.io/@carol)')).toEqual([])
   })
 
+  it('⚠️ обращение ВПЛОТНУЮ за ссылкой не съедается вместе с адресом', () => {
+    // Граница адреса — не только пробел: закрывающая скобка markdown-ссылки и угловая
+    // скобка тоже. Иначе `[сайт](url)@dev-two` терял упоминание, стоящее СНАРУЖИ адреса.
+    expect(extractHandles('см. [сайт](https://site.example/a)@dev-two')).toEqual(['dev-two'])
+    expect(extractHandles('<https://site.example/a>@dev-two')).toEqual(['dev-two'])
+  })
+
   it('обращение РЯДОМ с адресом остаётся обращением', () => {
     // Вырезаем адрес, а не строку с адресом: иначе «почини это, @dev» под ссылкой
     // перестало бы кого-либо звать.
