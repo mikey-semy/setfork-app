@@ -473,7 +473,7 @@
   },
   "src/features/runs/actions.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/features/search/adapter.ts": {
