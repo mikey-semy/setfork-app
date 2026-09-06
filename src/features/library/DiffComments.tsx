@@ -366,9 +366,6 @@ function ThreadCard({
               <CircleDot size={14} />
             </Button>
           </Tooltip>
-          {toIssueRefused && (
-            <span className="text-body-sm text-danger">{t(toIssueRefused === 'rate' ? 'issue.rateLimited' : 'issue.cannotOpen', lang)}</span>
-          )}
           <Tooltip label={labels.resolve}>
             <Button
               variant="ghost"
@@ -379,6 +376,17 @@ function ThreadCard({
               {pending ? <Spinner size="sm" /> : <Check size={14} />}
             </Button>
           </Tooltip>
+        </div>
+      )}
+      {/* ⚠️ ПРИЧИНА — ОТДЕЛЬНОЙ СТРОКОЙ ПОД РЯДОМ, а не четвёртым элементом в нём.
+          Ряд без переноса и с `justify-end`, а кнопки в нём не сжимаются
+          (`whitespace-nowrap` в buttonClass) — значит остаток ширины достаётся
+          тексту, и в узкой панели диффа фраза складывается в столбик из двух слов.
+          Форма ровно та же, что у отказа в прогоне: одна и та же строка на двух
+          поверхностях не должна быть свёрстана двумя способами. */}
+      {toIssueRefused && (
+        <div className="mt-2 text-body-sm text-danger">
+          {t(toIssueRefused === 'rate' ? 'issue.rateLimited' : 'issue.cannotOpen', lang)}
         </div>
       )}
     </div>
