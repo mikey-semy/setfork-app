@@ -43,19 +43,31 @@ vi.mock('@/features/notifications/notify', () => ({
 vi.mock('@/features/watch/subscribe', () => ({ subscribeToList: async (id: string) => void h.subscribed.push(id) }))
 vi.mock('@/features/watch/queries', () => ({ getWatcherIds: async () => [] }))
 vi.mock('@/features/collab-store/store', () => ({
-  collabStore: { openIssue: async () => ({ id: 'i1', number: 1 }) },
+  collabStore: {
+    openIssue: async () => ({ id: 'i1', number: 1 }),
+    addIssueComment: async () => ({ id: 'c1' }),
+  },
   issueCommenterIds: async () => [],
 }))
-vi.mock('@/features/issues/queries', () => ({ getListLabels: async () => [], loadIssue: async () => null }))
+vi.mock('@/features/issues/queries', () => ({
+  getListLabels: async () => [],
+  loadIssue: async () => ({
+    tpl: TPL,
+    iss: { id: 'i1', authorId: 'author', status: 'open', closeReason: null, title: 'т', body: 'б', lockedAt: null },
+  }),
+}))
 vi.mock('@/features/issues/events', () => ({ recordIssueEvent: async () => {} }))
 
-const { openIssueOn } = await import('@/features/issues/core')
+const { commentOnIssue, openIssueOn } = await import('@/features/issues/core')
 
 /** Тело садовника — ЧУЖОЙ текст: битые ссылки, взятые из списка его автора. */
 const LINK_WITH_HANDLE = 'Мёртвые ссылки:\n- https://site.example/p?user=@alice'
 
 const open = (writer: 'person' | 'service') =>
   openIssueOn(TPL as never, 'gardener', { title: 'битые ссылки', body: LINK_WITH_HANDLE }, writer)
+
+const comment = (writer: 'person' | 'service') =>
+  commentOnIssue('gardener', 'owner-user', 'spisok', 7, `${LINK_WITH_HANDLE}\nи ещё @bob`, writer)
 
 beforeEach(() => Object.assign(h, { rateKeys: [], subscribed: [], notified: [], mentionTexts: [] }))
 
@@ -95,5 +107,20 @@ describe('служебный писатель', () => {
     await open('person')
     expect(h.mentionTexts).toHaveLength(1)
     expect(h.mentionTexts[0]).toContain('@alice')
+  })
+
+  it('⚠️ и в КОММЕНТИРОВАНИИ служба тоже не рассылает упоминаний', async () => {
+    // Второй путь рассылки. Сегодня служебных комментаторов нет, и раньше путь был
+    // закрыт именно этим — отсутствием вызывающего, а не свойством. Тест держит
+    // свойство: заведётся служба, отвечающая в треде, — она промолчит, как и должна.
+    await comment('service')
+    expect(h.mentionTexts).toEqual([])
+    expect(h.notified, 'а вот о самой реплике участники узнают').toContain('issue_comment')
+  })
+
+  it('человек, отвечая в треде, зовёт упомянутых', async () => {
+    await comment('person')
+    expect(h.mentionTexts).toHaveLength(1)
+    expect(h.mentionTexts[0]).toContain('@bob')
   })
 })
