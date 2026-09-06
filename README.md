@@ -117,3 +117,37 @@ src/
   widgets/                   # TopNav, Dashboard
 scripts/seed.ts              # сид публичной библиотеки
 ```
+
+---
+
+## For developers (English)
+
+SetFork is an open-source platform for **canonical, runnable checklists**: lists that an
+AI drafts, the community refines, and whose versions and authorship are kept honestly in
+git. This repository is the web application — Next.js and TypeScript, with Postgres
+behind it. Git itself is owned by a separate Rust service,
+[`setfork-core`](https://github.com/mikey-semy/setfork-core).
+
+Licensed under **AGPL-3.0-only** — see [LICENSE](LICENSE). Section 13 applies to network
+use: if you run a modified version as a service, its users must be able to obtain the
+source.
+
+```sh
+npm ci
+cp .env.example .env
+npm run itest:env     # Postgres in Docker
+npm run db:push       # schema (not the migration files — see CONTRIBUTING)
+npm run db:seed
+npm run dev
+```
+
+Most of the application runs without the Rust core; anything touching git — versions,
+diffs, branches, suggestions — does not.
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to propose a change, the AI policy, DCO, and
+  the architecture guards you will meet
+- [SECURITY.md](SECURITY.md) — how to report a vulnerability (not as a public issue)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+
+The project is maintained by one person and pull requests are reviewed about once a
+week. That is a promise of an answer, not of speed.
