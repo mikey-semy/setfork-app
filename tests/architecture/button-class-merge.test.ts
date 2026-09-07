@@ -48,6 +48,14 @@ function tailOfTemplate(src: string, from: number): string {
     // (`${on ? f({kind: 'x'}, `bg-danger`) : ''}`) закрывался своей `}`, обнуляя
     // счётчик раньше времени. Дальше обратная кавычка принималась за конец строки,
     // хвост обрезался, и цвет за ним правило не видело. Нашло авто-ревью.
+    // ⚠️ Содержимое строкового литерала — ДАННЫЕ: скобка в нём ничего не открывает
+    // и не закрывает. Без этого `${on ? f('}', `bg-danger`) : ''}` сбивал счёт той
+    // же `}` из строки. Тоже нашло авто-ревью, уже во второй редакции этой функции.
+    if (c === "'" || c === '"') {
+      const quote = c
+      for (i++; i < src.length && src[i] !== quote; i++) if (src[i] === '\\') i++
+      continue
+    }
     if (c === '{') {
       depth++
       continue
@@ -93,6 +101,8 @@ describe('классы кнопки не дописываются строкой
     ['вложенный шаблон в подстановке', '`${buttonClass({ size: "lg" })} ${on ? `bg-danger` : ""}`'],
     // Объектный литерал ПЕРЕД вложенным шаблоном: его `}` сбивала счётчик.
     ['объектный литерал перед вложенным шаблоном', '`${buttonClass({ size: "lg" })} ${on ? f({ kind: "x" }, `bg-danger`) : ""}`'],
+    // Скобка ВНУТРИ строки — данные, а не синтаксис.
+    ['фигурная скобка в строковом литерале', '`${buttonClass({ size: "lg" })} ${on ? f("}", `bg-danger`) : ""}`'],
     ['цвет дописан прямо', '`${buttonClass({ size: "lg" })} bg-danger text-white`'],
     ['цвет в тернарнике без вложенного шаблона', '`${buttonClass({ size: "lg" })} ${on ? "bg-danger" : ""}`'],
   ])('правило видит дефект: %s', (_name, sample) => {
@@ -101,11 +111,14 @@ describe('классы кнопки не дописываются строкой
     expect(PAINT.test(tail), 'образец должен быть найден — иначе правило ослепло').toBe(true)
   })
 
-  it('и не срабатывает там, где цвета нет', () => {
-    const ok = '`${buttonClass({ size: "lg" })} w-full ${on ? "opacity-50" : ""}`'
-    const at = ok.search(CALL)
-    const tail = tailOfTemplate(ok, at).replace(/buttonClass\([\s\S]*?\)\}/, '')
-    expect(PAINT.test(tail), 'размер и прозрачность варианту не противоречат').toBe(false)
+  // Обратная сторона: правило, которое ловит всё, бесполезно так же, как слепое.
+  it.each([
+    ['размер и прозрачность', '`${buttonClass({ size: "lg" })} w-full ${on ? "opacity-50" : ""}`'],
+    ['цвет в СОСЕДНЕЙ строке, за концом этой', '`${buttonClass({ size: "lg" })} w-full` + `bg-danger`'],
+  ])('и не срабатывает там, где цвета нет: %s', (_name, sample) => {
+    const at = sample.search(CALL)
+    const tail = tailOfTemplate(sample, at).replace(/buttonClass\([\s\S]*?\)\}/, '')
+    expect(PAINT.test(tail), 'вариант тут ничем не перебит').toBe(false)
   })
 
   it('проверке есть что проверять', () => {
