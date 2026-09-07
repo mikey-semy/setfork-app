@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
-import { db, issues, templates, users } from '@/shared/db'
+import { db, discussions, issues, templates, users } from '@/shared/db'
 import { t, tr, type Lang, type TKey } from '@/shared/i18n'
 import type { NotificationType } from './queries'
 import { NOTIF_VERB } from './verbs'
@@ -24,6 +24,7 @@ export interface NotificationRef {
   type: NotificationType
   templateId?: string | null
   issueId?: string | null
+  discussionId?: string | null
   suggestionId?: string | null
 }
 
@@ -52,6 +53,16 @@ export async function resolveNotificationDisplay(p: NotificationRef): Promise<No
     ? await db.select({ number: issues.number }).from(issues).where(and(eq(issues.id, p.issueId), eq(issues.templateId, p.templateId))).limit(1)
     : [undefined]
 
+  // Номер треда — то, чем обсуждение зовут в адресе. Без него письмо про ответ вело бы
+  // на список, и человек искал бы разговор глазами.
+  const [disc] = p.discussionId && p.templateId
+    ? await db
+        .select({ number: discussions.number })
+        .from(discussions)
+        .where(and(eq(discussions.id, p.discussionId), eq(discussions.templateId, p.templateId)))
+        .limit(1)
+    : [undefined]
+
   const actorHandle = actor?.handle ?? 'someone'
   const listTitle = tpl ? tr(tpl.title, p.lang) : ''
   const verb = t(NOTIF_VERB[p.type], p.lang)
@@ -66,9 +77,11 @@ export async function resolveNotificationDisplay(p: NotificationRef): Promise<No
         ? `${appOrigin()}/settings`
         : iss
           ? `${base}/issues/${iss.number}`
-          : p.suggestionId && tpl
-            ? `${base}/suggestions/${p.suggestionId}`
-            : base
+          : disc
+            ? `${base}/discussions/${disc.number}`
+            : p.suggestionId && tpl
+              ? `${base}/suggestions/${p.suggestionId}`
+              : base
   const text = listTitle ? `${actorHandle} ${verb} ${listTitle}` : `${actorHandle} ${verb}`
 
   return { actorHandle, verb, listTitle, url, text }

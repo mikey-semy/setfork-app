@@ -15,6 +15,7 @@ export interface EmailJobPayload {
   type: NotificationType
   templateId?: string | null
   issueId?: string | null
+  discussionId?: string | null
 }
 
 /** Обработчик email-задачи. Бросает исключение при неудаче → воркер сделает ретрай. */
@@ -31,6 +32,7 @@ export interface PushJobPayload {
   type: NotificationType
   templateId?: string | null
   issueId?: string | null
+  discussionId?: string | null
 }
 
 /** Web-push уведомления на подписки пользователя (фоновый браузерный поп-ап). */

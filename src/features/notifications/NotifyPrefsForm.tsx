@@ -12,11 +12,20 @@ import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 const ROWS: {
   key: keyof NotifyPrefs
-  labelKey: 'prefNewSuggestions' | 'prefSuggestionResolved' | 'prefStars' | 'prefForks' | 'prefIssues' | 'prefComments' | 'prefWatchedUpdates'
+  labelKey:
+    | 'prefNewSuggestions'
+    | 'prefSuggestionResolved'
+    | 'prefStars'
+    | 'prefForks'
+    | 'prefIssues'
+    | 'prefDiscussions'
+    | 'prefComments'
+    | 'prefWatchedUpdates'
 }[] = [
   { key: 'newSuggestions', labelKey: 'prefNewSuggestions' },
   { key: 'suggestionResolved', labelKey: 'prefSuggestionResolved' },
   { key: 'issues', labelKey: 'prefIssues' },
+  { key: 'discussions', labelKey: 'prefDiscussions' },
   { key: 'comments', labelKey: 'prefComments' },
   { key: 'watchedUpdates', labelKey: 'prefWatchedUpdates' },
   { key: 'stars', labelKey: 'prefStars' },

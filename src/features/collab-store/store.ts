@@ -9,7 +9,7 @@ import { collabStore as drizzleStore } from './adapter'
 // comments на Rust CollabWrite при SETFORK_DOMAIN_WRITES=1 (тот же флаг, что
 // ListWrite/CurationWrite). До включения — Drizzle-адаптер. Потребители
 // импортируют ТОЛЬКО отсюда. Хелперы дедупа комментаторов — из adapter.
-export { issueCommenterIds, suggestionCommenterIds } from './adapter'
+export { discussionCommenterIds, issueCommenterIds, suggestionCommenterIds } from './adapter'
 
 const coreOn = !!process.env.SETFORK_CORE_URL
 const remoteWrites = coreOn && process.env.SETFORK_DOMAIN_WRITES === '1'

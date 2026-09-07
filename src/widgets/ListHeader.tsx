@@ -139,6 +139,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                   customTitle: t('watchCustomTitle', lang),
                   evVersions: t('versionsTab', lang),
                   evIssues: t('issuesTab', lang),
+                  evDiscussions: t('featDiscussions', lang),
                   evSuggestions: t('suggestions', lang),
                   apply: t('apply', lang),
                 }}

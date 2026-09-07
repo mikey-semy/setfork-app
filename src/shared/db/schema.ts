@@ -30,6 +30,7 @@ import {
   vector,
 } from 'drizzle-orm/pg-core'
 import type { Lang, LocaleText } from '../i18n'
+import type { WatchEvents } from '../../core/ports'
 
 // ── Enums ────────────────────────────────────────────────────────────
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
@@ -94,6 +95,8 @@ export const notificationType = pgEnum('notification_type', [
   'issue_closed_by_merge', // твою задачу закрыли принятым предложением
   'issue_closed', // твою задачу закрыли руками
   'issue_reopened', // твою задачу открыли заново
+  'discussion_new', // в твоём списке начали обсуждение
+  'discussion_comment', // ответили в обсуждении, где ты участвуешь
   'new_version',
   'star',
   'fork',
@@ -208,7 +211,8 @@ export type NotifyPrefs = {
   stars?: boolean
   forks?: boolean
   issues?: boolean // новый issue на моём списке
-  comments?: boolean // комментарии в issue/правке, где я участвую
+  discussions?: boolean // новое обсуждение на моём списке
+  comments?: boolean // комментарии в issue/правке/обсуждении, где я участвую
   watchedUpdates?: boolean // новая версия отслеживаемого списка
   email?: boolean // дублировать уведомления на почту (по умолчанию выкл)
   browser?: boolean // показывать браузерные уведомления (по умолчанию выкл)
@@ -1644,9 +1648,14 @@ export const watches = pgTable(
       .references(() => templates.id, { onDelete: 'cascade' }),
     // Существующие подписчики (клик Watch) → 'all' (их прежнее поведение = все обновления).
     level: watchLevel('level').notNull().default('all'),
-    // Только для level='custom': какие события слать (null иначе). Доставку наблюдателям
-    // имеют versions/issues/suggestions (discussions/security им пока не шлём).
-    events: jsonb('events').$type<{ versions?: boolean; issues?: boolean; suggestions?: boolean }>(),
+    // Только для level='custom': какие события слать (null иначе).
+    //
+    // ⚠️ ТИП БЕРЁМ У ЯДРА, а не переписываем здесь: это была ЧЕТВЁРТАЯ копия перечня
+    // событий (ядро, дропдаун Watch, выборка подписчиков и вот эта). Копия и подвела —
+    // добавив событие «обсуждения» всюду, кроме неё, я получил отказ типов на вставке в
+    // тесте, а не на настоящем пути; окажись она чуть либеральнее, событие молча не
+    // сохранялось бы.
+    events: jsonb('events').$type<WatchEvents>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ userTpl: uniqueIndex('watches_user_tpl').on(t.userId, t.templateId), tpl: index('watches_tpl_idx').on(t.templateId) }),
@@ -2772,6 +2781,10 @@ export const notifications = pgTable(
     type: notificationType('type').notNull(),
     templateId: uuid('template_id').references(() => templates.id, { onDelete: 'cascade' }),
     issueId: uuid('issue_id').references(() => issues.id, { onDelete: 'cascade' }),
+    // Тред обсуждения — своя ссылка, а не issueId: без неё уведомление вело бы на список
+    // и человек искал бы разговор глазами. Каскад тот же: снесли тред — уведомления о нём
+    // больше не о чем.
+    discussionId: uuid('discussion_id').references(() => discussions.id, { onDelete: 'cascade' }),
     suggestionId: uuid('suggestion_id').references(() => suggestions.id, { onDelete: 'cascade' }),
     read: boolean('read').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -8,8 +8,14 @@ import { resolveListBySlug, type ResolvedList } from '@/shared/db/resolve-list'
 import { requireSession } from '@/shared/auth/session'
 import { canWriteToFeature } from '@/core'
 import { ensureWatch } from '@/features/watch/actions'
-// eslint-disable-next-line boundaries/dependencies -- права соавтора живут в collab (тот же кросс-фич-паттерн, что у задач)
+/* eslint-disable boundaries/dependencies -- обсуждение живёт на стыке: права даёт collab,
+   уведомления — notifications, подписчиков — watch, собеседников — collab-store. Тот же
+   кросс-фичевый набор, что у задач. */
 import { isCollaborator } from '@/features/collab/queries'
+import { notifyMany, notifyMentions } from '@/features/notifications/notify'
+import { getWatcherIds } from '@/features/watch/queries'
+import { discussionCommenterIds } from '@/features/collab-store/store'
+/* eslint-enable boundaries/dependencies */
 import { canOpenDiscussion, canReplyInDiscussion } from './limits'
 import { isCategory } from './constants'
 
@@ -86,9 +92,29 @@ export async function createDiscussion(
       category,
       number: sql<number>`(select coalesce(max(${discussions.number}), 0) + 1 from ${discussions} where ${discussions.templateId} = ${tpl.id})`,
     })
-    .returning({ number: discussions.number })
+    .returning({ id: discussions.id, number: discussions.number })
 
   await ensureWatch(tpl.id) // автор треда следит за списком
+
+  // ⚠️ О НОВОМ ОБСУЖДЕНИИ УЗНАЮТ ЛЮДИ. Раньше не узнавал никто: тред появлялся в
+  // разделе и лежал там, пока владелец случайно не заглянет. Для раздела, смысл
+  // которого — разговор, это отменяет сам разговор: спросить было можно, услышать —
+  // нет. Круг тот же, что у новой задачи: владелец списка и наблюдатели, выбравшие
+  // событие «обсуждения». Себе не шлём — `notifyMany` отсекает автора действия.
+  const watchers = await getWatcherIds(tpl.id, 'discussions')
+  await notifyMany([tpl.ownerId, ...watchers], {
+    actorId: session.userId,
+    type: 'discussion_new',
+    templateId: tpl.id,
+    discussionId: row.id,
+  })
+  await notifyMentions({
+    text: `${title}\n${body}`,
+    actorId: session.userId,
+    templateId: tpl.id,
+    discussionId: row.id,
+  })
+
   revalidatePath(`/${owner}/${slug}/discussions`)
   redirect(`/${owner}/${slug}/discussions/${row.number}`)
 }
@@ -107,7 +133,7 @@ export async function addDiscussionComment(formData: FormData): Promise<void> {
   if (!(await canWriteDiscussions(tpl, session.userId))) redirect(`/${owner}/${slug}`)
 
   const [disc] = await db
-    .select({ id: discussions.id })
+    .select({ id: discussions.id, authorId: discussions.authorId })
     .from(discussions)
     .where(and(eq(discussions.templateId, tpl.id), eq(discussions.number, number)))
     .limit(1)
@@ -124,6 +150,22 @@ export async function addDiscussionComment(formData: FormData): Promise<void> {
 
   await db.insert(discussionComments).values({ discussionId: disc.id, authorId: session.userId, body })
   await ensureWatch(tpl.id)
+
+  // Об ответе узнают ТЕ ЖЕ, кто узнаёт об ответе в задаче: автор треда, владелец списка,
+  // прежние собеседники и наблюдатели раздела. Без этого разговор шёл вслепую — человек
+  // отвечал, а его собеседник об ответе не знал.
+  const [commenters, watchers] = await Promise.all([
+    discussionCommenterIds(disc.id),
+    getWatcherIds(tpl.id, 'discussions'),
+  ])
+  await notifyMany([disc.authorId, tpl.ownerId, ...commenters, ...watchers], {
+    actorId: session.userId,
+    type: 'discussion_comment',
+    templateId: tpl.id,
+    discussionId: disc.id,
+  })
+  await notifyMentions({ text: body, actorId: session.userId, templateId: tpl.id, discussionId: disc.id })
+
   revalidatePath(`/${owner}/${slug}/discussions/${number}`)
   redirect(`/${owner}/${slug}/discussions/${number}`)
 }

@@ -17,6 +17,7 @@ export async function sendNotificationEmail(p: {
   type: NotificationType
   templateId?: string | null
   issueId?: string | null
+  discussionId?: string | null
 }): Promise<boolean> {
   const d = await resolveNotificationDisplay(p)
   const subject = d.text

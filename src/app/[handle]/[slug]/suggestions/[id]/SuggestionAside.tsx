@@ -77,6 +77,7 @@ export function SuggestionAside({
                 customTitle: t('watchCustomTitle', lang),
                 evVersions: t('versionsTab', lang),
                 evIssues: t('issuesTab', lang),
+                evDiscussions: t('featDiscussions', lang),
                 evSuggestions: t('suggestions', lang),
                 apply: t('apply', lang),
               }}
