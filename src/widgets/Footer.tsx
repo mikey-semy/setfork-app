@@ -4,6 +4,7 @@ import { aboutUrl, legalUrl } from '@/shared/docs'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { APP_VERSION } from '@/shared/app-version'
 import { PAGE_X } from '@/shared/ui/control'
+import { SOURCE_URL } from '@/shared/site'
 
 /** Плоский подвал (как в GitHub): один ряд приглушённых ссылок, без границ и колонок. */
 export async function Footer({ lang }: { lang: Lang }) {
@@ -19,8 +20,15 @@ export async function Footer({ lang }: { lang: Lang }) {
       <div className={`${PAGE_X} flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-6 text-body-sm`}>
         <Link href="/explore" className={link}>{t('explore', lang)}</Link>
         <a href={aboutUrl()} className={link}>{t('aboutProject', lang)}</a>
-        {/* «Исходный код» убран из футера (владелец): репо приватный, ссылка вела в доки,
-            а не в исходники — вводила в заблуждение. Доки доступны из других мест. */}
+        {/* «Исходный код» вернулся, когда репозиторий открылся: раздел 13 AGPL требует дать
+            пользователю сетевого сервиса возможность получить исходники. Убран он был не
+            зря — вёл в доки вместо кода; поэтому адрес задаётся явно, и пока он пуст,
+            пункта нет вовсе (см. SOURCE_URL). */}
+        {SOURCE_URL && (
+          <a href={SOURCE_URL} target="_blank" rel="noreferrer" className={link}>
+            {t('sourceCode', lang)}
+          </a>
+        )}
         {/* Contact ведёт на свою форму фидбека (ссылка на issues приватного репо отдавала 404). */}
         <Link href="/feedback" className={link}>{t('feedback', lang)}</Link>
         <a href={legalUrl('terms', lang)} className={link}>{t('terms', lang)}</a>

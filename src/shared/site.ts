@@ -40,6 +40,22 @@ export const DOCS_ORIGIN = strip(process.env.NEXT_PUBLIC_DOCS_URL?.trim() || `ht
 /** Лендинг «О проекте» (проект setfork-about) — по ПУТИ канона, не поддоменом (SEO). */
 export const ABOUT_URL = strip(process.env.NEXT_PUBLIC_ABOUT_URL?.trim() || `${SITE_ORIGIN}/about`)
 
+/**
+ * ИСХОДНЫЙ КОД — обязанность лицензии, а не украшение подвала.
+ *
+ * Раздел 13 AGPL-3.0 действует именно на сетевой сервис: пользователю, который
+ * работает с приложением по сети, должна быть доступна возможность получить
+ * исходный текст. Официальный текст лицензии предлагает и способ дословно: «if your
+ * program is a web application, its interface could display a "Source" link that
+ * leads users to an archive of the code».
+ *
+ * ⚠️ Пусто = пункта в подвале НЕТ, и это не лень, а прошлый урок: пункт уже стоял
+ * там и был убран владельцем, потому что репозиторий закрыт, а ссылка вела в
+ * документацию — то есть обещала исходники и не давала их. Значение задаётся в
+ * момент, когда репозиторий становится публичным, и ни минутой раньше.
+ */
+export const SOURCE_URL = strip(process.env.NEXT_PUBLIC_SOURCE_URL?.trim() || '')
+
 /** Домен служебных адресов авторов коммитов — по образцу `users.noreply.github.com`. */
 export const NOREPLY_DOMAIN = `users.noreply.${SITE_HOST}`
 
