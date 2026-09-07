@@ -34,7 +34,7 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
             ? ru ? 'Метка с таким именем уже есть.' : 'A label with this name already exists.'
             : res.error === 'forbidden'
               ? ru ? 'Нет прав.' : 'Not allowed.'
-              : ru ? 'Проверь имя и цвет.' : 'Check name and color.',
+              : ru ? 'Проверьте имя и цвет.' : 'Check name and color.',
         )
         return
       }

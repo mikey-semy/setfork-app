@@ -14,7 +14,7 @@ export function ForgotPasswordForm({ lang }: { lang: Lang }) {
     return (
       <Alert variant="ok">
         {ru
-          ? 'Если такой аккаунт существует — письмо со ссылкой уже в пути. Проверь почту (и спам).'
+          ? 'Если такой аккаунт существует — письмо со ссылкой уже в пути. Проверьте почту (и спам).'
           : 'If that account exists, an email with the link is on its way. Check your inbox (and spam).'}
       </Alert>
     )

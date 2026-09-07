@@ -58,7 +58,7 @@ export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; l
       ))}
       <p className="mt-1 text-body-sm text-muted">
         {ru
-          ? 'Перетащи картинку на плитку или кликни по ней. Выключенное достижение не показывается ни на одном профиле.'
+          ? 'Перетащите картинку на плитку или кликните по ней. Выключенное достижение не показывается ни на одном профиле.'
           : 'Drag an image onto a tile or click it. A disabled achievement is hidden on all profiles.'}
       </p>
     </div>

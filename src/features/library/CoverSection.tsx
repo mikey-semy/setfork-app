@@ -68,7 +68,7 @@ export function CoverSection({
 
   return (
     <SettingsSection title={ru ? 'Обложка' : 'Cover'}>
-      <Tooltip label={ru ? 'Перетащи или выбери картинку' : 'Drag or pick an image'}>
+      <Tooltip label={ru ? 'Перетащите или выберите картинку' : 'Drag or pick an image'}>
         {/* ui-parity-ok: зона перетаскивания — рамка в две толщины меняет цвет под курсором, у карточки такой роли нет */}
         <button
           type="button"

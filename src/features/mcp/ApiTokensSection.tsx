@@ -91,7 +91,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
       {created && (
         <div className={cardClass({ tone: 'warn', pad: 'sm' })}>
           <div className="mb-1 flex items-center gap-1.5 text-body-sm font-semibold text-warn">
-            <TriangleAlert size={14} /> {ru ? 'Скопируй сейчас — больше не покажем' : 'Copy it now — shown only once'}
+            <TriangleAlert size={14} /> {ru ? 'Скопируйте сейчас — больше не покажем' : 'Copy it now — shown only once'}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <code className="max-w-full overflow-x-auto rounded-md bg-surface-2 px-2 py-1 font-mono text-body-sm text-ink">{created}</code>

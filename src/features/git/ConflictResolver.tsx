@@ -96,7 +96,7 @@ export function ConflictResolver({
         </span>
         <Badge variant="soft">{chosen}/{total}</Badge>
         <span className="text-body-sm text-muted">
-          {ru ? 'выбери версию каждого конфликтующего элемента' : 'pick a side for each conflicting item'}
+          {ru ? 'выберите версию каждого конфликтующего элемента' : 'pick a side for each conflicting item'}
         </span>
       </div>
 

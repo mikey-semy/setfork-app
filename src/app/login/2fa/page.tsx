@@ -26,7 +26,7 @@ export default async function TwoFaLoginPage() {
         </div>
         <p className="mb-5 text-body text-ink-2">
           {ru
-            ? 'Введи код из приложения-аутентификатора или один из recovery-кодов.'
+            ? 'Введите код из приложения-аутентификатора или один из recovery-кодов.'
             : 'Enter the code from your authenticator app, or one of your recovery codes.'}
         </p>
         <TwoFaLoginForm lang={lang} />

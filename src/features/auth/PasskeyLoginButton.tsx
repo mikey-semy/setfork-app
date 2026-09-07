@@ -26,7 +26,7 @@ export function PasskeyLoginButton({ lang }: { lang: Lang }) {
       if ('error' in res) {
         setErr(
           res.error === 'throttled'
-            ? ru ? 'Слишком много попыток — подожди.' : 'Too many attempts — wait a bit.'
+            ? ru ? 'Слишком много попыток — подождите.' : 'Too many attempts — wait a bit.'
             : res.error === 'unknown'
               ? ru ? 'Passkey не найден.' : 'Passkey not recognised.'
               : ru ? 'Не удалось войти.' : 'Sign-in failed.',

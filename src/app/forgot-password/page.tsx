@@ -24,7 +24,7 @@ export default async function ForgotPasswordPage() {
         </div>
         <p className="mb-5 text-body text-ink-2">
           {ru
-            ? 'Укажи почту аккаунта — пришлём ссылку для нового пароля.'
+            ? 'Укажите почту аккаунта — пришлём ссылку для нового пароля.'
             : 'Enter your account email — we’ll send a link to set a new password.'}
         </p>
         {/* Формы нет, когда письму неоткуда взяться: пустая форма с ответом «проверьте
