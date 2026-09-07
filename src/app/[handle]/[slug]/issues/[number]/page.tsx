@@ -168,7 +168,7 @@ export default async function IssueThreadPage({
             частый ответ и закрытие дубликатом с номером, которого в списке нет. */}
         {(sp.e === 'rate' || sp.e === 'dup') && (
           <Alert variant="danger" className="mb-3">
-            {t(sp.e === 'rate' ? 'issue.rateLimited' : 'issue.duplicateNotFound', lang)}
+            {t(sp.e === 'rate' ? 'rateLimited' : 'issue.duplicateNotFound', lang)}
           </Alert>
         )}
 

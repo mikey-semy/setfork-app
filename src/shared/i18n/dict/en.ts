@@ -141,7 +141,6 @@ export const en = {
   'issue.lockedNotice': 'This conversation is locked: {reason}. Only the list owner and people with write access can reply.',
   'issue.lockedNoticeOwner': 'This conversation is locked: {reason}. Others cannot reply.',
   'issue.lockHint': 'The issue stays open — locked does not mean resolved.',
-  'issue.rateLimited': 'Too many requests in a minute — try again shortly.',
   'issue.cannotOpen': 'Could not open an issue: this list does not take issues.',
   'issue.duplicateNotFound': 'No issue with that number in this list — nothing was closed.',
   'issue.edited': 'edited',

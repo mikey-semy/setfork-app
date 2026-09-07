@@ -447,7 +447,7 @@ export function RunView({
                     </div>
                     {reportRefused?.stepId === s.id && (
                       <div className="mt-2 text-body-sm text-danger">
-                        {t(reportRefused.reason === 'rate' ? 'issue.rateLimited' : 'issue.cannotOpen', lang)}
+                        {t(reportRefused.reason === 'rate' ? 'rateLimited' : 'issue.cannotOpen', lang)}
                       </div>
                     )}
                   </div>

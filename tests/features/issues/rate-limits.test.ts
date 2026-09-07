@@ -14,11 +14,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const calls: { key: string; limit: number }[] = []
 let denyMarker = 'нет-такого-ключа'
 
-vi.mock('@/shared/rate-limit', () => ({
-  rateLimit: async (key: string, limit: number) => {
-    calls.push({ key, limit })
-    return { ok: !key.includes(denyMarker), remaining: 0, resetAt: Date.now() + 60_000 }
-  },
+// Подменяем ХРАНИЛИЩЕ, а не сам счётчик: форма «два ключа» с недавних пор общая с
+// обсуждениями и живёт в `shared/rate-limit`. Подменив её, тест проверял бы собственную
+// копию правила вместо настоящей — а держать он должен именно настоящую.
+vi.mock('@/shared/rate-limit-store', () => ({
+  rateStore: () => ({
+    fixedWindow: async (key: string, limit: number) => {
+      calls.push({ key, limit })
+      return { ok: !key.includes(denyMarker), remaining: 0, retryAfter: 60, resetAt: Date.now() + 60_000 }
+    },
+  }),
 }))
 
 const { ISSUE_LIMITS, canComment, canOpenIssue } = await import('@/features/issues/limits')

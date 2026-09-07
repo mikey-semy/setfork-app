@@ -4,11 +4,32 @@ import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db, discussionComments, discussions } from '@/shared/db'
-import { resolveListBySlug } from '@/shared/db/resolve-list'
+import { resolveListBySlug, type ResolvedList } from '@/shared/db/resolve-list'
 import { requireSession } from '@/shared/auth/session'
 import { canWriteToFeature } from '@/core'
 import { ensureWatch } from '@/features/watch/actions'
+// eslint-disable-next-line boundaries/dependencies -- права соавтора живут в collab (тот же кросс-фич-паттерн, что у задач)
+import { isCollaborator } from '@/features/collab/queries'
+import { canOpenDiscussion, canReplyInDiscussion } from './limits'
 import { isCategory } from './constants'
+
+/**
+ * ПРАВО ПИСАТЬ В ОБСУЖДЕНИЯ — включая СОАВТОРА.
+ *
+ * Раньше спрашивали только «владелец ли ты», и на приватном списке соавтор оказывался в
+ * положении, которое не выражает ничего осмысленного: обсуждения он ВИДИТ, а ответить не
+ * может — вкладка открыта, форма на месте, запись отклоняется. Список ведут вместе, а
+ * разговаривать о нём разрешено одному. Ровно этот перекос уже чинили у задач (#582).
+ *
+ * Соавторство спрашиваем лениво: за публичный список лишним запросом не платим.
+ */
+async function canWriteDiscussions(tpl: ResolvedList, userId: string): Promise<boolean> {
+  const isOwner = tpl.ownerId === userId
+  return (
+    canWriteToFeature(tpl, 'discussions', { isOwner }) ||
+    canWriteToFeature(tpl, 'discussions', { isOwner, isCollaborator: await isCollaborator(tpl.id, userId) })
+  )
+}
 
 /** Открыть тред. Любой залогиненный, кто видит список, — пока раздел включён. */
 /**
@@ -43,10 +64,16 @@ export async function createDiscussion(
 
   const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
-  // Право писать = раздел включён И список виден. Проверка на СТРАНИЦЕ отвечает только
-  // за то, что видно: сохранённая форма и прямой вызов server action её не проходят, и
-  // выключенный владельцем раздел продолжал принимать записи в невидимые треды.
-  if (!canWriteToFeature(tpl, 'discussions', { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
+  // Право писать = раздел включён И список виден (соавтор — «свой», см. выше). Проверка
+  // на СТРАНИЦЕ отвечает только за то, что видно: сохранённая форма и прямой вызов
+  // server action её не проходят, и выключенный владельцем раздел продолжал принимать
+  // записи в невидимые треды.
+  if (!(await canWriteDiscussions(tpl, session.userId))) redirect(`/${owner}/${slug}`)
+
+  // ⚠️ ЧАСТОТА — ПОСЛЕ ПРАВ, НО ДО ЗАПИСИ. Счётчика тут не было вовсе: скрипт в цикле
+  // набивал ленту обсуждений за минуту. Ключей два, на человека и на список (числа и
+  // довод — в ./limits).
+  if (!(await canOpenDiscussion(session.userId, tpl.id))) redirect(`/${owner}/${slug}/discussions?e=rate`)
 
   // Номер per-list — подзапросом в одном INSERT (атомарно; гонку добьёт unique).
   const [row] = await db
@@ -77,7 +104,10 @@ export async function addDiscussionComment(formData: FormData): Promise<void> {
 
   const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
-  if (!canWriteToFeature(tpl, 'discussions', { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
+  if (!(await canWriteDiscussions(tpl, session.userId))) redirect(`/${owner}/${slug}`)
+  if (!(await canReplyInDiscussion(session.userId, tpl.id))) {
+    redirect(`/${owner}/${slug}/discussions/${number}?e=rate`)
+  }
 
   const [disc] = await db
     .select({ id: discussions.id })

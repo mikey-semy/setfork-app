@@ -4,6 +4,7 @@ import { MessageSquare, Plus } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { Alert } from '@/shared/ui/Alert'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { timeAgo } from '@/shared/ui/timeAgo'
@@ -28,7 +29,7 @@ export default async function DiscussionsPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ category?: string; page?: string; q?: string }>
+  searchParams: Promise<{ category?: string; page?: string; q?: string; e?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const ru = lang === 'ru'
@@ -57,6 +58,14 @@ export default async function DiscussionsPage({
   return (
     <>
       <div className={PAGE}>
+        {/* Отказ по частоте — там же, где человек его получил: страница после отказа
+            выглядит точно так же, как до нажатия, и без полосы читается как поломка. */}
+        {sp.e === 'rate' && (
+          <Alert variant="danger" className="mb-3">
+            {t('rateLimited', lang)}
+          </Alert>
+        )}
+
         {/* Ряд «поиск + создать» — тот же, что на Предложениях: одна поверхность у двух
             разделов списка не может выглядеть по-разному. Фильтр раздела едет скрытым
             полем, иначе поиск сбрасывал бы выбранную категорию. */}

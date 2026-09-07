@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { Alert } from '@/shared/ui/Alert'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
@@ -28,7 +29,7 @@ export default async function DiscussionThreadPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string; number: string }>
-  searchParams: Promise<{ after?: string; before?: string }>
+  searchParams: Promise<{ after?: string; before?: string; e?: string }>
 }) {
   const [{ handle: owner, slug, number: numStr }, sp] = await Promise.all([params, searchParams])
   const number = Number(numStr)
@@ -52,6 +53,12 @@ export default async function DiscussionThreadPage({
   return (
     <>
       <div className={PAGE_NARROW}>
+        {/* Отказ по частоте — там же, где человек нажимал «ответить». */}
+        {sp.e === 'rate' && (
+          <Alert variant="danger" className="mb-3">
+            {t('rateLimited', lang)}
+          </Alert>
+        )}
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <Tooltip label={categoryLabel(disc.category, lang)}>
             <span className="text-title">{categoryMeta(disc.category).icon}</span>

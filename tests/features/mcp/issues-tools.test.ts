@@ -37,11 +37,15 @@ const h = vi.hoisted(() => ({
 
 const TPL = { id: 'l1', ownerId: 'owner', visibility: 'public', status: 'published', moderation: 'ok', issuesEnabled: true }
 
-vi.mock('@/shared/rate-limit', () => ({
-  rateLimit: async (key: string) => {
-    h.rateKeys.push(key)
-    return { ok: !key.includes(h.denyKey), remaining: 0, resetAt: Date.now() + 60_000 }
-  },
+// Подменяем ХРАНИЛИЩЕ, а не счётчик: правило «два ключа» общее у задач с обсуждениями и
+// живёт в `shared/rate-limit`. Подменив его, тест проверял бы свою копию правила.
+vi.mock('@/shared/rate-limit-store', () => ({
+  rateStore: () => ({
+    fixedWindow: async (key: string) => {
+      h.rateKeys.push(key)
+      return { ok: !key.includes(h.denyKey), remaining: 0, retryAfter: 60, resetAt: Date.now() + 60_000 }
+    },
+  }),
 }))
 vi.mock('@/shared/db', () => ({
   db: {
