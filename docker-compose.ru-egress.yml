@@ -3,7 +3,7 @@
 # OpenRouter отдаёт 403 на российский IP, поэтому его домен резолвится в свой сервер
 # вне РФ с TCP-passthrough (SNI сквозной, TLS не расшивается — ключ моста не видит).
 #
-# Оверлеем, а не строкой в docker-compose.dokploy.yml: адрес моста зависит от места
+# Оверлеем, а не строкой в docker-compose.prod.yml: адрес моста зависит от места
 # развёртывания, и «дефолт» здесь опаснее отсутствия. Пока он стоял дефолтом в общем
 # файле, канон переехал вне РФ, мост списали — и все вызовы модели молча уходили в
 # мёртвый IP (см. комментарий у сервиса app).
@@ -11,7 +11,7 @@
 # Подключается ТРЕТЬИМ файлом, после серверного override (в нём traefik-роутинг):
 #
 #   RU_EGRESS_IP=<ip моста> \
-#   docker compose -f docker-compose.dokploy.yml \
+#   docker compose -f docker-compose.prod.yml \
 #                  -f docker-compose.override.yml \
 #                  -f docker-compose.ru-egress.yml up -d --build
 #

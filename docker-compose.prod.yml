@@ -1,19 +1,19 @@
 # Полный деплой SetFork на прод-хосте: Postgres + git-ядро (Rust) + миграции + фронт (Next).
 # Медиа (S3/imgproxy) — внешние (Selectel), задаётся через .env.
 #
-# Сеть одна — `edge`, обычная bridge. Прежняя `dokploy-network` была overlay-сетью Swarm:
-# Swarm тянулся за панелью Dokploy (снята 13.08), а на одном сервере без нод не нужен.
-# Переезд шёл в два прохода — сперва обе сети разом, чтобы соседи по имени не потерялись,
-# потом уборка старой. Ядро (setfork-core) — ОТДЕЛЬНЫЙ проект, оно переехало парно
-# (setfork-core#94 и его же второй проход); связь идёт по `setfork-core:50051` внутри `edge`.
+# Сеть одна — `edge`, обычная bridge, создаётся на хосте руками:
+# `docker network create edge`. Overlay-сети Swarm здесь не нужно: сервер один,
+# нод нет, а overlay это лишний слой (VXLAN и свой DNS). Ядро (setfork-core) —
+# ОТДЕЛЬНЫЙ проект; связь идёт по `setfork-core:50051` внутри `edge`.
 #
-# Сеть создаётся на хосте руками: `docker network create edge`.
-#
-# core собирается из соседнего чекаута ../setfork-core — при деплое оба репо должны быть рядом
-# (моно-чекаут). Иначе деплойте core отдельно его же setfork-core/docker-compose.dokploy.yml,
+# core собирается из соседнего чекаута ../setfork-core — при деплое оба репо должны быть
+# рядом (моно-чекаут). Иначе деплойте core отдельно его же setfork-core/docker-compose.prod.yml,
 # уберите здесь сервис `core` и оставьте SETFORK_CORE_ADDR=setfork-core:50051.
 #
-# Traefik-роутинг на `app` (домен, порт 3000) настраивается ярлыками Dokploy в UI — тут портов нет.
+# ⚠️ МАРШРУТ ЖИВЁТ НЕ ЗДЕСЬ. Ярлыки Traefik (`Host(...)`, порт 3000) лежат в
+# `docker-compose.override.yml` НА СЕРВЕРЕ — в репозитории его нет, и портов тут
+# поэтому тоже нет. Поднимать прод только вместе с ним: `up -d` без второго `-f`
+# снимает ярлыки, Traefik теряет бэкенд, и сайт отдаёт 404 при «healthy» контейнере.
 services:
   # ВАЖНО: имя сервиса УНИКАЛЬНОЕ (setfork-db), НЕ generic `db`. Compose добавляет
   # имя сервиса сетевым алиасом в общие внешние сети. Если назвать `db`,
@@ -36,7 +36,7 @@ services:
     networks: [edge]
 
   # git-ядро (Rust) деплоится ОТДЕЛЬНЫМ проектом из репо setfork-core
-  # (setfork-core/docker-compose.dokploy.yml) → контейнер `setfork-core` в общей
+  # (setfork-core/docker-compose.prod.yml) → контейнер `setfork-core` в общей
   # сети `edge`. Здесь его НЕ собираем (иначе сборка ищет ../setfork-core,
   # которого в single-repo чекауте нет). Фронт зовёт его по имени контейнера:
   # SETFORK_CORE_ADDR=setfork-core:50051 (см. сервис app). Том git-объектов и

@@ -11,7 +11,7 @@ export function rateLimit(key: string, limit: number, windowMs: number): Promise
   return rateStore().fixedWindow(key, limit, windowMs)
 }
 
-/** IP клиента из заголовков прокси (Traefik/dokploy). */
+/** IP клиента из заголовков прокси (Traefik). */
 export function clientIp(req: Request): string {
   const xff = req.headers.get('x-forwarded-for')
   if (xff) return xff.split(',')[0].trim()

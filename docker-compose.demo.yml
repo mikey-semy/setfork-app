@@ -7,7 +7,7 @@
 # Том git-объектов принадлежит ЯДРУ; приложение его не монтирует вовсе.
 #
 # ВАЖНО (урок с проды): все имена сервисов УНИКАЛЬНЫЕ (setfork-demo-*), чтобы алиасы
-# в общей dokploy-network не пересекались с другими проектами.
+# в общей сети `edge` не пересекались с другими проектами.
 #
 # Наполнение после первого деплоя:
 #   docker compose -f docker-compose.demo.yml run --rm --no-deps migrate npx tsx scripts/seed-demo.ts
@@ -26,7 +26,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    networks: [dokploy-network]
+    networks: [edge]
 
   migrate:
     build: { context: ., target: migrate }
@@ -35,7 +35,7 @@ services:
     depends_on:
       setfork-demo-db: { condition: service_healthy }
     restart: 'no'
-    networks: [dokploy-network]
+    networks: [edge]
 
   # Авто-наполнение demo-данными при деплое (one-shot, после миграций). Скрипт
   # идемпотентный: пересоздаёт свой набор demo-юзеров/списков — можно гонять каждый
@@ -49,7 +49,7 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
     restart: 'no'
-    networks: [dokploy-network]
+    networks: [edge]
 
   # imgproxy для demo-картинок. Читает оригиналы из того же S3 (Selectel), но по
   # префиксу demo/ — чтобы demo-медиа не смешивалось с прод. Порт 8082 (прод — 8081).
@@ -71,7 +71,7 @@ services:
       IMGPROXY_ALLOW_ORIGIN: ${IMGPROXY_ALLOW_ORIGIN:-*}
     ports:
       - '${DEMO_IMGPROXY_PORT:-8082}:8080'
-    networks: [dokploy-network]
+    networks: [edge]
 
   app:
     build:
@@ -103,7 +103,7 @@ services:
       setfork-demo-db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
       setfork-demo-core: { condition: service_healthy }
-    networks: [dokploy-network]
+    networks: [edge]
 
   # git-ядро демо-стенда. Своя копия — демо не должно ходить в прод-репозитории.
   setfork-demo-core:
@@ -137,12 +137,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
-    networks: [dokploy-network]
+    networks: [edge]
 
 volumes:
   demo_pgdata:
   demo_gitdata:
 
 networks:
-  dokploy-network:
+  # Та же внешняя сеть, что у канона: стенд ходит туда же, куда прод.
+  edge:
     external: true
