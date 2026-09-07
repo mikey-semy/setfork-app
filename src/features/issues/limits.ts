@@ -1,5 +1,5 @@
 import 'server-only'
-import { rateLimit } from '@/shared/rate-limit'
+import { rateLimit, underTwoKeyRate } from '@/shared/rate-limit'
 
 /**
  * ОГРАНИЧЕНИЕ ЧАСТОТЫ ДЛЯ ЗАДАЧ И КОММЕНТАРИЕВ.
@@ -33,16 +33,10 @@ export const ISSUE_LIMITS = {
 
 const MINUTE = 60_000
 
-/** Разрешено ли действие. `false` — один из двух счётчиков переполнен. */
-async function allowed(userKey: string, userLimit: number, listKey: string, listLimit: number): Promise<boolean> {
-  // Оба счётчика считаем всегда, а не «пока не откажет»: иначе при частых обращениях
-  // одного человека счётчик списка отстаёт и порог по списку не наступает никогда.
-  const [byUser, byList] = await Promise.all([
-    rateLimit(userKey, userLimit, MINUTE),
-    rateLimit(listKey, listLimit, MINUTE),
-  ])
-  return byUser.ok && byList.ok
-}
+/** Разрешено ли действие. `false` — один из двух счётчиков переполнен (см. `underTwoKeyRate`:
+ *  форма двух ключей общая с обсуждениями, числа у каждого раздела свои). */
+const allowed = (userKey: string, userLimit: number, listKey: string, listLimit: number) =>
+  underTwoKeyRate({ key: userKey, limit: userLimit }, { key: listKey, limit: listLimit }, MINUTE)
 
 export function canOpenIssue(userId: string, listId: string): Promise<boolean> {
   return allowed(

@@ -386,7 +386,7 @@ function ThreadCard({
           поверхностях не должна быть свёрстана двумя способами. */}
       {toIssueRefused && (
         <div className="mt-2 text-body-sm text-danger">
-          {t(toIssueRefused === 'rate' ? 'issue.rateLimited' : 'issue.cannotOpen', lang)}
+          {t(toIssueRefused === 'rate' ? 'rateLimited' : 'issue.cannotOpen', lang)}
         </div>
       )}
     </div>

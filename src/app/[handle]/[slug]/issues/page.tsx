@@ -110,7 +110,7 @@ export default async function IssuesPage({
             «кнопка не работает»: человек повторял бы попытку и упирался снова. */}
         {sp.e === 'rate' && (
           <Alert variant="danger" className="mb-3">
-            {t('issue.rateLimited', lang)}
+            {t('rateLimited', lang)}
           </Alert>
         )}
         {/* Поиск + New */}
