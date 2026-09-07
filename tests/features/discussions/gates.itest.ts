@@ -125,6 +125,18 @@ describe('частота', () => {
     expect(await threadCount(), 'сверх порога не записано ничего').toBe(DISCUSSION_LIMITS.threadPerUser)
   })
 
+  it('⚠️ перебор несуществующих номеров НЕ жжёт квоту списка', async () => {
+    // Иначе любой желающий затыкал бы разговор всем остальным до конца окна: счётчик
+    // списка выгорал бы на отказах, которые ничего не записали. Платить надо за записи.
+    await openThread('живой тред')
+    for (let i = 0; i < DISCUSSION_LIMITS.replyPerUser + 5; i++) {
+      await call(() => addDiscussionComment(form({ owner: OWNER, slug: SLUG, number: '999', body: 'в никуда' })))
+    }
+    const url = await call(() => addDiscussionComment(form({ owner: OWNER, slug: SLUG, number: '1', body: 'настоящий ответ' })))
+    expect(url, 'разговор в живом треде должен идти').toBe(`/${OWNER}/${SLUG}/discussions/1`)
+    expect((await db.select().from(discussionComments)).length).toBe(1)
+  })
+
   it('ответы считаются ОТДЕЛЬНЫМ потоком: исчерпанные треды не затыкают разговор', async () => {
     await openThread('разговор')
     for (let i = 0; i < DISCUSSION_LIMITS.threadPerUser; i++) {

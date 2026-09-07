@@ -105,9 +105,6 @@ export async function addDiscussionComment(formData: FormData): Promise<void> {
   const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
   if (!(await canWriteDiscussions(tpl, session.userId))) redirect(`/${owner}/${slug}`)
-  if (!(await canReplyInDiscussion(session.userId, tpl.id))) {
-    redirect(`/${owner}/${slug}/discussions/${number}?e=rate`)
-  }
 
   const [disc] = await db
     .select({ id: discussions.id })
@@ -115,6 +112,15 @@ export async function addDiscussionComment(formData: FormData): Promise<void> {
     .where(and(eq(discussions.templateId, tpl.id), eq(discussions.number, number)))
     .limit(1)
   if (!disc) redirect(`/${owner}/${slug}/discussions`)
+
+  // ⚠️ ЧАСТОТА СЧИТАЕТСЯ ПОСЛЕ ТОГО, КАК ТРЕД НАЙДЕН. Иначе перебор несуществующих
+  // номеров жёг бы счётчик СПИСКА, ничего не записав, — то есть любой желающий затыкал
+  // бы разговор всем остальным до конца окна. Счётчик существует ради записей и их
+  // рассылки; за отказ, который ничего не записал, платить нечем. Тот же порядок у
+  // задач: там реплика тоже считается после загрузки задачи.
+  if (!(await canReplyInDiscussion(session.userId, tpl.id))) {
+    redirect(`/${owner}/${slug}/discussions/${number}?e=rate`)
+  }
 
   await db.insert(discussionComments).values({ discussionId: disc.id, authorId: session.userId, body })
   await ensureWatch(tpl.id)
