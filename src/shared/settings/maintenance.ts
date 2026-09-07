@@ -3,7 +3,7 @@ import { getSettings, saveSettings } from './kv'
 
 // Режим «сайт на ремонте». Оперативный флаг живёт в БД (appSettings) и
 // управляется из админки; env SETFORK_MAINTENANCE=1 — аварийный оверрайд
-// (когда БД лежит или нужен рубильник с Dokploy), из UI не выключается.
+// (когда БД лежит или нужен рубильник помимо интерфейса), из UI не выключается.
 
 export const MAINTENANCE_KEY = 'maintenance.on'
 

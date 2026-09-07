@@ -39,7 +39,7 @@
 
 ```cron
 # ежедневно 03:15 UTC
-15 3 * * *  cd /root/setfork/src/setfork-frontend && COMPOSE_FILE=docker-compose.dokploy.yml ./scripts/backup.sh >> /var/log/setfork-backup.log 2>&1
+15 3 * * *  cd /root/setfork/src/setfork-frontend && COMPOSE_FILE=docker-compose.prod.yml ./scripts/backup.sh >> /var/log/setfork-backup.log 2>&1
 ```
 
 Переменные: `COMPOSE_FILE`, `BACKUP_DIR` (по умолч. `./backups`), `RETENTION_DAYS` (14),
@@ -57,7 +57,7 @@
 
 ```sh
 # по метке из имени файлов (db-<TS>.dump / git-<TS>.tar.gz)
-COMPOSE_FILE=docker-compose.dokploy.yml ./scripts/restore.sh 20260704-031500Z
+COMPOSE_FILE=docker-compose.prod.yml ./scripts/restore.sh 20260704-031500Z
 # либо явными путями
 ./scripts/restore.sh ./backups/db-….dump ./backups/git-….tar.gz
 ```

@@ -9,7 +9,7 @@
 #   15 3 * * *  cd /opt/setfork && ./scripts/backup.sh >> /var/log/setfork-backup.log 2>&1
 #
 # Переменные (все опциональны):
-#   COMPOSE_FILE   compose-файл (по умолч. docker-compose.yml; в проде dokploy-вариант)
+#   COMPOSE_FILE   compose-файл (по умолч. docker-compose.yml; в проде docker-compose.prod.yml)
 #   BACKUP_DIR     куда класть (по умолч. ./backups)
 #   RETENTION_DAYS сколько хранить локально (по умолч. 14)
 #   PROJECT        имя compose-проекта для имени тома (по умолч. имя папки)

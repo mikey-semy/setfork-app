@@ -22,7 +22,7 @@ export function appHost(): string {
   return appOrigin().replace(/^https?:\/\//, '')
 }
 
-/** IP клиента для rate-limit внутри server actions (заголовки прокси Traefik/dokploy). */
+/** IP клиента для rate-limit внутри server actions (заголовки прокси Traefik). */
 export async function clientIpFromHeaders(): Promise<string> {
   const h = await headers()
   const xff = h.get('x-forwarded-for')

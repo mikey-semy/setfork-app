@@ -1,10 +1,10 @@
 # Деплой и персистентность
 
-> Обновлено 19.08.2026. Прежняя редакция описывала деплой через панель **Dokploy** — её
+> Обновлено 07.09.2026. Прод разворачивается из CI по ssh (джоба `deploy`),
 > сняли 13.08.2026 вместе со Swarm, и с тех пор выкаткой управляет CI. Имя файла
-> `docker-compose.dokploy.yml` осталось историческим: это просто базовый compose прода.
+> `docker-compose.prod.yml` осталось историческим: это просто базовый compose прода.
 
-Прод-стек — [`docker-compose.dokploy.yml`](../docker-compose.dokploy.yml): Postgres +
+Прод-стек — [`docker-compose.prod.yml`](../docker-compose.prod.yml): Postgres +
 Rust git-ядро + миграции + фронт (+ опц. свой Stalwart-mail). Медиа (S3/imgproxy) —
 внешние (Selectel). Сеть одна — `edge`, обычная bridge.
 
@@ -75,7 +75,7 @@ imgproxy отдаёт подписанные трансформации на л�
 браузер → CDN (кэш по URL) → imgproxy (:8081) → S3-оригинал (Selectel)
 ```
 
-- **imgproxy self-hosted** в `docker-compose.dokploy.yml` (сервис `imgproxy`, порт `8081`):
+- **imgproxy self-hosted** в `docker-compose.prod.yml` (сервис `imgproxy`, порт `8081`):
   читает оригиналы из внешнего S3 (те же креды `S3_*`, что у приложения). CDN Selectel
   ставится **перед** ним (origin CDN = `http://<vps>:8081` или ваш `img.<домен>:8081`).
 - ⚠️ **`CDN_URL` и `IMGPROXY_URL` должны включать схему `https://`.** Код строит URL как
@@ -96,7 +96,7 @@ imgproxy отдаёт подписанные трансформации на л�
 и mail не должен блокировать деплой фронта. Включить, когда будете настраивать SMTP:
 
 ```sh
-docker compose -f docker-compose.dokploy.yml --profile mail up -d
+docker compose -f docker-compose.prod.yml --profile mail up -d
 ```
 
 > Образ переименован: `stalwartlabs/mail-server` → **`stalwartlabs/stalwart`** (у старого

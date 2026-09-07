@@ -152,8 +152,8 @@ Postgres** (self-check: 11 списков, резолв `demo/redis-…`→uuid+
   LocaleText `{en}`). READ RPC + CreateBundle теперь тоже через `ensure_repo` (после push клоны видят
   коммит). **Проверено:** `git push` через Rust → коммит персистится (re-clone) И в Postgres версия 4
   (8 шагов, note, tags-мета, current_version). TS Connect-ES `receivePack` тоже проверен (мост).
-- [x] **Docker (оба репо):** `Dockerfile` + `docker-compose.yml` (обычный) + `docker-compose.dokploy.yml`
-  (сеть `dokploy-network` external). Core: rust→debian-slim+git. Front: node standalone + `migrate` target
+- [x] **Docker (оба репо):** `Dockerfile` + `docker-compose.yml` (обычный) + `docker-compose.prod.yml`
+  (внешняя сеть `edge`). Core: rust→debian-slim+git. Front: node standalone + `migrate` target
   (drizzle-kit push). Все compose провалидированы `docker compose config`.
 - [x] **КАТОВЕР git на Rust — ГОТОВ (dev).** Флип `.env.local`: `SETFORK_CORE_URL=1` +
   `SETFORK_CORE_ADDR=127.0.0.1:50051` → `gitCore` в роуте `[...git]` = `gitCoreRemote` → Rust.
