@@ -26,13 +26,24 @@ ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
 ARG NEXT_PUBLIC_DOCS_URL
 ARG NEXT_PUBLIC_ABOUT_URL
 # Ссылка «Исходный код» в подвале (раздел 13 AGPL). Пусто = пункта нет.
+#
+# ⚠️ ЕГО НЕТ В `ENV` НИЖЕ, И ЭТО НАМЕРЕННО. `ENV X=$X` определяет переменную ВСЕГДА,
+# в том числе пустой, когда `--build-arg` не передан (проверено: `'X' in process.env`
+# = true, значение ""). А Next вшивает `NEXT_PUBLIC_*` литералом, если переменная при
+# сборке ОПРЕДЕЛЕНА, — и пустая строка вшивалась как `("".trim()||"")`, убивая чтение
+# окружения в рантайме. Ссылка не появлялась НИ через `.env` на сервере, НИ без
+# `--build-arg`; в собранном образе от 07.09.2026 так и было.
+#
+# Голый `ARG` ведёт себя правильно в обоих случаях: передан — виден команде `RUN`
+# и вшивается; не передан — не определён вовсе, и Next оставляет живое
+# `process.env.…`, которое читается при старте контейнера из `.env` (`env_file`).
+# Оба пути настройки живы одновременно только так.
 ARG NEXT_PUBLIC_SOURCE_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_UMAMI_URL=$NEXT_PUBLIC_UMAMI_URL \
     NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID \
     NEXT_PUBLIC_DOCS_URL=$NEXT_PUBLIC_DOCS_URL \
-    NEXT_PUBLIC_ABOUT_URL=$NEXT_PUBLIC_ABOUT_URL \
-    NEXT_PUBLIC_SOURCE_URL=$NEXT_PUBLIC_SOURCE_URL
+    NEXT_PUBLIC_ABOUT_URL=$NEXT_PUBLIC_ABOUT_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
