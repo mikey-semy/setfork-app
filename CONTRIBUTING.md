@@ -12,16 +12,19 @@ the thread.
 ## Getting it running
 
 ```sh
-npm ci
-cp .env.example .env          # fill in what you need
-npm run itest:env             # brings up Postgres in Docker
-npm run db:push               # schema
-npm run db:seed               # some data to look at
-npm run dev
+npm install
+cp .env.example .env          # fill in AUTH_SECRET: openssl rand -hex 32
+npm run db:up                 # Postgres (pgvector) in Docker, port DB_PORT (5435 by default)
+npm run db:init               # schema, extensions and search setup in one command
+npm run db:seed               # a public library to look at
+npm run dev                   # http://localhost:3000
 ```
 
-⚠️ Use `db:push`, not the migration files. The migrations in the repository are older
-than the schema and are kept for history; the schema of record is the Drizzle definition.
+On `/login`, **Continue as demo** works without any external setup.
+
+⚠️ `db:init` pushes the Drizzle schema; do not run the migration files. They are older
+than the schema and are kept for history — the schema of record is the Drizzle
+definition.
 
 Most of the application works without the Rust core. Anything touching git — versions,
 diffs, branches, suggestions — does not.
@@ -73,6 +76,16 @@ npm run build        # run it: type-clean code still fails the build
 ⚠️ **`npm run build` is not optional before pushing.** A change can pass types, lint and
 1800 unit tests and still break the build — it happened here with a route setting that
 only the production build validates.
+
+`npm run test` is the unit suite. The integration tests run against a real Postgres and
+the Rust core, and CI runs them on every pull request:
+
+```sh
+npm run itest:env            # brings both up, then prints the command to run
+```
+
+⚠️ Note the `itest:env` database is a separate instance on port 55432 — it does not
+touch your development one.
 
 ### Architecture guards
 

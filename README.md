@@ -133,12 +133,12 @@ use: if you run a modified version as a service, its users must be able to obtai
 source.
 
 ```sh
-npm ci
-cp .env.example .env
-npm run itest:env     # Postgres in Docker
-npm run db:push       # schema (not the migration files — see CONTRIBUTING)
-npm run db:seed
-npm run dev
+npm install
+cp .env.example .env  # fill in AUTH_SECRET: openssl rand -hex 32
+npm run db:up         # Postgres (pgvector) in Docker, port DB_PORT (5435 by default)
+npm run db:init       # schema, extensions and search setup in one command
+npm run db:seed       # a public library to look at
+npm run dev           # http://localhost:3000
 ```
 
 Most of the application runs without the Rust core; anything touching git — versions,
