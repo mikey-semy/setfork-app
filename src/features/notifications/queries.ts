@@ -2,34 +2,25 @@ import 'server-only'
 import { and, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { canViewList } from '@/core'
-import { collaborators, db, issues, notifications, templates, users } from '@/shared/db'
+import { collaborators, db, discussions, issues, notifications, templates, users, type notificationType } from '@/shared/db'
 import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
 import type { LocaleText } from '@/shared/i18n'
 import { probeLimit, type Cursor, type FeedDirection } from '@/shared/lib/paging'
 import { avatarSrc } from '@/shared/media'
 
-export type NotificationType =
-  | 'suggestion_new'
-  | 'suggestion_accepted'
-  | 'suggestion_edited'
-  | 'suggestion_rejected'
-  | 'suggestion_comment'
-  | 'issue_new'
-  | 'issue_comment'
-  | 'issue_closed_by_merge'
-  | 'issue_closed'
-  | 'issue_reopened'
-  | 'new_version'
-  | 'star'
-  | 'fork'
-  | 'follow'
-  | 'mention'
-  | 'assigned'
-  | 'review_requested'
-  | 'review_dismissed'
-  | 'transfer_incoming'
-  | 'transfer_accepted'
-  | 'transfer_declined'
+/**
+ * ⚠️ ТИП УВЕДОМЛЕНИЯ ВЫВОДИТСЯ ИЗ СХЕМЫ, а не переписывается рядом.
+ *
+ * Перечень жил в ТРЁХ местах: `notificationType` в схеме, `NotifType` в notify.ts и
+ * этот союз. Копии расходятся тихо и в опасную сторону: значение, добавленное в базу и
+ * в рассылку, но забытое здесь, доезжает до колокольчика — а там `NOTIF_VERB` устроен
+ * как `Record<NotificationType, …>` и о пропаже не узнает, потому что в его ключах
+ * этого значения нет. То есть уведомление уходит человеку без глагола.
+ *
+ * Теперь источник один — перечень схемы, и добавление значения ЛОМАЕТ СБОРКУ ровно в
+ * тех местах, где о нём надо вспомнить.
+ */
+export type NotificationType = (typeof notificationType.enumValues)[number]
 
 export interface NotificationItem {
   id: string
@@ -42,6 +33,8 @@ export interface NotificationItem {
   slug: string | null
   title: LocaleText | null
   issueNumber: number | null
+  /** Номер треда обсуждения — им же он зовётся в адресе. */
+  discussionNumber: number | null
   suggestionId: string | null
 }
 
@@ -104,6 +97,7 @@ async function fetchNotifications(
       slug: templates.slug,
       title: templates.title,
       issueNumber: issues.number,
+      discussionNumber: discussions.number,
       suggestionId: notifications.suggestionId,
       templateId: notifications.templateId,
       listOwnerId: templates.ownerId,
@@ -116,6 +110,7 @@ async function fetchNotifications(
     .leftJoin(templates, eq(notifications.templateId, templates.id))
     .leftJoin(owner, eq(owner.id, templates.ownerId))
     .leftJoin(issues, eq(notifications.issueId, issues.id))
+    .leftJoin(discussions, eq(notifications.discussionId, discussions.id))
     .where(and(eq(notifications.recipientId, userId), step.where))
     // Условие и порядок берутся ОДНИМ шагом: порознь они могли бы смотреть в разные
     // стороны, и запрос молча отдавал бы хвост ленты вместо соседней порции. Заодно

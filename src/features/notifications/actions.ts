@@ -16,6 +16,7 @@ export async function updateNotifyPrefs(formData: FormData): Promise<void> {
     stars: on('stars'),
     forks: on('forks'),
     issues: on('issues'),
+    discussions: on('discussions'),
     comments: on('comments'),
     watchedUpdates: on('watchedUpdates'),
     email: on('email'),

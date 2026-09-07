@@ -27,11 +27,12 @@ export interface WatchLabels {
   customTitle: string
   evVersions: string
   evIssues: string
+  evDiscussions: string
   evSuggestions: string
   apply: string
 }
 
-const EVENT_KEYS = ['versions', 'issues', 'suggestions'] as const
+const EVENT_KEYS = ['versions', 'issues', 'discussions', 'suggestions'] as const
 
 /** Watch как на GitHub: кнопка-триггер с дропдауном уровней подписки
  *  (Participating & @mentions / All activity / Ignore / Custom). Custom открывает
@@ -150,7 +151,9 @@ export function WatchButton({
       >
         <div className="flex flex-col gap-1">
           {EVENT_KEYS.map((k) => {
-            const label = k === 'versions' ? labels.evVersions : k === 'issues' ? labels.evIssues : labels.evSuggestions
+            // Подпись — по КАРТЕ, а не цепочкой тернарников: с третьим событием цепочка
+            // молча отдавала бы новому ключу подпись последнего.
+            const label = { versions: labels.evVersions, issues: labels.evIssues, discussions: labels.evDiscussions, suggestions: labels.evSuggestions }[k]
             return (
               <label key={k} className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-2 hover:bg-surface-2">
                 <Checkbox

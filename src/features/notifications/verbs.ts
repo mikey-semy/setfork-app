@@ -22,6 +22,8 @@ export const NOTIF_VERB: Record<NotificationType, TKey> = {
   issue_closed_by_merge: 'notifIssueClosedByMerge',
   issue_closed: 'notifIssueClosed',
   issue_reopened: 'notifIssueReopened',
+  discussion_new: 'notifDiscussionNew',
+  discussion_comment: 'notifDiscussionComment',
   new_version: 'notifNewVersion',
   star: 'notifStar',
   fork: 'notifFork',

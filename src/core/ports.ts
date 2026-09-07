@@ -102,7 +102,7 @@ export interface SearchIndex {
  *  глобальный дефолт (только упоминания/участие) = отсутствие строки в watches. */
 export type WatchLevel = 'participating' | 'all' | 'ignore' | 'custom'
 /** События с доставкой наблюдателям (для level='custom'). */
-export type WatchEvent = 'versions' | 'issues' | 'suggestions'
+export type WatchEvent = 'versions' | 'issues' | 'suggestions' | 'discussions'
 export type WatchEvents = Partial<Record<WatchEvent, boolean>>
 export interface WatchState {
   level: WatchLevel

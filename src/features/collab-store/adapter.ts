@@ -1,7 +1,7 @@
 import 'server-only'
 import { eq, sql } from 'drizzle-orm'
 import type { CollabStore, Issue, IssueComment, Suggestion, SuggestionComment } from '@/core'
-import { db, issueComments, issues, suggestionComments, suggestions, templates, type ProposedItem } from '@/shared/db'
+import { db, discussionComments, issueComments, issues, suggestionComments, suggestions, templates, type ProposedItem } from '@/shared/db'
 
 // Каноническая реализация порта CollabStore (issues/suggestions/comments).
 // Delivery-эффекты (auth/notify/watch/revalidate/redirect) остаются в server-actions.
@@ -138,6 +138,15 @@ export const collabStore: CollabStore = {
 // helper для дедупа комментаторов issue (используется в actions для fan-out нотификаций)
 export async function issueCommenterIds(issueId: string): Promise<string[]> {
   const rows = await db.selectDistinct({ id: issueComments.authorId }).from(issueComments).where(eq(issueComments.issueId, issueId))
+  return rows.map((c) => c.id)
+}
+
+// helper для дедупа собеседников обсуждения
+export async function discussionCommenterIds(discussionId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ id: discussionComments.authorId })
+    .from(discussionComments)
+    .where(eq(discussionComments.discussionId, discussionId))
   return rows.map((c) => c.id)
 }
 

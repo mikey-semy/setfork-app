@@ -6,6 +6,7 @@ import { t, tr, type TKey } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { notificationHref } from '@/features/notifications/href'
 import { getNotificationsPage, type NotificationItem } from '@/features/notifications/queries'
 import { MarkRead } from '@/features/notifications/MarkRead'
 import { NOTIF_VERB } from '@/features/notifications/verbs'
@@ -64,14 +65,8 @@ export default async function NotificationsPage({
           {items.map((n) => {
             const isFollow = n.type === 'follow'
             const listTitle = n.title ? tr(n.title, lang) : t('aList', lang)
-            const listHref = n.ownerHandle && n.slug ? `/${n.ownerHandle}/${n.slug}` : null
-            const href = isFollow
-              ? `/${n.actorHandle ?? ''}`
-              : listHref && n.issueNumber != null
-                ? `${listHref}/issues/${n.issueNumber}`
-                : listHref && n.suggestionId
-                  ? `${listHref}/suggestions/${n.suggestionId}`
-                  : listHref
+            // Куда ведёт уведомление — общее правило с колокольчиком (см. features/notifications/href).
+            const href = notificationHref(n)
             return (
               <div
                 key={n.id}

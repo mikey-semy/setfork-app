@@ -9,32 +9,25 @@ import { pushEnabled } from '@/shared/push/vapid'
 import { userHasPush } from '@/shared/push/send'
 import { captureError } from '@/shared/observability'
 import { extractHandles } from './mentions'
+import type { NotificationType } from './queries'
 
-type NotifType =
-  | 'suggestion_new'
-  | 'suggestion_accepted'
-  | 'suggestion_edited'
-  | 'suggestion_rejected'
-  | 'suggestion_comment'
-  | 'issue_new'
-  | 'issue_comment'
-  | 'issue_closed_by_merge'
-  | 'issue_closed'
-  | 'issue_reopened'
-  | 'new_version'
-  | 'star'
-  | 'fork'
-  | 'follow'
-  | 'mention'
-  | 'assigned'
-  | 'review_requested'
-  | 'review_dismissed'
-  | 'transfer_incoming'
-  | 'transfer_accepted'
-  | 'transfer_declined'
+/** Тот же перечень, что в схеме и в колокольчике: один источник, см. `./queries`. */
+type NotifType = NotificationType
 
-// Тип события → ключ предпочтения получателя (follow не отключается — ключа нет).
-const TYPE_PREF: Partial<Record<NotifType, keyof NotifyPrefs>> = {
+/**
+ * ТИП СОБЫТИЯ → РУЧКА ПОЛУЧАТЕЛЯ. Таблица ПОЛНАЯ, а не частичная, и это несущее.
+ *
+ * ⚠️ Была `Partial<Record<…>>`, и пропуск в ней ничего не ломал: у забытого типа ключ
+ * приезжал `undefined`, условие «выключено получателем» не срабатывало — и уведомление
+ * уходило ВОПРЕКИ настройкам. Тихо: сборка проходит, тесты зелёные, а человек, снявший
+ * переключатель, продолжает получать письма и считает, что переключатель сломан.
+ *
+ * Теперь `null` значит «неотключаемо ОСОЗНАННО», а пропуск невозможен: `Record` по
+ * полному перечню типов ломает сборку, пока новый тип не назван. То же лечение, что у
+ * таблицы глаголов (`./verbs`), и по той же причине — там пропуск давал уведомление без
+ * текста, здесь даёт уведомление вопреки запрету.
+ */
+const TYPE_PREF: Record<NotifType, keyof NotifyPrefs | null> = {
   suggestion_new: 'newSuggestions',
   suggestion_accepted: 'suggestionResolved',
   suggestion_rejected: 'suggestionResolved',
@@ -47,9 +40,22 @@ const TYPE_PREF: Partial<Record<NotifType, keyof NotifyPrefs>> = {
   issue_closed_by_merge: 'issues',
   issue_closed: 'issues',
   issue_reopened: 'issues',
+  // Новое обсуждение — своя ручка: молчать о разговорах и получать задачи (или наоборот)
+  // человек вправе. Ответ в треде — это «комментарии», как и ответ в задаче.
+  discussion_new: 'discussions',
+  discussion_comment: 'comments',
   new_version: 'watchedUpdates',
   star: 'stars',
   fork: 'forks',
+  // Ниже — то, что НЕ отключается, и у каждого своя причина.
+  follow: null, // подписка на тебя: адресное действие человека, а не поток из списка
+  mention: null, // тебя позвали по нику — молчать об этом значит не донести обращение
+  assigned: null, // на тебя повесили работу
+  review_requested: null, // тебя попросили посмотреть правку
+  review_dismissed: null, // твой вердикт сняли: это про твоё же решение
+  transfer_incoming: null, // тебе предлагают принять список — без этого предложение зависнет
+  transfer_accepted: null,
+  transfer_declined: null,
 }
 
 /** Создаёт уведомление. Себе не шлём; уважаем предпочтения получателя. Ошибки глотаем. */
@@ -59,6 +65,7 @@ export async function notify(params: {
   type: NotifType
   templateId?: string | null
   issueId?: string | null
+  discussionId?: string | null
   suggestionId?: string | null
 }): Promise<void> {
   if (params.actorId && params.actorId === params.recipientId) return
@@ -77,6 +84,7 @@ export async function notify(params: {
       type: params.type,
       templateId: params.templateId ?? null,
       issueId: params.issueId ?? null,
+      discussionId: params.discussionId ?? null,
       suggestionId: params.suggestionId ?? null,
     })
     const refPayload = {
@@ -85,6 +93,7 @@ export async function notify(params: {
       type: params.type,
       templateId: params.templateId ?? null,
       issueId: params.issueId ?? null,
+      discussionId: params.discussionId ?? null,
       suggestionId: params.suggestionId ?? null,
     }
 
@@ -108,7 +117,14 @@ export async function notify(params: {
 /** Рассылка нескольким получателям (дедуп, себя пропустит notify). */
 export async function notifyMany(
   recipientIds: string[],
-  params: { actorId?: string | null; type: NotifType; templateId?: string | null; issueId?: string | null; suggestionId?: string | null },
+  params: {
+    actorId?: string | null
+    type: NotifType
+    templateId?: string | null
+    issueId?: string | null
+    discussionId?: string | null
+    suggestionId?: string | null
+  },
 ): Promise<void> {
   const unique = [...new Set(recipientIds)].filter(Boolean)
   await Promise.all(unique.map((recipientId) => notify({ recipientId, ...params })))
@@ -123,6 +139,7 @@ export async function notifyMentions(params: {
   actorId: string
   templateId?: string | null
   issueId?: string | null
+  discussionId?: string | null
 }): Promise<void> {
   const handles = extractHandles(params.text)
   if (handles.length === 0) return
@@ -131,7 +148,13 @@ export async function notifyMentions(params: {
     if (rows.length === 0) return
     await notifyMany(
       rows.map((r) => r.id),
-      { actorId: params.actorId, type: 'mention', templateId: params.templateId ?? null, issueId: params.issueId ?? null },
+      {
+        actorId: params.actorId,
+        type: 'mention',
+        templateId: params.templateId ?? null,
+        issueId: params.issueId ?? null,
+        discussionId: params.discussionId ?? null,
+      },
     )
   } catch (e) {
     captureError(e, { where: 'notifyMentions', templateId: params.templateId })

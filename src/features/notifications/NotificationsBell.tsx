@@ -11,6 +11,7 @@ import { IconButton } from '@/shared/ui/IconButton'
 import { t, tr, type Lang, type TKey } from '@/shared/i18n'
 import type { NotificationItem } from './queries'
 import { markNotificationsRead } from './actions'
+import { notificationHref } from './href'
 import { NOTIF_VERB } from './verbs'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Badge } from '@/shared/ui/badge'
@@ -61,14 +62,9 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
           <div className="min-h-0 flex-1 overflow-auto">
             {items.map((n) => {
               const isFollow = n.type === 'follow'
-              const listHref = n.ownerHandle && n.slug ? `/${n.ownerHandle}/${n.slug}` : null
-              const href = isFollow
-                ? `/${n.actorHandle ?? ''}`
-                : listHref && n.issueNumber != null
-                  ? `${listHref}/issues/${n.issueNumber}`
-                  : listHref && n.suggestionId
-                    ? `${listHref}/suggestions/${n.suggestionId}`
-                    : (listHref ?? '/notifications')
+              // Правило «куда ведёт уведомление» — общее со страницей (см. ./href):
+              // копия здесь однажды отстала бы, и колокольчик вёл бы не туда.
+              const href = notificationHref(n) ?? '/notifications'
               return (
                 <Link
                   key={n.id}
