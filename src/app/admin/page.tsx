@@ -360,7 +360,7 @@ export default async function AdminPage() {
           title={T.ach}
           hint={
             ru
-              ? 'Включай/выключай достижения и задавай свою картинку вместо иконки (перетаскиванием). Действует на всех профилях.'
+              ? 'Включайте и выключайте достижения, задавайте свою картинку вместо иконки (перетаскиванием). Действует на всех профилях.'
               : 'Enable/disable achievements and set a custom image instead of the icon (drag-and-drop). Applies to all profiles.'
           }
         >

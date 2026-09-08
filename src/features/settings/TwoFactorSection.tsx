@@ -26,7 +26,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
   const [pending, start] = useTransition()
 
   const badCode = ru ? 'Неверный код' : 'Invalid code'
-  const expired = ru ? 'Сессия включения истекла — начни заново' : 'Enrollment expired — start again'
+  const expired = ru ? 'Сессия включения истекла — начните заново' : 'Enrollment expired — start again'
 
   const begin = () =>
     start(async () => {
@@ -118,7 +118,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
       {recovery && (
         <div className={cardClass({ tone: 'warn' })}>
           <div className="mb-1.5 text-body font-semibold text-ink">
-            {ru ? 'Recovery-коды — сохрани сейчас, второй раз не покажем' : 'Recovery codes — save them now, they won’t be shown again'}
+            {ru ? 'Recovery-коды — сохраните сейчас, второй раз не покажем' : 'Recovery codes — save them now, they won’t be shown again'}
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 font-mono text-body text-ink sm:grid-cols-5">
             {recovery.map((c) => (
@@ -151,7 +151,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
           <div className="min-w-0 flex-1">
             <p className="text-body text-ink-2">
               {ru
-                ? 'Отсканируй QR в приложении-аутентификаторе (1Password, Google Authenticator, Aegis…) или введи секрет вручную:'
+                ? 'Отсканируйте QR в приложении-аутентификаторе (1Password, Google Authenticator, Aegis…) или введите секрет вручную:'
                 : 'Scan the QR with your authenticator app (1Password, Google Authenticator, Aegis…) or enter the secret manually:'}
             </p>
             <code className="mt-1.5 block break-all rounded-md bg-surface px-2 py-1 font-mono text-body-sm text-ink">{enroll.secret}</code>
@@ -175,8 +175,8 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
         <div className={cardClass({ tone: 'inset' })}>
           <p className="mb-2 text-body text-ink-2">
             {mode === 'disable'
-              ? ru ? 'Для отключения введи код из приложения (или recovery-код):' : 'Enter a code from your app (or a recovery code) to disable:'
-              : ru ? 'Для перегенерации введи код из приложения (или recovery-код). Старые коды перестанут работать.' : 'Enter a code to regenerate. Old recovery codes will stop working.'}
+              ? ru ? 'Для отключения введите код из приложения (или recovery-код):' : 'Enter a code from your app (or a recovery code) to disable:'
+              : ru ? 'Для перегенерации введите код из приложения (или recovery-код). Старые коды перестанут работать.' : 'Enter a code to regenerate. Old recovery codes will stop working.'}
           </p>
           <div className="flex items-center gap-2">
             {codeInput(mode === 'disable' ? doDisable : doRegen, ru ? 'Код' : 'Code')}

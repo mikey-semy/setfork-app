@@ -263,10 +263,10 @@ const SEED_BASE: SeedExpert[] = [
 - "Look back" is a real step that verifies the result
 - Checklist shape: short blocks, clear pause points
 - Each step marked read-do or do-confirm`,
-    codeRu: `- Сначала классифицируй задачу, потом выбирай метод
+    codeRu: `- Сначала классификация задачи, потом выбор метода
 - «Оглянись» — настоящий шаг, который проверяет результат
 - Форма чек-листа: короткие блоки, ясные точки паузы
-- Каждый шаг помечен: читай-и-делай или сделай-и-проверь`,
+- Каждый шаг помечен типом: «читай-и-делай» или «сделай-и-проверь»`,
     lens: 'method structure checklist verification',
     memory: '',
     domains: ['*'],

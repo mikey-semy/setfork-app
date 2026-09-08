@@ -45,7 +45,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
           <KeyRound size={18} className="text-accent" /> {ru ? 'Новый пароль' : 'Set a new password'}
         </div>
         <p className="mb-5 text-body text-ink-2">
-          {ru ? 'После смены пароля ты выйдешь со всех устройств.' : 'After the change you’ll be signed out on all devices.'}
+          {ru ? 'После смены пароля вы выйдете со всех устройств.' : 'After the change you’ll be signed out on all devices.'}
         </p>
         <ResetPasswordForm token={token!} lang={lang} />
       </div>

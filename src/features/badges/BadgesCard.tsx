@@ -25,7 +25,7 @@ export function BadgesCard({ owner, slug, origin, lang }: { owner: string; slug:
     <div className={cardClass()}>
       <div className="mb-1 text-body font-semibold text-ink">{ru ? 'Бейджи' : 'Badges'}</div>
       <p className="mb-3 text-body-sm text-muted">
-        {ru ? 'Живой бейдж списка — вставь в README проекта, доки или блог.' : 'A live badge for this list — drop it in your project README, docs or blog.'}
+        {ru ? 'Живой бейдж списка — вставьте в README проекта, доки или блог.' : 'A live badge for this list — drop it in your project README, docs or blog.'}
       </p>
       <div className="flex flex-col gap-2">
         {KINDS.map((kind) => {

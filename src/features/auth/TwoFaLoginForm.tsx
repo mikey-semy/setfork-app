@@ -15,7 +15,7 @@ export function TwoFaLoginForm({ lang }: { lang: Lang }) {
     <form action={action} className="flex flex-col gap-3">
       {state?.error && (
         <Alert variant="danger">
-          {ru ? 'Неверный код — попробуй ещё раз.' : 'Invalid code — try again.'}
+          {ru ? 'Неверный код — попробуйте ещё раз.' : 'Invalid code — try again.'}
         </Alert>
       )}
       <Input

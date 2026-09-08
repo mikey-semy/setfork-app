@@ -18,7 +18,7 @@ const FALLBACK_CHIPS = [
 // Плейсхолдер поиска — тоже не одна надпись: крутим пул фраз (+ вариант с
 // примером из живого списка, он собирается ниже).
 const PLACEHOLDERS = [
-  { en: 'Describe what you need to do…', ru: 'Опиши, что нужно сделать…' },
+  { en: 'Describe what you need to do…', ru: 'Опишите, что нужно сделать…' },
   { en: 'What are we setting up today?', ru: 'Что настраиваем сегодня?' },
   { en: 'Find a proven list…', ru: 'Найди проверенный список…' },
   { en: 'What needs doing — step by step?', ru: 'Что нужно сделать — по шагам?' },

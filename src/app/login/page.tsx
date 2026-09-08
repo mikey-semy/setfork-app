@@ -67,7 +67,7 @@ export default async function LoginPage({
         {sp.reset === "1" && (
           <Alert variant="ok" className="mb-4 text-left">
             {lang === "ru"
-              ? "Пароль изменён — войди с новым."
+              ? "Пароль изменён — войдите с новым."
               : "Password changed — sign in with the new one."}
           </Alert>
         )}
@@ -164,7 +164,7 @@ export default async function LoginPage({
                 ? t("auth.oauthStateLost", lang)
                 : sp.e === "2fa_throttled"
                 ? lang === "ru"
-                  ? "Слишком много попыток кода 2FA — войди заново через несколько минут."
+                  ? "Слишком много попыток кода 2FA — войдите заново через несколько минут."
                   : "Too many 2FA attempts — sign in again in a few minutes."
                 : `Auth error: ${sp.e}`}
           </div>

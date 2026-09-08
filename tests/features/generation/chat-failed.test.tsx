@@ -75,7 +75,7 @@ describe('чат генерации: виток сорвался', () => {
 
   it('причина рядом с провалом — свёрнута', () => {
     render(chat())
-    expect(screen.getByText('Не получилось — попробуй ещё раз.')).toBeTruthy()
+    expect(screen.getByText('Не получилось — попробуйте ещё раз.')).toBeTruthy()
     expect(screen.getByText('Подробности')).toBeTruthy()
     expect(screen.queryByText(/AbortError/)).toBeNull()
   })

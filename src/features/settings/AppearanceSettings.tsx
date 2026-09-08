@@ -168,7 +168,7 @@ export function AppearanceSettings({
         </div>
         <p className="mt-2 text-body-sm text-muted">
           {ru
-            ? 'Акцент и шрифт сохраняются в аккаунте и следуют за тобой между устройствами. Тема (светлая/тёмная) — в этом браузере.'
+            ? 'Акцент и шрифт сохраняются в аккаунте и следуют за вами между устройствами. Тема (светлая/тёмная) — в этом браузере.'
             : 'Accent and font are saved to your account and follow you across devices. Theme (light/dark) stays in this browser.'}
         </p>
       </div>

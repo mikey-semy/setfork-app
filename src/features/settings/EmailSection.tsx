@@ -18,10 +18,10 @@ function changeError(err: Exclude<EmailChangeResult, { ok: true }>['error'], ru:
     smtp: 'Couldn’t send the email (SMTP not configured?).',
   }
   const rus: Record<typeof err, string> = {
-    invalid: 'Введи корректный адрес почты.',
-    same: 'Это и есть твой текущий адрес.',
+    invalid: 'Введите корректный адрес почты.',
+    same: 'Это и есть ваш текущий адрес.',
     taken: 'Этот адрес привязан к другому аккаунту.',
-    throttled: 'Слишком много попыток — попробуй позже.',
+    throttled: 'Слишком много попыток — попробуйте позже.',
     'no-email': 'Менять нечего (вход через GitHub).',
     smtp: 'Не удалось отправить письмо (SMTP не настроен?).',
   }
@@ -87,7 +87,7 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
       {state?.ok ? (
         <p className="text-body text-ok">
           {ru
-            ? 'Письмо для подтверждения отправлено на новый адрес. Старый остаётся активным, пока не перейдёшь по ссылке.'
+            ? 'Письмо для подтверждения отправлено на новый адрес. Старый остаётся активным, пока вы не перейдёте по ссылке.'
             : 'A confirmation email was sent to the new address. The old one stays active until you follow the link.'}
         </p>
       ) : editing ? (

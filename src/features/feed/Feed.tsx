@@ -78,7 +78,7 @@ export function Feed({
       {emptyHint && (
         <p className="mb-3 text-body-sm text-muted">
           {ru
-            ? 'Лента собирается из подписок: подпишись на людей и списки в '
+            ? 'Лента собирается из подписок: подпишитесь на людей и списки в '
             : 'Your feed is built from people and lists you follow. Find them on '}
           <Link href="/explore" className="text-accent hover:underline">
             Explore
@@ -132,7 +132,7 @@ export function Feed({
       {prefs.events.recommended && recommended.length > 0 && (
         <div className={cardClass({ className: 'mt-4' })}>
           <div className="mb-2 flex items-center gap-1.5 text-body-sm font-semibold text-ink">
-            <Star size={13} className="text-muted" /> {ru ? 'Рекомендации для тебя' : 'Recommended for you'}
+            <Star size={13} className="text-muted" /> {ru ? 'Рекомендации для вас' : 'Recommended for you'}
           </div>
           <div className="flex flex-col">
             {recommended.map((r) => (
