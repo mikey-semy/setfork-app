@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Send } from 'lucide-react'
+import { ActionResult } from '@/shared/ui/ActionResult'
 import { Switch } from '@/shared/ui/switch'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
@@ -45,8 +46,8 @@ export function EmailSettingsForm({ lang, v }: { lang: Lang; v: EmailFormValues 
     <div className="flex flex-col gap-5">
       <div className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-body-sm text-ink-2">
         {ru
-          ? 'Свой SMTP-сервер (без сторонних сервисов). Пусто = берётся из .env. docker compose поднимает Stalwart (Rust MTA): host=mail, port=587; разовая настройка — админка Stalwart на :8080 (пароль в логах сервиса mail). Прод: домен + DKIM/SPF/DMARC.'
-          : 'Your own SMTP server (no third-party service). Empty = taken from .env. docker compose runs Stalwart (Rust MTA): host=mail, port=587; one-time setup in Stalwart admin at :8080 (password in the mail service logs). Prod: domain + DKIM/SPF/DMARC.'}
+          ? 'Свой SMTP-сервер (без сторонних сервисов). Пусто = берётся из .env. Локально docker compose поднимает Stalwart (Rust MTA): host=mail, port=587, настройка — админка Stalwart на :8080 (пароль в логах сервиса mail). На проде иначе: host=mail.setfork.com, port=465, TLS сразу. ⚠️ Host обязан совпадать с именем в сертификате: по внутреннему имени контейнера (setfork-mail) на 465 проверка имени падает, и письмо не уходит МОЛЧА — в журнале только «Hostname/IP does not match certificate\u2019s altnames». Плюс домен и DKIM/SPF/DMARC.'
+          : 'Your own SMTP server (no third-party service). Empty = taken from .env. Locally docker compose runs Stalwart (Rust MTA): host=mail, port=587, setup in Stalwart admin at :8080 (password in the mail service logs). Production differs: host=mail.setfork.com, port=465, implicit TLS. \u26a0\ufe0f Host must match the certificate name: using the internal container name (setfork-mail) on 465 fails name verification and the message is dropped SILENTLY \u2014 the log only says \u201cHostname/IP does not match certificate\u2019s altnames\u201d. Plus domain and DKIM/SPF/DMARC.'}
       </div>
 
       <form action={setEmailSettings} className="flex flex-col gap-4">
@@ -106,9 +107,7 @@ export function EmailSettingsForm({ lang, v }: { lang: Lang; v: EmailFormValues 
           {ru ? 'Тест-письмо' : 'Send test'}
         </button>
         {result && (
-          <span className={`text-body-sm ${result.ok ? 'text-ok' : 'text-danger'}`}>
-            {result.ok ? (ru ? 'Отправлено ✅' : 'Sent ✅') : result.error}
-          </span>
+          <ActionResult ok={result.ok}>{result.ok ? (ru ? 'Отправлено' : 'Sent') : result.error}</ActionResult>
         )}
       </div>
     </div>

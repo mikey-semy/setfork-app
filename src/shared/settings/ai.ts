@@ -345,11 +345,11 @@ export async function hasApiKey(): Promise<boolean> {
 }
 
 /** Маскирует ключ для показа в UI: «sk-or-v1••••••••1a2b». Полный ключ на клиент не уходит. */
-export function maskKey(k: string): string {
-  if (!k) return ''
-  if (k.length <= 12) return `${k.slice(0, 2)}${'•'.repeat(8)}`
-  return `${k.slice(0, 8)}${'•'.repeat(10)}${k.slice(-4)}`
-}
+/** Маска ключа — та же общая, что у прочих секретов. Прежняя копия раскрывала
+ *  ВОСЕМЬ первых знаков и четыре последних: у ключей поставщиков первые знаки —
+ *  это префикс вида (`sk-or-v1-…`), то есть снимок отдавал и вид ключа, и кусок
+ *  значения. Разбор — в `shared/lib/mask-secret`. */
+export { maskSecret as maskKey } from '@/shared/lib/mask-secret'
 
 export async function getAiSettings(): Promise<AiSettings> {
   const allKeys = [
