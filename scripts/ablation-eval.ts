@@ -25,7 +25,7 @@
  *     Чтобы измерить именно продукт — прогнать реальный generateListCouncil (TODO,
  *     нужен app-env: DB/квоты).
  *
- * Запуск (из setfork-frontend):
+ * Запуск (из setfork-app):
  *   npx tsx scripts/ablation-eval.ts prices   # только каталог/ростер — ~0 трат
  *   npx tsx scripts/ablation-eval.ts live      # живой прогон — траты под жёстким капом
  */
@@ -313,7 +313,7 @@ async function modeLive() {
 
 async function main() {
   if (!API_KEY) {
-    console.error('Нет OPENROUTER_API_KEY (.env.local / .env в setfork-frontend). Из РФ openrouter недоступен напрямую — нужен egress/VPN.')
+    console.error('Нет OPENROUTER_API_KEY (.env.local / .env в setfork-app). Из РФ openrouter недоступен напрямую — нужен egress/VPN.')
     process.exit(1)
   }
   const mode = process.argv[2] || 'prices'
