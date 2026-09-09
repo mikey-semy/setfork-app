@@ -23,9 +23,17 @@ const nextConfig = {
   env: { NEXT_PUBLIC_APP_VERSION: pkgVersion },
   // Компактный self-contained сервер (.next/standalone) для Docker-образа.
   output: 'standalone',
-  images: {
-    remotePatterns: [{ protocol: 'https', hostname: 'avatars.githubusercontent.com' }],
-  },
+  // ⛔ `images.remotePatterns` ЗДЕСЬ НЕТ НАМЕРЕННО, и возвращать его нельзя без
+  // живого потребителя. Любой разрешённый паттерн включает `/_next/image` —
+  // эндпоинт оптимизации, который отвечает АНОНИМУ и прогоняет чужой файл через
+  // декодеры Next (AVIF/HEIF). Мы держали там `avatars.githubusercontent.com`, хотя
+  // `next/image` в коде не импортируется НИ РАЗУ: настройка была мёртвой, а
+  // поверхность живой — замер с прода 09.09.2026 давал 200 на разрешённый источник
+  // и 400 на посторонний, то есть эндпоинт работал.
+  //
+  // Разрешённый домен тут не защита, а приглашение: аватар на GitHub ставит себе
+  // кто угодно, то есть файл на «доверенном» домене выбирает атакующий. Ровно этим
+  // путём достигался критический CVE в Image Optimization API (AVIF) до 16.3.3.
   experimental: {
     serverActions: { allowedOrigins: serverActionOrigins },
   },
