@@ -14,7 +14,7 @@
  * Автономный (НЕ импортит server-only shared/ai), но верен проду: тот же `ai` SDK +
  * @openrouter/ai-sdk-provider и то же поле стоимости providerMetadata.openrouter.usage.cost.
  *
- * Запуск (из setfork-frontend):
+ * Запуск (из setfork-app):
  *   npx tsx scripts/gnome-society.ts run "Deploy a Next.js app to production with zero downtime"
  *   npx tsx scripts/gnome-society.ts compare     # society vs плоский совет-3 vs одиночка + судья
  */

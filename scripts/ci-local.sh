@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Локальный CI — прогоняет ровно то, что .github/workflows/ci.yml (check +
 # integration + coverage), но на этой машине и бесплатно. Эфемерные Postgres+
-# Redis в docker, автоочистка. Запуск из корня setfork-frontend:
+# Redis в docker, автоочистка. Запуск из корня setfork-app:
 #   bash scripts/ci-local.sh          # всё
 #   bash scripts/ci-local.sh --fast   # без build и без coverage (быстрая проверка)
 #

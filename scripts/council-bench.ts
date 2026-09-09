@@ -12,7 +12,7 @@
  * ВАЖНО: скрипт автономный (НЕ импортит server-only-модули shared/ai), но верен продукту —
  * тот же `ai` SDK + @openrouter/ai-sdk-provider и то же поле usage.cost, что и runListModel/extractUsage.
  *
- * Запуск (из setfork-frontend):
+ * Запуск (из setfork-app):
  *   npx tsx scripts/council-bench.ts prices   # только цены каталога — ~0 трат
  *   npx tsx scripts/council-bench.ts live      # живой прогон — небольшие траты (жёсткий кап ниже)
  */
@@ -291,7 +291,7 @@ async function modeAnalytic() {
 
 async function main() {
   if (!API_KEY) {
-    console.error('Нет OPENROUTER_API_KEY (проверь .env.local / .env в setfork-frontend).')
+    console.error('Нет OPENROUTER_API_KEY (проверь .env.local / .env в setfork-app).')
     process.exit(1)
   }
   const mode = process.argv[2] || 'prices'
