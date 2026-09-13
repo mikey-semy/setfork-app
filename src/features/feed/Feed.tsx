@@ -16,7 +16,12 @@ import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
 
 // Лента dashboard: сервер отдаёт все события (page.tsx), фильтр — клиентский
-// по localStorage-настройкам (FeedFilter). В конце — «Recommended for you».
+// по localStorage-настройкам (FeedFilter). В конце — полка «Свежие списки».
+//
+// ⚠️ Имя `recommended` в пропсах и в ключе настройки осталось от прежнего названия
+// («Рекомендации для вас») НАМЕРЕННО: ключ хранится у людей в localStorage, и
+// переименование молча сбросило бы их выбор фильтров. Переименование не «не доделано» —
+// сама полка называется тем, чем собрана (см. getFreshLists).
 
 const ICONS = {
   version: Tag,
