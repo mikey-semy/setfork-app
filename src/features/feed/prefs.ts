@@ -9,7 +9,9 @@ export type FeedEventType =
   | 'follow'
   | 'issue'
   | 'suggestion'
-  | 'recommended' // блок «Recommended for you» в конце ленты
+  // Полка «Свежие списки» в конце ленты. ⚠️ Ключ остаётся прежним намеренно: он хранится
+  // у людей, и переименование молча сбросило бы их выбор фильтров.
+  | 'recommended'
 
 export interface FeedPrefs {
   events: Record<FeedEventType, boolean>

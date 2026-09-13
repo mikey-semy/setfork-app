@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { GitFork, ListChecks, MessageSquare, PencilLine, Star, Tag, UserPlus } from 'lucide-react'
+import { Clock, GitFork, ListChecks, MessageSquare, PencilLine, Star, Tag, UserPlus } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { UserLine } from '@/shared/ui/UserLine'
 import { Markdown } from '@/shared/ui/Markdown'
 import { tr, type Lang } from '@/shared/i18n'
 import type { FeedEvent } from './queries'
-import type { RecommendedList } from './queries'
+import type { FreshList } from './queries'
 import { DEFAULT_PREFS, type FeedPrefs } from './prefs'
 import { FeedFilter } from './FeedFilter'
 import { cardClass } from '@/shared/ui/card-style'
@@ -61,7 +61,7 @@ export function Feed({
   emptyHint,
 }: {
   events: FeedEvent[]
-  recommended: RecommendedList[]
+  recommended: FreshList[]
   lang: Lang
   emptyHint: boolean
 }) {
@@ -131,8 +131,11 @@ export function Feed({
 
       {prefs.events.recommended && recommended.length > 0 && (
         <div className={cardClass({ className: 'mt-4' })}>
+          {/* ⚠️ ПОДПИСЬ НАЗЫВАЕТ РОВНО ТО, ЧТО В ЗАПРОСЕ. Было «Рекомендации для вас» при
+              глобальном топе по звёздам — обещание, которого код не выполнял (см.
+              getFreshLists). Значок тоже сменился: звезда подкрепляла ложное «популярное». */}
           <div className="mb-2 flex items-center gap-1.5 text-body-sm font-semibold text-ink">
-            <Star size={13} className="text-muted" /> {ru ? 'Рекомендации для вас' : 'Recommended for you'}
+            <Clock size={13} className="text-muted" /> {ru ? 'Свежие списки' : 'Recently updated'}
           </div>
           <div className="flex flex-col">
             {recommended.map((r) => (
@@ -147,9 +150,19 @@ export function Feed({
                   </span>
                   <span className="block truncate text-body-sm text-muted">{r.ownerHandle}</span>
                 </span>
-                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-mono text-caption text-muted">
-                  <Star size={11} /> {r.starsCount}
-                </span>
+                {/* Справа — КОГДА обновляли: это и есть признак, по которому полка
+                    собрана. Стоял счётчик звёзд, и при одной звезде на весь корпус он
+                    показывал ноль в каждой строке — украшение, читавшееся как рейтинг.
+                    ⚠️ ДАТА, А НЕ «сколько назад»: относительное время по-русски бывает
+                    длинным («на прошлой неделе»), и на 390px оно съедало половину строки
+                    у заголовка. Живой стенд это и показал. Форма — та же, что в ленте
+                    задачи: день и месяц. */}
+                <time
+                  dateTime={r.updatedAt.toISOString()}
+                  className="ml-auto shrink-0 font-mono text-caption text-muted"
+                >
+                  {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short' }).format(r.updatedAt)}
+                </time>
               </Link>
             ))}
           </div>

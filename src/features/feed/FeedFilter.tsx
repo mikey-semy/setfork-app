@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { GitFork, Heart, ListChecks, MessageSquare, SlidersHorizontal, Star, Tag, UserPlus } from 'lucide-react'
+import { Clock, GitFork, ListChecks, MessageSquare, SlidersHorizontal, Star, Tag, UserPlus } from 'lucide-react'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { Button } from '@/shared/ui/button'
 import { CheckboxRow } from '@/shared/ui/checkbox'
@@ -21,7 +21,9 @@ const EVENTS: { key: FeedEventType; icon: typeof Star; en: [string, string]; ru:
   { key: 'issue', icon: MessageSquare, en: ['Issues', 'Issues from lists you watch'], ru: ['Issues', 'Из отслеживаемых списков'] },
   { key: 'suggestion', icon: MessageSquare, en: ['Suggestions', 'Suggested edits from lists you watch'], ru: ['Предложения', 'Правки в отслеживаемых списках'] },
   { key: 'follow', icon: UserPlus, en: ['Follows', 'Who people are following'], ru: ['Подписки', 'На кого подписываются люди'] },
-  { key: 'recommended', icon: Heart, en: ['Recommendations', 'Lists you may like'], ru: ['Рекомендации', 'Списки, которые могут понравиться'] },
+  // Ключ настройки остаётся прежним намеренно: он хранится у людей, и переименование
+  // молча сбросило бы их выбор фильтров. Меняется то, что человек читает.
+  { key: 'recommended', icon: Clock, en: ['Recently updated', 'Fresh lists, except your own'], ru: ['Свежие списки', 'Недавно обновлённые, кроме ваших'] },
 ]
 
 export function FeedFilter({ lang, onChange }: { lang: Lang; onChange: (p: FeedPrefs) => void }) {

@@ -4,7 +4,7 @@ import { countUserTemplates, getActivity, getUserTemplates } from '@/features/li
 import { getImprovementFeed } from '@/features/improve/queries'
 import { getFollowingIds } from '@/features/follows/queries'
 import { getWatchedIds } from '@/features/watch/queries'
-import { getFeedEvents, getRecommended, getStarredIds, type FeedEvent } from '@/features/feed/queries'
+import { getFeedEvents, getFreshLists, getStarredIds, type FeedEvent } from '@/features/feed/queries'
 import { Feed } from '@/features/feed/Feed'
 import type { Lang } from '@/shared/i18n'
 import { ListsPanel } from './ListsPanel'
@@ -49,7 +49,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
       createdAt: a.createdAt,
     }))
   }
-  const [recommended, improve] = await Promise.all([getRecommended(userId, starred, 4), getImprovementFeed(userId, 3)])
+  const [recommended, improve] = await Promise.all([getFreshLists(userId, starred, 4), getImprovementFeed(userId, 3)])
 
   // ТРИ КОЛОНКИ ВКЛЮЧАЮТСЯ НЕ НА lg. На 1024px в этот же момент появляется левое меню
   // приложения (240px), и на ленту оставалось ~70px: слова переносились по одному, а сама
