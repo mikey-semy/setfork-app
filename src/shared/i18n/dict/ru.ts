@@ -819,6 +819,7 @@ export const ru: Record<DictKey, string> = {
   draftBadge: 'Черновик',
   draftHint: 'Не опубликован — виден только вам и соавторам.',
   publish: 'Опубликовать',
+  trendingOrderNote: 'Порядок — по звёздам и форкам.',
   trending: 'В тренде',
   newest: 'Новые',
   mostStarred: 'Популярные',

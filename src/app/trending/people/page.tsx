@@ -25,7 +25,7 @@ export default async function TrendingPeoplePage() {
       <ExploreNav active="trending" lang={lang} />
       <div className={PAGE}>
         <div className="mb-5">
-          <TrendScope active="people" range="week" lang={lang} />
+          <TrendScope active="people" lang={lang} />
         </div>
         <PeopleResults people={people} lang={lang} />
       </div>

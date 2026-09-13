@@ -87,7 +87,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const statics: MetadataRoute.Sitemap = [
     { url: at('/'), changeFrequency: 'daily', priority: 1 },
     { url: at('/explore'), changeFrequency: 'daily', priority: 0.7 },
-    { url: at('/trending'), changeFrequency: 'daily', priority: 0.7 },
+    // ⚠️ НЕ `daily`: страница не меняется ежедневно. Порядок — звёзды и форки, а их
+    // на 13.09.2026 два и ноль; «ежедневно» было обещанием движения, которого нет,
+    // и обращено оно к поисковику, который по нему планирует обход.
+    { url: at('/trending'), changeFrequency: 'weekly', priority: 0.7 },
     { url: at('/tags'), changeFrequency: 'weekly', priority: 0.5 },
     { url: at('/collections'), changeFrequency: 'weekly', priority: 0.6 },
   ]

@@ -827,6 +827,7 @@ export const en = {
   draftBadge: 'Draft',
   draftHint: 'Not published — only you and collaborators can see it.',
   publish: 'Publish',
+  trendingOrderNote: 'Ordered by stars and forks.',
   trending: 'Trending',
   newest: 'Newest',
   mostStarred: 'Most starred',

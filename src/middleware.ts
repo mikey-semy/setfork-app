@@ -90,9 +90,9 @@ function legacyExploreTarget(url: NextRequest['nextUrl']): string | null {
   if (tab === 'collections') return '/collections'
   if (tab !== 'trending') return null
   if (url.searchParams.get('view') === 'people') return '/trending/people'
-  const range = url.searchParams.get('range')
-  // Неделя — состояние по умолчанию, её в адресе не оставляем.
-  return range && range !== 'week' ? `/trending?range=${range}` : '/trending'
+  // Период раздела убран (он давал одну и ту же выдачу на всех значениях), поэтому
+  // старые адреса с `?range=` ведут на саму страницу, а не тащат мёртвый параметр.
+  return '/trending'
 }
 
 /**
