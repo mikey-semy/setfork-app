@@ -828,7 +828,8 @@ export const en = {
   draftHint: 'Not published — only you and collaborators can see it.',
   publish: 'Publish',
   trendingOrderNote: 'Ordered by stars and forks.',
-  trending: 'Trending',
+  // «Popular», not «Trending»: trending promises movement, this order is static.
+  trending: 'Popular',
   newest: 'Newest',
   mostStarred: 'Most starred',
   like: 'Like',

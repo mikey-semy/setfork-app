@@ -1,4 +1,4 @@
-import { Compass, Flame, FolderGit2, Hash } from 'lucide-react'
+import { Compass, FolderGit2, Hash, Star } from 'lucide-react'
 import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { t, type Lang } from '@/shared/i18n'
 import { EXPLORE_SECTION, type ExploreSectionPath } from '@/shared/nav/explore-section'
@@ -22,7 +22,7 @@ export type ExploreTab = 'explore' | 'tags' | 'trending' | 'collections'
 const TAB_LOOK: Record<ExploreSectionPath, { id: ExploreTab; key: Parameters<typeof t>[0]; icon: React.ReactNode }> = {
   '/explore': { id: 'explore', key: 'explore', icon: <Compass size={15} /> },
   '/tags': { id: 'tags', key: 'popularTags', icon: <Hash size={15} /> },
-  '/trending': { id: 'trending', key: 'trending', icon: <Flame size={15} /> },
+  '/trending': { id: 'trending', key: 'trending', icon: <Star size={15} /> },
   '/collections': { id: 'collections', key: 'catalogsTab', icon: <FolderGit2 size={15} /> },
 }
 
