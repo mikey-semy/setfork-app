@@ -22,6 +22,11 @@ export function monthYear(value: Date | string | number, lang: Lang): string {
   return formatter(lang, { year: 'numeric', month: 'short' }).format(new Date(value))
 }
 
+/** «11 авг.» — день и месяц без года (ленты и полки, где год избыточен). */
+export function dayMonth(value: Date | string | number, lang: Lang): string {
+  return formatter(lang, { day: 'numeric', month: 'short' }).format(new Date(value))
+}
+
 /** «11 авг. 2026» — полная дата без времени (прохождение курса, события). */
 export function dayMonthYear(value: Date | string | number, lang: Lang): string {
   return formatter(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value))

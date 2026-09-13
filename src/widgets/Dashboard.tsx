@@ -5,6 +5,7 @@ import { getImprovementFeed } from '@/features/improve/queries'
 import { getFollowingIds } from '@/features/follows/queries'
 import { getWatchedIds } from '@/features/watch/queries'
 import { getFeedEvents, getFreshLists, getStarredIds, type FeedEvent } from '@/features/feed/queries'
+import { dayMonth } from '@/shared/lib/date'
 import { Feed } from '@/features/feed/Feed'
 import type { Lang } from '@/shared/i18n'
 import { ListsPanel } from './ListsPanel'
@@ -115,7 +116,22 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
             </ul>
           </div>
         )}
-        <Feed events={events} recommended={recommended} lang={lang} emptyHint={emptyHint} />
+        {/* Дату полки готовит СЕРВЕР: Feed — клиентский компонент, и `Intl` в нём дал бы
+            расхождение гидратации (сервер форматирует в своём поясе, браузер — в поясе
+            человека). Заодно форматтер строится один раз на язык, а не на каждую строку
+            (кэш в shared/lib/date). */}
+        <Feed
+          events={events}
+          recommended={recommended.map((r) => ({
+            ownerHandle: r.ownerHandle,
+            slug: r.slug,
+            title: r.title,
+            updatedAt: r.updatedAt.toISOString(),
+            updatedLabel: dayMonth(r.updatedAt, lang),
+          }))}
+          lang={lang}
+          emptyHint={emptyHint}
+        />
       </div>
 
       {/* Справа: промо-слот + changelog */}

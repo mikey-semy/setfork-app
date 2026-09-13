@@ -15,6 +15,16 @@ import { FeedFilter } from './FeedFilter'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
 
+/** Полка в готовом к показу виде: дату форматирует сервер, чтобы в клиенте не было `Intl`. */
+export interface FreshListView {
+  ownerHandle: string
+  slug: string
+  title: FreshList['title']
+  /** ISO — только для атрибута `datetime`, человеку показывается `updatedLabel`. */
+  updatedAt: string
+  updatedLabel: string
+}
+
 // Лента dashboard: сервер отдаёт все события (page.tsx), фильтр — клиентский
 // по localStorage-настройкам (FeedFilter). В конце — полка «Свежие списки».
 //
@@ -66,7 +76,7 @@ export function Feed({
   emptyHint,
 }: {
   events: FeedEvent[]
-  recommended: FreshList[]
+  recommended: FreshListView[]
   lang: Lang
   emptyHint: boolean
 }) {
@@ -160,13 +170,12 @@ export function Feed({
                     показывал ноль в каждой строке — украшение, читавшееся как рейтинг.
                     ⚠️ ДАТА, А НЕ «сколько назад»: относительное время по-русски бывает
                     длинным («на прошлой неделе»), и на 390px оно съедало половину строки
-                    у заголовка. Живой стенд это и показал. Форма — та же, что в ленте
-                    задачи: день и месяц. */}
-                <time
-                  dateTime={r.updatedAt.toISOString()}
-                  className="ml-auto shrink-0 font-mono text-caption text-muted"
-                >
-                  {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short' }).format(r.updatedAt)}
+                    у заголовка. Живой стенд это и показал.
+                    ⚠️ СТРОКУ ГОТОВИТ СЕРВЕР (см. Dashboard): здесь клиентский компонент,
+                    и `Intl` в разметке дал бы расхождение гидратации — сервер форматирует
+                    в своём часовом поясе, браузер в поясе человека. */}
+                <time dateTime={r.updatedAt} className="ml-auto shrink-0 font-mono text-caption text-muted">
+                  {r.updatedLabel}
                 </time>
               </Link>
             ))}

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { CircleDot, CircleCheckBig, GitMerge, Lock, LockOpen } from 'lucide-react'
 import { fill, t, type Lang, type TKey } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { dayMonth } from '@/shared/lib/date'
 import type { IssueEvent } from './events'
 
 /**
@@ -67,7 +68,7 @@ export function IssueEventRow({ event, listPath, lang }: { event: IssueEvent; li
         )}
       </span>
       <time dateTime={event.createdAt.toISOString()} className="ml-auto shrink-0 text-caption text-muted">
-        {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short' }).format(event.createdAt)}
+        {dayMonth(event.createdAt, lang)}
       </time>
     </div>
   )
