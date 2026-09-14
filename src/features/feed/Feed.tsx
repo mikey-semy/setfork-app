@@ -2,21 +2,36 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { GitFork, ListChecks, MessageSquare, PencilLine, Star, Tag, UserPlus } from 'lucide-react'
+import { Clock, GitFork, ListChecks, MessageSquare, PencilLine, Star, Tag, UserPlus } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { UserLine } from '@/shared/ui/UserLine'
 import { Markdown } from '@/shared/ui/Markdown'
 import { tr, type Lang } from '@/shared/i18n'
 import type { FeedEvent } from './queries'
-import type { RecommendedList } from './queries'
+import type { FreshList } from './queries'
 import { DEFAULT_PREFS, type FeedPrefs } from './prefs'
 import { FeedFilter } from './FeedFilter'
 import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
 
+/** Полка в готовом к показу виде: дату форматирует сервер, чтобы в клиенте не было `Intl`. */
+export interface FreshListView {
+  ownerHandle: string
+  slug: string
+  title: FreshList['title']
+  /** ISO — только для атрибута `datetime`, человеку показывается `updatedLabel`. */
+  updatedAt: string
+  updatedLabel: string
+}
+
 // Лента dashboard: сервер отдаёт все события (page.tsx), фильтр — клиентский
-// по localStorage-настройкам (FeedFilter). В конце — «Recommended for you».
+// по localStorage-настройкам (FeedFilter). В конце — полка «Свежие списки».
+//
+// ⚠️ Имя `recommended` в пропсах и в ключе настройки осталось от прежнего названия
+// («Рекомендации для вас») НАМЕРЕННО: ключ хранится у людей в localStorage, и
+// переименование молча сбросило бы их выбор фильтров. Переименование не «не доделано» —
+// сама полка называется тем, чем собрана (см. getFreshLists).
 
 const ICONS = {
   version: Tag,
@@ -61,7 +76,7 @@ export function Feed({
   emptyHint,
 }: {
   events: FeedEvent[]
-  recommended: RecommendedList[]
+  recommended: FreshListView[]
   lang: Lang
   emptyHint: boolean
 }) {
@@ -131,8 +146,11 @@ export function Feed({
 
       {prefs.events.recommended && recommended.length > 0 && (
         <div className={cardClass({ className: 'mt-4' })}>
+          {/* ⚠️ ПОДПИСЬ НАЗЫВАЕТ РОВНО ТО, ЧТО В ЗАПРОСЕ. Было «Рекомендации для вас» при
+              глобальном топе по звёздам — обещание, которого код не выполнял (см.
+              getFreshLists). Значок тоже сменился: звезда подкрепляла ложное «популярное». */}
           <div className="mb-2 flex items-center gap-1.5 text-body-sm font-semibold text-ink">
-            <Star size={13} className="text-muted" /> {ru ? 'Рекомендации для вас' : 'Recommended for you'}
+            <Clock size={13} className="text-muted" /> {ru ? 'Свежие списки' : 'Recently updated'}
           </div>
           <div className="flex flex-col">
             {recommended.map((r) => (
@@ -147,9 +165,18 @@ export function Feed({
                   </span>
                   <span className="block truncate text-body-sm text-muted">{r.ownerHandle}</span>
                 </span>
-                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-mono text-caption text-muted">
-                  <Star size={11} /> {r.starsCount}
-                </span>
+                {/* Справа — КОГДА обновляли: это и есть признак, по которому полка
+                    собрана. Стоял счётчик звёзд, и при одной звезде на весь корпус он
+                    показывал ноль в каждой строке — украшение, читавшееся как рейтинг.
+                    ⚠️ ДАТА, А НЕ «сколько назад»: относительное время по-русски бывает
+                    длинным («на прошлой неделе»), и на 390px оно съедало половину строки
+                    у заголовка. Живой стенд это и показал.
+                    ⚠️ СТРОКУ ГОТОВИТ СЕРВЕР (см. Dashboard): здесь клиентский компонент,
+                    и `Intl` в разметке дал бы расхождение гидратации — сервер форматирует
+                    в своём часовом поясе, браузер в поясе человека. */}
+                <time dateTime={r.updatedAt} className="ml-auto shrink-0 font-mono text-caption text-muted">
+                  {r.updatedLabel}
+                </time>
               </Link>
             ))}
           </div>

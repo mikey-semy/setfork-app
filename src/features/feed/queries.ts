@@ -204,16 +204,42 @@ export async function getFeedEvents(scope: FeedScope, limit = 40): Promise<FeedE
   return withAvatars(tagged.sort((a, b) => +b.createdAt - +a.createdAt).slice(0, limit))
 }
 
-export interface RecommendedList {
+export interface FreshList {
   ownerHandle: string
   slug: string
   title: LocaleText
-  starsCount: number
+  updatedAt: Date
   tags: string[]
 }
 
-/** «Recommended for you»: популярное, что пользователь ещё не звездил и не его. */
-export async function getRecommended(userId: string, excludeStarred: string[], limit = 4): Promise<RecommendedList[]> {
+/**
+ * ПОЛКА ДЛЯ ЗНАКОМСТВА: свежие списки, кроме своих и уже отмеченных.
+ *
+ * ⚠️ РАНЬШЕ ЭТО НАЗЫВАЛОСЬ «Рекомендации для вас» И НЕ БЫЛО ИМИ. Единственным следом
+ * человека в запросе были «не мой» и «не отмечен мной»; всё остальное — глобальный топ
+ * по звёздам. У двух людей без звёзд выдача выходила побайтово одинаковой, а подпись
+ * обещала персональную.
+ *
+ * Персонализировать сейчас НЕЧЕМ, и это не мнение, а число: в корпусе 24 публичных
+ * списка и ОДНА звезда на всех (аудит рекомендаций, 02.09). Рабочий образец у нас есть —
+ * `improve/queries.ts` считает по звёздам и прогонам зрителя, — но на таком корпусе он
+ * вернул бы пустоту почти каждому. Умный алгоритм на пустых данных хуже честной подписи.
+ *
+ * Поэтому порядок теперь ровно тот, что говорит подпись: сначала недавно обновлённые.
+ * Это же дефолт у Gitea (`recentupdate`), и в ту же сторону вернулся GitHub, отказавшись
+ * от алгоритмической ленты. Звёзды из порядка ушли совсем: при одной звезде на корпус
+ * `desc(starsCount)` не сортировал, а только маскировал под ранжирование.
+ *
+ * Когда корпус вырастет, сюда вернётся ранжирование — но композитом активности, а не
+ * звёздами (аудит, пункт 4: свежесть, правки, участники, закрытые обсуждения). Это
+ * отдельная работа со своим замером.
+ *
+ * ⚠️ ДОВОДЧИК ПОРЯДКА ОБЯЗАТЕЛЕН: у списков одной операции `updatedAt` совпадает, и без
+ * второго ключа соседние показы меняли бы состав полки местами.
+ */
+export async function getFreshLists(userId: string, excludeStarred: string[], limit = 4): Promise<FreshList[]> {
+  // «Не моё» и «не отмеченное» остаются: полка для ЗНАКОМСТВА, а свой список человек
+  // и так видит в панели, отмеченный — в избранном.
   const filters: SQL[] = [visible(), ne(templates.ownerId, userId)]
   if (excludeStarred.length) filters.push(notInArray(templates.id, excludeStarred))
   return db
@@ -221,13 +247,13 @@ export async function getRecommended(userId: string, excludeStarred: string[], l
       ownerHandle: users.handle,
       slug: templates.slug,
       title: templates.title,
-      starsCount: templates.starsCount,
+      updatedAt: templates.updatedAt,
       tags: templates.tags,
     })
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(...filters))
-    .orderBy(desc(templates.starsCount), desc(templates.updatedAt))
+    .orderBy(desc(templates.updatedAt), desc(templates.id))
     .limit(limit)
 }
 
