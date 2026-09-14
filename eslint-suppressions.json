@@ -597,10 +597,5 @@
     "no-restricted-syntax": {
       "count": 1
     }
-  },
-  "src/widgets/explore/TrendControls.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
   }
 }

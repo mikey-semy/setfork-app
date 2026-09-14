@@ -5,7 +5,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { FeedCard } from '@/features/library/FeedCard'
-import { getFeed, getStarredIds, getTrendingFeed, type TrendRange } from '@/features/library/queries'
+import { getFeed, getStarredIds } from '@/features/library/queries'
 import { getPublicCatalogs } from '@/features/catalogs/queries'
 import { CatalogRow } from '@/features/catalogs/CatalogRow'
 import { searchPeople } from '@/features/profile/search'
@@ -18,13 +18,10 @@ import { pageMeta } from '@/shared/seo/page-meta'
 // живут по СВОИМ адресам (/tags, /trending, /collections), как у GitHub; здесь
 // осталась только сама витрина.
 
-/** Период ссылки «ещё» из бокового виджета: неделя, а не день — за сутки бывает пусто. */
-const SIDE_TREND_RANGE: TrendRange = 'week'
-/** Сколько карточек в основной ленте витрины и сколько в боковом виджете. Числа стоят
+/** Сколько карточек в основной ленте витрины. Число стоит
  *  рядом с местом, где они видны, и уезжают в САМ запрос: витрина показывает верх выдачи,
  *  и грузить ради него весь корпус незачем. */
 const EXPLORE_FEED = 12
-const EXPLORE_SIDE = 5
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -41,19 +38,16 @@ export default async function ExplorePage() {
   // с notFound() на профиле: страница «не найдено» уезжала с кодом 200).
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const uid = session?.userId
-  // Четыре независимых чтения — одной волной, а не в затылок друг другу.
-  // Каталоги идут в ОСНОВНОЙ ленте рядом со списками (не отдельной вкладкой), а виджет
-  // показывает ТО ЖЕ, куда ведёт его ссылка: тот же запрос и тот же период. Лента
-  // страницы ранжируется иначе (звёзды за всё время), и наполнять ею виджет с подписью
-  // «Trending» значило бы обещать одно, а по клику показывать другое.
-  const [feed, exploreCatalogs, sidePeople, sideTrending] = await Promise.all([
+  // Три независимых чтения — одной волной, а не в затылок друг другу.
+  // Каталоги идут в ОСНОВНОЙ ленте рядом со списками (не отдельной вкладкой). Боковой
+  // виджет остался один — люди; почему нет виджета популярных списков, сказано у сайдбара.
+  const [feed, exploreCatalogs, sidePeople] = await Promise.all([
     // Витрине нужен ВЕРХ выдачи, а не вся она: раньше запрос тянул весь видимый корпус с
     // аватарами авторов, а показывались двенадцать. Числа те же, что и были, — теперь они
     // стоят в запросе, а не в разметке.
     getFeed({ sort: 'trending' }, uid, lang, { limit: EXPLORE_FEED }),
     getPublicCatalogs(6),
     searchPeople({ sort: 'followers', limit: 5 }),
-    getTrendingFeed(SIDE_TREND_RANGE, uid, lang, { limit: EXPLORE_SIDE }),
   ])
   const feedTop = feed
   // Звёзды зависят от того, что попало в ленту, — только это чтение и ждёт её.
@@ -83,33 +77,13 @@ export default async function ExplorePage() {
             </div>
           </div>
           <aside className="w-full shrink-0 space-y-6 lg:w-panel-lg">
-            <Widget
-              title={t('trending', lang)}
-              icon={<Star size={14} className="text-accent" />}
-              moreHref={`/explore?tab=trending&view=lists&range=${SIDE_TREND_RANGE}`}
-              moreLabel={t('trendingListsMore', lang)}
-            >
-              {sideTrending.map((l) => (
-                <Link
-                  key={l.id}
-                  href={`/${l.ownerHandle}/${l.slug}`}
-                  className="flex min-h-11 items-center justify-between gap-2 py-1.5 hover:text-accent"
-                >
-                  {/* Обрезается ВЛАДЕЛЕЦ, название видно целиком — приём GitHub
-                      («semantica… / semantica»). Раньше `truncate` стоял на всей строке
-                      и съедал ровно название, то есть единственное, ради чего строку
-                      читают: «miki/Дело о таинственном майнер…». */}
-                  <span className="flex min-w-0 flex-1 items-baseline gap-0.5 text-body">
-                    <span className="max-w-18 shrink truncate text-muted">{l.ownerHandle}</span>
-                    <span className="shrink-0 text-muted">/</span>
-                    <span className="min-w-0 flex-1 truncate font-medium text-ink-2">{tr(l.title, lang)}</span>
-                  </span>
-                  <span className="inline-flex shrink-0 items-center gap-1 text-body-sm text-muted">
-                    <Star size={12} /> {l.starsCount}
-                  </span>
-                </Link>
-              ))}
-            </Widget>
+            {/* ⚠️ Виджета «Популярное» здесь НЕТ намеренно. У `/trending` убран период, и его
+                верхушка — это РОВНО тот же запрос, что основная лента слева
+                (`getTrendingFeed('all')` сводится к `getFeed({ sort: 'trending' })` с теми же
+                зрителем и языком). Виджет показывал бы первые пять карточек той же ленты,
+                что стоит рядом. До этого он брал неделю — и расходился со своей же ссылкой
+                «ещё», которая после отмены периода вела на всё время (находка авто-ревью
+                по #911). Раздел «Популярное» остаётся в навигации над страницей. */}
             <Widget
               title={t('popularPeople', lang)}
               icon={<Users size={14} className="text-accent" />}
