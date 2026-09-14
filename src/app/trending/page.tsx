@@ -44,7 +44,11 @@ export default async function TrendingListsPage() {
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <TrendScope active="lists" lang={lang} />
           {/* Чем собран порядок — сказано вслух: подпись «популярное» без этого читается
-              как «выбрано редакцией» или «умный подбор», а это звёзды и форки. */}
+              как «выбрано редакцией» или «умный подбор». ⚠️ И сказано ПОЛНОСТЬЮ: первым
+              ключом `keywordFeed` сортирует по языку зрителя (`langPref`), и только потом
+              по звёздам и форкам — список без звёзд на языке зрителя стоит выше
+              популярного без перевода. Первая редакция подписи («по звёздам и форкам»)
+              об этом молчала и была неправдой; поймало авто-ревью. */}
           <p className="text-body-sm text-muted">{t('trendingOrderNote', lang)}</p>
         </div>
         {lists.length === 0 ? (

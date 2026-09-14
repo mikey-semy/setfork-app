@@ -674,7 +674,6 @@ export const en = {
   searchPrompt: 'Search lists, people and issues',
   popularPeople: 'Popular people',
   // Выход из бокового виджета на полную страницу — как «See more…» у GitHub.
-  trendingListsMore: 'See more trending lists',
   trendingPeopleMore: 'See more popular people',
   searchFor: 'Search for',
   shareVia: 'Share via',
@@ -827,7 +826,7 @@ export const en = {
   draftBadge: 'Draft',
   draftHint: 'Not published — only you and collaborators can see it.',
   publish: 'Publish',
-  trendingOrderNote: 'Ordered by stars and forks.',
+  trendingOrderNote: 'Your language first, then by stars and forks.',
   // «Popular», not «Trending»: trending promises movement, this order is static.
   trending: 'Popular',
   newest: 'Newest',
