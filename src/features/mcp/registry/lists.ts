@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
-import { itemShape } from './block-schema'
+import { itemShape, itemShapeLean } from './block-schema'
 import { json, err, type ToolKit } from './kit'
 
 /** Списки: создание, замена, точечная правка, публикация черновика, удаление. */
@@ -22,11 +22,21 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
           .optional()
           .describe('Name of one of your catalogs (shelves) to file the list under. Unknown name = the list stays unfiled and the response says so.'),
         ordered: z.boolean().optional().describe('true = ordered steps, false = unordered set (default true)'),
-        items: z.array(itemShape).min(1).describe('The blocks (steps and optionally text/image/poll/video/quiz/file)'),
+        items: z
+          .array(itemShapeLean)
+          .min(1)
+          .describe(
+            'The blocks. Fields for step and text are listed here; quiz/poll/video/image/file blocks are also accepted — their fields are documented in patch_list',
+          ),
       },
     },
     async (userId, args) => {
-      const res = await mcpCreateList(userId, args)
+      // ⚠️ Разбираем ПОЛНОЙ формой: снаружи объявлена облегчённая (см. block-schema),
+      // и поля редких типов приходят сквозь `passthrough`. Без этого шага они уехали бы
+      // в сервис непроверенными — то есть экономия токенов обернулась бы тихой потерей
+      // данных, а это ровно то, ради чего экономии не делают.
+      const items = z.array(itemShape).parse(args.items)
+      const res = await mcpCreateList(userId, { ...args, items })
       return 'error' in res ? err(res.error as string) : json(res)
     },
   )
@@ -43,7 +53,10 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
       inputSchema: {
         handle: z.string().describe('Owner handle (must be you)'),
         slug: z.string().describe('List slug'),
-        items: z.array(itemShape).min(1).describe('The new full set of blocks'),
+        items: z
+          .array(itemShapeLean)
+          .min(1)
+          .describe('The new full set of blocks (fields as in create_list; full block shape in patch_list)'),
         note: z.string().optional().describe('Change note (for published lists)'),
         tags: z.array(z.string()).optional(),
         ordered: z.boolean().optional(),
@@ -54,7 +67,8 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
       },
     },
     async (userId, { handle, slug, ...rest }) => {
-      const res = await mcpUpdateList(userId, handle, slug, rest)
+      // Полная форма — по той же причине, что в create_list.
+      const res = await mcpUpdateList(userId, handle, slug, { ...rest, items: z.array(itemShape).parse(rest.items) })
       return 'error' in res ? err(res.error as string) : json(res)
     },
   )
@@ -229,7 +243,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
               tags: z.array(z.string()).optional(),
               catalog: z.string().optional().describe('Name of one of your catalogs to file this list under'),
               ordered: z.boolean().optional(),
-              items: z.array(itemShape).min(1),
+              items: z.array(itemShapeLean).min(1),
             }),
           )
           .min(1)
@@ -237,8 +251,10 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
           .describe('The lists to create'),
       },
     },
-    async (userId, { lists, dryRun }) => {
-      const res = await mcpBulkCreate(userId, lists, dryRun !== false)
+    async (userId, { lists, dryRun }: { lists: { items: unknown[] }[]; dryRun?: boolean }) => {
+      // Полная форма — по той же причине, что в create_list.
+      const full = lists.map((l) => ({ ...l, items: z.array(itemShape).parse(l.items) })) as Parameters<typeof mcpBulkCreate>[1]
+      const res = await mcpBulkCreate(userId, full, dryRun !== false)
       return 'error' in res ? err(res.error as string) : json(res)
     },
   )

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { mcpApplySuggestion, mcpMergeSuggestion, mcpPendingSuggestions, mcpRevertSuggestion, mcpReviewSuggestion, mcpSuggestEdit } from '@/features/mcp/tools'
-import { itemShape } from './block-schema'
+import { itemShape, itemShapeLean } from './block-schema'
 import { json, err, type ToolKit } from './kit'
 
 /** Предложения и проверки: очередь, применение, ревью, слияние, откат, отчёт. */
@@ -39,11 +39,17 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
       inputSchema: {
         list: z.string().describe('List reference: "handle/slug" or just "slug"'),
         note: z.string().describe('What you changed and why — the owner reads this first'),
-        items: z.array(itemShape).min(1).describe('The full list content as it should look after the change'),
+        items: z
+          .array(itemShapeLean)
+          .min(1)
+          .describe('The full list content as it should look after the change (full block shape in patch_list)'),
       },
     },
     async (userId, args) => {
-      const res = await mcpSuggestEdit(userId, args as Parameters<typeof mcpSuggestEdit>[1])
+      // Полная форма: снаружи объявлена облегчённая, поля редких типов приходят
+      // сквозь `passthrough` и должны быть разобраны, а не переданы как есть.
+      const items = z.array(itemShape).parse(args.items)
+      const res = await mcpSuggestEdit(userId, { ...args, items } as Parameters<typeof mcpSuggestEdit>[1])
       return 'error' in res ? err(res.error as string) : json(res)
     },
   )
