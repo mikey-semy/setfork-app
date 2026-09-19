@@ -26,9 +26,13 @@ export function registerRuns({ readTool, writeTool }: ToolKit) {
   writeTool(
     'check_step',
     {
+      // ⚠️ Разрушающий: отметка шага СТИРАЕТ заметку к нему (`note: ''`) — в том числе
+      // написанную человеком на сайте. Идемпотентным при этом не является: без `done`
+      // вызов ПЕРЕКЛЮЧАЕТ шаг, и повтор вернёт его обратно.
+      annotations: { destructiveHint: true },
       title: 'Check off a run step',
       description:
-        'Report the outcome of a run step by its number (like a CI step). done true/false marks it passed/not; blocked true marks it failed, with reason for why. Report failures honestly: a run with an unreported failure claims the list works when it does not. Omitting done TOGGLES the step, and the updated run comes back in the response — you do not need get_run afterwards.',
+        'Report the outcome of a run step by its number (like a CI step). done true/false marks it passed/not; blocked true marks it failed, with reason for why. Report failures honestly: a run with an unreported failure claims the list works when it does not. Reporting pass/fail CLEARS any note on that step, including one a person wrote on the site. Omitting done TOGGLES the step, and the updated run comes back in the response — you do not need get_run afterwards.',
       inputSchema: {
         runId: z.string().describe('The run id'),
         step: z.number().int().min(1).describe('Step number (1-based)'),
@@ -46,9 +50,12 @@ export function registerRuns({ readTool, writeTool }: ToolKit) {
   writeTool(
     'report_run',
     {
+      // ⚠️ Разрушающий: удачный отчёт поднимает уровень версии и СТИРАЕТ `verified_by` —
+      // человека, ручавшегося за прежний уровень (см. verification-report.ts).
+      annotations: { destructiveHint: true },
       title: 'Report a verification run',
       description:
-        'Record a machine verification report for the version you just ran. The report belongs to that VERSION, not to the list: a later edit makes a new version, which starts with no reports. runId is REQUIRED and must belong to this list — a report without a run is a claim, not a fact. Failures are reported the same way as successes (verdict "fails"): "ran and failed" and "never ran" are different facts. A successful report raises the version to machine-run level, but never overwrites a higher human level. The response echoes reportedVersion and currentVersion; if they differ it also sets staleVersion — the list moved on while you were running, so your report vouches for the version you ran, not for what people see now.',
+        'Record a machine verification report for the version you just ran. The report belongs to that VERSION, not to the list: a later edit makes a new version, which starts with no reports. runId is REQUIRED and must belong to this list — a report without a run is a claim, not a fact. Failures are reported the same way as successes (verdict "fails"): "ran and failed" and "never ran" are different facts. A successful report raises the version to machine-run level, but never overwrites a higher human level; raising it clears who vouched for the previous level — from then on the machine vouches, not a person. The response echoes reportedVersion and currentVersion; if they differ it also sets staleVersion — the list moved on while you were running, so your report vouches for the version you ran, not for what people see now.',
       inputSchema: {
         list: z.string().describe('List reference: "handle/slug" or just "slug"'),
         runId: z.string().describe('Run id from start_run — the report references a real, existing run'),

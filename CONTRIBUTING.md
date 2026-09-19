@@ -100,6 +100,13 @@ production.
 **When you add a guard, prove it can fail.** Break the rule it guards and watch it go
 red. A guard that has never been red guards nothing, and we have shipped two of those.
 
+**Adding an MCP tool?** Read [docs/mcp-surface.md](docs/mcp-surface.md) first. All 37
+tool declarations travel in every agent request — the user pays for them by the token —
+and a wrong `destructiveHint` tells the client it may skip asking the human before a
+call that replaces someone's work. That document records what a declaration owes its
+reader, and `tests/features/mcp/registry.test.ts` holds the lists you will have to touch
+on purpose.
+
 ## Style
 
 - run `npm run lint` and `npm run typecheck`;
