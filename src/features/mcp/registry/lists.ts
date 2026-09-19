@@ -11,7 +11,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
     {
       title: 'Create a list',
       description:
-        'Create a new list owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site. Publishing makes version 1; every later edit makes the next version, and old ones stay readable. Items can be plain steps or richer blocks (text, image, poll, video, quiz) — set each item\'s "type". Content language is auto-detected (or pass "lang"); the slug is generated from the title (Cyrillic is transliterated). Per-step "subtasks" are VERIFICATION CHECKS shown to the person doing the step — phrase them as checkable conditions, not sub-steps. If you need an existing list\'s ref, call search_lists first.\n\nHOW TO LAY A LIST OUT — one block is one thing, and headings live in "section":\n• "section" is a HEADING ABOVE a block and works on ANY block type. Consecutive blocks sharing it are grouped under it and it lands in the table of contents. Do not fake headings by writing "## Heading" at the top of a text block — the reader sees it glued to that block, the next block looks like part of it, and the contents misses it.\n• One block = one item. A person, a rule, an idea — its own block, so it can be moved, quoted and patched by bid later.\n• "step" for something the reader DOES (it gets a number and a checkbox); "text" for prose that is only read. Mixing them is fine: frames as text, actions as steps.\n• Markdown inside a block is for emphasis, lists, quotes and code — not for structure. Structure is blocks and sections.',
+        'Create a new list owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site. Publishing makes version 1; every later edit makes the next version, and old ones stay readable. Items can be plain steps or richer blocks (text, image, poll, video, quiz) — set each item\'s "type". Content language is auto-detected (or pass "lang"); the slug is generated from the title (Cyrillic is transliterated). Per-step "subtasks" are VERIFICATION CHECKS shown to the person doing the step — phrase them as checkable conditions, not sub-steps. If you need an existing list\'s ref, call search_lists first. Creating several lists at once? Use bulk_create_lists — one call instead of N.\n\nHOW TO LAY A LIST OUT — one block is one thing, and headings live in "section":\n• "section" is a HEADING ABOVE a block and works on ANY block type. Consecutive blocks sharing it are grouped under it and it lands in the table of contents. Do not fake headings by writing "## Heading" at the top of a text block — the reader sees it glued to that block, the next block looks like part of it, and the contents misses it.\n• One block = one item. A person, a rule, an idea — its own block, so it can be moved, quoted and patched by bid later.\n• "step" for something the reader DOES (it gets a number and a checkbox); "text" for prose that is only read. Mixing them is fine: frames as text, actions as steps.\n• Markdown inside a block is for emphasis, lists, quotes and code — not for structure. Structure is blocks and sections.',
       inputSchema: {
         title: z.string().describe('List title'),
         lang: z.enum(['en', 'ru']).optional().describe('Content language; omit to auto-detect from the title/description'),
@@ -65,6 +65,10 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
     'patch_list',
     {
       title: 'Patch a list',
+      // ⚠️ Разрушающий: среди операций есть `delete` — блок исчезает из текущего состава.
+      // История при этом цела (версии неизменяемы), но клиент вправе спросить человека
+      // перед вызовом, который может стереть чужой блок.
+      annotations: { destructiveHint: true },
       description:
         'Edit SPECIFIC blocks of a list you own instead of resending the whole list. Ops address blocks by their stable "bid" from get_list: update (change only the fields you pass), insert (new block at start/end/after a bid), delete, move. All ops apply together or none at all. baseVersion is required — pass the "version" you got from get_list; if the list changed meanwhile the patch is rejected so you cannot silently overwrite someone else\'s edit. By default each call publishes a new version; pass publish:false to COLLECT edits instead — they pile up in the same draft the editor shows (get_list returns it as pendingEdits), and publish_draft turns the whole pile into ONE version. Prefer this over update_list for edits. This works the same whether or not the list is published. Layout rules are the same as in create_list: a heading between items is the "section" field on the following block (works on ANY block type), not a "## Heading" line written inside a text block.',
       inputSchema: {
@@ -108,7 +112,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
     {
       title: 'Publish pending edits',
       description:
-        'Turn the pending edits of this list into ONE new version. TWO-STEP: without confirm it reports what would be published (how many blocks, which version it becomes) and writes nothing; pass confirm:true to publish. Two steps on purpose — the pending edits are shared with the web editor, so unfinished work of yours may be sitting there. Nothing pending — it says so. If the list moved on meanwhile, publishing is refused instead of overwriting the work of others: discard_draft or redo the edits on the fresh version.',
+        'Turn the pending edits of this list into ONE new version — for publishing a whole unpublished list use publish_lists instead. TWO-STEP: without confirm it reports what would be published (how many blocks, which version it becomes) and writes nothing; pass confirm:true to publish. Two steps on purpose — the pending edits are shared with the web editor, so unfinished work of yours may be sitting there. Nothing pending — it says so. If the list moved on meanwhile, publishing is refused instead of overwriting the work of others: discard_draft or redo the edits on the fresh version.',
       inputSchema: {
         handle: z.string().describe('Owner handle (must be you)'),
         slug: z.string().describe('List slug'),
@@ -157,7 +161,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
     {
       title: 'Publish drafts',
       description:
-        `Publish your drafts in one call (max ${MCP_PUBLISH_MAX}). DRY RUN BY DEFAULT: it reports what would be published and writes nothing until you pass dryRun:false. This does NOT bypass moderation — a published public list goes through the same gate as the button on the site: it becomes "pending" and is auto-checked, and anything already flagged or hidden stays that way. Lists that are not yours or not drafts are skipped with a reason.`,
+        `Publish your drafts in one call (max ${MCP_PUBLISH_MAX}) — this is for whole unpublished lists; to publish pending EDITS of one list use publish_draft. DRY RUN BY DEFAULT: it reports what would be published and writes nothing until you pass dryRun:false. This does NOT bypass moderation — a published public list goes through the same gate as the button on the site: it becomes "pending" and is auto-checked, and anything already flagged or hidden stays that way. Lists that are not yours or not drafts are skipped with a reason.`,
       inputSchema: {
         refs: z.array(z.string()).min(1).describe('Refs from my_drafts, e.g. ["me/deploy-to-vps"]'),
         dryRun: z.boolean().optional().describe('Default TRUE — report the plan without publishing. Pass false to publish.'),

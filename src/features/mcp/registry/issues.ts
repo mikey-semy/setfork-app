@@ -96,6 +96,9 @@ export function registerIssues({ readTool, writeTool }: ToolKit) {
   writeTool(
     'close_issue',
     {
+      // Повтор того же состояния НИЧЕГО не пишет и никого не будит (см. issues/core.ts):
+      // повторный вызов с теми же доводами безопасен, и клиенту стоит это знать.
+      annotations: { idempotentHint: true },
       title: 'Close an issue with an outcome',
       description:
         'Close an issue — the author of the issue or the list owner may do it. The outcome is REQUIRED because a closed issue looks the same either way: "completed" (it was done), "not_planned" (it will not be done) or "duplicate" (it is already reported), and a duplicate must name the original with duplicateOf. Wrong number, no close: the call is refused instead of dropping the link.',
@@ -115,6 +118,9 @@ export function registerIssues({ readTool, writeTool }: ToolKit) {
   writeTool(
     'reopen_issue',
     {
+      // Повтор того же состояния НИЧЕГО не пишет и никого не будит (см. issues/core.ts):
+      // повторный вызов с теми же доводами безопасен, и клиенту стоит это знать.
+      annotations: { idempotentHint: true },
       title: 'Reopen a closed issue',
       description:
         'Reopen a closed issue — the author of the issue or the list owner. The previous outcome is cleared from the issue itself but stays in its timeline, so the history of "closed as not planned, then reopened" is not rewritten.',

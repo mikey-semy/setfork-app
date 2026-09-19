@@ -38,7 +38,10 @@ export async function ownedList(userId: string, handle: string, slug: string) {
     with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
   })
   if (!tpl) return { error: 'list not found' as const }
-  if (tpl.ownerId !== userId) return { error: 'forbidden: you are not the owner' as const }
+  // Отказ называет СЛЕДУЮЩИЙ ШАГ: чужой список правится предложением, а не запретом.
+  // Голое «forbidden» — тупик: агент либо сдаётся, либо перебирает вызовы наугад.
+  if (tpl.ownerId !== userId)
+    return { error: 'forbidden: you are not the owner — use suggest_edit to propose a change to a list you do not own' as const }
   // Архив/заморозка: гейт нужен ЗДЕСЬ, а не только в фасадном бэкстопе addVersion —
   // мета (tags/ordered) обновляется до версии и не должна утечь в read-only список.
   if (!canEditList(tpl)) return { error: 'forbidden: list is archived or frozen' as const }

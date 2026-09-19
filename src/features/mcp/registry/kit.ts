@@ -58,6 +58,12 @@ export function toolKit(server: McpServer): ToolKit {
     })
 
   const writeTool: Register = (name, config, fn) =>
+    // ⚠️ `destructiveHint: false` — это УТВЕРЖДЕНИЕ, а не умолчание «на всякий случай».
+    // По спецификации MCP у пишущего инструмента подсказка по умолчанию TRUE: не сказав
+    // ничего, мы считались бы разрушающими все. Сказав `false`, мы заявляем клиенту:
+    // «только добавляет» — и он вправе не спрашивать человека. Поэтому инструмент,
+    // который стирает или заменяет чужое, ОБЯЗАН перебить это своим `destructiveHint: true`
+    // (см. `tests/features/mcp/registry.test.ts` — там перечень и он же сторож).
     register(name, annotate(config, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }), async (args, extra) => {
       const userId = userIdOf(extra)
       if (!userId) return err('Unauthorized')

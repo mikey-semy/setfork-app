@@ -18,8 +18,10 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
   writeTool(
     'apply_suggestion',
     {
+      // ⚠️ Разрушающий: принятое предложение СТАНОВИТСЯ новым составом списка — блоки, которых в нём нет, из текущей версии уходят.
+      annotations: { destructiveHint: true },
       title: 'Accept a suggested edit',
-      description: 'Accept an open suggested edit on a list you own: it becomes a new version of the list. Get ids from pending_suggestions. A suggestion blocked by a reviewer who requested changes cannot be accepted.',
+      description: 'Accept an open suggested edit on a list you own: its items REPLACE the whole list content as a new version, so read them before accepting. Get ids from pending_suggestions. A suggestion blocked by a reviewer who requested changes cannot be accepted.',
       inputSchema: { suggestionId: z.string().describe('Suggestion id from pending_suggestions') },
     },
     async (userId, { suggestionId }) => {
@@ -70,6 +72,8 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
   writeTool(
     'merge_suggestion',
     {
+      // ⚠️ Разрушающий: слияние заменяет состав списка решением сопровождающего.
+      annotations: { destructiveHint: true },
       title: 'Merge a suggestion',
       description:
         'Merge an open suggestion into the list — the maintainer decision. Works for both kinds: a branch suggestion is merged in git (squash if the list is set that way), an items suggestion becomes a new version. Refuses while a gate holds: a reviewer requested changes, unresolved discussions, missing approvals, a draft, or conflicts. Only the list owner or a collaborator may merge.',

@@ -126,6 +126,63 @@ describe('реестр MCP: вшитая авторизация', () => {
 })
 
 /**
+ * ПОДСКАЗКИ О ПОСЛЕДСТВИЯХ — ПЕРЕЧЕНЬ, А НЕ УМОЛЧАНИЕ.
+ *
+ * По спецификации MCP `destructiveHint` у пишущего инструмента по умолчанию TRUE, а наш
+ * `kit` ставит всем `false`. Это осознанное УТВЕРЖДЕНИЕ «только добавляет», и клиент по
+ * нему решает, спрашивать ли человека перед вызовом. Значит перечень тех, кто стирает или
+ * заменяет чужое, обязан быть виден и проверяем — иначе тридцать восьмой инструмент
+ * приедет с нашим умолчанием и молча получит право не спрашивать.
+ *
+ * Список задан НЕЗАВИСИМО от аннотаций, как и READ_ONLY выше, и по той же причине.
+ */
+const DESTRUCTIVE = [
+  'update_list', // заменяет ВЕСЬ состав: не переданный блок исчезает
+  'patch_list', // среди операций есть delete
+  'discard_draft', // выбрасывает накопленные правки
+  'delete_list', // необратимо, вместе с версиями и звёздами
+  'apply_suggestion', // принятые items становятся новым составом целиком
+  'merge_suggestion', // слияние заменяет состав решением сопровождающего
+]
+
+/**
+ * ПОВТОР НИЧЕГО НЕ МЕНЯЕТ — значит клиенту безопасно повторить при обрыве связи.
+ * `check_step` сюда НЕ входит специально: без `done` он ПЕРЕКЛЮЧАЕТ шаг, и повтор
+ * возвращает его обратно.
+ */
+const IDEMPOTENT = ['discard_draft', 'delete_list', 'close_issue', 'reopen_issue']
+
+describe('подсказки о последствиях', () => {
+  const tools = collect()
+  const writes = tools.filter((t) => !READ_ONLY.includes(t.name))
+
+  it('всё, что стирает или заменяет чужое, объявлено разрушающим', () => {
+    for (const name of DESTRUCTIVE) {
+      const a = tools.find((t) => t.name === name)?.config.annotations
+      expect(a, `инструмент ${name} не найден`).toBeTruthy()
+      expect(a?.destructiveHint, `${name} стирает или заменяет чужое`).toBe(true)
+    }
+  })
+
+  it('остальные пишущие заявлены как добавляющие — осознанно, а не по умолчанию', () => {
+    expect(writes.length).toBeGreaterThan(20)
+    for (const t of writes) {
+      // Подсказка обязана быть ЯВНОЙ у каждого: её отсутствие по спецификации означает
+      // «разрушающий», то есть противоположность тому, что мы заявляем.
+      expect(typeof t.config.annotations?.destructiveHint, `${t.name}: подсказка не проставлена`).toBe('boolean')
+      expect(t.config.annotations?.destructiveHint, `${t.name} заявлен добавляющим — так ли это?`).toBe(DESTRUCTIVE.includes(t.name))
+    }
+  })
+
+  it('повторяемые вызовы объявлены идемпотентными, а переключатель — нет', () => {
+    for (const name of IDEMPOTENT) {
+      expect(tools.find((t) => t.name === name)?.config.annotations?.idempotentHint, `${name}: повтор безопасен`).toBe(true)
+    }
+    expect(tools.find((t) => t.name === 'check_step')?.config.annotations?.idempotentHint, 'check_step ПЕРЕКЛЮЧАЕТ шаг').toBeUndefined()
+  })
+})
+
+/**
  * ОПИСАНИЯ — ЭТО ДОКУМЕНТАЦИЯ ДЛЯ АГЕНТА, а не подпись к кнопке.
  *
  * Агент выбирает инструмент и строит вызов по одному тексту: если там не сказано, что у
