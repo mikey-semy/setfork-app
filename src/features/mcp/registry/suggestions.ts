@@ -53,9 +53,12 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
   writeTool(
     'review_suggestion',
     {
+      // ⚠️ Разрушающий: вердикт того же ревьюера ЗАМЕНЯЕТСЯ, а отклонение ревью
+      // снимается (dismissedAt/dismissedById/dismissReason → null).
+      annotations: { destructiveHint: true },
       title: 'Review a suggestion',
       description:
-        'Leave a verdict on an open suggestion: "approve", "changes" (asks the author to rework it — this BLOCKS merging until the verdict changes) or "comment" (an opinion that blocks nothing). One verdict per reviewer: reviewing again replaces your previous one. You cannot review your own suggestion.',
+        'Leave a verdict on an open suggestion: "approve", "changes" (asks the author to rework it — this BLOCKS merging until the verdict changes) or "comment" (an opinion that blocks nothing). One verdict per reviewer: reviewing again replaces your previous one, and un-dismisses it if a maintainer had dismissed it. You cannot review your own suggestion.',
       inputSchema: {
         list: z.string().describe('List reference: "handle/slug" or just "slug"'),
         number: z.number().int().min(1).describe('Suggestion number within the list, e.g. 12'),

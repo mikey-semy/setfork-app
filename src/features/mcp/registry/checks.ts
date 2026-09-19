@@ -9,6 +9,9 @@ export function registerChecks({ readTool, writeTool }: ToolKit) {
   writeTool(
     'report_check',
     {
+      // ⚠️ Разрушающий: проверка с тем же именем ЗАМЕНЯЕТСЯ — прошлый вердикт, сводка
+      // и имя отчитавшегося уходят (onConflictDoUpdate по suggestionId+name).
+      annotations: { destructiveHint: true },
       title: 'Report an external check on a suggestion',
       description:
         'Report the result of an external check (tests, lint, build…) on an open suggestion, like a CI status check. The check appears on the Checks tab of that suggestion. Reporting the same name again UPDATES the previous result, so a long run can report "pending" first and the real outcome later. Only the list owner or a collaborator may report — not the suggestion author.',

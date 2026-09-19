@@ -118,9 +118,10 @@ export function registerIssues({ readTool, writeTool }: ToolKit) {
   writeTool(
     'reopen_issue',
     {
-      // Повтор того же состояния НИЧЕГО не пишет и никого не будит (см. issues/core.ts):
-      // повторный вызов с теми же доводами безопасен, и клиенту стоит это знать.
-      annotations: { idempotentHint: true },
+      // ⚠️ Разрушающий: переоткрытие СНИМАЕТ исход закрытия и ссылку на оригинал из
+      // текущего состояния (в ленте они остаются). Одновременно идемпотентен: повтор
+      // на уже открытой задаче не пишет ничего — флаги независимы.
+      annotations: { destructiveHint: true, idempotentHint: true },
       title: 'Reopen a closed issue',
       description:
         'Reopen a closed issue — the author of the issue or the list owner. The previous outcome is cleared from the issue itself but stays in its timeline, so the history of "closed as not planned, then reopened" is not rewritten.',

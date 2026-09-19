@@ -7,6 +7,9 @@ export function registerSources({ readTool, writeTool }: ToolKit) {
   writeTool(
     'register_source',
     {
+      // ⚠️ Разрушающий: источник с тем же url ЗАМЕНЯЕТСЯ целиком — название, лицензия,
+      // атрибуция и заметка, в том числе внесённые кем-то другим.
+      annotations: { destructiveHint: true },
       title: 'Register an external source',
       description:
         'Register an external source the company is allowed to draw on. ADMIN ONLY: the license verdict is a legal decision, not a routine write. The license is FAIL-CLOSED: only CC0, public domain, CC-BY, CC-BY-SA, MIT and Apache-2.0 are accepted, and licenses requiring attribution are rejected until you provide it. NC/ND variants are refused. Re-registering the same URL updates the record instead of creating a second one.',
