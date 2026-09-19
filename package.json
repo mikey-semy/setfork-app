@@ -33,7 +33,11 @@
     "doctor": "npx react-doctor@latest",
     "itest:env": "tsx scripts/itest-env.ts",
     "audit:git-parity": "tsx --conditions=react-server scripts/git-parity-audit.ts",
-    "itest:local": "tsx scripts/itest-env.ts env"
+    "itest:local": "tsx scripts/itest-env.ts env",
+    "review": "python3 scripts/review/review.py",
+    "review:status": "python3 scripts/review/review.py status",
+    "review:coverage": "python3 scripts/review/review.py coverage",
+    "review:check": "python3 scripts/review/review.py check"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1078.0",
