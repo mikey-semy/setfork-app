@@ -9,6 +9,12 @@ SetFork — площадка для **канонических списков-и
 Список — это упорядоченная последовательность **или** неупорядоченный набор шагов;
 у шага есть заголовок, описание, команда, подпункты-проверки, ссылки и скриншот.
 
+Приложение открыто под **AGPL-3.0-only** — см. [LICENSE](LICENSE). Раздел 13 про сетевое
+использование: запустив изменённую версию как сервис, вы обязаны дать её пользователям
+исходники. Сам git принадлежит отдельной службе на Rust —
+[`setfork-core`](https://github.com/mikey-semy/setfork-core); без неё работает всё, кроме
+версий, разниц, веток и предложений.
+
 ## Что умеет
 
 **Списки и версии**
@@ -59,7 +65,7 @@ SetFork — площадка для **канонических списков-и
 - **OpenRouter** + Vercel `ai` SDK (генерация, refine, модерация, эмбеддинги)
 - **imgproxy** + S3 (`@aws-sdk/client-s3`), MinIO локально
 - **MCP**: `mcp-handler` + `@modelcontextprotocol/sdk`
-- Авторизация: **jose**-сессии, scrypt-пароли (node crypto), GitHub OAuth
+- Авторизация: **jose**-сессии, scrypt-пароли (node crypto); входы GitHub, Яндекс, VK ID, Telegram
 - Двуязычный интерфейс **EN/RU** (locale-JSON контент)
 - Feature-Sliced Design: `src/{app, features, shared, widgets}`
 
@@ -78,7 +84,10 @@ npm run dev                   # http://localhost:3000
 полностью функционально. Опционально:
 
 - **AI** — задай `OPENROUTER_API_KEY` в `.env` **или** прямо в `/admin` (ключ хранится в БД, на клиент не уходит). Без ключа генерация/refine/семантика выключены (откат на keyword-поиск).
-- **GitHub-вход** — OAuth App (callback `…/api/auth/github/callback`) + `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`.
+- **Внешние входы** — каждый включается своей парой ключей в `.env`, любой можно не настраивать:
+  GitHub (`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`, callback `…/api/auth/github/callback`),
+  Яндекс (`YANDEX_CLIENT_ID`/`YANDEX_CLIENT_SECRET`), VK ID (`VK_CLIENT_ID`),
+  Telegram (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME`).
 - **Медиа** — S3/imgproxy настраиваются в `/admin` (перекрывают `.env`); без них аватары/скриншоты падают на локальный диск.
 
 Админ-доступ (`/admin`) — по хэндлам из env `ADMIN_HANDLES` (по умолчанию `demo`).
@@ -86,7 +95,12 @@ npm run dev                   # http://localhost:3000
 ## Подключение ИИ-агента (MCP)
 
 1. Настройки → **«API и MCP-доступ»** → создай токен (показывается один раз).
-2. В ИИ-клиенте добавь удалённый MCP-сервер: URL `http://<host>/api/mcp`, заголовок `Authorization: Bearer sf_…`.
+2. В ИИ-клиенте добавь удалённый MCP-сервер: URL `https://setfork.com/api/mcp` (локально —
+   `http://localhost:3000/api/mcp`), заголовок `Authorization: Bearer sf_…`.
+
+Токен бывает на чтение и на запись; пишущие инструменты read-токену отказывают и говорят,
+чего не хватает. Инструмент, который заменяет или стирает, помечен подсказкой
+`destructiveHint` — клиент по ней решает, спросить ли человека перед вызовом.
 
 ## Структура
 
@@ -117,6 +131,16 @@ src/
   widgets/                   # TopNav, Dashboard
 scripts/seed.ts              # сид публичной библиотеки
 ```
+
+## Как присоединиться
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — как предложить правку, политика по ИИ, DCO и те
+  архитектурные узды, с которыми вы встретитесь на проверках
+- [SECURITY.md](SECURITY.md) — как сообщить об уязвимости (не публичной задачей)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — кодекс участника
+
+Проект ведёт один человек, и предложения разбираются примерно раз в неделю. Это обещание
+ответа, а не скорости.
 
 ---
 
