@@ -140,6 +140,26 @@ export const metadata: Metadata = {
   },
   // Помогаем поисковикам индексировать (favicon в выдаче требует индексируемой главной).
   robots: { index: true, follow: true },
+  /**
+   * ПОДТВЕРЖДЕНИЕ ПРАВ В КОНСОЛЯХ ПОИСКОВИКОВ — из окружения, а не строкой в коде.
+   *
+   * Замер 19.09.2026: `site:setfork.com` не возвращал НИ ОДНОЙ страницы сайта, при
+   * живой карте на 250 адресов и верном robots.txt. Технически к обходу всё готово;
+   * не хватало шага, который делается руками — заявить домен в Search Console и
+   * Вебмастере. Там подтверждают права, и самый дешёвый способ — мета-тег.
+   *
+   * ⚠️ Переменные БЕЗ префикса `NEXT_PUBLIC_` намеренно: такие читаются в рантайме из
+   * `.env` сервера, и код подтверждения можно подставить БЕЗ пересборки образа. С
+   * `NEXT_PUBLIC_` значение вшилось бы при сборке — на этом мы уже обжигались со
+   * ссылкой на исходники (см. `shared/site.ts`, SOURCE_URL).
+   *
+   * Пусто — тегов нет вовсе: пустой `content` консоли не подтверждает, а мусор в
+   * разметке оставляет.
+   */
+  verification: {
+    ...(process.env.SITE_VERIFICATION_GOOGLE?.trim() ? { google: process.env.SITE_VERIFICATION_GOOGLE.trim() } : {}),
+    ...(process.env.SITE_VERIFICATION_YANDEX?.trim() ? { yandex: process.env.SITE_VERIFICATION_YANDEX.trim() } : {}),
+  },
   openGraph: {
     type: 'website',
     siteName: 'SetFork',
