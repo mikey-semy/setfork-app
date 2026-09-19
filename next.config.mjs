@@ -42,13 +42,41 @@ const nextConfig = {
   // X-Frame-Options и полный CSP тут НЕ ставим глобально: embed-роут намеренно
   // фреймится (frame-ancestors *), а CSP script-src требует nonce для inline-темы.
   async headers() {
+    // HSTS: год, с поддоменами. Проверено 19.09.2026 — `stats`, `docs`, `mail` и `www`
+    // отвечают по HTTPS, а http отдаёт 301 на https, поэтому включение поддоменов
+    // ничего не отрезает. `preload` НЕ ставим: это заявка в список браузеров, откуда
+    // выписываются месяцами, и делать её надо осознанным отдельным шагом.
+    const hsts = { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' }
+    // Разрешения браузера, которыми мы не пользуемся. Пустой список = «никому, включая
+    // нас»: если однажды понадобится камера, строка станет местом осознанного решения,
+    // а не забытым запретом. `fullscreen` НЕ трогаем — его просит встроенное видео.
+    const permissions = {
+      key: 'Permissions-Policy',
+      value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+    }
+    const base = [
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      hsts,
+      permissions,
+    ]
     return [
       {
-        source: '/:path*',
-        headers: [
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-        ],
+        // ⚠️ ВСЁ, КРОМЕ адреса, ОКАНЧИВАЮЩЕГОСЯ на `/embed`. Запрет на чужие рамки
+        // ставится здесь, а не глобально: embed-роут для того и существует, чтобы его
+        // вставляли к себе. Две записи с разными CSP на один адрес дали бы ДВА заголовка,
+        // а браузер применяет их пересечение — то есть самый строгий, и встраивание молча
+        // перестало бы работать.
+        // `$` на конце обязателен: без него исключение ловило любой адрес, ГДЕ ВСТРЕЧАЕТСЯ
+        // «embed», — а ник и слаг пишет пользователь. `/embedder/my-list` и
+        // `/alice/embedded-guide` оставались бы вообще без защитных заголовков.
+        source: '/:path((?!.*/embed$).*)',
+        headers: [...base, { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" }],
+      },
+      {
+        // Встраиваемая страница: рамки разрешены кому угодно, остальное — как везде.
+        source: '/:handle/:slug/embed',
+        headers: base,
       },
     ]
   },
