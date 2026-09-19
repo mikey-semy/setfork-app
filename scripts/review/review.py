@@ -522,6 +522,26 @@ def cmd_findings(args) -> int:
 # --------------------------------------------------------------------------- check
 
 
+# Сколько строк агент реально прочитывает за один сеанс. Число не выдумано: соседний
+# проект прошёл блок в 1727 строк за шесть запусков и два часа, а блок в 87 тысяч строк
+# отчитался по 4 файлам из 14 — то есть соврал про охват, не нарушив ни одной проверки.
+# Порог с запасом втрое от прочитанного, чтобы ловить заведомо невыполнимое.
+READABLE_LINES = 6000
+
+
+def block_lines(pathspecs: list[str]) -> tuple[int, int]:
+    """Сколько файлов и строк в блоке — чтобы отличить блок от обещания."""
+    files = git_files(pathspecs)
+    total = 0
+    for f in files:
+        try:
+            with open(ROOT / f, encoding="utf-8", errors="ignore") as fh:
+                total += sum(1 for _ in fh)
+        except OSError:
+            pass
+    return len(files), total
+
+
 def cmd_check(args) -> int:
     defn, st, rows = blocks(), state(), findings()
     idx = block_index(defn)
@@ -629,6 +649,17 @@ def cmd_check(args) -> int:
     _, _, unassigned = coverage_map()
     if unassigned:
         problems.append(f"{len(unassigned)} файлов не принадлежат ни одному блоку — `make review-coverage`")
+
+    # Блок, который за сеанс не прочитать, — обещание, а не блок.
+    for bid, b in idx.items():
+        if not b.get("paths"):
+            continue
+        n, lines = block_lines(b["paths"])
+        if lines > READABLE_LINES:
+            problems.append(
+                f"{bid}: {n} файлов, {lines} строк — за сеанс не прочитать "
+                f"(порог {READABLE_LINES}). Разрежьте блок, иначе отчёт соврёт про охват"
+            )
 
     if problems:
         print("ПРОВЕРКА НЕ ПРОЙДЕНА:\n")

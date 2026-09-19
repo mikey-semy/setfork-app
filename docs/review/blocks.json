@@ -18,6 +18,14 @@
   {
    "pattern": "*.svg",
    "reason": "графика"
+  },
+  {
+   "pattern": "drizzle/**",
+   "reason": "сгенерированный SQL, 40 тыс. строк: не читается, а сверяется — блок H14 на чистой БД"
+  },
+  {
+   "pattern": "docs/review/coverage.tsv",
+   "reason": "карта покрытия пересобирается инструментом, не код"
   }
  ],
  "blocks": [
@@ -29,12 +37,16 @@
    "role": "reviewer",
    "goal": "Найти места, где приватное, скрытое или чужое доходит до того, кому не должно, — или наоборот, где своё перестаёт быть видно владельцу.",
    "paths": [
+    "src/app/api/auth",
     "src/app/api/auth/**",
     "src/features/auth/**",
     "src/features/sessions/**",
     "src/middleware.ts",
     "src/shared/auth/**",
-    "src/shared/list-visibility.ts"
+    "src/shared/list-visibility.ts",
+    "tests/features/auth",
+    "tests/features/sessions",
+    "tests/security"
    ],
    "ref_paths": [
     "src/features/library/**",
@@ -54,7 +66,8 @@
     "src/app/[handle]/[slug]/[...git]",
     "src/app/[handle]/[slug]/repo.bundle",
     "src/features/git/**",
-    "src/shared/core-transport.ts"
+    "src/shared/core-transport.ts",
+    "tests/features/git"
    ],
    "ref_paths": [
     "src/features/library/**"
@@ -68,7 +81,6 @@
    "role": "reviewer",
    "goal": "Найти расхождения схемы с кодом, миграции, которые не применятся на чистой установке, индексы, которых нет под живыми запросами.",
    "paths": [
-    "drizzle/**",
     "src/shared/db/**"
    ],
    "ref_paths": []
@@ -83,7 +95,8 @@
    "paths": [
     "docs/mcp-surface.md",
     "src/app/api/[transport]",
-    "src/features/mcp/**"
+    "src/features/mcp/**",
+    "tests/features/mcp"
    ],
    "ref_paths": [
     "tests/features/mcp/**"
@@ -101,7 +114,9 @@
     "src/shared/entitlements.ts",
     "src/shared/quota.ts",
     "src/shared/rate-limit*.ts",
-    "src/shared/rate-limit-store.ts"
+    "src/shared/rate-limit-store.ts",
+    "tests/features/monetization",
+    "tests/features/money"
    ],
    "ref_paths": [
     "src/shared/ai/**"
@@ -115,7 +130,8 @@
    "role": "reviewer",
    "goal": "Найти текст мимо словаря, расхождения ru/en, нарушения словаря продукта: «PR» вместо «Предложение», slug на виду, слово «гном» в тексте.",
    "paths": [
-    "src/shared/i18n/**"
+    "src/shared/i18n/**",
+    "tests/features/i18n"
    ],
    "ref_paths": [
     "src/features/**"
@@ -185,7 +201,9 @@
    "paths": [
     "src/app/runs/**",
     "src/features/runs/**",
-    "src/shared/jobs/**"
+    "src/shared/jobs/**",
+    "tests/features/jobs",
+    "tests/features/runs"
    ],
    "ref_paths": []
   },
@@ -198,13 +216,15 @@
    "goal": "Найти расхождения между тем, что мы обещаем роботам, и тем, что отдаём: карта сайта, robots, канонические адреса, метаданные, JSON-LD.",
    "paths": [
     "src/app/.well-known/**",
+    "src/app/api/go",
     "src/app/llms-full.txt/**",
     "src/app/llms.txt/**",
     "src/app/robots.ts",
     "src/app/sitemap.ts",
     "src/shared/docs.ts",
     "src/shared/seo/**",
-    "src/shared/site.ts"
+    "src/shared/site.ts",
+    "tests/features/seo"
    ],
    "ref_paths": []
   },
@@ -212,11 +232,15 @@
    "id": "H12",
    "slug": "tests",
    "phase": 1,
-   "title": "Тесты и узды",
+   "title": "Архитектурные узды и оснастка тестов",
    "role": "reviewer",
-   "goal": "Найти зелёные тесты, которые ничего не стерегут: подмена проверяемого, подделка мягче настоящей системы, сценарий мимо пути человека, узда, ни разу не бывшая красной.",
+   "goal": "Найти узды, которые ни разу не были красными, и оснастку, которая делает зелёными тесты на сломанном коде: подделка мягче настоящей системы, подмена проверяемого правила.",
    "paths": [
-    "tests/**",
+    "tests/architecture",
+    "tests/helpers",
+    "tests/instrumentation.test.ts",
+    "tests/integration-setup.ts",
+    "tests/setup.ts",
     "vitest.config.ts",
     "vitest.integration.config.ts"
    ],
@@ -230,12 +254,6 @@
    "role": "reviewer",
    "goal": "Найти расхождения между тем, что собирается, и тем, что едет на прод: compose, CI, переменные окружения, скрипты.",
    "paths": [
-    "*.json",
-    "*.mjs",
-    "*.toml",
-    "*.ts",
-    "*.yaml",
-    "*.yml",
     ".dockerignore",
     ".env.example",
     ".gitattributes",
@@ -243,10 +261,20 @@
     ".gitignore",
     ".gitleaksignore",
     ".npmrc",
+    ":(glob)*.json",
+    ":(glob)*.mjs",
+    ":(glob)*.toml",
+    ":(glob)*.ts",
+    ":(glob)*.yaml",
+    ":(glob)*.yml",
     "Dockerfile*",
     "LICENSE",
     "docker-compose*.yml",
     "scripts/**",
+    "src/app/api/health",
+    "src/app/api/internal",
+    "src/app/api/ready",
+    "src/app/api/version",
     "src/shared/app-version.ts",
     "src/shared/env.ts",
     "src/shared/version.ts"
@@ -261,33 +289,8 @@
    "role": "reviewer",
    "goal": "Пройти домен списка целиком и найти, где обещание интерфейса расходится с тем, что записывается.",
    "paths": [
-    "src/app/[handle]/[slug]/ListAbout.tsx",
-    "src/app/[handle]/[slug]/ListAdNotices.tsx",
-    "src/app/[handle]/[slug]/ListAside.tsx",
-    "src/app/[handle]/[slug]/ListBlock.tsx",
-    "src/app/[handle]/[slug]/ListBlocks.tsx",
-    "src/app/[handle]/[slug]/ListDraftNotices.tsx",
-    "src/app/[handle]/[slug]/ListStepCard.tsx",
-    "src/app/[handle]/[slug]/ListToolbar.tsx",
-    "src/app/[handle]/[slug]/ListViewBanner.tsx",
-    "src/app/[handle]/[slug]/blame",
-    "src/app/[handle]/[slug]/certificate",
-    "src/app/[handle]/[slug]/compare",
-    "src/app/[handle]/[slug]/data.json",
-    "src/app/[handle]/[slug]/edit",
-    "src/app/[handle]/[slug]/embed",
-    "src/app/[handle]/[slug]/export",
-    "src/app/[handle]/[slug]/fork",
-    "src/app/[handle]/[slug]/forks",
-    "src/app/[handle]/[slug]/layout.tsx",
-    "src/app/[handle]/[slug]/load.ts",
-    "src/app/[handle]/[slug]/milestones",
-    "src/app/[handle]/[slug]/page.tsx",
-    "src/app/[handle]/[slug]/raw",
-    "src/app/[handle]/[slug]/releases",
-    "src/app/[handle]/[slug]/releases.atom",
-    "src/app/[handle]/[slug]/settings",
-    "src/app/[handle]/[slug]/versions",
+    "src/app/api/list-title",
+    "src/app/api/lists",
     "src/app/changelog/**",
     "src/app/collections/**",
     "src/app/my-lists/**",
@@ -296,7 +299,9 @@
     "src/features/collections/**",
     "src/features/library/**",
     "src/features/milestones/**",
-    "src/features/releases/**"
+    "src/features/releases/**",
+    "tests/features/changelog",
+    "tests/features/releases"
    ],
    "ref_paths": [
     "src/shared/db/schema.ts"
@@ -315,7 +320,9 @@
     "src/app/improve/**",
     "src/features/curation/**",
     "src/features/improve/**",
-    "src/features/reports/**"
+    "src/features/reports/**",
+    "tests/features/improve",
+    "tests/features/reports"
    ],
    "ref_paths": [
     "src/features/library/suggestion-core/**"
@@ -331,12 +338,16 @@
    "paths": [
     "src/app/[handle]/[slug]/discussions",
     "src/app/[handle]/[slug]/issues",
+    "src/app/api/issues",
     "src/features/comments/**",
     "src/features/discussions/**",
     "src/features/issues/**",
     "src/features/polls/**",
     "src/features/quizzes/**",
-    "src/features/reactions/**"
+    "src/features/reactions/**",
+    "tests/features/comments",
+    "tests/features/discussions",
+    "tests/features/issues"
    ],
    "ref_paths": []
   },
@@ -350,7 +361,9 @@
    "paths": [
     "src/features/collab-store/**",
     "src/features/collab/**",
-    "src/features/linkcheck/**"
+    "src/features/linkcheck/**",
+    "tests/features/collab",
+    "tests/features/linkcheck"
    ],
    "ref_paths": [
     "src/features/runs/**"
@@ -365,11 +378,14 @@
    "goal": "Пройти раскладку библиотеки: полки, звёздные папки, теги, перенос.",
    "paths": [
     "src/app/[handle]/catalogs",
+    "src/app/api/tags",
     "src/app/tags/**",
     "src/features/catalogs/**",
     "src/features/star-folders/**",
     "src/features/tags/**",
-    "src/features/transfer/**"
+    "src/features/transfer/**",
+    "tests/features/catalogs",
+    "tests/features/tags"
    ],
    "ref_paths": []
   },
@@ -383,6 +399,7 @@
    "paths": [
     "src/app/[handle]/[slug]/insights",
     "src/app/[handle]/[slug]/leaderboard",
+    "src/app/api/track",
     "src/app/explore/**",
     "src/app/search/**",
     "src/app/trending/**",
@@ -394,7 +411,13 @@
     "src/features/insights/**",
     "src/features/knowledge/**",
     "src/features/search/**",
-    "src/shared/analytics/**"
+    "src/shared/analytics/**",
+    "tests/features/analytics",
+    "tests/features/dig",
+    "tests/features/feed",
+    "tests/features/feeds",
+    "tests/features/related-lists.itest.ts",
+    "tests/features/search"
    ],
    "ref_paths": []
   },
@@ -411,6 +434,10 @@
     "src/app/[handle]/ProfileOverview.tsx",
     "src/app/[handle]/load.ts",
     "src/app/[handle]/page.tsx",
+    "src/app/api/notifications",
+    "src/app/api/push",
+    "src/app/api/unsubscribe",
+    "src/app/api/users",
     "src/app/guilds/**",
     "src/app/notifications/**",
     "src/features/badges/**",
@@ -420,7 +447,13 @@
     "src/features/profile/**",
     "src/features/watch/**",
     "src/shared/email/**",
-    "src/shared/push/**"
+    "src/shared/push/**",
+    "tests/features/badges",
+    "tests/features/follows",
+    "tests/features/notifications",
+    "tests/features/partners",
+    "tests/features/profile",
+    "tests/features/watch"
    ],
    "ref_paths": []
   },
@@ -433,13 +466,15 @@
    "goal": "Пройти путь генерации: запрос, кандидаты, совет, доработка, эмбеддинги. Найти, где ИИ-слой обещает больше, чем даёт.",
    "paths": [
     "AGENTS.md",
+    "src/app/api/generate",
     "src/app/generate/**",
     "src/features/gardener/**",
     "src/features/generation/**",
     "src/shared/agents/**",
     "src/shared/ai/**",
     "src/shared/completion.ts",
-    "src/shared/gen/**"
+    "src/shared/gen/**",
+    "tests/features/generation"
    ],
    "ref_paths": []
   },
@@ -452,12 +487,12 @@
    "goal": "Пройти модерацию и админку: гейты, обжалование, настройки, аудит.",
    "paths": [
     "src/app/admin/**",
+    "src/app/api/admin",
     "src/features/admin/**",
     "src/features/backoffice/**",
-    "src/features/moderation/**",
-    "src/shared/audit.ts",
-    "src/shared/moderation/**",
-    "src/shared/settings/**"
+    "src/shared/settings/**",
+    "tests/features/admin",
+    "tests/features/backoffice"
    ],
    "ref_paths": []
   },
@@ -471,8 +506,10 @@
    "paths": [
     "src/app/[handle]/[slug]/badge",
     "src/app/[handle]/[slug]/opengraph-image.tsx",
+    "src/app/api/upload",
     "src/shared/fonts/**",
-    "src/shared/media/**"
+    "src/shared/media/**",
+    "tests/features/media"
    ],
    "ref_paths": []
   },
@@ -484,6 +521,7 @@
    "role": "reviewer",
    "goal": "Пройти жизненный цикл аккаунта: регистрация, вход провайдерами, смена почты, восстановление пароля, отписка, удаление.",
    "paths": [
+    "src/app/api/telegram",
     "src/app/change-email/**",
     "src/app/forgot-password/**",
     "src/app/login/**",
@@ -494,7 +532,8 @@
     "src/app/unsubscribe/**",
     "src/app/verify-email/**",
     "src/features/settings/**",
-    "src/shared/telegram/**"
+    "src/shared/telegram/**",
+    "tests/features/settings"
    ],
    "ref_paths": []
   },
@@ -510,6 +549,7 @@
     ".claude/**",
     "docs/**",
     "src/app/about/**",
+    "src/app/api/landing",
     "src/app/feedback/**",
     "src/app/healthz/**",
     "src/app/layout.tsx",
@@ -518,13 +558,27 @@
     "src/app/terms/**",
     "src/features/feedback/**",
     "src/features/landing/**",
+    "src/instrumentation-loops.ts",
+    "src/instrumentation.ts",
     "src/shared/docs.ts",
     "src/shared/geo.ts",
     "src/shared/lib/**",
     "src/shared/nav/**",
     "src/shared/providers/**",
     "src/shared/redis.ts",
-    "src/widgets/**"
+    "src/widgets/**",
+    "tests/app",
+    "tests/core",
+    "tests/email-layout.test.ts",
+    "tests/empty.ts",
+    "tests/evals",
+    "tests/features/dig-followups.test.ts",
+    "tests/features/feedback",
+    "tests/features/index-content.test.ts",
+    "tests/features/landing",
+    "tests/scripts",
+    "tests/shared",
+    "tests/widgets"
    ],
    "ref_paths": []
   },
@@ -564,6 +618,160 @@
    "ref_paths": [
     "scripts/**"
    ]
+  },
+  {
+   "id": "H14",
+   "slug": "migrations",
+   "phase": 3,
+   "role": "reviewer",
+   "title": "Миграции: применимость и сверка",
+   "goal": "Проверить миграции НЕ чтением, а исполнением: применить на чистой БД, сверить получившуюся схему с кодом схемы, найти расхождения и неприменимые шаги.",
+   "paths": [],
+   "ref_paths": [
+    "src/shared/db/**",
+    "drizzle.config.ts"
+   ]
+  },
+  {
+   "id": "V1b",
+   "slug": "list-editor",
+   "phase": 2,
+   "role": "reviewer",
+   "title": "Редактор списка",
+   "goal": "Пройти редактор целиком: перетаскивание, отмена, автосохранение, черновик — и найти, где показанное расходится с тем, что уйдёт в версию.",
+   "paths": [
+    "src/features/library/list-editor"
+   ],
+   "ref_paths": []
+  },
+  {
+   "id": "V1c",
+   "slug": "list-pages",
+   "phase": 2,
+   "role": "reviewer",
+   "title": "Страницы списка",
+   "goal": "Пройти страницы списка глазами посетителя и владельца: обзор, содержание, версии, сравнение, форки, настройки.",
+   "paths": [
+    "src/app/[handle]/[slug]"
+   ],
+   "ref_paths": []
+  },
+  {
+   "id": "V8b",
+   "slug": "embeddings",
+   "phase": 2,
+   "role": "reviewer",
+   "title": "Эмбеддинги и смысловой поиск",
+   "goal": "Пройти путь вектора: построение, размерность, переиндексация, выдача. Найти, где смена модели обнуляет поиск молча.",
+   "paths": [
+    "src/shared/ai/embed",
+    "src/shared/ai/search"
+   ],
+   "ref_paths": []
+  },
+  {
+   "id": "V9b",
+   "slug": "moderation",
+   "phase": 2,
+   "role": "reviewer",
+   "title": "Модерация",
+   "goal": "Пройти модерацию: гейты публикации, скрытие, обжалование, аудит решений.",
+   "paths": [
+    "src/app/api/mod-health",
+    "src/features/moderation",
+    "src/shared/audit.ts",
+    "src/shared/moderation",
+    "tests/features/moderation",
+    "tests/features/moderation-reason.test.ts"
+   ],
+   "ref_paths": []
+  },
+  {
+   "id": "H15",
+   "slug": "domain-core",
+   "phase": 1,
+   "role": "reviewer",
+   "title": "Доменное ядро",
+   "goal": "Прочитать чистые доменные правила целиком и найти, где правило, записанное здесь, расходится с тем, как его применяют вызывающие.",
+   "paths": [
+    "src/core"
+   ],
+   "ref_paths": [
+    "src/features/library"
+   ]
+  },
+  {
+   "id": "V1d",
+   "slug": "list-write",
+   "phase": 2,
+   "role": "reviewer",
+   "title": "Список: запись и версии",
+   "goal": "Прочитать все маршруты записи списка СРАЗУ и найти то, чего нет ни в одном: атомарность, сверку версии, общий гейт. Дефект такого рода не виден при чтении файла по отдельности.",
+   "paths": [
+    "src/features/library/actions",
+    "src/features/library/bulk",
+    "src/features/library/core",
+    "src/features/library/versions",
+    "tests/features/library"
+   ],
+   "ref_paths": []
+  },
+  {
+   "id": "V1e",
+   "slug": "list-read",
+   "phase": 2,
+   "role": "reviewer",
+   "title": "Список: чтение и показ",
+   "goal": "Пройти путь от запроса к экрану: выборки, карточки, оглавление, экспорт — и найти, где показанное расходится с записанным.",
+   "paths": [
+    "src/features/library/export",
+    "src/features/library/queries",
+    "src/features/library/view"
+   ],
+   "ref_paths": []
+  },
+  {
+   "id": "V8c",
+   "slug": "gen-pipeline",
+   "phase": 2,
+   "role": "reviewer",
+   "title": "Конвейер генерации",
+   "goal": "Пройти путь запроса пользователя до кандидатов: подготовка, вызов модели, разбор ответа, отказы и повторы.",
+   "paths": [
+    "src/app/generate",
+    "src/features/generation",
+    "src/shared/gen"
+   ],
+   "ref_paths": []
+  },
+  {
+   "id": "V8d",
+   "slug": "gardener",
+   "phase": 2,
+   "role": "reviewer",
+   "title": "Садовник и фоновые улучшения",
+   "goal": "Пройти автоматические улучшения списков: отбор кандидатов, бюджет, применение, следы в истории.",
+   "paths": [
+    "src/features/gardener",
+    "src/shared/agents",
+    "tests/features/gardener"
+   ],
+   "ref_paths": []
+  },
+  {
+   "id": "V12b",
+   "slug": "shared-lib",
+   "phase": 2,
+   "role": "reviewer",
+   "title": "Общие библиотеки",
+   "goal": "Прочитать общие помощники целиком: то, чем пользуются все, и потому ошибка здесь расходится по всему коду.",
+   "paths": [
+    "src/shared/lib",
+    "tests/shared/ai",
+    "tests/shared/lib",
+    "tests/shared/ui"
+   ],
+   "ref_paths": []
   }
  ]
 }
