@@ -67,7 +67,7 @@ def load_json(path: Path):
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        die(f"{path.relative_to(ROOT)} is missing — run `make review-init`")
+        die(f"{path.relative_to(ROOT)} is missing — run `npm run review -- init`")
     except json.JSONDecodeError as exc:
         die(f"{path.relative_to(ROOT)} is not valid JSON: {exc}")
 
@@ -211,7 +211,7 @@ def cmd_status(args) -> int:
         cur = st["blocks"][nxt["id"]]["status"]
         role = "verify" if cur == "hunted" else "hunter"
         print(f"\nследующий блок: {nxt['id']} ({nxt['title']}) — статус {cur}")
-        print(f"промпт:  make review-prompt BLOCK={nxt['id']} ROLE={role}")
+        print(f"промпт:  npm run review -- prompt {nxt['id']} --role {role}")
         print(f"манифест: docs/review/blocks/{nxt['id']}-{nxt['slug']}.md")
     else:
         print("\nвсе блоки закрыты — пора сводить находки и удалять docs/review/")
@@ -428,7 +428,7 @@ def cmd_import(args) -> int:
             fh.write(json.dumps(f, ensure_ascii=False) + "\n")
     live = sum(1 for f in incoming if f.get("status") == "open")
     print(f"{args.block}: импортировано {len(incoming)} записей, из них открытых {live}")
-    print("не забудь: make review-findings && make review-check")
+    print("не забудь: npm run review -- findings && npm run review:check")
     return 0
 
 
@@ -550,16 +550,33 @@ def cmd_check(args) -> int:
     # 1. state and definition agree
     for bid in idx:
         if bid not in st["blocks"]:
-            problems.append(f"{bid}: нет записи в state.json — запусти `make review-init`")
+            problems.append(f"{bid}: нет записи в state.json — запусти `npm run review -- init`")
     for bid in st["blocks"]:
         if bid not in idx:
             problems.append(f"{bid}: есть в state.json, но отсутствует в blocks.json")
 
-    # 2. every block has a manifest
+    # Манифест спрашиваем только у блока, который ДОШЁЛ до работы: манифест пишется
+    # перед своим блоком, и требование его у всех сразу роняет проверку всегда —
+    # тогда она перестаёт быть гейтом и её начинают игнорировать.
+    for bid, b in idx.items():
+        if st["blocks"].get(bid, {}).get("status", "todo") == "todo":
+            continue
+        manifest = REVIEW / "blocks" / f"{b['id']}-{b['slug']}.md"
+        if not manifest.exists():
+            problems.append(f"{bid}: нет манифеста {manifest.relative_to(ROOT)}")
+
+    # Блок, объявленный проверенным или закрытым, обязан предъявить отчёт
+    # ВЕРИФИКАТОРА. Иначе `set-status closed` закрывает блок с одним отчётом
+    # охотника, и непроверенные находки исчезают из остатка работ.
     for b in defn["blocks"]:
-        m = REVIEW / "blocks" / f"{b['id']}-{b['slug']}.md"
-        if not m.exists():
-            problems.append(f"{b['id']}: нет манифеста {m.relative_to(ROOT)}")
+        stt = st["blocks"].get(b["id"], {}).get("status", "todo")
+        if stt in ("verified", "closed"):
+            rep = REVIEW / "reports" / f"{b['id']}-{b['slug']}.verify.md"
+            if not rep.exists():
+                problems.append(
+                    f"{b['id']}: статус {stt}, но отчёта верификатора нет — "
+                    f"проверка держится на честном слове"
+                )
 
     # 3. declared reports exist
     for bid, s in st["blocks"].items():
@@ -649,6 +666,24 @@ def cmd_check(args) -> int:
     _, _, unassigned = coverage_map()
     if unassigned:
         problems.append(f"{len(unassigned)} файлов не принадлежат ни одному блоку — `make review-coverage`")
+
+    # Карта покрытия на диске обязана совпадать с пересчётом: иначе потребитель
+    # читает вчерашнее владение и не узнаёт об этом. Ровно так она и разошлась —
+    # файлы самого ревью появились после того, как карту записали.
+    cov = REVIEW / "coverage.tsv"
+    if cov.exists():
+        owned, excluded, unassigned = coverage_map()
+        fresh = {f"{f}\t{','.join(bs)}" for f, bs in owned.items()}
+        on_disk = {
+            ln.rstrip("\n")
+            for ln in cov.read_text(encoding="utf-8").splitlines()[1:]
+            if ln.strip()
+        }
+        if fresh != on_disk:
+            problems.append(
+                f"coverage.tsv устарел: на диске {len(on_disk)} строк, "
+                f"пересчёт даёт {len(fresh)} — выполните `npm run review:coverage`"
+            )
 
     # Блок, который за сеанс не прочитать, — обещание, а не блок.
     for bid, b in idx.items():

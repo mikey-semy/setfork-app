@@ -69,6 +69,10 @@ package.json	H13
 postcss.config.mjs	H13
 proto/domain_read.proto	H2
 proto/git.proto	H2
+public/browserconfig.xml	V12
+public/schema/list.v1.json	H4
+public/site.webmanifest	V12
+public/sw.js	V7
 scripts/_migrate-identity.ts	H13
 scripts/ablation-eval.ts	H13
 scripts/audit-github-handles.ts	H13
