@@ -87,7 +87,9 @@ npm run dev                   # http://localhost:3000
 - **Внешние входы** — каждый включается своей парой ключей в `.env`, любой можно не настраивать:
   GitHub (`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`, callback `…/api/auth/github/callback`),
   Яндекс (`YANDEX_CLIENT_ID`/`YANDEX_CLIENT_SECRET`), VK ID (`VK_CLIENT_ID`),
-  Telegram (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME`).
+  Telegram (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME` **и** `TELEGRAM_WEBHOOK_SECRET`,
+  зарегистрированный в Telegram через `setWebhook` — иначе кнопка входа появится, а
+  бот будет молчать; команда есть в комментарии к `.env.example`).
 - **Медиа** — S3/imgproxy настраиваются в `/admin` (перекрывают `.env`); без них аватары/скриншоты падают на локальный диск.
 
 Админ-доступ (`/admin`) — по хэндлам из env `ADMIN_HANDLES` (по умолчанию `demo`).
@@ -95,8 +97,11 @@ npm run dev                   # http://localhost:3000
 ## Подключение ИИ-агента (MCP)
 
 1. Настройки → **«API и MCP-доступ»** → создай токен (показывается один раз).
-2. В ИИ-клиенте добавь удалённый MCP-сервер: URL `https://setfork.com/api/mcp` (локально —
-   `http://localhost:3000/api/mcp`), заголовок `Authorization: Bearer sf_…`.
+2. В ИИ-клиенте добавь удалённый MCP-сервер: URL `https://<ваш-хост>/api/mcp`, заголовок
+   `Authorization: Bearer sf_…`. ⚠️ Адрес — ТОТ, ГДЕ ВЫДАН ТОКЕН: на своём развёрнутом
+   экземпляре это ваш хост, а не `setfork.com`, иначе токен уедет на чужой сервер, где
+   всё равно не сработает. Для публичного SetFork — `https://setfork.com/api/mcp`,
+   локально — `http://localhost:3000/api/mcp`.
 
 Токен бывает на чтение и на запись; пишущие инструменты read-токену отказывают и говорят,
 чего не хватает. Инструмент, который заменяет или стирает, помечен подсказкой
