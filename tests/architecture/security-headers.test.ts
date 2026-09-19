@@ -22,6 +22,9 @@ import config from '../../next.config.mjs'
  */
 const EMBED = '/miki/spisok/embed'
 const USUAL = '/miki/spisok'
+/** ⚠️ Ник и слаг пишет ЧЕЛОВЕК — «embed» встречается в них законно. Эти адреса обязаны
+ *  получить всё, включая запрет на чужие рамки: встраиваемая страница только одна. */
+const TRAPS = ['/embedder/my-list', '/alice/embedded-guide', '/miki/spisok/embedding', '/embed-tips']
 
 async function rules() {
   return (await (config as unknown as { headers: () => Promise<Array<{ source: string; headers: { key: string; value: string }[] }>> }).headers())
@@ -35,6 +38,16 @@ describe('заголовки безопасности', () => {
     expect(csp.length, 'правило с CSP ровно одно').toBe(1)
     expect(hits(csp[0].source, EMBED), 'CSP не должен доставать до embed').toBe(false)
     expect(hits(csp[0].source, USUAL), 'а до обычной страницы — должен').toBe(true)
+  })
+
+  it('⚠️ адрес, где «embed» лишь внутри ника или слага, защиту НЕ теряет', async () => {
+    const all = await rules()
+    const csp = all.filter((r) => r.headers.some((h) => h.key === 'Content-Security-Policy'))
+    for (const path of TRAPS) {
+      expect(hits(csp[0].source, path), `${path} остался без запрета на чужие рамки`).toBe(true)
+      const applied = all.filter((r) => hits(r.source, path)).flatMap((r) => r.headers.map((h) => h.key))
+      expect(applied, `${path}: nosniff`).toContain('X-Content-Type-Options')
+    }
   })
 
   it('базовые заголовки достают до ОБОИХ адресов, включая embed', async () => {
