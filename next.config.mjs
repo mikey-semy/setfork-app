@@ -4,6 +4,11 @@ import { readFileSync } from 'node:fs'
 // NEXT_PUBLIC_APP_VERSION, чтобы её видели и сервер (футер), и клиент (баннер
 // обновления) без чтения файла в рантайме (standalone-образ package.json не тащит целиком).
 const pkgVersion = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
+// Версию считает `scripts/build-version.mjs` из git и передаёт CI аргументом сборки:
+// внутри образа истории нет (`.git` в .dockerignore). package.json — запасной вариант
+// для локальной сборки; там `0.1.0` с первого коммита, и это честнее пустой строки,
+// потому что локальная сборка и не претендует на опознание релиза.
+const appVersion = process.env.NEXT_PUBLIC_APP_VERSION?.trim() || pkgVersion
 
 // Разрешённые origin'ы для Server Actions (Next сам сверяет Origin↔Host для CSRF).
 // Same-origin проходит всегда; тут добавляем прод-домен на случай прокси, где Host отличается.
@@ -20,7 +25,7 @@ if (process.env.NEXT_PUBLIC_SITE_URL) {
 const nextConfig = {
   reactStrictMode: true,
   // Прокидываем версию в бандл (клиент+сервер) — читается через shared/app-version.
-  env: { NEXT_PUBLIC_APP_VERSION: pkgVersion },
+  env: { NEXT_PUBLIC_APP_VERSION: appVersion },
   // Компактный self-contained сервер (.next/standalone) для Docker-образа.
   output: 'standalone',
   // ⛔ `images.remotePatterns` ЗДЕСЬ НЕТ НАМЕРЕННО, и возвращать его нельзя без

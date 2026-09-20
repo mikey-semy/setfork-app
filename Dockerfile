@@ -19,6 +19,7 @@ RUN npm ci
 FROM base AS builder
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_UMAMI_URL
+ARG NEXT_PUBLIC_APP_VERSION
 ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
 # Адреса доков и лендинга: на проде их дефолты (`docs.<хост>` и `<origin>/about`)
 # и есть правильные значения, а на своём стенде — нет, поэтому демо ссылалось на
@@ -39,7 +40,8 @@ ARG NEXT_PUBLIC_ABOUT_URL
 # `process.env.…`, которое читается при старте контейнера из `.env` (`env_file`).
 # Оба пути настройки живы одновременно только так.
 ARG NEXT_PUBLIC_SOURCE_URL
-ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+ENV NEXT_PUBLIC_APP_VERSION=$NEXT_PUBLIC_APP_VERSION \
+    NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_UMAMI_URL=$NEXT_PUBLIC_UMAMI_URL \
     NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID \
     NEXT_PUBLIC_DOCS_URL=$NEXT_PUBLIC_DOCS_URL \

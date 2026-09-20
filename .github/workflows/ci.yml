@@ -285,6 +285,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          # ⚠️ ВСЯ история: номер версии считается по видам коммитов
+          # (scripts/build-version.mjs). По умолчанию checkout берёт глубину 1, и
+          # скрипт честно вернёт пустоту — версия молча осталась бы прежней.
+          fetch-depth: 0
       # Повтор — из-за той же внешней зависимости, что и в `check`: сборка Next тянет
       # шрифты с fonts.googleapis.com, и с российских адресов это лотерея. Там повтор
       # уже стоит (и понадобился 30.07), здесь без него сорванная загрузка шрифта
@@ -300,8 +304,21 @@ jobs:
           NEXT_PUBLIC_UMAMI_URL: ${{ vars.NEXT_PUBLIC_UMAMI_URL }}
           NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${{ vars.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
         run: |
+          # Номер версии считается ЗДЕСЬ, а не в образе: `.git` стоит в .dockerignore,
+          # внутри сборки истории нет. ⚠️ Пустой build-arg NEXT_PUBLIC_* убивает чтение
+          # переменной из окружения, поэтому при неудачном подсчёте аргумент НЕ
+          # передаётся вовсе — next.config откатится на package.json.
+          APP_VERSION="$(node scripts/build-version.mjs || true)"
+          if [ -n "$APP_VERSION" ]; then
+            echo "::notice::версия сборки $APP_VERSION"
+            VERSION_ARG=(--build-arg "NEXT_PUBLIC_APP_VERSION=$APP_VERSION")
+          else
+            echo "::warning::версию из git посчитать не удалось — останется номер из package.json"
+            VERSION_ARG=()
+          fi
           build_app() {
             docker build --target runner \
+            "${VERSION_ARG[@]}" \
             --build-arg NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
             --build-arg NEXT_PUBLIC_UMAMI_URL="$NEXT_PUBLIC_UMAMI_URL" \
             --build-arg NEXT_PUBLIC_UMAMI_WEBSITE_ID="$NEXT_PUBLIC_UMAMI_WEBSITE_ID" \
