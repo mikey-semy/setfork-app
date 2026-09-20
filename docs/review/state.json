@@ -1,9 +1,9 @@
 {
   "review_id": "setfork-frontend-2026-09",
-  "updated_at": "2026-09-19T09:05:05Z",
+  "updated_at": "2026-09-20T17:18:04Z",
   "blocks": {
     "H1": {
-      "status": "todo",
+      "status": "verified",
       "started": null,
       "finished": "2026-09-19T09:05:03Z",
       "reports": [],
