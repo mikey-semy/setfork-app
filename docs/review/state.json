@@ -1,6 +1,6 @@
 {
   "review_id": "setfork-frontend-2026-09",
-  "updated_at": "2026-09-20T18:06:51Z",
+  "updated_at": "2026-09-20T18:35:43Z",
   "blocks": {
     "H1": {
       "status": "verified",
@@ -269,6 +269,13 @@
       "note": ""
     },
     "V12b": {
+      "status": "todo",
+      "started": null,
+      "finished": null,
+      "reports": [],
+      "note": ""
+    },
+    "V1f": {
       "status": "todo",
       "started": null,
       "finished": null,
