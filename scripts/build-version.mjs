@@ -18,9 +18,12 @@ import { execSync } from 'node:child_process'
 
 const TYPES = /^(feat|fix|docs|refactor|perf|test|chore|build|ci|style|revert)(\(|!|:)/i
 
-function git(cmd) {
+// Рабочий каталог передаётся ОПЦИЕЙ, а не куском команды: путь с пробелом (а такой
+// бывает у checkout на своём раннере) развалил бы строку, и git прочитал бы её как
+// несколько аргументов. Вызов и так идёт без шелла — аргументы разбирает не оболочка.
+function git(args, cwd) {
   try {
-    return execSync(`git ${cmd}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+    return execSync(`git ${args}`, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
   } catch {
     return ''
   }
@@ -48,8 +51,8 @@ export function versionOf(types) {
 
 export function buildVersion(cwd = process.cwd()) {
   // Мелкая копия истории не содержит: номер по ней был бы неверным, а не приблизительным.
-  const shallow = git(`-C ${cwd} rev-parse --is-shallow-repository`) === 'true'
-  const log = git(`-C ${cwd} log --reverse --format=%s`)
+  const shallow = git('rev-parse --is-shallow-repository', cwd) === 'true'
+  const log = git('log --reverse --format=%s', cwd)
   if (shallow || !log) return ''
   return versionOf(commitTypes(log))
 }
