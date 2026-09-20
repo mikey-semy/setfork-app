@@ -40,10 +40,16 @@ const level = async (id: string, version: number) => {
     .from(templateVersions)
     .where(eq(templateVersions.templateId, id))
     .orderBy(templateVersions.version)
+  // ⚠️ Порядок здесь ПРОВЕРЯЕТСЯ (`all.map(r => r.l)` сравнивается со списком), значит
+  // его надо задать: без ORDER BY Postgres волен вернуть строки как ему удобно, и после
+  // UPDATE обновлённая версия приезжает не на своё место. Соседняя выборка выше
+  // сортировку имеет — здесь её просто забыли, и тест краснел раз в сотню прогонов
+  // (поймано на прогоне 35533954469).
   const all = await db
     .select({ v: templateVersions.version, l: templateVersions.verificationLevel })
     .from(templateVersions)
     .where(eq(templateVersions.templateId, id))
+    .orderBy(templateVersions.version)
   return { first: row, all, of: all.find((r) => r.v === version) }
 }
 
