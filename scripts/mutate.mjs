@@ -131,11 +131,11 @@ let failures = 0
   // Опечатка в `--only` или снятая порча дали бы «0/0 порч поймано» и успешный выход:
   // заказанная проверка не выполнилась бы вовсе, а выглядело бы это как пройденная.
   if (chosen.length === 0) {
-    process.stderr.write(
-      only
-        ? `по отбору «${only}» не нашлось ни одной порчи из ${passport.mutants.length} — опечатка или порча снята\n`
-        : 'в паспорте нет ни одной порчи\n',
-    )
+    // eslint-disable-next-line no-restricted-syntax -- вывод инструмента разработчика в терминал, не интерфейс: переводить нечего
+    const why = only
+      ? `по отбору «${only}» не нашлось ни одной порчи из ${passport.mutants.length} — опечатка или порча снята\n`
+      : 'в паспорте нет ни одной порчи\n'
+    process.stderr.write(why)
     process.exit(2)
   }
   for (const m of chosen) {
