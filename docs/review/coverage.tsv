@@ -119,6 +119,7 @@ scripts/mutate.mjs	H13d
 scripts/probe/touch-sweep.mjs	H13f
 scripts/purge-lists.ts	H13f
 scripts/restore.sh	H13f
+scripts/review/__pycache__/review.cpython-314.pyc	H13d
 scripts/review/review.py	H13d
 scripts/seed-demo.ts	H13c
 scripts/seed-ops.ts	H13f
@@ -741,6 +742,7 @@ src/features/mcp/registry/sources.ts	H4b
 src/features/mcp/registry/suggestions.ts	H4b
 src/features/mcp/tools/index.ts	H4
 src/features/mcp/tools/issues.ts	H4b
+src/features/mcp/tools/lists/base-version.ts	H4
 src/features/mcp/tools/lists/catalogs.ts	H4
 src/features/mcp/tools/lists/create.ts	H4
 src/features/mcp/tools/lists/delete.ts	H4
@@ -778,6 +780,7 @@ src/features/notifications/display.ts	V7b
 src/features/notifications/email.ts	V7b
 src/features/notifications/href.ts	V7b
 src/features/notifications/jobs.ts	V7b
+src/features/notifications/list-access.ts	V7b
 src/features/notifications/mentions.ts	V7b
 src/features/notifications/notify.ts	V7b
 src/features/notifications/push-client.ts	V7b
@@ -1225,6 +1228,7 @@ src/widgets/TopNav/use-crumb.ts	V12
 src/widgets/explore/ExploreNav.tsx	V12
 src/widgets/explore/TrendControls.tsx	V12
 src/widgets/sidebar-context.tsx	V12
+tests/app/api/auth/provider-gate-both-ends.test.ts	V12d
 tests/app/api/ready.itest.ts	V12d
 tests/app/api/user-search-order.itest.ts	V12d
 tests/app/api/write-allowed-content.test.ts	V12d
@@ -1270,6 +1274,7 @@ tests/architecture/step-converter-one-path.test.ts	H12
 tests/architecture/touch-zone-vs-position.test.ts	H12
 tests/architecture/ui-parity.test.ts	H12
 tests/architecture/verified-not-public.test.ts	H12
+tests/architecture/version-base-declared.test.ts	H12
 tests/core/domain/access.test.ts	V12d
 tests/core/domain/affiliate.test.ts	V12d
 tests/core/domain/destructive-command.mutants.json	V12d
@@ -1292,6 +1297,7 @@ tests/features/auth/login-keeps-email.test.tsx	H1
 tests/features/auth/oauth-next.test.ts	H1
 tests/features/auth/passkey-error.test.ts	H1
 tests/features/auth/passkey-options.test.ts	H1
+tests/features/auth/passkey-second-factor.itest.ts	H1
 tests/features/auth/register-admin-handle.itest.ts	H1
 tests/features/auth/register-honours-handle-taken.itest.ts	H1
 tests/features/backoffice/ai-watch.itest.ts	V9d
@@ -1317,10 +1323,12 @@ tests/features/feeds/pull.itest.ts	V6
 tests/features/gardener/budget-midbatch.itest.ts	V8d
 tests/features/gardener/candidates.itest.ts	V8d
 tests/features/gardener/journal.itest.ts	V8d
+tests/features/gardener/living-stale.test.ts	V8d
 tests/features/gardener/living.itest.ts	V8d
 tests/features/gardener/publish-order.test.ts	V8d
 tests/features/gardener/readiness-gate.itest.ts	V8d
 tests/features/gardener/snapshot-fields.itest.ts	V8d
+tests/features/gardener/stale-automerge-notifies.test.ts	V8d
 tests/features/gardener/stop-rule.itest.ts	V8d
 tests/features/generation/abandon.itest.ts	V8c
 tests/features/generation/candidate-card-focus.test.tsx	V8c
@@ -1356,6 +1364,7 @@ tests/features/landing/stats.test.ts	V12
 tests/features/library/accept-suggestion.itest.ts	V1
 tests/features/library/actions-mutations.itest.ts	V1d
 tests/features/library/agent-draft-detail.itest.ts	V8c
+tests/features/library/apply-replaced-version.test.ts	V1k
 tests/features/library/blame.itest.ts	V1h
 tests/features/library/block-identity.test.ts	V1k
 tests/features/library/block-inserter-gap.test.ts	V1k
@@ -1436,6 +1445,7 @@ tests/features/library/suggestion-result-blocks.test.tsx	V1,V1k
 tests/features/library/suggestion-result.test.tsx	V1,V1k
 tests/features/library/suggestion-revert.itest.ts	V1
 tests/features/library/suggestion-revert.test.ts	V1,V1k
+tests/features/library/translate-merge.test.ts	V1k
 tests/features/library/translation-carry.test.ts	V1h,V1k
 tests/features/library/translation-state.test.ts	V1h,V1k
 tests/features/library/verification-levels.itest.ts	V1h
@@ -1466,9 +1476,12 @@ tests/features/mcp/report-check.itest.ts	H4b
 tests/features/mcp/report-run.itest.ts	H4b
 tests/features/mcp/runs.itest.ts	H4b
 tests/features/mcp/sources.itest.ts	H4b
+tests/features/mcp/stale-refusal-texts.test.ts	H4
+tests/features/mcp/suggestion-base-visible.test.ts	H4
 tests/features/mcp/suggestion-flow.itest.ts	H4b
 tests/features/mcp/tools.itest.ts	H4
 tests/features/mcp/update-hold.itest.ts	H4
+tests/features/mcp/write-proposed-base.test.ts	H4
 tests/features/moderation-reason.test.ts	V9b
 tests/features/moderation/approve-many.itest.ts	V9b
 tests/features/moderation/automation.test.ts	V9b
@@ -1476,6 +1489,7 @@ tests/features/moderation/gate.itest.ts	V9b
 tests/features/monetization/pro-interest.itest.ts	H5
 tests/features/money/budget-window.itest.ts	H5
 tests/features/money/retry-idempotent.itest.ts	H5
+tests/features/notifications/delivery-visibility.itest.ts	V7b
 tests/features/notifications/href.test.ts	V7b
 tests/features/notifications/keyset.itest.ts	V7b
 tests/features/notifications/mentions.test.ts	V7b
@@ -1572,6 +1586,7 @@ tests/shared/auth/api-token-scope.itest.ts	V12f
 tests/shared/auth/api-token.test.ts	V12f
 tests/shared/auth/handle.test.ts	V12f
 tests/shared/auth/oauth-server.itest.ts	V12f
+tests/shared/auth/oauth-single-use.itest.ts	H1
 tests/shared/auth/oauth.test.ts	V12f
 tests/shared/auth/totp.test.ts	V12f
 tests/shared/block-identity-on-write.test.ts	V12f
