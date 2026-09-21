@@ -326,6 +326,28 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       })
       .returning({ id: suggestions.id })
 
+    /**
+     * ПРЕДЛОЖЕНИЕ ОСТАЁТСЯ ЖДАТЬ ЧЕЛОВЕКА — уведомить владельца И записать в журнал.
+     *
+     * Одним местом, а не двумя: открытых предложений на этом проходе рождается два сорта
+     * (обычное и то, у которого сорвалось авто-слияние), и вторая ветка уже успела
+     * разойтись с первой — журнал писала, а уведомления не слала. Владелец, который
+     * полагается на уведомления, про такую правку не узнавал вовсе, и предложения
+     * копились молча.
+     */
+    const leaveSuggestionOpen = async (reason?: string) => {
+      await notify({ recipientId: tpl.ownerId, actorId: tenderId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+      // Запись в журнал — не отчётность ради отчётности: по нему считается «День
+      // компании» и правило остановки. Самая частая ветка прохода не писала в него
+      // НИЧЕГО, и владелец видел пустой день при работающей компании.
+      await journal(
+        'list.suggest',
+        'ok',
+        { mode: 'suggestion', ...(reason ? { reason } : {}), profession: byWhom },
+        { trigger: 'schedule', deadLinks: deadUrls.length },
+      )
+    }
+
     // Рецепты НЕ авто-мёрджим даже на кураторских — правка количеств требует
     // человеческого глаза, пока качество recipe-политики не оценено вручную.
     if (tpl.ownerCurated && kind !== 'recipe') {
@@ -346,13 +368,10 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       if (wrote === 'stale') {
         // Версии нет — значит `afterVersion` не сработал и предложение осталось ОТКРЫТЫМ.
         // Это и есть нужный исход: правка не пропала, её просто решает человек (или
-        // следующий проход) на свежем составе, а чужая версия цела.
-        await journal(
-          'list.suggest',
-          'ok',
-          { mode: 'suggestion', reason: 'the list moved on — auto-merge refused, the suggestion stays open', profession: byWhom },
-          { trigger: 'schedule', deadLinks: deadUrls.length },
-        )
+        // следующий проход) на свежем составе, а чужая версия цела. Но раз решает теперь
+        // ЧЕЛОВЕК, он обязан об этом узнать — тем же уведомлением, что у обычного
+        // открытого предложения: «тихо оставили ждать» ничем не отличается от «потеряли».
+        await leaveSuggestionOpen('the list moved on — auto-merge refused, the suggestion stays open')
         log.info('gardener: curated list moved on, suggestion left open', { slug: tpl.slug, suggestionId: created.id })
         proposed++
         continue
@@ -365,11 +384,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       )
       log.info('gardener: auto-merged on curated list', { slug: tpl.slug })
     } else {
-      await notify({ recipientId: tpl.ownerId, actorId: tenderId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
-      // Запись в журнал — не отчётность ради отчётности: по нему считается «День
-      // компании» и правило остановки. Самая частая ветка прохода не писала в него
-      // НИЧЕГО, и владелец видел пустой день при работающей компании.
-      await journal('list.suggest', 'ok', { mode: 'suggestion', profession: byWhom }, { trigger: 'schedule', deadLinks: deadUrls.length })
+      await leaveSuggestionOpen()
       log.info('gardener: suggestion opened', { slug: tpl.slug, suggestionId: created.id, tender: expertId || 'generic' })
     }
     proposed++

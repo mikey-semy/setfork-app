@@ -9,7 +9,7 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
     'pending_suggestions',
     {
       title: 'Suggested edits waiting for you',
-      description: 'List the OPEN suggested edits on lists you own — what is waiting for your decision. Accepting one with apply_suggestion (or merge_suggestion) makes a new version of the list; rejecting leaves the list untouched. Each entry reports basedOn against listVersion: an older basedOn means accepting drops what was added since.',
+      description: 'List the OPEN suggested edits on lists you own — what is waiting for your decision. Accepting one with apply_suggestion (or merge_suggestion) makes a new version of the list; rejecting leaves the list untouched. Each entry reports kind, basedOn and listVersion: for kind "items" an older basedOn means accepting drops what was added since; a branch is merged by git, so there it means nothing.',
       inputSchema: { limit: z.number().int().min(1).max(50).optional().describe('Max results (default 20)') },
     },
     async (userId, { limit }) => json(await mcpPendingSuggestions(userId, limit ?? 20)),
@@ -21,7 +21,7 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
       // ⚠️ Разрушающий: принятое предложение СТАНОВИТСЯ новым составом списка — блоки, которых в нём нет, из текущей версии уходят.
       annotations: { destructiveHint: true },
       title: 'Accept a suggested edit',
-      description: 'Accept an open suggested edit on a list you own: its items REPLACE the whole list content as a new version, so read them before accepting. Get ids from pending_suggestions — it also reports basedOn, and older than the list version means accepting drops what came after. A suggestion blocked by a reviewer who requested changes cannot be accepted.',
+      description: 'Accept an open suggested edit on a list you own: its items REPLACE the whole list content as a new version, so read them before accepting. Get ids from pending_suggestions — it also reports basedOn, and for an items suggestion an older one means accepting drops what came after (a branch is merged by git instead). A suggestion blocked by a reviewer who requested changes cannot be accepted.',
       inputSchema: { suggestionId: z.string().describe('Suggestion id from pending_suggestions') },
     },
     async (userId, { suggestionId }) => {
