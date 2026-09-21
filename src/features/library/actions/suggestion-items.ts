@@ -12,7 +12,7 @@ import { canEditList, editBlockReason } from '@/core'
 import { parseEditorItems, toProposedItems } from '../editor'
 import { toListContent } from '../list-content'
 import { canEditSuggestionItems } from '../suggestion-perms'
-import { suggestionBlocks } from '../suggestion-blocks'
+import { BLOCKS_UNREADABLE, readSuggestionBlocks } from '../suggestion-blocks'
 import { applyFieldValue } from '../suggestion-apply'
 import { gitPort, ownerHandle } from './shared'
 import { NOREPLY_DOMAIN } from '@/shared/site'
@@ -99,7 +99,15 @@ async function writeSuggestionItems(
     // Пункты ветки живут в git. Базу берём из снапшота: заголовок/теги/порядок
     // принадлежат ветке, а не БД, и перетирать их правкой пунктов нельзя.
     const { gitCore, BranchOpError } = await gitPort()
-    const snap = await gitCore.branchSnapshot({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
+    // Сбой связи отделён от «ветки нет»: раньше оба выходили кодом `not-found`, и
+    // человеку с набранной правкой сообщали, что его ветка исчезла, — хотя ядро просто
+    // не ответило. Советы по этим двум случаям разные, поэтому и коды разные.
+    let snap: Awaited<ReturnType<typeof gitCore.branchSnapshot>>
+    try {
+      snap = await gitCore.branchSnapshot({ owner, slug: tpl.slug }, sug.branchRef)
+    } catch {
+      return BLOCKS_UNREADABLE
+    }
     if (!snap) return 'not-found'
     // Содержимое версии, а не готовый файл: канон собирает ядро (владелец формата).
     // Раскладка ОБЩАЯ с показом канона текстом (Ф4) — см. toListContent: до этого
@@ -195,7 +203,12 @@ export async function applySuggestedEdit(commentId: string): Promise<void> {
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.number ?? sug.id}`
   // Пункты берём тем же правилом, что и вся страница: у ветки — из tip.
-  const items = await suggestionBlocks(sug, owner, tpl.slug)
+  const read = await readSuggestionBlocks(sug, owner, tpl.slug)
+  // Сбой чтения раньше приходил сюда пустым списком и выходил под чужой причиной
+  // «пункта уже нет»: человек шёл искать исчезнувший пункт, а ядро просто не ответило.
+  // Причина теперь своя, и повторить по ней осмысленно.
+  if (!read.ok) redirect(`${path}?e=${read.reason}`)
+  const items = read.blocks
   const idx = items.findIndex((it) => it.blockId === row.blockId)
   if (idx < 0) redirect(`${path}?e=orphaned`) // блок исчез — применять некуда
 

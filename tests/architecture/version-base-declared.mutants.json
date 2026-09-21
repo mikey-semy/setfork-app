@@ -1,0 +1,11 @@
+{
+  "target": "src/features/library/suggestion-core/revision.ts",
+  "tests": ["tests/architecture/version-base-declared.test.ts"],
+  "mutants": [
+    {
+      "name": "подставной маршрут создаёт версию В ЯДРЕ мимо таблицы решений",
+      "from": "  const snap = await gitCore.branchSnapshot({ owner: owner?.handle ?? '', slug: tpl.slug }, sug.branchRef).catch(() => null)",
+      "to": "  await gitCore.mergeBranch({ owner: owner?.handle ?? '', slug: tpl.slug }, sug.branchRef)\n  const snap = await gitCore.branchSnapshot({ owner: owner?.handle ?? '', slug: tpl.slug }, sug.branchRef).catch(() => null)"
+    }
+  ]
+}

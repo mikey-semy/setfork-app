@@ -1475,6 +1475,7 @@ export const en = {
   'branch.errOutOfSync': 'This list’s repository disagrees with its history — writes are paused until it is repaired',
   'branch.errGateUnavailable': 'Permission check is unavailable — retry in a few seconds',
   'branch.errGateMalformed': 'Permission check replied in an unknown format: versions diverged. Retrying will not help — we know and are on it',
+  'branch.errSnapshotUnavailable': 'Could not read the branch contents — the merge is on hold until it can be checked; retry in a few seconds',
   'branch.errInternal': 'Something went wrong',
   'release.errBadtag': 'Tag: letters/digits and .-_ (max 40 chars).',
   'release.errBadversion': 'No such version.',

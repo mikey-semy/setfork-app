@@ -70,7 +70,11 @@ export async function loadListPage({
   // Строгая проверка формы sha: реф уходит в git-команду, и чужие строки здесь
   // не нужны (сам снапшот вернёт null, если такого объекта в репо нет).
   const refCommit = !refBranch && sp.ref && /^[0-9a-f]{7,40}$/i.test(sp.ref) ? sp.ref : null
-  const snapshot = refBranch || refCommit ? await gitCore.branchSnapshot({ owner, slug }, (refBranch ?? refCommit)!) : null
+  // Снапшот бросает на сбое связи с ядром (порт отличает его от «ветки нет»). Здесь
+  // это чтение, и у страницы уже выбран ответ на недоступное ядро — строкой выше
+  // `listBranches(...).catch(() => [])`: показываем канон, а не отдаём ошибку. Держим
+  // один ответ на обе строки, иначе один и тот же обрыв давал бы то канон, то 500.
+  const snapshot = refBranch || refCommit ? await gitCore.branchSnapshot({ owner, slug }, (refBranch ?? refCommit)!).catch(() => null) : null
   const branchInfo = refBranch ? branches.find((b) => b.name === refBranch) : null
 
   // Просмотр ПРОШЛОЙ версии по ?v=N (снимок из template_versions, только чтение).

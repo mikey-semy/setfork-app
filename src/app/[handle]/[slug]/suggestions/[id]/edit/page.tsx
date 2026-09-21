@@ -74,6 +74,9 @@ export default async function EditSuggestionPage({
           'not-allowed': t('prEditNotAllowed', lang),
           frozen: t('frozenOn', lang),
           archived: t('archivedOn', lang),
+          // Ядро не ответило на чтение ветки: правка цела, повторить осмысленно. Без
+          // этой строки человек увидел бы служебный код отказа как есть.
+          'snapshot-unavailable': t('branch.errSnapshotUnavailable', lang),
         }}
       >
         <PageHeader

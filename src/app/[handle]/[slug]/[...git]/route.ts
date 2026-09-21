@@ -195,6 +195,10 @@ async function receivePack(req: Request, op: GitHttpOperation, meta: Meta, early
   }
 
   const who = await gitActorContext(early.userId, req.headers.get('accept-language'))
+  // ⚠️ ВЕРСИЮ СОЗДАЁТ ЯДРО: принятый пак проецируется в новую версию мимо фасада записи.
+  // Базы правки (`expectedVersion`) у пуша нет намеренно — её роль играет реф: ядро
+  // принимает только fast-forward к известному tip, non-fast-forward отвергает сам git
+  // до всякой проекции. Решение записано в узде `tests/architecture/version-base-declared`.
   let res: Awaited<ReturnType<typeof gitCore.receivePack>>
   try {
     res = await gitCore.receivePack(op.repo, body, {

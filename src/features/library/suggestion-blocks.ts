@@ -21,12 +21,37 @@ export function blocksFrom(sug: { branchRef: string | null; items: unknown }, sn
   return (sug.items ?? []) as ProposedItem[]
 }
 
-/** То же правило, но со своей загрузкой снапшота — для экшенов, где его нет. */
-export async function suggestionBlocks(
+/** Код отказа чтения — он же уходит человеку в `?e=` (словарь `merge-err.ts`). */
+export const BLOCKS_UNREADABLE = 'snapshot-unavailable'
+
+/** Исход загрузки: пункты ЛИБО причина, по которой их не прочитали. */
+export type SuggestionBlocksRead = { ok: true; blocks: ProposedItem[] } | { ok: false; reason: typeof BLOCKS_UNREADABLE }
+
+/**
+ * То же правило, но со своей загрузкой снапшота — для экшенов, где его нет.
+ *
+ * ⚠️ ВОЗВРАЩАЕТ ИСХОД, А НЕ МАССИВ, и это не украшательство. Прежняя редакция гасила
+ * сбой чтения (`.catch(() => null)`) и отдавала пустой массив: вызывающий не мог
+ * отличить «в ветке нет пунктов» от «до ядра не достучались». На пути слияния это
+ * открывало стража исполняемых команд — пусто значило «команд нет», то есть РАЗРЕШЕНИЕ
+ * ровно тогда, когда проверить было нечем. Тип заставляет назвать решение в каждой
+ * точке; молча получить пустоту вместо отказа больше нельзя.
+ */
+export async function readSuggestionBlocks(
   sug: { branchRef: string | null; items: unknown },
   owner: string,
   slug: string,
-): Promise<ProposedItem[]> {
-  const snapshot = sug.branchRef ? await gitCore.branchSnapshot({ owner, slug }, sug.branchRef).catch(() => null) : null
-  return blocksFrom(sug, snapshot)
+): Promise<SuggestionBlocksRead> {
+  if (!sug.branchRef) return { ok: true, blocks: blocksFrom(sug, null) }
+  let snapshot: BranchSnapshot | null
+  // Под catch — РОВНО чтение, и ни строкой больше. Обернуть заодно и разбор значило бы
+  // выдавать ошибку в нашем маппинге за недоступность ядра: чинили бы сеть вместо кода.
+  try {
+    // null здесь — честный ответ ядра «ветки/list.json нет» (см. порт): пунктов в ней
+    // действительно нет. Отказ связи приходит исключением.
+    snapshot = await gitCore.branchSnapshot({ owner, slug }, sug.branchRef)
+  } catch {
+    return { ok: false, reason: BLOCKS_UNREADABLE }
+  }
+  return { ok: true, blocks: blocksFrom(sug, snapshot) }
 }
