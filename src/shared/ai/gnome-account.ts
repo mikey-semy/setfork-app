@@ -4,6 +4,7 @@ import { councilExperts, db, templates, users } from '@/shared/db'
 import type { Expert } from './roster'
 import { HOME_REALM, mythicName, needsOwnName } from './gnome-names'
 import { domainAffinity } from './precedent-filter'
+import { handleTaken } from '@/shared/auth/handle'
 import type { Lang } from '@/shared/i18n'
 
 /**
@@ -43,8 +44,12 @@ async function freeHandle(base: string): Promise<string> {
   const clean = base.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 30) || 'expert'
   for (let i = 0; i < 50; i++) {
     const candidate = i === 0 ? clean : `${clean}-${i + 1}`
-    const [taken] = await db.select({ id: users.id }).from(users).where(eq(users.handle, candidate)).limit(1)
-    if (!taken) return candidate
+    // ⚠️ Через канон, а не запросом в users: аккаунт специалиста заводится по имени из
+    // ростера, то есть по строке, которую пишет человек. Прямая проверка пропускала
+    // зарезервированные и админские ники и УДЕРЖАНИЕ чужого прежнего ника — специалист
+    // с именем «alice» забрал бы себе её старые ссылки (H1-001, то же место, что в
+    // регистрации).
+    if (!(await handleTaken(candidate))) return candidate
   }
   return `${clean}-${Date.now().toString(36)}`
 }

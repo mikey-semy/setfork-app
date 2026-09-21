@@ -1291,6 +1291,7 @@ export const en = {
   invalidCredentials: 'Wrong email or password.',
   emailTaken: 'Email already registered.',
   handleTaken: 'Handle already taken.',
+  handleHeld: 'This handle is held for its previous owner until {date} — old links still lead there.',
   passwordShort: 'Password must be at least 8 characters.',
   invalidEmailMsg: 'Enter a valid email.',
   invalidHandleMsg: 'Handle: 3–30 chars, a–z, 0–9, hyphen.',

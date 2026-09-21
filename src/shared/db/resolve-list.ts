@@ -96,6 +96,13 @@ export function handleHoldAlive() {
   return sql`${userRedirects.createdAt} > now() - make_interval(days => ${HANDLE_HOLD_DAYS})`
 }
 
+/** Когда удержание отпустит ник. Нужна отказу: «занят» и «освободится 3 марта» —
+ *  разные сообщения, и второе человек может дождаться. Считается из той же
+ *  настройки, что и предикат выше, чтобы срок в тексте не разошёлся с проверкой. */
+export function handleHoldUntil(createdAt: Date): Date {
+  return new Date(createdAt.getTime() + HANDLE_HOLD_DAYS * 24 * 60 * 60 * 1000)
+}
+
 /** Собрать актуальный адрес и понять, отличается ли он от запрошенного. */
 function addressOf(row: { ownerHandle: string; slug: string }): string {
   return `/${row.ownerHandle}/${row.slug}`
