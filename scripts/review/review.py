@@ -530,8 +530,17 @@ READABLE_LINES = 6000
 
 
 def block_lines(pathspecs: list[str]) -> tuple[int, int]:
-    """Сколько файлов и строк в блоке — чтобы отличить блок от обещания."""
-    files = git_files(pathspecs)
+    """Сколько файлов и строк в блоке — чтобы отличить блок от обещания.
+
+    ⚠️ ИСКЛЮЧЁННОЕ НЕ СЧИТАЕТСЯ. Порог мерил то, чего блок не владеет: `coverage_map`
+    вычитает `exclusions`, а этот счёт — нет, и H13 показывал 30 388 строк, из которых
+    19 181 приходились на `package-lock.json`, исключённый ещё при заведении блоков.
+    Число выходило втрое больше настоящего и требовало резать то, что и так не читают.
+    Считать надо ровно тот набор, который блок получит в работу.
+    """
+    defn = blocks()
+    excluded = git_files([e["pattern"] for e in defn.get("exclusions", [])])
+    files = git_files(pathspecs) - excluded
     total = 0
     for f in files:
         try:
