@@ -1,4 +1,4 @@
-# коммит 3cfdc663
+# коммит bab6c488
 file	blocks
 .claude/hooks/ui-guard.mjs	V12c
 .claude/launch.json	V12c
@@ -69,6 +69,7 @@ docs/review/reports/H1-findings.jsonl	V12e
 docs/review/reports/H15-domain-core.hunter.md	V12c
 docs/review/reports/H15-domain-core.verify.md	V12c
 docs/review/reports/H15-findings.jsonl	V12e
+docs/review/reports/H15-verifier-calibration.md	V12c
 docs/review/reports/V1d-findings.jsonl	V12e
 docs/review/reports/V1d-list-write.hunter.md	V12c
 docs/review/reports/V1d-list-write.verify.md	V12c

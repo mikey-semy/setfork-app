@@ -3,17 +3,20 @@
 > Файл СГЕНЕРИРОВАН из `findings.jsonl` командой `npm run review -- findings`.
 > Не редактируй его руками — правь jsonl и перегенерируй.
 
-Открыто: **39** из 43 записей.
+Открыто: **56** из 64 записей.
 
-## high (2 открыто / 3)
+## high (5 открыто / 6)
 
 | id | блок | статус | место | что не так |
 |---|---|---|---|---|
 | H1-001 | H1 | open | `src/features/auth/actions.ts:47` | Регистрация по e-mail сверяет занятость ника прямым запросом в users и минует handleTaken(), то есть 180-дневное удержание прежнего ника в user_redirects |
 | H15-001 | H15 | fixed | `src/core/domain/destructive-command.ts:155` | Префикс echo/printf пропускает строку ЦЕЛИКОМ: PRINTS_ONLY снимает и запрет публикации, и пометку разрушительного пункта |
 | H15-002 | H15 | open | `src/app/[handle]/[slug]/[...git]/route.ts:200` | Версия, созданная проекцией git push, минует assertNoDestructiveSteps: страж стоит только на фасаде ListStore, а ядро проецирует коммит в версию мимо него |
+| H5-002 | H5 | open | `src/shared/quota.ts:104` | На яндекс/гигачат/selectel обе денежные страховки могут молчать одновременно: цена модели вне прайс-книги пишется нулём, а пол баланса работает только у OpenRouter |
+| H5-011 | H5 | open | `src/shared/quota.ts:119` | Пол остатка OpenRouter применяется при ЛЮБОМ активном провайдере: пустой счёт OpenRouter останавливает ИИ, работающий на Яндексе/Selectel/GigaChat |
+| H5-019 | H5 | open | `src/shared/ai/credits.ts:33` | Ответ 200 с неожиданным телом даёт remaining=0, кладётся в кеш как валидный и глушит ИИ на всём инстансе — fail-closed там, где quota.ts:117 обещает best-effort |
 
-## medium (17 открыто / 18)
+## medium (25 открыто / 30)
 
 | id | блок | статус | место | что не так |
 |---|---|---|---|---|
@@ -24,6 +27,18 @@
 | H15-006 | H15 | open | `src/core/domain/quiz.ts:72` | shuffleSort и matchRights сортируют через localeCompare без явной локали: чистая функция ядра даёт разный ответ на одних входных данных в зависимости от окружения |
 | H15-007 | H15 | open | `src/core/domain/access.ts:129` | canRunList не зовёт ни одна строка продукта (только тест), и путь MCP start_run запускает прогон архивного списка |
 | H15-013 | H15 | open | `src/features/collab-store/store.ts:22` | Предложение правки теряет danger, needsHuman и needsHumanAsk на границе порта CollabStore, а удалённая реализация — ещё и blockId, хотя проводной NewStep все четыре поля объявляет |
+| H5-001 | H5 | open | `src/shared/quota.ts:51` | freeGenQuota считает строки generations без фильтра по статусу — сорвавшаяся генерация съедает слот месячного лимита Free |
+| H5-003 | H5 | duplicate | `src/shared/ai/credits.ts:29` | При сбое эндпоинта кредитов возвращается кэш любого возраста, и fresh:true этого не пробивает — пол остатка тихо перестаёт быть защитой |
+| H5-004 | H5 | open | `src/features/generation/service.ts:37` | Месячный лимит совета дебетуется по refId=generationId, а считается count(distinct refId) — все витки одной генерации списывают один слот |
+| H5-005 | H5 | open | `src/features/mcp/gnome.ts:31` | Number(process.env.X ?? 10): пустая или мусорная переменная даёт 0/NaN и наглухо закрывает лимит вопросов гному, отвечая чужой причиной |
+| H5-006 | H5 | open | `src/shared/ai/embeddings.ts:192` | embedTexts тратит и пишет ai_usage, но не спрашивает globalBudgetOk: расход входит в знаменатель дневного капа и сам под кап не попадает |
+| H5-012 | H5 | duplicate | `src/features/generation/service.ts:39` | Месячный лимит совета считает count(distinct ref_id), то есть ГЕНЕРАЦИИ, а не доставленные советы: один тред расходует до MAX_VARIANTS=6 советов за единицу лимита |
+| H5-013 | H5 | open | `src/shared/ai/credits.ts:30` | При сбое /credits возвращается кэш ЛЮБОГО возраста, в том числе когда явно запрошен fresh — «живой остаток» в горячей зоне оказывается часовой давности |
+| H5-014 | H5 | open | `src/shared/ai/generate.ts:235` | Упавший по таймауту вызов пишется с cost=0 и нулевыми токенами, хотя провайдер тарифицирует уже сгенерированное — трата уходит мимо дневного капа |
+| H5-015 | H5 | duplicate | `src/shared/ai/index-run.ts:217` | Массовая индексация (embedTexts батчами) не спрашивает globalBudgetOk — целый класс платного расхода не покрыт объявленной страховкой от runaway |
+| H5-016 | H5 | duplicate | `src/shared/quota.ts:51` | freeGenQuota считает строки generations, то есть ПОПЫТКИ: виток, не давший ни одного кандидата, навсегда съедает месячный слот free-тарифа |
+| H5-020 | H5 | open | `src/app/api/[transport]/route.ts:35` | Второй экземпляр корня сырого Number(process.env): пустая SETFORK_MCP_RATE_PER_MIN даёт limit=0 и закрывает ВЕСЬ MCP-транспорт ответом 429 |
+| H5-021 | H5 | open | `src/shared/ai/generate.ts:408` | outcome:'ok' пишется ДО проверки ответа: перевод журналируется успехом и тут же отбраковывается, поэтому щиток надёжности видит 100% успеха при неработающей кнопке |
 | V1d-001 | V1d | open | `src/features/library/actions/forks.ts:101` | «Использовать как шаблон» собирает шаги рукописным маппингом и теряет needsHuman, needsHumanAsk, blockId и danger — соседняя forkTemplate в том же файле три из них переносит, общий toStepInput не зовётся |
 | V1d-002 | V1d | open | `src/features/library/actions/forks.ts:214` | Форк теряет пометку «разрушительный пункт»: маппинг чинили дважды (needsHuman, blockId), а danger не доложили, и toStepInput с его тристейтом не зовётся |
 | V1d-003 | V1d | open | `src/features/generation/actions.ts:333` | Приём сгенерированного кандидата пишет шаги третьим рукописным маппингом и выбрасывает needsHuman/needsHumanAsk, вычисленные восемью строками выше, а также blockId и danger |
@@ -36,7 +51,7 @@
 | V1d-012 | V1d | open | `src/features/library/actions/ai.ts:243` | Перевод списка — четвёртый рукописный конвертер шагов: он переносит blockId, type, content и «нужен человек» с комментариями, а danger не переносит, и тристейт в toStepInput подменяет решение автора мнением детектора |
 | V1d-013 | V1d | open | `src/features/library/draft.ts:30` | Замок рабочей копии сериализует только MCP против MCP: сохранение из редактора идёт мимо lockList и не сверяет rev, поэтому гонка «патч и сохранение человеком», названная в комментарии к замку, открыта |
 
-## low (20 открыто / 22)
+## low (26 открыто / 28)
 
 | id | блок | статус | место | что не так |
 |---|---|---|---|---|
@@ -56,6 +71,12 @@
 | H15-011 | H15 | open | `src/core/domain/links.ts:59` | walkStrings обходит произвольный JSON прямой рекурсией без ограничения глубины и без множества посещённых |
 | H15-012 | H15 | rejected | `src/core/domain/quiz-fingerprint.ts:19` | Отвергнуто: «редактор при первом сохранении пишет kind:'choice' явно и отпечаток легаси-теста меняется» — такого пути нет, kind для choice намеренно опускается |
 | H15-014 | H15 | open | `src/shared/ai/adapter.ts:7` | Адаптер AiPort.embed выбрасывает объявленный портом meta для учёта стоимости, а в EmbedMeta нет поля feature вовсе |
+| H5-007 | H5 | open | `src/shared/quota.ts:40` | Снятие лимитов админу читает ник из JWT, тогда как админский гейт сознательно перечитывает его из БД — снятые лимиты живут до 30 дней после смены ника |
+| H5-008 | H5 | open | `tests/features/money/budget-window.itest.ts:20` | Тест окна дневного капа ни разу не кладёт расход за границу окна — подмена суток месяцем или годом остаётся зелёной |
+| H5-009 | H5 | open | `src/shared/ai/generate.ts:434` | Упавший вызов перевода не пишется в ai_usage — единственная точка вызова модели, освобождённая от правила «каждый физический вызов в журнал» |
+| H5-010 | H5 | open | `src/features/mcp/council.ts:26` | council_draft не проверяет globalBudgetOk и обещает агенту совет, которого не будет |
+| H5-017 | H5 | open | `src/shared/quota.ts:40` | Денежные квоты снимаются по isAdminHandle, а не по planFor/isPro — ровно та ошибка, которую entitlements.ts запрещает вслух |
+| H5-018 | H5 | open | `src/shared/quota.ts:64` | aiQuota суммирует cost_usd без учёта outcome: вызовы, вернувшие мусор вместо JSON (outcome='invalid'), списывают месячный бюджет пользователя, ничего ему не отдав |
 | V1d-008 | V1d | rejected | `src/features/mcp/tools/lists/edit.ts:168` | Отвергнуто: patch_list с publish:false и правда не зовёт listWritable под замком, но сценария за этим нет — ownedList спрашивает canEditList в начале КАЖДОГО вызова, и остаётся окно в доли миллисекунды |
 | V1d-009 | V1d | open | `src/features/library/actions/verification.ts:314` | setVerificationLevel адресует версию номером, прочитанным до записи, без условия «эта версия всё ещё текущая», и возвращает ok:true, когда уровень лёг на версию, переставшую быть текущей |
 | V1d-014 | V1d | open | `src/features/library/draft.ts:33` | Сохранение черновика из редактора — единственная запись в рабочую копию без стража исполняемых команд: обе ветки MCP зовут assertNoDestructiveSteps и объясняют зачем, upsertDraft не зовёт |
