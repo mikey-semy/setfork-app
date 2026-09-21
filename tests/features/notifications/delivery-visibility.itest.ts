@@ -106,3 +106,60 @@ describe('доставка наружу уважает видимость спи
     expect(kinds(), 'тут нечего скрывать: список не при чём').toEqual(['email', 'push'])
   })
 })
+
+describe('какие типы гейт НЕ трогает', () => {
+  it('⚠️ все типы передачи владения — и набор выведен ИЗ ПЕРЕЧНЯ СХЕМЫ, а не списком', async () => {
+    // Новый `transfer_*` попадёт под исключение сам. Список рядом отстал бы молча —
+    // ровно тот корень, который мы ловим весь день.
+    const { notificationType } = await import('@/shared/db/schema')
+    const { TRANSFER_TYPES } = await import('@/features/notifications/notify')
+    const fromSchema = notificationType.enumValues.filter((t) => t.startsWith('transfer_'))
+    expect([...TRANSFER_TYPES].sort()).toEqual([...fromSchema].sort())
+    expect(fromSchema.length, 'типы передачи в схеме исчезли — исключение стало пустым').toBeGreaterThan(0)
+
+    await db.update(templates).set({ visibility: 'private' }).where(eq(templates.id, tplId))
+    for (const type of fromSchema) {
+      h.jobs = []
+      await notify({ recipientId: uid['dv-outsider'], actorId: uid['dv-owner'], type, templateId: tplId })
+      expect(kinds(), `тип ${type} обязан доходить: получатель законно не видит список`).toEqual(['email', 'push'])
+    }
+  })
+
+  it('⚠️ но «неотключаемый» НЕ значит «мимо гейта»: упоминание постороннему молчит', async () => {
+    // Соблазн сформулировать правило как «неотключаемые типы не глушим» — и это вернуло
+    // бы дыру: `mention`, `assigned`, `review_requested` тоже нельзя выключить ручкой, и
+    // именно через них приватное название уезжало тому, кто списка не видит. Право на
+    // письмо даёт участие В ПЕРЕДАЧЕ, а не неотключаемость типа.
+    await db.update(templates).set({ visibility: 'private' }).where(eq(templates.id, tplId))
+    await notify({ recipientId: uid['dv-outsider'], actorId: uid['dv-owner'], type: 'mention', templateId: tplId })
+    expect(kinds()).toEqual([])
+  })
+})
+
+describe('чего письмо о передаче НЕ говорит', () => {
+  it('⚠️ названия приватного списка в нём нет — иначе предложение станет способом его узнать', async () => {
+    // Дыра без этого такая: предложил передачу → название уехало в тему письма →
+    // получатель отказался. Какой список, человек увидит в настройках, приняв решение.
+    const { resolveNotificationDisplay } = await import('@/features/notifications/display')
+    await db.update(templates).set({ visibility: 'private' }).where(eq(templates.id, tplId))
+    const shown = await resolveNotificationDisplay({
+      lang: 'ru',
+      actorId: uid['dv-owner'],
+      type: 'transfer_incoming',
+      templateId: tplId,
+    })
+    expect(shown.text).not.toContain('Переезд на свой сервер')
+    expect(shown.url, 'адрес ведёт в настройки, где список и будет назван').toContain('/settings')
+  })
+
+  it('у обычного уведомления название на месте: скрывать его незачем', async () => {
+    const { resolveNotificationDisplay } = await import('@/features/notifications/display')
+    const shown = await resolveNotificationDisplay({
+      lang: 'ru',
+      actorId: uid['dv-owner'],
+      type: 'issue_new',
+      templateId: tplId,
+    })
+    expect(shown.text).toContain('Переезд на свой сервер')
+  })
+})

@@ -9,6 +9,7 @@ import { pushEnabled } from '@/shared/push/vapid'
 import { userHasPush } from '@/shared/push/send'
 import { captureError } from '@/shared/observability'
 import { extractHandles } from './mentions'
+import { notificationType } from '@/shared/db/schema'
 import type { NotificationType } from './queries'
 import { recipientSeesList } from './list-access'
 
@@ -60,12 +61,22 @@ const TYPE_PREF: Record<NotifType, keyof NotifyPrefs | null> = {
 }
 
 /**
- * Уведомления о передаче владения: получатель законно НЕ видит список — приглашённый
+ * Уведомления о ПЕРЕДАЧЕ ВЛАДЕНИЯ: получатель законно НЕ видит список — приглашённый
  * ещё не владелец, а прежний владелец уже не владелец. Гейт видимости к ним не
  * применяется (см. `notify`), и отключить их нельзя (см. TYPE_PREF): без них передача
  * зависает, и обе стороны об этом не узнают.
+ *
+ * ⚠️ НАБОР ВЫВОДИТСЯ ИЗ ПЕРЕЧНЯ СХЕМЫ, а не переписан списком: новый тип `transfer_*`
+ * попадёт сюда сам. Список рядом отстал бы молча — ровно тот корень, который мы ловим.
+ *
+ * ⚠️ И НЕ ПУТАТЬ С «НЕОТКЛЮЧАЕМЫМИ»: `mention`, `assigned`, `review_requested` тоже
+ * нельзя выключить ручкой, но гейт к ним применяется — именно через них приватное
+ * название уезжало постороннему. Право на письмо о передаче даёт участие В ПЕРЕДАЧЕ,
+ * а не неотключаемость типа.
  */
-export const TRANSFER_TYPES = new Set<NotifType>(['transfer_incoming', 'transfer_accepted', 'transfer_declined'])
+export const TRANSFER_TYPES: ReadonlySet<NotifType> = new Set(
+  notificationType.enumValues.filter((t): t is NotifType => t.startsWith('transfer_')),
+)
 
 /** Создаёт уведомление. Себе не шлём; уважаем предпочтения получателя. Ошибки глотаем. */
 export async function notify(params: {
