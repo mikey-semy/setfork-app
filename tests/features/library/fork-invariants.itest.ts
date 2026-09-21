@@ -1,6 +1,29 @@
 import { and, eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it } from 'vitest'
-import { db, steps, templates, templateVersions, users } from '@/shared/db'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Граница Next-рантайма подменяется, ПРОВЕРЯЕМЫЙ КОД — нет: тест зовёт настоящий
+// forkTemplate. Прежняя версия переписывала его маппинг внутри себя и проверяла свою
+// копию — то есть зеленела при любом поведении форка (именно так потеря `danger` и
+// дожила до прода).
+const h = vi.hoisted(() => ({ session: null as null | { userId: string; handle: string } }))
+vi.mock('@/shared/auth/session', () => ({
+  requireSession: async () => {
+    if (!h.session) throw new Error('no session')
+    return h.session
+  },
+  getSession: async () => h.session,
+}))
+vi.mock('next/cache', () => ({ revalidatePath: () => {}, revalidateTag: () => {} }))
+vi.mock('next/navigation', () => ({
+  redirect: (url: string) => {
+    const e = new Error('REDIRECT') as Error & { url: string }
+    e.url = url
+    throw e
+  },
+}))
+
+const { db, steps, templates, templateVersions, users } = await import('@/shared/db')
+const { forkTemplate } = await import('@/features/library/actions/forks')
 
 /**
  * Два инварианта форка, которые держались не тем, чем нужно.
@@ -65,10 +88,10 @@ describe('инвариант «один аккаунт — один форк с�
 })
 
 describe('копия шага несёт защитные поля', () => {
-  it('пометка «здесь нужен человек», её вопрос и идентичность блока переживают копирование', async () => {
+  it('⚠️ «нужен человек», его вопрос, идентичность блока и «разрушительный пункт» переживают ФОРК', async () => {
     const [src] = await db
       .insert(templates)
-      .values({ ownerId: ctx.owner, slug: 'src3', title: { en: 'src3' }, currentVersion: 1 })
+      .values({ ownerId: ctx.owner, slug: 'src3', title: { en: 'src3' }, currentVersion: 1, visibility: 'public', status: 'published' })
       .returning({ id: templates.id })
     const [v] = await db
       .insert(templateVersions)
@@ -79,31 +102,37 @@ describe('копия шага несёт защитные поля', () => {
       versionId: v.id,
       n: 1,
       title: { en: 'Local price' },
-      command: '',
+      // Команда ВЫГЛЯДИТ разрушительной, и автор пометил её как такую: копия обязана
+      // донести решение автора, а не переспросить детектор.
+      command: 'make reset',
+      danger: true,
       needsHuman: true,
       needsHumanAsk: { en: 'What does it cost in your city?' },
       blockId: bid,
     })
 
-    // Копия ровно тем маппингом, который делает форк.
-    const src_ = await db.select().from(steps).where(eq(steps.versionId, v.id))
-    const copied = src_.map((s, i) => ({
-      n: i + 1,
-      title: s.title,
-      desc: s.desc,
-      command: s.command,
-      level: s.level,
-      why: s.why,
-      section: s.section,
-      subtasks: s.subtasks,
-      refs: s.refs,
-      needsHuman: s.needsHuman,
-      needsHumanAsk: s.needsHumanAsk,
-      blockId: s.blockId,
-    }))
+    // ⚠️ Зовём НАСТОЯЩИЙ форк, а не его копию: иначе тест проверяет сам себя.
+    h.session = { userId: ctx.forker, handle: FORKER }
+    try {
+      await forkTemplate(src.id)
+    } catch (e) {
+      if ((e as Error).message !== 'REDIRECT') throw e
+    }
 
-    expect(copied[0].needsHuman).toBe(true)
-    expect(copied[0].needsHumanAsk).toEqual({ en: 'What does it cost in your city?' })
-    expect(copied[0].blockId).toBe(bid)
+    const [copy] = await db
+      .select({ id: templates.id })
+      .from(templates)
+      .where(and(eq(templates.ownerId, ctx.forker), eq(templates.forkedFromId, src.id)))
+    expect(copy, 'форк должен был создаться').toBeTruthy()
+    const [cv] = await db
+      .select({ id: templateVersions.id })
+      .from(templateVersions)
+      .where(eq(templateVersions.templateId, copy.id))
+    const [copied] = await db.select().from(steps).where(eq(steps.versionId, cv.id))
+
+    expect(copied.needsHuman, 'пометка «здесь нужен человек» потеряна').toBe(true)
+    expect(copied.needsHumanAsk).toEqual({ en: 'What does it cost in your city?' })
+    expect(copied.blockId, 'идентичность блока потеряна').toBe(bid)
+    expect(copied.danger, 'пометка «разрушительный пункт» потеряна — команда станет исполняемой в собранном скрипте').toBe(true)
   })
 })

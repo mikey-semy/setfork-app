@@ -43,6 +43,13 @@ const domainStepToProposed = (s: Suggestion['steps'][number]): ProposedItem => (
   imageKey: s.imageRef ?? undefined,
   level: s.level,
   why: s.why,
+  // ⚠️ ЗАЩИТНЫЕ ПОМЕТКИ ПЕРЕНОСЯТСЯ ЯВНО, как blockId выше и по той же причине. Их
+  // здесь не было: предложение, пришедшее из домена, приезжало без «здесь нужен
+  // человек» и без «разрушительного пункта». Второе видно снаружи — пункт без пометки
+  // попадает в собранный скрипт ИСПОЛНЯЕМЫМ, а не закомментированным.
+  needsHuman: s.needsHuman,
+  needsHumanAsk: s.needsHumanAsk,
+  danger: s.danger,
   section: s.section,
   subtasks: s.subtasks,
   refs: s.refs,
@@ -58,6 +65,11 @@ const proposedToDomainStep = (it: ProposedItem, i: number): Suggestion['steps'][
   command: it.command,
   level: it.level,
   why: it.why,
+  // Обратная сторона того же переноса: см. комментарий выше. Пометки — свойство
+  // пункта, и теряться на границе порта они не должны ни в одну сторону.
+  needsHuman: it.needsHuman,
+  needsHumanAsk: it.needsHumanAsk,
+  danger: it.danger,
   section: it.section,
   subtasks: it.subtasks,
   refs: it.refs,
