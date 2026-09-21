@@ -1,888 +1,1702 @@
 {
- "review_id": "setfork-frontend-2026-09",
- "created": "2026-09-19",
- "note": "Нарезка на три фазы: сквозные задают язык, доменные читают свой срез целиком, стендовые работают на запущенной системе и файлами не владеют.",
- "exclusions": [
-  {
-   "pattern": "package-lock.json",
-   "reason": "сгенерирован npm; зависимости смотрит H13 по package.json"
-  },
-  {
-   "pattern": "certs/**",
-   "reason": "сертификаты для локальной разработки, не код"
-  },
-  {
-   "pattern": "*.svg",
-   "reason": "графика"
-  },
-  {
-   "pattern": "drizzle/**",
-   "reason": "сгенерированный SQL, 40 тыс. строк: не читается, а сверяется — блок H14 на чистой БД"
-  },
-  {
-   "pattern": "docs/review/coverage.tsv",
-   "reason": "карта покрытия пересобирается инструментом, не код"
-  },
-  {
-   "pattern": "public/*.png",
-   "reason": "графика"
-  },
-  {
-   "pattern": "public/*.ico",
-   "reason": "иконки"
-  },
-  {
-   "pattern": "public/*.svg",
-   "reason": "графика"
-  },
-  {
-   "pattern": "public/*.jpg",
-   "reason": "графика"
-  },
-  {
-   "pattern": "public/*.webp",
-   "reason": "графика"
-  },
-  {
-   "pattern": "public/fonts/**",
-   "reason": "шрифты"
-  }
- ],
- "blocks": [
-  {
-   "id": "H1",
-   "slug": "access",
-   "phase": 1,
-   "title": "Доступ и видимость",
-   "role": "reviewer",
-   "goal": "Найти места, где приватное, скрытое или чужое доходит до того, кому не должно, — или наоборот, где своё перестаёт быть видно владельцу.",
-   "paths": [
-    "src/app/api/auth",
-    "src/app/api/auth/**",
-    "src/features/auth/**",
-    "src/features/sessions/**",
-    "src/middleware.ts",
-    "src/shared/auth/**",
-    "src/shared/list-visibility.ts",
-    "tests/features/auth",
-    "tests/security"
-   ],
-   "ref_paths": [
-    "src/features/library/**",
-    "src/features/issues/**"
-   ]
-  },
-  {
-   "id": "H2",
-   "slug": "core-contract",
-   "phase": 1,
-   "title": "Контракт с git-ядром",
-   "role": "reviewer",
-   "goal": "Найти места, где версия списка пишется или читается в обход ядра, где история может разойтись с репозиторием, где ошибка ядра проглатывается.",
-   "paths": [
-    "cli/**",
-    "proto/**",
-    "src/app/[handle]/[slug]/[...git]",
-    "src/app/[handle]/[slug]/repo.bundle",
-    "src/features/git/**",
-    "src/shared/core-transport.ts",
-    "tests/features/git"
-   ],
-   "ref_paths": [
-    "src/features/library/**"
-   ]
-  },
-  {
-   "id": "H3",
-   "slug": "db-schema",
-   "phase": 1,
-   "title": "Схема БД и миграции",
-   "role": "reviewer",
-   "goal": "Найти расхождения схемы с кодом, миграции, которые не применятся на чистой установке, индексы, которых нет под живыми запросами.",
-   "paths": [
-    "src/shared/db/**"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "H4",
-   "slug": "mcp-surface",
-   "phase": 1,
-   "title": "Поверхность MCP",
-   "role": "reviewer",
-   "goal": "Найти объявления инструментов, которые обещают не то, что делают, стоят лишних токенов или не учат агента следующему шагу.",
-   "paths": [
-    "docs/mcp-surface.md",
-    "public/schema/list.v1.json",
-    "src/app/api/[transport]",
-    "src/features/mcp/**",
-    "tests/features/mcp"
-   ],
-   "ref_paths": [
-    "tests/features/mcp/**"
-   ]
-  },
-  {
-   "id": "H5",
-   "slug": "money",
-   "phase": 1,
-   "title": "Деньги, квоты и лимиты",
-   "role": "reviewer",
-   "goal": "Найти места, где пользователь платит за наш сбой, где лимит считает не то, где трата не записывается.",
-   "paths": [
-    "src/features/monetization/**",
-    "src/shared/entitlements.ts",
-    "src/shared/quota.ts",
-    "src/shared/rate-limit*.ts",
-    "src/shared/rate-limit-store.ts",
-    "tests/features/monetization",
-    "tests/features/money"
-   ],
-   "ref_paths": [
-    "src/shared/ai/**"
-   ]
-  },
-  {
-   "id": "H6",
-   "slug": "i18n",
-   "phase": 1,
-   "title": "Язык и словарь продукта",
-   "role": "reviewer",
-   "goal": "Найти текст мимо словаря, расхождения ru/en, нарушения словаря продукта: «PR» вместо «Предложение», slug на виду, слово «гном» в тексте.",
-   "paths": [
-    "src/shared/i18n/**"
-   ],
-   "ref_paths": [
-    "src/features/**"
-   ]
-  },
-  {
-   "id": "H7",
-   "slug": "mobile-ui",
-   "phase": 1,
-   "title": "Мобильная вёрстка и шкала контролов",
-   "role": "reviewer",
-   "goal": "Найти места, которые распирают 390 и 320 px, разнобой высот в ряду, самодельные примитивы вместо shared/ui.",
-   "paths": [
-    "src/app/globals.css",
-    "src/shared/ui/**"
-   ],
-   "ref_paths": [
-    "src/widgets/**",
-    "src/features/**"
-   ]
-  },
-  {
-   "id": "H8",
-   "slug": "failures",
-   "phase": 1,
-   "title": "Отказы и наблюдаемость",
-   "role": "reviewer",
-   "goal": "Найти тихую деградацию: пустой экран вместо причины, отсутствие «Повторить», проглоченную ошибку, отказ-тупик без следующего шага.",
-   "paths": [
-    "src/app/error.tsx",
-    "src/app/global-error.tsx",
-    "src/app/not-found.tsx",
-    "src/shared/http/**",
-    "src/shared/observability.ts",
-    "src/shared/sentry.ts"
-   ],
-   "ref_paths": [
-    "src/features/**"
-   ]
-  },
-  {
-   "id": "H9",
-   "slug": "transport-security",
-   "phase": 1,
-   "title": "Сессии, токены и заголовки",
-   "role": "reviewer",
-   "goal": "Найти слабые места входа и транспорта: сессии, CSRF, заголовки безопасности, API-токены, анти-инъекция.",
-   "paths": [
-    "next.config.mjs",
-    "src/shared/ai/spotlight.ts",
-    "src/shared/csrf.ts",
-    "src/shared/request-ip.ts",
-    "src/shared/request-path.ts"
-   ],
-   "ref_paths": [
-    "src/shared/auth/**",
-    "tests/architecture/**"
-   ]
-  },
-  {
-   "id": "H10",
-   "slug": "jobs",
-   "phase": 1,
-   "title": "Очередь задач и фоновая работа",
-   "role": "reviewer",
-   "goal": "Найти расхождения по трём осям очереди: статус, попытка, часы БД. Задачи, которые залипают, повторяются или теряются.",
-   "paths": [
-    "src/app/runs/**",
-    "src/features/runs/**",
-    "src/shared/jobs/**",
-    "tests/features/runs"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "H11",
-   "slug": "seo",
-   "phase": 1,
-   "title": "Публичная поверхность и SEO",
-   "role": "reviewer",
-   "goal": "Найти расхождения между тем, что мы обещаем роботам, и тем, что отдаём: карта сайта, robots, канонические адреса, метаданные, JSON-LD.",
-   "paths": [
-    "src/app/.well-known/**",
-    "src/app/api/go",
-    "src/app/llms-full.txt/**",
-    "src/app/llms.txt/**",
-    "src/app/robots.ts",
-    "src/app/sitemap.ts",
-    "src/shared/docs.ts",
-    "src/shared/seo/**",
-    "src/shared/site.ts"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "H12",
-   "slug": "tests",
-   "phase": 1,
-   "title": "Архитектурные узды и оснастка тестов",
-   "role": "reviewer",
-   "goal": "Найти узды, которые ни разу не были красными, и оснастку, которая делает зелёными тесты на сломанном коде: подделка мягче настоящей системы, подмена проверяемого правила.",
-   "paths": [
-    "tests/architecture",
-    "tests/helpers",
-    "tests/instrumentation.test.ts",
-    "tests/integration-setup.ts",
-    "tests/setup.ts",
-    "vitest.config.ts",
-    "vitest.integration.config.ts"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "H13",
-   "slug": "build",
-   "phase": 1,
-   "title": "Сборка, выкатка и окружение",
-   "role": "reviewer",
-   "goal": "Найти расхождения между тем, что собирается, и тем, что едет на прод: compose, CI, переменные окружения, скрипты.",
-   "paths": [
-    ".dockerignore",
-    ".env.example",
-    ".gitattributes",
-    ".github/**",
-    ".gitignore",
-    ".gitleaksignore",
-    ".npmrc",
-    ":(glob)*.json",
-    ":(glob)*.mjs",
-    ":(glob)*.toml",
-    ":(glob)*.ts",
-    ":(glob)*.yaml",
-    ":(glob)*.yml",
-    "Dockerfile*",
-    "LICENSE",
-    "docker-compose*.yml",
-    "scripts/**",
-    "src/app/api/health",
-    "src/app/api/internal",
-    "src/app/api/ready",
-    "src/app/api/version",
-    "src/shared/app-version.ts",
-    "src/shared/env.ts",
-    "src/shared/version.ts"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V1",
-   "slug": "lists",
-   "phase": 2,
-   "title": "Список: создание, версии, публикация",
-   "role": "reviewer",
-   "goal": "Пройти домен списка целиком и найти, где обещание интерфейса расходится с тем, что записывается.",
-   "paths": [
-    "src/app/api/list-title",
-    "src/app/api/lists",
-    "src/app/changelog/**",
-    "src/app/collections/**",
-    "src/app/my-lists/**",
-    "src/app/new/**",
-    "src/features/changelog/**",
-    "src/features/collections/**",
-    "src/features/library/**",
-    "src/features/milestones/**",
-    "src/features/releases/**",
-    "tests/features/changelog",
-    "tests/features/library/accept-suggestion.itest.ts",
-    "tests/features/library/agent-draft-detail.itest.ts",
-    "tests/features/library/blame.itest.ts",
-    "tests/features/library/block-identity.test.ts",
-    "tests/features/library/block-inserter-gap.test.ts",
-    "tests/features/library/block-meta.test.ts",
-    "tests/features/library/block-ops.test.ts",
-    "tests/features/library/blocks-chat-title.test.ts",
-    "tests/features/library/branch-suggestion-adopt.itest.ts",
-    "tests/features/library/change-summary.test.ts",
-    "tests/features/library/closing-refs.test.ts",
-    "tests/features/library/commits-keyset.itest.ts",
-    "tests/features/library/data-envelope.test.ts",
-    "tests/features/library/diff.test.ts",
-    "tests/features/library/dismiss-review.itest.ts",
-    "tests/features/library/domain-read-parity.itest.ts",
-    "tests/features/library/draft-tags-registry.itest.ts",
-    "tests/features/library/drag-geometry.test.ts",
-    "tests/features/library/editor.test.ts",
-    "tests/features/library/embed-privacy.itest.ts",
-    "tests/features/library/export.more.test.ts",
-    "tests/features/library/export.steps.test.ts",
-    "tests/features/library/export.test.ts",
-    "tests/features/library/feed-card.test.tsx",
-    "tests/features/library/feed-visibility.itest.ts",
-    "tests/features/library/file-drop.test.tsx",
-    "tests/features/library/history.test.ts",
-    "tests/features/library/hotkeys.test.ts",
-    "tests/features/library/keyset-indexes.itest.ts",
-    "tests/features/library/list-actions-menu.test.tsx",
-    "tests/features/library/localized-content.test.ts",
-    "tests/features/library/maintainer-parity.itest.ts",
-    "tests/features/library/my-lists-filter.itest.ts",
-    "tests/features/library/needs-human-store.itest.ts",
-    "tests/features/library/outline-numbering.test.tsx",
-    "tests/features/library/page-stability.itest.ts",
-    "tests/features/library/pr-settings.test.ts",
-    "tests/features/library/raw-contract.itest.ts",
-    "tests/features/library/reindex-staleness.itest.ts",
-    "tests/features/library/required-checks.itest.ts",
-    "tests/features/library/review-visibility.itest.ts",
-    "tests/features/library/script-dialect.test.ts",
-    "tests/features/library/script-injection.test.ts",
-    "tests/features/library/search-href.test.ts",
-    "tests/features/library/search-query.test.ts",
-    "tests/features/library/search-ranking.itest.ts",
-    "tests/features/library/selfgen-outcome.test.ts",
-    "tests/features/library/semantic-order.itest.ts",
-    "tests/features/library/set-verification-level.itest.ts",
-    "tests/features/library/slug.test.ts",
-    "tests/features/library/suggest-refusal-keeps-edit.test.ts",
-    "tests/features/library/suggestion-apply.test.ts",
-    "tests/features/library/suggestion-checks.test.ts",
-    "tests/features/library/suggestion-close-reopen.itest.ts",
-    "tests/features/library/suggestion-locked.itest.ts",
-    "tests/features/library/suggestion-result-blocks.test.tsx",
-    "tests/features/library/suggestion-result.test.tsx",
-    "tests/features/library/suggestion-revert.itest.ts",
-    "tests/features/library/suggestion-revert.test.ts",
-    "tests/features/library/translation-carry.test.ts",
-    "tests/features/library/translation-state.test.ts",
-    "tests/features/library/verification-levels.itest.ts",
-    "tests/features/library/verification-report.itest.ts",
-    "tests/features/library/viewed-fingerprint.test.ts",
-    "tests/features/releases"
-   ],
-   "ref_paths": [
-    "src/shared/db/schema.ts"
-   ]
-  },
-  {
-   "id": "V2",
-   "slug": "suggestions",
-   "phase": 2,
-   "title": "Предложения и ревью",
-   "role": "reviewer",
-   "goal": "Пройти путь предложения от создания до слияния и отката; найти места, где чужая работа заменяется молча.",
-   "paths": [
-    "src/app/[handle]/[slug]/suggest",
-    "src/app/[handle]/[slug]/suggestions",
-    "src/app/improve/**",
-    "src/features/curation/**",
-    "src/features/improve/**",
-    "src/features/reports/**",
-    "tests/features/reports"
-   ],
-   "ref_paths": [
-    "src/features/library/suggestion-core/**"
-   ]
-  },
-  {
-   "id": "V3",
-   "slug": "issues",
-   "phase": 2,
-   "title": "Задачи, обсуждения и реакции",
-   "role": "reviewer",
-   "goal": "Пройти задачи и обсуждения целиком: состояния, исходы, дубликаты, уведомления участникам.",
-   "paths": [
-    "src/app/[handle]/[slug]/discussions",
-    "src/app/[handle]/[slug]/issues",
-    "src/app/api/issues",
-    "src/features/comments/**",
-    "src/features/discussions/**",
-    "src/features/issues/**",
-    "src/features/polls/**",
-    "src/features/quizzes/**",
-    "src/features/reactions/**",
-    "tests/features/comments",
-    "tests/features/discussions",
-    "tests/features/issues"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V4",
-   "slug": "runs",
-   "phase": 2,
-   "title": "Прогоны и проверки",
-   "role": "reviewer",
-   "goal": "Пройти прогон списка и отчёт о проверке; найти, где отчёт утверждает больше, чем измерил.",
-   "paths": [
-    "src/features/collab-store/**",
-    "src/features/collab/**",
-    "src/features/linkcheck/**",
-    "tests/features/collab",
-    "tests/features/linkcheck"
-   ],
-   "ref_paths": [
-    "src/features/runs/**"
-   ]
-  },
-  {
-   "id": "V5",
-   "slug": "catalogs",
-   "phase": 2,
-   "title": "Каталоги, полки и теги",
-   "role": "reviewer",
-   "goal": "Пройти раскладку библиотеки: полки, звёздные папки, теги, перенос.",
-   "paths": [
-    "src/app/[handle]/catalogs",
-    "src/app/api/tags",
-    "src/app/tags/**",
-    "src/features/catalogs/**",
-    "src/features/star-folders/**",
-    "src/features/tags/**",
-    "src/features/transfer/**",
-    "tests/features/tags"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V6",
-   "slug": "discovery",
-   "phase": 2,
-   "title": "Лента, поиск и подборки",
-   "role": "reviewer",
-   "goal": "Пройти всё, чем список находят: лента, поиск, обзор, популярное, знакомство, подборки.",
-   "paths": [
-    "src/app/[handle]/[slug]/insights",
-    "src/app/[handle]/[slug]/leaderboard",
-    "src/app/api/track",
-    "src/app/explore/**",
-    "src/app/search/**",
-    "src/app/trending/**",
-    "src/features/analytics/**",
-    "src/features/dig/**",
-    "src/features/digest/**",
-    "src/features/feed/**",
-    "src/features/feeds/**",
-    "src/features/insights/**",
-    "src/features/knowledge/**",
-    "src/features/search/**",
-    "src/shared/analytics/**",
-    "tests/features/analytics",
-    "tests/features/dig",
-    "tests/features/feed",
-    "tests/features/feeds",
-    "tests/features/related-lists.itest.ts"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V7",
-   "slug": "people",
-   "phase": 2,
-   "title": "Профиль, подписки и уведомления",
-   "role": "reviewer",
-   "goal": "Пройти всё, что связывает людей: профиль, подписки, наблюдение, уведомления, почта, пуши, значки.",
-   "paths": [
-    "public/sw.js",
-    "src/app/[handle]/ProfileAside.tsx",
-    "src/app/[handle]/ProfileLists.tsx",
-    "src/app/[handle]/ProfileOverview.tsx",
-    "src/app/[handle]/load.ts",
-    "src/app/[handle]/page.tsx",
-    "src/app/api/notifications",
-    "src/app/api/push",
-    "src/app/api/unsubscribe",
-    "src/app/api/users",
-    "src/app/guilds/**",
-    "src/app/notifications/**",
-    "src/features/badges/**",
-    "src/features/follows/**",
-    "src/features/notifications/**",
-    "src/features/partners/**",
-    "src/features/profile/**",
-    "src/features/watch/**",
-    "src/shared/email/**",
-    "src/shared/push/**",
-    "tests/features/badges",
-    "tests/features/notifications",
-    "tests/features/partners",
-    "tests/features/profile",
-    "tests/features/watch"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V8",
-   "slug": "ai",
-   "phase": 2,
-   "title": "Генерация, совет экспертов и эмбеддинги",
-   "role": "reviewer",
-   "goal": "Пройти путь генерации: запрос, кандидаты, совет, доработка, эмбеддинги. Найти, где ИИ-слой обещает больше, чем даёт.",
-   "paths": [
-    "AGENTS.md",
-    "src/app/api/generate",
-    "src/app/generate/**",
-    "src/features/gardener/**",
-    "src/features/generation/**",
-    "src/shared/agents/**",
-    "src/shared/ai/**",
-    "src/shared/completion.ts",
-    "src/shared/gen/**",
-    "tests/features/generation"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V9",
-   "slug": "moderation",
-   "phase": 2,
-   "title": "Модерация и админка",
-   "role": "reviewer",
-   "goal": "Пройти модерацию и админку: гейты, обжалование, настройки, аудит.",
-   "paths": [
-    "src/app/admin/**",
-    "src/app/api/admin",
-    "src/features/admin/**",
-    "src/features/backoffice/**",
-    "src/shared/settings/**",
-    "tests/features/admin",
-    "tests/features/backoffice"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V10",
-   "slug": "media",
-   "phase": 2,
-   "title": "Медиа и файлы",
-   "role": "reviewer",
-   "goal": "Пройти путь картинки: загрузка, хранение, отдача, оптимизация.",
-   "paths": [
-    "src/app/[handle]/[slug]/badge",
-    "src/app/[handle]/[slug]/opengraph-image.tsx",
-    "src/app/api/upload",
-    "src/shared/fonts/**",
-    "src/shared/media/**"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V11",
-   "slug": "account",
-   "phase": 2,
-   "title": "Вход, регистрация и настройки аккаунта",
-   "role": "reviewer",
-   "goal": "Пройти жизненный цикл аккаунта: регистрация, вход провайдерами, смена почты, восстановление пароля, отписка, удаление.",
-   "paths": [
-    "src/app/api/telegram",
-    "src/app/change-email/**",
-    "src/app/forgot-password/**",
-    "src/app/login/**",
-    "src/app/oauth/**",
-    "src/app/register/**",
-    "src/app/reset-password/**",
-    "src/app/settings/**",
-    "src/app/unsubscribe/**",
-    "src/app/verify-email/**",
-    "src/features/settings/**",
-    "src/shared/telegram/**",
-    "tests/features/settings"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V12",
-   "slug": "static",
-   "phase": 2,
-   "title": "Статические страницы и каркас",
-   "role": "reviewer",
-   "goal": "Пройти то, что видит любой пришедший: каркас, навигация, лендинг, правовые страницы, обратная связь.",
-   "paths": [
-    "*.md",
-    ".claude/**",
-    "docs/**",
-    "public/browserconfig.xml",
-    "public/site.webmanifest",
-    "src/app/about/**",
-    "src/app/api/landing",
-    "src/app/feedback/**",
-    "src/app/healthz/**",
-    "src/app/layout.tsx",
-    "src/app/page.tsx",
-    "src/app/privacy/**",
-    "src/app/terms/**",
-    "src/features/feedback/**",
-    "src/features/landing/**",
-    "src/instrumentation-loops.ts",
-    "src/instrumentation.ts",
-    "src/shared/docs.ts",
-    "src/shared/geo.ts",
-    "src/shared/lib/**",
-    "src/shared/nav/**",
-    "src/shared/providers/**",
-    "src/shared/redis.ts",
-    "src/widgets/**",
-    "tests/app",
-    "tests/core",
-    "tests/email-layout.test.ts",
-    "tests/empty.ts",
-    "tests/evals",
-    "tests/features/dig-followups.test.ts",
-    "tests/features/feedback",
-    "tests/features/index-content.test.ts",
-    "tests/features/landing",
-    "tests/scripts",
-    "tests/shared",
-    "tests/widgets"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "S1",
-   "slug": "stand-access",
-   "phase": 3,
-   "title": "Матрица прав на живом стенде",
-   "role": "reviewer",
-   "goal": "Пройти по живому стенду матрицу «роль × действие × ресурс» и сверить с тем, что обещает код.",
-   "paths": [],
-   "ref_paths": [
-    "src/shared/list-visibility.ts",
-    "src/middleware.ts"
-   ]
-  },
-  {
-   "id": "S2",
-   "slug": "stand-mobile",
-   "phase": 3,
-   "title": "Мобильный проход 390/320",
-   "role": "reviewer",
-   "goal": "Пройти ключевые экраны на 390 и 320 px в живом браузере и найти то, что распирает ширину или недоступно пальцем.",
-   "paths": [],
-   "ref_paths": [
-    "src/shared/ui/**"
-   ]
-  },
-  {
-   "id": "S3",
-   "slug": "stand-smoke",
-   "phase": 3,
-   "title": "Смок и здоровье прода",
-   "role": "reviewer",
-   "goal": "Пройти прод как пользователь и как робот: коды ответов, заголовки, карта сайта, время отклика.",
-   "paths": [],
-   "ref_paths": [
-    "scripts/**"
-   ]
-  },
-  {
-   "id": "H14",
-   "slug": "migrations",
-   "phase": 3,
-   "role": "reviewer",
-   "title": "Миграции: применимость и сверка",
-   "goal": "Проверить миграции НЕ чтением, а исполнением: применить на чистой БД, сверить получившуюся схему с кодом схемы, найти расхождения и неприменимые шаги.",
-   "paths": [],
-   "ref_paths": [
-    "src/shared/db/**",
-    "drizzle.config.ts"
-   ]
-  },
-  {
-   "id": "V1b",
-   "slug": "list-editor",
-   "phase": 2,
-   "role": "reviewer",
-   "title": "Редактор списка",
-   "goal": "Пройти редактор целиком: перетаскивание, отмена, автосохранение, черновик — и найти, где показанное расходится с тем, что уйдёт в версию.",
-   "paths": [
-    "src/features/library/list-editor"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V1c",
-   "slug": "list-pages",
-   "phase": 2,
-   "role": "reviewer",
-   "title": "Страницы списка",
-   "goal": "Пройти страницы списка глазами посетителя и владельца: обзор, содержание, версии, сравнение, форки, настройки.",
-   "paths": [
-    "src/app/[handle]/[slug]"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V8b",
-   "slug": "embeddings",
-   "phase": 2,
-   "role": "reviewer",
-   "title": "Эмбеддинги и смысловой поиск",
-   "goal": "Пройти путь вектора: построение, размерность, переиндексация, выдача. Найти, где смена модели обнуляет поиск молча.",
-   "paths": [],
-   "ref_paths": []
-  },
-  {
-   "id": "V9b",
-   "slug": "moderation",
-   "phase": 2,
-   "role": "reviewer",
-   "title": "Модерация",
-   "goal": "Пройти модерацию: гейты публикации, скрытие, обжалование, аудит решений.",
-   "paths": [
-    "src/app/api/mod-health",
-    "src/features/moderation",
-    "src/shared/audit.ts",
-    "src/shared/moderation",
-    "tests/features/moderation",
-    "tests/features/moderation-reason.test.ts"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "H15",
-   "slug": "domain-core",
-   "phase": 1,
-   "role": "reviewer",
-   "title": "Доменное ядро",
-   "goal": "Прочитать чистые доменные правила целиком и найти, где правило, записанное здесь, расходится с тем, как его применяют вызывающие.",
-   "paths": [
-    "src/core"
-   ],
-   "ref_paths": [
-    "src/features/library"
-   ]
-  },
-  {
-   "id": "V1d",
-   "slug": "list-write",
-   "phase": 2,
-   "role": "reviewer",
-   "title": "Список: запись и версии",
-   "goal": "Прочитать все маршруты записи списка СРАЗУ и найти то, чего нет ни в одном: атомарность, сверку версии, общий гейт. Дефект такого рода не виден при чтении файла по отдельности.",
-   "paths": [
-    "src/features/library/actions",
-    "tests/features/library/actions-mutations.itest.ts",
-    "tests/features/library/catover-write-parity.itest.ts",
-    "tests/features/library/create-reason.test.ts",
-    "tests/features/library/create-refusal-keeps-input.test.ts",
-    "tests/features/library/create-wire.test.ts",
-    "tests/features/library/danger-store.itest.ts",
-    "tests/features/library/delete-promise.test.ts",
-    "tests/features/library/draft-publish.itest.ts",
-    "tests/features/library/fork-invariants.itest.ts",
-    "tests/features/library/fork-tree.itest.ts",
-    "tests/features/library/guard.itest.ts",
-    "tests/features/library/lineage.itest.ts",
-    "tests/features/library/merge-not-projected.test.ts",
-    "tests/features/library/merge-paths-parity.test.ts",
-    "tests/features/library/mirror-error.test.ts",
-    "tests/features/library/mirror-retry.test.ts",
-    "tests/features/library/mirror-sweep.itest.ts",
-    "tests/features/library/mirror-undelivered.itest.ts",
-    "tests/features/library/needs-human-write-paths.itest.ts",
-    "tests/features/library/owner-lists-isolation.itest.ts",
-    "tests/features/library/ownership-breadth.itest.ts",
-    "tests/features/library/publication-state.itest.ts",
-    "tests/features/library/publish.itest.ts",
-    "tests/features/library/version-sha-wiring.test.ts",
-    "tests/features/library/version-sha.test.ts",
-    "tests/features/library/write-out-of-sync.itest.ts"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V1e",
-   "slug": "list-read",
-   "phase": 2,
-   "role": "reviewer",
-   "title": "Список: чтение и показ",
-   "goal": "Пройти путь от запроса к экрану: выборки, карточки, оглавление, экспорт — и найти, где показанное расходится с записанным.",
-   "paths": [
-    "src/features/library/queries"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V8c",
-   "slug": "gen-pipeline",
-   "phase": 2,
-   "role": "reviewer",
-   "title": "Конвейер генерации",
-   "goal": "Пройти путь запроса пользователя до кандидатов: подготовка, вызов модели, разбор ответа, отказы и повторы.",
-   "paths": [
-    "src/app/generate",
-    "src/features/generation",
-    "src/shared/gen"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V8d",
-   "slug": "gardener",
-   "phase": 2,
-   "role": "reviewer",
-   "title": "Садовник и фоновые улучшения",
-   "goal": "Пройти автоматические улучшения списков: отбор кандидатов, бюджет, применение, следы в истории.",
-   "paths": [
-    "src/features/gardener",
-    "src/shared/agents",
-    "tests/features/gardener"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V12b",
-   "slug": "shared-lib",
-   "phase": 2,
-   "role": "reviewer",
-   "title": "Общие библиотеки",
-   "goal": "Прочитать общие помощники целиком: то, чем пользуются все, и потому ошибка здесь расходится по всему коду.",
-   "paths": [
-    "src/shared/lib",
-    "tests/shared/ai",
-    "tests/shared/lib",
-    "tests/shared/ui"
-   ],
-   "ref_paths": []
-  },
-  {
-   "id": "V1f",
-   "slug": "bulk-writes",
-   "phase": 2,
-   "role": "reviewer",
-   "title": "Пачечные операции над списками",
-   "goal": "Прочитать пачечные операции целиком и найти, где снимок состояния переживает одну запись: условие владельца, статуса, видимости и модерации обязано стоять В САМОМ UPDATE, а не быть прочитанным один раз до цикла.",
-   "paths": [
-    "src/features/library/bulk",
-    "tests/features/library/bulk-actions.itest.ts"
-   ],
-   "ref_paths": [
-    "src/features/library/actions"
-   ]
-  }
- ]
+  "review_id": "setfork-frontend-2026-09",
+  "created": "2026-09-19",
+  "note": "Нарезка на три фазы: сквозные задают язык, доменные читают свой срез целиком, стендовые работают на запущенной системе и файлами не владеют.",
+  "exclusions": [
+    {
+      "pattern": "package-lock.json",
+      "reason": "сгенерирован npm; зависимости смотрит H13 по package.json"
+    },
+    {
+      "pattern": "certs/**",
+      "reason": "сертификаты для локальной разработки, не код"
+    },
+    {
+      "pattern": "*.svg",
+      "reason": "графика"
+    },
+    {
+      "pattern": "drizzle/**",
+      "reason": "сгенерированный SQL, 40 тыс. строк: не читается, а сверяется — блок H14 на чистой БД"
+    },
+    {
+      "pattern": "docs/review/coverage.tsv",
+      "reason": "карта покрытия пересобирается инструментом, не код"
+    },
+    {
+      "pattern": "public/*.png",
+      "reason": "графика"
+    },
+    {
+      "pattern": "public/*.ico",
+      "reason": "иконки"
+    },
+    {
+      "pattern": "public/*.svg",
+      "reason": "графика"
+    },
+    {
+      "pattern": "public/*.jpg",
+      "reason": "графика"
+    },
+    {
+      "pattern": "public/*.webp",
+      "reason": "графика"
+    },
+    {
+      "pattern": "public/fonts/**",
+      "reason": "шрифты"
+    },
+    {
+      "pattern": "src/shared/gen/**",
+      "reason": "сгенерирован protoc-gen-es из .proto; не читается, а сверяется — джоба «proto ↔ кодоген не разъехались» в CI пересобирает и сравнивает"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "H1",
+      "slug": "access",
+      "phase": 1,
+      "title": "Доступ и видимость",
+      "role": "reviewer",
+      "goal": "Найти места, где приватное, скрытое или чужое доходит до того, кому не должно, — или наоборот, где своё перестаёт быть видно владельцу.",
+      "paths": [
+        "src/app/api/auth",
+        "src/app/api/auth/**",
+        "src/features/auth/**",
+        "src/features/sessions/**",
+        "src/middleware.ts",
+        "src/shared/auth/**",
+        "src/shared/list-visibility.ts",
+        "tests/features/auth",
+        "tests/security"
+      ],
+      "ref_paths": [
+        "src/features/library/**",
+        "src/features/issues/**"
+      ]
+    },
+    {
+      "id": "H2",
+      "slug": "core-contract",
+      "phase": 1,
+      "title": "Контракт с git-ядром",
+      "role": "reviewer",
+      "goal": "Найти места, где версия списка пишется или читается в обход ядра, где история может разойтись с репозиторием, где ошибка ядра проглатывается.",
+      "paths": [
+        "cli/**",
+        "proto/**",
+        "src/app/[handle]/[slug]/[...git]",
+        "src/app/[handle]/[slug]/repo.bundle",
+        "src/features/git/**",
+        "src/shared/core-transport.ts",
+        "tests/features/git"
+      ],
+      "ref_paths": [
+        "src/features/library/**"
+      ]
+    },
+    {
+      "id": "H3",
+      "slug": "db-schema",
+      "phase": 1,
+      "title": "Схема БД и миграции",
+      "role": "reviewer",
+      "goal": "Найти расхождения схемы с кодом, миграции, которые не применятся на чистой установке, индексы, которых нет под живыми запросами.",
+      "paths": [
+        "src/shared/db/**"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H4",
+      "slug": "mcp-surface",
+      "phase": 1,
+      "title": "MCP: объявления инструментов и чтение",
+      "role": "reviewer",
+      "goal": "Проверить, что описание инструмента обещает ровно то, что он делает, и учит агента следующему шагу: реестр, схема блока, транспорт, чтения, патч списка.",
+      "paths": [
+        "docs/mcp-surface.md",
+        "public/schema/list.v1.json",
+        "src/app/api/[transport]",
+        "src/features/mcp/registry/index.ts",
+        "src/features/mcp/registry/kit.ts",
+        "src/features/mcp/registry/server-info.ts",
+        "src/features/mcp/registry/block-schema.ts",
+        "src/features/mcp/registry/lists.ts",
+        "src/features/mcp/registry/reads.ts",
+        "src/features/mcp/tools/index.ts",
+        "src/features/mcp/tools/lists",
+        "src/features/mcp/tools/reads.ts",
+        "src/features/mcp/tools/shared.ts",
+        "src/features/mcp/patch.ts",
+        "tests/features/mcp/registry.test.ts",
+        "tests/features/mcp/tools.itest.ts",
+        "tests/features/mcp/patch-block.test.ts",
+        "tests/features/mcp/patch-ops.test.ts",
+        "tests/features/mcp/publish-drafts.itest.ts",
+        "tests/features/mcp/publish-refs.itest.ts",
+        "tests/features/mcp/create-catalog.itest.ts",
+        "tests/features/mcp/bulk.itest.ts",
+        "tests/features/mcp/moved-lookup.itest.ts",
+        "tests/features/mcp/update-hold.itest.ts",
+        "tests/features/mcp/get-script-steps.itest.ts"
+      ],
+      "ref_paths": [
+        "tests/features/mcp/**"
+      ]
+    },
+    {
+      "id": "H4b",
+      "slug": "mcp-surface",
+      "phase": 1,
+      "title": "MCP: совместная работа через агента",
+      "role": "reviewer",
+      "goal": "Проверить инструменты, которыми агент участвует в работе людей — задачи, правки, прогоны, проверки, источники: те же права и та же частота, что у форм сайта.",
+      "paths": [
+        "src/features/mcp/ApiTokensSection.tsx",
+        "src/features/mcp/actions.ts",
+        "src/features/mcp/council.ts",
+        "src/features/mcp/gnome.ts",
+        "src/features/mcp/queries.ts",
+        "src/features/mcp/registry/checks.ts",
+        "src/features/mcp/registry/gnomes.ts",
+        "src/features/mcp/registry/issues.ts",
+        "src/features/mcp/registry/runs.ts",
+        "src/features/mcp/registry/sources.ts",
+        "src/features/mcp/registry/suggestions.ts",
+        "src/features/mcp/tools/issues.ts",
+        "src/features/mcp/tools/runs.ts",
+        "src/features/mcp/tools/sources.ts",
+        "src/features/mcp/tools/suggestions.ts",
+        "tests/features/mcp/danger-carry.itest.ts",
+        "tests/features/mcp/git-parity.itest.ts",
+        "tests/features/mcp/issues-tools.itest.ts",
+        "tests/features/mcp/issues-tools.test.ts",
+        "tests/features/mcp/lean-block-shape.test.ts",
+        "tests/features/mcp/report-check.itest.ts",
+        "tests/features/mcp/report-run.itest.ts",
+        "tests/features/mcp/runs.itest.ts",
+        "tests/features/mcp/sources.itest.ts",
+        "tests/features/mcp/suggestion-flow.itest.ts"
+      ],
+      "ref_paths": [
+        "tests/features/mcp/**"
+      ]
+    },
+    {
+      "id": "H5",
+      "slug": "money",
+      "phase": 1,
+      "title": "Деньги, квоты и лимиты",
+      "role": "reviewer",
+      "goal": "Найти места, где пользователь платит за наш сбой, где лимит считает не то, где трата не записывается.",
+      "paths": [
+        "src/features/monetization/**",
+        "src/shared/entitlements.ts",
+        "src/shared/quota.ts",
+        "src/shared/rate-limit*.ts",
+        "src/shared/rate-limit-store.ts",
+        "tests/features/monetization",
+        "tests/features/money"
+      ],
+      "ref_paths": [
+        "src/shared/ai/**"
+      ]
+    },
+    {
+      "id": "H6",
+      "slug": "i18n",
+      "phase": 1,
+      "title": "Язык и словарь продукта",
+      "role": "reviewer",
+      "goal": "Найти текст мимо словаря, расхождения ru/en, нарушения словаря продукта: «PR» вместо «Предложение», slug на виду, слово «гном» в тексте.",
+      "paths": [
+        "src/shared/i18n/**"
+      ],
+      "ref_paths": [
+        "src/features/**"
+      ]
+    },
+    {
+      "id": "H7",
+      "slug": "mobile-ui",
+      "phase": 1,
+      "title": "Поля, кнопки и шкала контролов",
+      "role": "reviewer",
+      "goal": "Проверить ступени высот, тач-цели и состояния у всего, чем ВВОДЯТ и НАЖИМАЮТ: одна высота в ряду, 44px на сенсоре, ни одного самодельного примитива вместо общего.",
+      "paths": [
+        "src/app/globals.css",
+        "src/shared/ui/control.ts",
+        "src/shared/ui/controls.tsx",
+        "src/shared/ui/button.tsx",
+        "src/shared/ui/button-style.ts",
+        "src/shared/ui/card-style.ts",
+        "src/shared/ui/input.tsx",
+        "src/shared/ui/textarea.tsx",
+        "src/shared/ui/select.tsx",
+        "src/shared/ui/checkbox.tsx",
+        "src/shared/ui/switch.tsx",
+        "src/shared/ui/badge.tsx",
+        "src/shared/ui/Chip.tsx",
+        "src/shared/ui/ChipList.tsx",
+        "src/shared/ui/TagChip.tsx",
+        "src/shared/ui/TagInput.tsx",
+        "src/shared/ui/LabelChips.tsx",
+        "src/shared/ui/SegmentedControl.tsx",
+        "src/shared/ui/DensityToggle.tsx",
+        "src/shared/ui/IconButton.tsx",
+        "src/shared/ui/IconChoice.tsx",
+        "src/shared/ui/SubmitButton.tsx",
+        "src/shared/ui/SplitButton.tsx",
+        "src/shared/ui/TextButton.tsx",
+        "src/shared/ui/CopyButton.tsx",
+        "src/shared/ui/CopyRow.tsx",
+        "src/shared/ui/Field.tsx",
+        "src/shared/ui/FloatingInput.tsx",
+        "src/shared/ui/SearchField.tsx",
+        "src/shared/ui/SearchForm.tsx",
+        "src/shared/ui/DatePicker.tsx",
+        "src/shared/ui/ColorSwatch.tsx",
+        "src/shared/ui/Meter.tsx",
+        "src/shared/ui/StatTile.tsx",
+        "src/shared/ui/Skeleton.tsx",
+        "src/shared/ui/Spinner.tsx",
+        "src/shared/ui/StepLevelBadge.tsx",
+        "src/shared/ui/DiffStat.tsx",
+        "src/shared/ui/keep-form-values.ts",
+        "src/shared/ui/FormSaveBar.tsx",
+        "src/shared/ui/DangerZone.tsx",
+        "src/shared/ui/ConfirmDialog.tsx",
+        "src/shared/ui/use-confirm.tsx",
+        "src/shared/ui/toast.tsx",
+        "src/shared/ui/Alert.tsx",
+        "src/shared/ui/ActionResult.tsx",
+        "src/shared/ui/EmptyState.tsx",
+        "src/shared/ui/HintDot.tsx",
+        "src/shared/ui/DismissibleHint.tsx"
+      ],
+      "ref_paths": [
+        "src/widgets/**",
+        "src/features/**"
+      ]
+    },
+    {
+      "id": "H7b",
+      "slug": "mobile-ui",
+      "phase": 1,
+      "title": "Наложения, панели и составные виды",
+      "role": "reviewer",
+      "goal": "Проверить всё, что ПОКАЗЫВАЕТ и раскладывает: меню, оверлеи, таблицы, навигацию, редакторы текста — на 390 и 320 px, без горизонтальной прокрутки и обрезанных подписей.",
+      "paths": [
+        "src/shared/ui/AnchoredMenu.tsx",
+        "src/shared/ui/AutoBanner.tsx",
+        "src/shared/ui/Avatar.tsx",
+        "src/shared/ui/AvatarCropper.tsx",
+        "src/shared/ui/AvatarStack.tsx",
+        "src/shared/ui/BackLink.tsx",
+        "src/shared/ui/Backdrop.tsx",
+        "src/shared/ui/BubbleTextEditor.tsx",
+        "src/shared/ui/BubbleToolbar.tsx",
+        "src/shared/ui/ChatComposer.tsx",
+        "src/shared/ui/ChatDock.tsx",
+        "src/shared/ui/CodeCard.tsx",
+        "src/shared/ui/CodeEditor.tsx",
+        "src/shared/ui/CodeEditorInner.tsx",
+        "src/shared/ui/CodeSurface.tsx",
+        "src/shared/ui/CommandText.tsx",
+        "src/shared/ui/DisclosureToggle.tsx",
+        "src/shared/ui/EmojiPickerPopover.tsx",
+        "src/shared/ui/FilterMenu.tsx",
+        "src/shared/ui/FloatingBack.tsx",
+        "src/shared/ui/GnomeAvatar.tsx",
+        "src/shared/ui/HydrationSignal.tsx",
+        "src/shared/ui/Markdown.tsx",
+        "src/shared/ui/MarkdownEditor/EditorToolbar.tsx",
+        "src/shared/ui/MarkdownEditor/IssueRefList.tsx",
+        "src/shared/ui/MarkdownEditor/index.tsx",
+        "src/shared/ui/MarkdownEditor/use-editor-history.ts",
+        "src/shared/ui/MarkdownEditor/use-issue-ref.ts",
+        "src/shared/ui/MarkdownEditor/use-uploads.ts",
+        "src/shared/ui/MentionList.tsx",
+        "src/shared/ui/MenuItem.tsx",
+        "src/shared/ui/OverlayPanel.tsx",
+        "src/shared/ui/PageAside.tsx",
+        "src/shared/ui/PageHeader.tsx",
+        "src/shared/ui/Pagination.tsx",
+        "src/shared/ui/PickerPanel.tsx",
+        "src/shared/ui/ProductBlock.tsx",
+        "src/shared/ui/ProvenancePanel.tsx",
+        "src/shared/ui/ProviderMark.tsx",
+        "src/shared/ui/SafeLink.tsx",
+        "src/shared/ui/ScrollRow.tsx",
+        "src/shared/ui/ScrollToTop.tsx",
+        "src/shared/ui/SectionLabel.tsx",
+        "src/shared/ui/SettingsSection.tsx",
+        "src/shared/ui/SideNav.tsx",
+        "src/shared/ui/SmartImage.tsx",
+        "src/shared/ui/TabNav.tsx",
+        "src/shared/ui/Tooltip.tsx",
+        "src/shared/ui/TrendChart.tsx",
+        "src/shared/ui/UpdateBanner.tsx",
+        "src/shared/ui/UserLine.tsx",
+        "src/shared/ui/caret-coords.ts",
+        "src/shared/ui/data-table/DataTableV2.tsx",
+        "src/shared/ui/data-table/column-builders.tsx",
+        "src/shared/ui/detect-lang.ts",
+        "src/shared/ui/dropdown-menu.tsx",
+        "src/shared/ui/highlight-code.ts",
+        "src/shared/ui/markdown-toolbar.ts",
+        "src/shared/ui/panel-parts.tsx",
+        "src/shared/ui/popover.tsx",
+        "src/shared/ui/remark-issue-refs.ts",
+        "src/shared/ui/sheet.tsx",
+        "src/shared/ui/split-segment.ts",
+        "src/shared/ui/table.tsx",
+        "src/shared/ui/text-ops.ts",
+        "src/shared/ui/timeAgo.ts",
+        "src/shared/ui/use-mention.ts",
+        "src/shared/ui/use-text-ops.ts",
+        "src/shared/ui/use-toolbar-fit.ts",
+        "src/shared/ui/use-viewport-bottom.ts"
+      ],
+      "ref_paths": [
+        "src/widgets/**",
+        "src/features/**"
+      ]
+    },
+    {
+      "id": "H8",
+      "slug": "failures",
+      "phase": 1,
+      "title": "Отказы и наблюдаемость",
+      "role": "reviewer",
+      "goal": "Найти тихую деградацию: пустой экран вместо причины, отсутствие «Повторить», проглоченную ошибку, отказ-тупик без следующего шага.",
+      "paths": [
+        "src/app/error.tsx",
+        "src/app/global-error.tsx",
+        "src/app/not-found.tsx",
+        "src/shared/http/**",
+        "src/shared/observability.ts",
+        "src/shared/sentry.ts"
+      ],
+      "ref_paths": [
+        "src/features/**"
+      ]
+    },
+    {
+      "id": "H9",
+      "slug": "transport-security",
+      "phase": 1,
+      "title": "Сессии, токены и заголовки",
+      "role": "reviewer",
+      "goal": "Найти слабые места входа и транспорта: сессии, CSRF, заголовки безопасности, API-токены, анти-инъекция.",
+      "paths": [
+        "next.config.mjs",
+        "src/shared/ai/spotlight.ts",
+        "src/shared/csrf.ts",
+        "src/shared/request-ip.ts",
+        "src/shared/request-path.ts"
+      ],
+      "ref_paths": [
+        "src/shared/auth/**",
+        "tests/architecture/**"
+      ]
+    },
+    {
+      "id": "H10",
+      "slug": "jobs",
+      "phase": 1,
+      "title": "Очередь задач и фоновая работа",
+      "role": "reviewer",
+      "goal": "Найти расхождения по трём осям очереди: статус, попытка, часы БД. Задачи, которые залипают, повторяются или теряются.",
+      "paths": [
+        "src/app/runs/**",
+        "src/features/runs/**",
+        "src/shared/jobs/**",
+        "tests/features/runs"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H11",
+      "slug": "seo",
+      "phase": 1,
+      "title": "Публичная поверхность и SEO",
+      "role": "reviewer",
+      "goal": "Найти расхождения между тем, что мы обещаем роботам, и тем, что отдаём: карта сайта, robots, канонические адреса, метаданные, JSON-LD.",
+      "paths": [
+        "src/app/.well-known/**",
+        "src/app/api/go",
+        "src/app/llms-full.txt/**",
+        "src/app/llms.txt/**",
+        "src/app/robots.ts",
+        "src/app/sitemap.ts",
+        "src/shared/docs.ts",
+        "src/shared/seo/**",
+        "src/shared/site.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H12",
+      "slug": "tests",
+      "phase": 1,
+      "title": "Архитектурные узды и оснастка тестов",
+      "role": "reviewer",
+      "goal": "Найти узды, которые ни разу не были красными, и оснастку, которая делает зелёными тесты на сломанном коде: подделка мягче настоящей системы, подмена проверяемого правила.",
+      "paths": [
+        "tests/architecture",
+        "tests/helpers",
+        "tests/instrumentation.test.ts",
+        "tests/integration-setup.ts",
+        "tests/setup.ts",
+        "vitest.config.ts",
+        "vitest.integration.config.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H13",
+      "slug": "build",
+      "phase": 1,
+      "title": "Образ и состав сборки",
+      "role": "reviewer",
+      "goal": "Проверить, что собирается ровно то, что едет: Dockerfile, compose, конфигурация сборщика и линта, состав зависимостей.",
+      "paths": [
+        ".dockerignore",
+        ".gitattributes",
+        ".gitignore",
+        ".gitleaksignore",
+        ".npmrc",
+        "Dockerfile*",
+        "docker-compose*.yml",
+        ":(glob)*.json",
+        ":(glob)*.mjs",
+        ":(glob)*.toml",
+        ":(glob)*.ts",
+        ":(glob)*.yaml"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H13b",
+      "slug": "build",
+      "phase": 1,
+      "title": "Конвейер CI",
+      "role": "reviewer",
+      "goal": "Проверить, что проверки в CI доказывают обещанное: порядок джоб, гейты, работа с секретами, закрепление сторонних экшенов.",
+      "paths": [
+        ".github/**"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H13c",
+      "slug": "build",
+      "phase": 1,
+      "title": "Скрипты данных и выкатки",
+      "role": "reviewer",
+      "goal": "Проверить скрипты, которые трогают боевые данные и выкатку: миграция схемы, посев, окружение тестов, аудит зависимостей — каждый обязан отказывать громко, а не «успешно» вхолостую.",
+      "paths": [
+        "scripts/lib/**",
+        "scripts/migrate-push.ts",
+        "scripts/migrate-push-run.ts",
+        "scripts/migrate-drops.ts",
+        "scripts/_migrate-identity.ts",
+        "scripts/db-bootstrap.ts",
+        "scripts/seed.ts",
+        "scripts/seed-demo.ts",
+        "scripts/itest-env.ts",
+        "scripts/audit-prod-deps.mjs",
+        "scripts/audit-migrate-deps.mjs",
+        "scripts/day-sensitive-tests.mjs"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H13d",
+      "slug": "build",
+      "phase": 1,
+      "title": "Оснастка ревью и узды",
+      "role": "reviewer",
+      "goal": "Проверить инструменты, которые СУДЯТ о коде: оснастка сплошного ревью, узда шкалы контролов, проверки покрытия — и то, что они не зеленеют на пустом месте.",
+      "paths": [
+        "scripts/review/**",
+        "scripts/ui-parity.mjs"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H13f",
+      "slug": "build",
+      "phase": 1,
+      "title": "Скрипты замеров и разовых прогонов",
+      "role": "reviewer",
+      "goal": "Проверить замеры и разовые прогоны: сравнение методов, стенд совета, общество гномов — и то, что число в отчёте получено, а не назначено.",
+      "paths": [
+        "scripts/ablation-eval.ts",
+        "scripts/audit-github-handles.ts",
+        "scripts/backfill-block-ids.ts",
+        "scripts/backup.sh",
+        "scripts/build-version.mjs",
+        "scripts/ci-local.sh",
+        "scripts/council-bench.ts",
+        "scripts/council-eval.ts",
+        "scripts/coverage-merge.mjs",
+        "scripts/eval-retrieval.ts",
+        "scripts/facet-eval.ts",
+        "scripts/fix-degenerate-slugs.ts",
+        "scripts/git-parity-audit.ts",
+        "scripts/gnome-society.ts",
+        "scripts/gnomes-coupling.mjs",
+        "scripts/golden-domain-read.ts",
+        "scripts/mcp-import-ops.ts",
+        "scripts/probe/touch-sweep.mjs",
+        "scripts/purge-lists.ts",
+        "scripts/restore.sh",
+        "scripts/seed-ops.ts",
+        "scripts/ui-drift.mjs",
+        "scripts/ui-sizes.mjs",
+        "scripts/verify-council-chat.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H13e",
+      "slug": "build",
+      "phase": 1,
+      "title": "Окружение и служебные роуты",
+      "role": "reviewer",
+      "goal": "Проверить, откуда берутся переменные окружения и что отвечают health/ready/version/internal: именно по ним прод считается живым.",
+      "paths": [
+        ".env.example",
+        "LICENSE",
+        "src/app/api/health/route.ts",
+        "src/app/api/internal/write-allowed/route.ts",
+        "src/app/api/ready/route.ts",
+        "src/app/api/version/route.ts",
+        "src/shared/app-version.ts",
+        "src/shared/env.ts",
+        "src/shared/version.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V1",
+      "slug": "lists",
+      "phase": 2,
+      "title": "Список: предложения правок и ревью",
+      "role": "reviewer",
+      "goal": "Пройти путь чужой правки: предложение, ревью, гейты, слияние, откат — и найти, где два пути одного действия разошлись.",
+      "paths": [
+        "src/features/library/suggestion*",
+        "src/features/library/review*",
+        "src/features/library/DiffComments.tsx",
+        "src/features/library/diff*",
+        "src/features/library/pr-settings*",
+        "tests/features/library/suggestion*",
+        "tests/features/library/diff*",
+        "tests/features/library/dismiss-review.itest.ts",
+        "tests/features/library/review-visibility.itest.ts",
+        "tests/features/library/required-checks.itest.ts",
+        "tests/features/library/branch-suggestion-adopt.itest.ts",
+        "tests/features/library/accept-suggestion.itest.ts",
+        "tests/features/library/maintainer-parity.itest.ts",
+        "tests/features/library/closing-refs.test.ts",
+        "tests/features/library/pr-settings.test.ts"
+      ],
+      "ref_paths": [
+        "src/shared/db/schema.ts"
+      ]
+    },
+    {
+      "id": "V1g",
+      "slug": "lists",
+      "phase": 2,
+      "title": "Список: витрина, поиск и экспорт",
+      "role": "reviewer",
+      "goal": "Пройти то, как список показывают наружу: лента, поиск и ранжирование, экспорт, сырой вид, встраивание — и где обещание подписи расходится с запросом.",
+      "paths": [
+        "src/features/library/Qualifier*",
+        "src/features/library/export*",
+        "src/features/library/search*",
+        "tests/features/library/commits-keyset.itest.ts",
+        "tests/features/library/embed-privacy.itest.ts",
+        "tests/features/library/export*",
+        "tests/features/library/feed-*",
+        "tests/features/library/keyset-indexes.itest.ts",
+        "tests/features/library/my-lists-filter.itest.ts",
+        "tests/features/library/page-stability.itest.ts",
+        "tests/features/library/raw-contract.itest.ts",
+        "tests/features/library/search*",
+        "tests/features/library/semantic-order.itest.ts"
+      ],
+      "ref_paths": [
+        "src/shared/db/schema.ts"
+      ]
+    },
+    {
+      "id": "V1h",
+      "slug": "lists",
+      "phase": 2,
+      "title": "Список: форки, зеркала и хранилище",
+      "role": "reviewer",
+      "goal": "Пройти связи списка с другими: форк, зеркала, переезд адреса, хранилище версий — и где копия расходится с оригиналом молча.",
+      "paths": [
+        "src/features/library/fork*",
+        "src/features/library/mirror*",
+        "src/features/library/list-store*",
+        "src/features/library/selfgen*",
+        "src/features/library/translat*",
+        "tests/features/library/blame.itest.ts",
+        "tests/features/library/history.test.ts",
+        "tests/features/library/domain-read-parity.itest.ts",
+        "tests/features/library/translation-*",
+        "tests/features/library/selfgen-outcome.test.ts",
+        "tests/features/library/verification-*",
+        "tests/features/library/set-verification-level.itest.ts",
+        "tests/features/library/reindex-staleness.itest.ts"
+      ],
+      "ref_paths": [
+        "src/shared/db/schema.ts"
+      ]
+    },
+    {
+      "id": "V1i",
+      "slug": "lists",
+      "phase": 2,
+      "title": "Релизы, вехи, подборки и журнал изменений",
+      "role": "reviewer",
+      "goal": "Пройти надстройки над списком: релизы, вехи, подборки, журнал изменений — и где надстройка обещает движение, которого в данных нет.",
+      "paths": [
+        "src/features/releases/**",
+        "src/features/changelog/**",
+        "src/features/milestones/**",
+        "src/features/collections/**",
+        "src/app/changelog/**",
+        "src/app/collections/**",
+        "tests/features/releases",
+        "tests/features/changelog"
+      ],
+      "ref_paths": [
+        "src/shared/db/schema.ts"
+      ]
+    },
+    {
+      "id": "V1n",
+      "slug": "lists",
+      "phase": 2,
+      "title": "Список: правка содержимого и настройки",
+      "role": "reviewer",
+      "goal": "Пройти экранную правку списка: блоки и их вставка, медиа, обложка, заметка к правке, настройки списка и необратимые действия — и то, что показанное совпадает с тем, что запишется, а необратимое называет последствие до нажатия.",
+      "paths": [
+        "src/features/library/*Danger*",
+        "src/features/library/*Settings*",
+        "src/features/library/ChangeNoteField.tsx",
+        "src/features/library/Commit*",
+        "src/features/library/CoverSection.tsx",
+        "src/features/library/ListSettings*",
+        "src/features/library/NewListForm.tsx"
+      ],
+      "ref_paths": [
+        "src/shared/db/schema.ts"
+      ]
+    },
+    {
+      "id": "V1p",
+      "slug": "lists",
+      "phase": 2,
+      "title": "Список: обсуждение правок, история и витрина",
+      "role": "reviewer",
+      "goal": "Пройти экранную часть совместной работы: обсуждение правок, ревью, история версий, зеркала, форки, поисковые фасады — и где подпись обещает не то, что показано.",
+      "paths": [
+        "src/features/library/AdvancedFacets.tsx",
+        "src/features/library/ChecksList.tsx",
+        "src/features/library/CourseOutline.tsx",
+        "src/features/library/DiffViewToggle.tsx",
+        "src/features/library/DiffViews.tsx",
+        "src/features/library/DraftToggle.tsx",
+        "src/features/library/EditItemsForm.tsx",
+        "src/features/library/FeaturesSection.tsx",
+        "src/features/library/FeedCard.tsx",
+        "src/features/library/FeedList.tsx",
+        "src/features/library/FeedTile.tsx",
+        "src/features/library/ForkForm.tsx",
+        "src/features/library/GeneralSection.tsx",
+        "src/features/library/HealthBoard.tsx",
+        "src/features/library/HeroSearch.tsx",
+        "src/features/library/LinkIssuePicker.tsx",
+        "src/features/library/ListActionsMenu.tsx",
+        "src/features/library/ListCardMeta.tsx",
+        "src/features/library/ListFormToggles.tsx",
+        "src/features/library/ListLineage.tsx",
+        "src/features/library/ListStateBadge.tsx",
+        "src/features/library/ListStats.tsx",
+        "src/features/library/LivingSection.tsx",
+        "src/features/library/LockToggle.tsx",
+        "src/features/library/MergedPanel.tsx",
+        "src/features/library/MirrorCheckButton.tsx",
+        "src/features/library/MirrorSection.tsx",
+        "src/features/library/PendingReviewBar.tsx",
+        "src/features/library/PinButton.tsx",
+        "src/features/library/ReviewPanel.tsx",
+        "src/features/library/RunReportLine.tsx",
+        "src/features/library/SavedQueryBar.tsx",
+        "src/features/library/ScopeSwitcher.tsx",
+        "src/features/library/ShareButton.tsx",
+        "src/features/library/StarButton.tsx",
+        "src/features/library/SuggestForm.tsx",
+        "src/features/library/SuggestionResult.tsx",
+        "src/features/library/SuggestionSelection.tsx",
+        "src/features/library/SuggestionTabs.tsx",
+        "src/features/library/SuggestionTimeline.tsx",
+        "src/features/library/SuggestionTitle.tsx",
+        "src/features/library/TagsAndCatalogFields.tsx",
+        "src/features/library/TemplateSection.tsx",
+        "src/features/library/TranslateButton.tsx",
+        "src/features/library/VerificationBadge.tsx",
+        "src/features/library/VerificationSection.tsx",
+        "src/features/library/VersionPicker.tsx",
+        "src/features/library/VideoEmbed.tsx",
+        "src/features/library/ViewedToggle.tsx"
+      ],
+      "ref_paths": [
+        "src/shared/db/schema.ts"
+      ]
+    },
+    {
+      "id": "V1k",
+      "slug": "lists",
+      "phase": 2,
+      "title": "Список: тесты на подменах",
+      "role": "reviewer",
+      "goal": "Пройти юнит-тесты библиотеки: подменяется ли в них ВНЕШНЕЕ, а не проверяемое правило, и совпадает ли сценарий с путём человека.",
+      "paths": [
+        "tests/features/library/*.test.ts",
+        "tests/features/library/*.test.tsx"
+      ],
+      "ref_paths": [
+        "src/shared/db/schema.ts"
+      ]
+    },
+    {
+      "id": "V1m",
+      "slug": "lists",
+      "phase": 2,
+      "title": "Список: тесты на настоящей базе",
+      "role": "reviewer",
+      "goal": "Пройти интеграционные тесты библиотеки: проверяют ли они то, что обещают названием, и предъявлен ли каждый живому дефекту.",
+      "paths": [
+        "src/app/api/list-title/route.ts",
+        "src/app/api/lists/by-owner/route.ts",
+        "src/app/api/lists/search/route.ts",
+        "src/app/my-lists/page.tsx",
+        "src/app/new/page.tsx",
+        "src/features/library/blame.ts",
+        "src/features/library/block-identity.ts",
+        "src/features/library/blocks.ts",
+        "src/features/library/change-summary.ts",
+        "src/features/library/closing-refs.ts",
+        "src/features/library/commit-diff.ts",
+        "src/features/library/commit-filter.ts",
+        "src/features/library/cover-actions.ts",
+        "src/features/library/data-envelope.ts",
+        "src/features/library/draft.ts",
+        "src/features/library/editor.ts",
+        "src/features/library/gnome-review-jobs.ts",
+        "src/features/library/gnome-review.ts",
+        "src/features/library/gnome-task-jobs.ts",
+        "src/features/library/gnome-task.ts",
+        "src/features/library/guard.ts",
+        "src/features/library/health.ts",
+        "src/features/library/index-content.ts",
+        "src/features/library/jobs.ts",
+        "src/features/library/lineage.ts",
+        "src/features/library/list-content.ts",
+        "src/features/library/list-visibility.ts",
+        "src/features/library/lock-policy.ts",
+        "src/features/library/publish-draft.ts",
+        "src/features/library/push-role.ts",
+        "src/features/library/reindex.ts",
+        "src/features/library/report-visibility.ts",
+        "src/features/library/sample-titles.ts",
+        "src/features/library/saved-queries-actions.ts",
+        "src/features/library/saved-queries.ts",
+        "src/features/library/slug.ts",
+        "src/features/library/verification-report.ts",
+        "src/features/library/version-sha.ts",
+        "src/features/library/viewed-actions.ts",
+        "src/features/library/viewed-fingerprint.ts"
+      ],
+      "ref_paths": [
+        "src/shared/db/schema.ts"
+      ]
+    },
+    {
+      "id": "V2",
+      "slug": "suggestions",
+      "phase": 2,
+      "title": "Предложения и ревью",
+      "role": "reviewer",
+      "goal": "Пройти путь предложения от создания до слияния и отката; найти места, где чужая работа заменяется молча.",
+      "paths": [
+        "src/app/[handle]/[slug]/suggest",
+        "src/app/[handle]/[slug]/suggestions",
+        "src/app/improve/**",
+        "src/features/curation/**",
+        "src/features/improve/**",
+        "src/features/reports/**",
+        "tests/features/reports"
+      ],
+      "ref_paths": [
+        "src/features/library/suggestion-core/**"
+      ]
+    },
+    {
+      "id": "V3",
+      "slug": "issues",
+      "phase": 2,
+      "title": "Задачи: состояния, исходы, тред",
+      "role": "reviewer",
+      "goal": "Пройти задачи целиком: кто открывает и закрывает, чем кончилось, дубликаты, замок обсуждения, доходят ли уведомления до участников.",
+      "paths": [
+        "src/app/[handle]/[slug]/issues",
+        "src/app/api/issues",
+        "src/features/issues/**",
+        "src/features/comments/**",
+        "tests/features/issues",
+        "tests/features/comments"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V3b",
+      "slug": "issues",
+      "phase": 2,
+      "title": "Обсуждения, опросы и реакции",
+      "role": "reviewer",
+      "goal": "Пройти разговорные поверхности: треды обсуждений, опросы, квизы, реакции — права, частота и то, доходит ли сказанное до людей.",
+      "paths": [
+        "src/features/discussions/NewDiscussionForm.tsx",
+        "src/features/discussions/actions.ts",
+        "src/features/discussions/constants.ts",
+        "src/features/discussions/limits.ts",
+        "src/features/discussions/queries.ts",
+        "src/features/polls/PollBlock.tsx",
+        "src/features/polls/PollHistoryChart.tsx",
+        "src/features/polls/actions.ts",
+        "src/features/polls/queries.ts",
+        "src/features/quizzes/CertificatePrintButton.tsx",
+        "src/features/quizzes/CourseProgress.tsx",
+        "src/features/quizzes/QuizBlock.tsx",
+        "src/features/quizzes/actions.ts",
+        "src/features/quizzes/queries.ts",
+        "src/features/reactions/Reactions.tsx",
+        "src/features/reactions/actions.ts",
+        "src/features/reactions/constants.ts",
+        "src/features/reactions/queries.ts",
+        "tests/features/discussions/feature-flag-write.itest.ts",
+        "tests/features/discussions/gates.itest.ts",
+        "tests/features/discussions/limits.test.ts",
+        "tests/features/discussions/notifications.itest.ts",
+        "tests/features/discussions/paging.itest.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V4",
+      "slug": "runs",
+      "phase": 2,
+      "title": "Прогоны и проверки",
+      "role": "reviewer",
+      "goal": "Пройти прогон списка и отчёт о проверке; найти, где отчёт утверждает больше, чем измерил.",
+      "paths": [
+        "src/features/collab-store/**",
+        "src/features/collab/**",
+        "src/features/linkcheck/**",
+        "tests/features/collab",
+        "tests/features/linkcheck"
+      ],
+      "ref_paths": [
+        "src/features/runs/**"
+      ]
+    },
+    {
+      "id": "V5",
+      "slug": "catalogs",
+      "phase": 2,
+      "title": "Каталоги, полки и теги",
+      "role": "reviewer",
+      "goal": "Пройти раскладку библиотеки: полки, звёздные папки, теги, перенос.",
+      "paths": [
+        "src/app/[handle]/catalogs",
+        "src/app/api/tags",
+        "src/app/tags/**",
+        "src/features/catalogs/**",
+        "src/features/star-folders/**",
+        "src/features/tags/**",
+        "src/features/transfer/**",
+        "tests/features/tags"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V6",
+      "slug": "discovery",
+      "phase": 2,
+      "title": "Лента, поиск и подборки",
+      "role": "reviewer",
+      "goal": "Пройти всё, чем список находят: лента, поиск, обзор, популярное, знакомство, подборки.",
+      "paths": [
+        "src/app/[handle]/[slug]/insights",
+        "src/app/[handle]/[slug]/leaderboard",
+        "src/app/api/track",
+        "src/app/explore/**",
+        "src/app/search/**",
+        "src/app/trending/**",
+        "src/features/analytics/**",
+        "src/features/dig/**",
+        "src/features/digest/**",
+        "src/features/feed/**",
+        "src/features/feeds/**",
+        "src/features/insights/**",
+        "src/features/knowledge/**",
+        "src/features/search/**",
+        "src/shared/analytics/**",
+        "tests/features/analytics",
+        "tests/features/dig",
+        "tests/features/feed",
+        "tests/features/feeds",
+        "tests/features/related-lists.itest.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V7",
+      "slug": "people",
+      "phase": 2,
+      "title": "Профиль и связи между людьми",
+      "role": "reviewer",
+      "goal": "Пройти профиль и всё, что связывает людей: страницы профиля, подписки на людей, значки, партнёры, гильдии.",
+      "paths": [
+        "src/app/[handle]/ProfileAside.tsx",
+        "src/app/[handle]/ProfileLists.tsx",
+        "src/app/[handle]/ProfileOverview.tsx",
+        "src/app/[handle]/load.ts",
+        "src/app/[handle]/page.tsx",
+        "src/app/api/users",
+        "src/app/guilds/**",
+        "src/features/badges/**",
+        "src/features/follows/**",
+        "src/features/partners/**",
+        "src/features/profile/**",
+        "tests/features/badges",
+        "tests/features/partners",
+        "tests/features/profile"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V7b",
+      "slug": "people",
+      "phase": 2,
+      "title": "Уведомления и доставка",
+      "role": "reviewer",
+      "goal": "Пройти путь уведомления от события до человека: подписка на список, запись, письмо, пуш, отписка — и то, что выключенная ручка молчит.",
+      "paths": [
+        "public/sw.js",
+        "src/app/api/notifications/recent/route.ts",
+        "src/app/api/push/public-key/route.ts",
+        "src/app/api/push/subscribe/route.ts",
+        "src/app/api/unsubscribe/route.ts",
+        "src/app/notifications/page.tsx",
+        "src/features/notifications/BrowserNotifier.tsx",
+        "src/features/notifications/MarkRead.tsx",
+        "src/features/notifications/NotificationsBell.tsx",
+        "src/features/notifications/NotifyPrefsForm.tsx",
+        "src/features/notifications/actions.ts",
+        "src/features/notifications/adapter.ts",
+        "src/features/notifications/display.ts",
+        "src/features/notifications/email.ts",
+        "src/features/notifications/href.ts",
+        "src/features/notifications/jobs.ts",
+        "src/features/notifications/mentions.ts",
+        "src/features/notifications/notify.ts",
+        "src/features/notifications/push-client.ts",
+        "src/features/notifications/queries.ts",
+        "src/features/notifications/verbs.ts",
+        "src/features/watch/WatchButton.tsx",
+        "src/features/watch/actions.ts",
+        "src/features/watch/queries.ts",
+        "src/features/watch/subscribe.ts",
+        "src/shared/email/admin-notify.ts",
+        "src/shared/email/layout.ts",
+        "src/shared/email/mailer.ts",
+        "src/shared/email/unsubscribe.ts",
+        "src/shared/push/send.ts",
+        "src/shared/push/vapid.ts",
+        "tests/features/notifications/href.test.ts",
+        "tests/features/notifications/keyset.itest.ts",
+        "tests/features/notifications/mentions.test.ts",
+        "tests/features/watch/watch-visibility.itest.ts",
+        "tests/features/watch/watcher-delivery.itest.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V8",
+      "slug": "ai",
+      "phase": 2,
+      "title": "ИИ: модели, цена и готовность",
+      "role": "reviewer",
+      "goal": "Пройти слой обращения к моделям: выбор провайдера и модели, цена, квоты, готовность — и то, что за сбой поставщика не платит человек.",
+      "paths": [
+        "AGENTS.md",
+        "src/app/api/generate/[id]/live/route.ts",
+        "src/shared/ai/assist*.ts",
+        "src/shared/ai/generate.ts",
+        "src/shared/ai/models*.ts",
+        "src/shared/ai/price*.ts",
+        "src/shared/ai/price-book.seed.json",
+        "src/shared/ai/rate-limit*.ts",
+        "src/shared/ai/readiness*.ts",
+        "src/shared/completion.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V8e",
+      "slug": "ai",
+      "phase": 2,
+      "title": "Совет гномов: голоса, репутация, состав",
+      "role": "reviewer",
+      "goal": "Пройти совет экспертов: состав, голоса, репутация, прецеденты — и то, чем подкреплён вердикт, который видит человек.",
+      "paths": [
+        "src/shared/ai/council/**",
+        "src/shared/ai/roster*.ts",
+        "src/shared/ai/gnome*.ts",
+        "src/shared/ai/voice*.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V8f",
+      "slug": "ai",
+      "phase": 2,
+      "title": "Смысловой слой: эмбеддинги, индекс, близость",
+      "role": "reviewer",
+      "goal": "Пройти смысловую часть: эмбеддинги, индексация, близость, слияние выдач — и то, подкреплено ли обещание «умного поиска» кодом.",
+      "paths": [
+        "src/shared/ai/activation-db.ts",
+        "src/shared/ai/activation.ts",
+        "src/shared/ai/actor-context.ts",
+        "src/shared/ai/adapter.ts",
+        "src/shared/ai/avatar-gallery.ts",
+        "src/shared/ai/council-clarify.ts",
+        "src/shared/ai/credits.ts",
+        "src/shared/ai/dehydrate.ts",
+        "src/shared/ai/detail-level.ts",
+        "src/shared/ai/dialogue.ts",
+        "src/shared/ai/dig.ts",
+        "src/shared/ai/embed-capability.ts",
+        "src/shared/ai/embed-space.ts",
+        "src/shared/ai/embeddings.ts",
+        "src/shared/ai/facets.ts",
+        "src/shared/ai/failure.ts",
+        "src/shared/ai/feed-parse.ts",
+        "src/shared/ai/feed-pick.ts",
+        "src/shared/ai/gardener-policies.ts",
+        "src/shared/ai/generation-messages.ts",
+        "src/shared/ai/gigachat-token.ts",
+        "src/shared/ai/health.ts",
+        "src/shared/ai/hire-signals.ts",
+        "src/shared/ai/index-run.ts",
+        "src/shared/ai/list-grade.ts",
+        "src/shared/ai/list-kind.ts",
+        "src/shared/ai/list-laws.ts",
+        "src/shared/ai/model-names.ts",
+        "src/shared/ai/model-picker.ts",
+        "src/shared/ai/model-roles.ts",
+        "src/shared/ai/model-stats.ts",
+        "src/shared/ai/moderate.ts",
+        "src/shared/ai/near-dup-check.ts",
+        "src/shared/ai/near-duplicate.ts",
+        "src/shared/ai/precedent-filter.ts",
+        "src/shared/ai/pricing.ts",
+        "src/shared/ai/provider-failover.ts",
+        "src/shared/ai/provider.ts",
+        "src/shared/ai/prune.ts",
+        "src/shared/ai/reply-parse.ts",
+        "src/shared/ai/retrieval.ts",
+        "src/shared/ai/retry.ts",
+        "src/shared/ai/rrf.ts",
+        "src/shared/ai/sanitize-command.ts",
+        "src/shared/ai/scorecard.ts",
+        "src/shared/ai/source-license.ts",
+        "src/shared/ai/triples.ts",
+        "src/shared/ai/usage.ts",
+        "src/shared/ai/web-search.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V9",
+      "slug": "moderation",
+      "phase": 2,
+      "title": "Админка: экраны и настройки инстанса",
+      "role": "reviewer",
+      "goal": "Пройти экраны админки и настройки инстанса: что видит администратор, что он может изменить и как изменение доезжает до работы сайта.",
+      "paths": [
+        "src/app/admin/**",
+        "src/app/api/admin",
+        "src/shared/settings/**"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V9c",
+      "slug": "moderation",
+      "phase": 2,
+      "title": "Админка: формы и панели",
+      "role": "reviewer",
+      "goal": "Пройти экранные части админки: формы настроек, панели переиндексации и моделей, галерея UI — и то, что форма сохраняет ровно названное.",
+      "paths": [
+        "src/features/admin/*.tsx"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V9d",
+      "slug": "moderation",
+      "phase": 2,
+      "title": "Админка: действия, выборки и бэкофис",
+      "role": "reviewer",
+      "goal": "Пройти то, что админка ДЕЛАЕТ: действия, выборки, бэкофис — и то, что последствие решения видно тому, кого оно касается.",
+      "paths": [
+        "src/features/admin/achievement-actions.ts",
+        "src/features/admin/actions.ts",
+        "src/features/admin/agenda-actions.ts",
+        "src/features/admin/audit-queries.ts",
+        "src/features/admin/catalog-problem.ts",
+        "src/features/admin/collection-actions.ts",
+        "src/features/admin/dashboard-queries.ts",
+        "src/features/admin/dashboard-types.ts",
+        "src/features/admin/development-queries.ts",
+        "src/features/admin/feed-actions.ts",
+        "src/features/admin/feed-queries.ts",
+        "src/features/admin/gnome-stats.ts",
+        "src/features/admin/hire.ts",
+        "src/features/admin/landing-actions.ts",
+        "src/features/admin/model-catalog-action.ts",
+        "src/features/admin/model-enrich.ts",
+        "src/features/admin/model-options.ts",
+        "src/features/admin/scorecard-queries.ts",
+        "src/features/admin/use-live-metrics.ts",
+        "src/features/backoffice/ai-watch.ts",
+        "src/features/backoffice/jobs.ts",
+        "src/features/backoffice/service.ts",
+        "tests/features/admin/audit-keyset.itest.ts",
+        "tests/features/admin/company-day.itest.ts",
+        "tests/features/admin/engine-attribution.itest.ts",
+        "tests/features/admin/model-select.test.tsx",
+        "tests/features/admin/scorecard-queries.itest.ts",
+        "tests/features/backoffice/ai-watch.itest.ts",
+        "tests/features/backoffice/loops.itest.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V10",
+      "slug": "media",
+      "phase": 2,
+      "title": "Медиа и файлы",
+      "role": "reviewer",
+      "goal": "Пройти путь картинки: загрузка, хранение, отдача, оптимизация.",
+      "paths": [
+        "src/app/[handle]/[slug]/badge",
+        "src/app/[handle]/[slug]/opengraph-image.tsx",
+        "src/app/api/upload",
+        "src/shared/fonts/**",
+        "src/shared/media/**"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V11",
+      "slug": "account",
+      "phase": 2,
+      "title": "Вход, регистрация и настройки аккаунта",
+      "role": "reviewer",
+      "goal": "Пройти жизненный цикл аккаунта: регистрация, вход провайдерами, смена почты, восстановление пароля, отписка, удаление.",
+      "paths": [
+        "src/app/api/telegram",
+        "src/app/change-email/**",
+        "src/app/forgot-password/**",
+        "src/app/login/**",
+        "src/app/oauth/**",
+        "src/app/register/**",
+        "src/app/reset-password/**",
+        "src/app/settings/**",
+        "src/app/unsubscribe/**",
+        "src/app/verify-email/**",
+        "src/features/settings/**",
+        "src/shared/telegram/**",
+        "tests/features/settings"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V12",
+      "slug": "static",
+      "phase": 2,
+      "title": "Каркас и страницы для всех",
+      "role": "reviewer",
+      "goal": "Пройти то, что видит любой пришедший: каркас, навигация, лендинг, правовые страницы, обратная связь, виджеты.",
+      "paths": [
+        "src/app/about/**",
+        "src/app/api/landing",
+        "src/app/feedback/**",
+        "src/app/healthz/**",
+        "src/app/layout.tsx",
+        "src/app/page.tsx",
+        "src/app/privacy/**",
+        "src/app/terms/**",
+        "src/features/feedback/**",
+        "src/features/landing/**",
+        "src/instrumentation-loops.ts",
+        "src/instrumentation.ts",
+        "src/shared/docs.ts",
+        "src/shared/geo.ts",
+        "src/shared/nav/**",
+        "src/shared/providers/**",
+        "src/shared/redis.ts",
+        "src/widgets/**",
+        "public/browserconfig.xml",
+        "public/site.webmanifest",
+        "tests/widgets",
+        "tests/features/landing",
+        "tests/features/feedback"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V12c",
+      "slug": "static",
+      "phase": 2,
+      "title": "Документация продукта",
+      "role": "reviewer",
+      "goal": "Прочитать документацию как обещание: README, CONTRIBUTING, docs/*.md, инструкции агентам — и найти, где текст описывает то, чего в коде уже нет.",
+      "paths": [
+        ":(glob)*.md",
+        ".claude/**",
+        "docs/*.md"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V12e",
+      "slug": "static",
+      "phase": 2,
+      "title": "Оснастка и отчёты сплошного ревью",
+      "role": "reviewer",
+      "goal": "Прочитать саму оснастку ревью: манифесты блоков, инварианты, отчёты — и проверить, что отчёт не шире того, что было прочитано.",
+      "paths": [
+        "docs/review/blocks.json",
+        "docs/review/findings.jsonl",
+        "docs/review/reports/H1-findings.jsonl",
+        "docs/review/reports/H15-findings.jsonl",
+        "docs/review/reports/V1d-findings.jsonl",
+        "docs/review/state.json"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V12d",
+      "slug": "static",
+      "phase": 2,
+      "title": "Тесты каркаса и доменного ядра",
+      "role": "reviewer",
+      "goal": "Пройти тесты каркаса приложения и доменного ядра: сценарий теста обязан совпадать с путём человека, иначе он зеленеет на сломанном.",
+      "paths": [
+        "tests/app",
+        "tests/core",
+        "tests/widgets",
+        "tests/evals",
+        "tests/scripts",
+        "tests/email-layout.test.ts",
+        "tests/empty.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V8g",
+      "slug": "static",
+      "phase": 2,
+      "title": "Тесты ИИ-слоя",
+      "role": "reviewer",
+      "goal": "Пройти тесты ИИ-слоя: подменяется ли в них ВНЕШНЕЕ (модель, сеть, часы), а не само проверяемое правило.",
+      "paths": [
+        "tests/shared/ai"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H7c",
+      "slug": "static",
+      "phase": 2,
+      "title": "Тесты примитивов интерфейса",
+      "role": "reviewer",
+      "goal": "Пройти тесты общих примитивов: держат ли они шкалу высот и тач-цели свойством, а не записью классов.",
+      "paths": [
+        "tests/shared/ui"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V12f",
+      "slug": "static",
+      "phase": 2,
+      "title": "Тесты очередей, агентов и помощников",
+      "role": "reviewer",
+      "goal": "Пройти оставшиеся тесты общих слоёв: очереди задач, политики агентов, помощники — и проверить, что подменяется внешнее, а не правило.",
+      "paths": [
+        "tests/features/dig-followups.test.ts",
+        "tests/features/index-content.test.ts",
+        "tests/shared/agents/agenda.test.ts",
+        "tests/shared/agents/budget.test.ts",
+        "tests/shared/agents/canary.itest.ts",
+        "tests/shared/agents/chronicle-quiet-progress.itest.ts",
+        "tests/shared/agents/dryrun-contract.itest.ts",
+        "tests/shared/agents/loops-contract.itest.ts",
+        "tests/shared/agents/stall.itest.ts",
+        "tests/shared/audit-outside-request.itest.ts",
+        "tests/shared/auth/api-token-scope.itest.ts",
+        "tests/shared/auth/api-token.test.ts",
+        "tests/shared/auth/handle.test.ts",
+        "tests/shared/auth/oauth-server.itest.ts",
+        "tests/shared/auth/oauth.test.ts",
+        "tests/shared/auth/totp.test.ts",
+        "tests/shared/block-identity-on-write.test.ts",
+        "tests/shared/certificate-snapshot.itest.ts",
+        "tests/shared/confirm-phrase.test.ts",
+        "tests/shared/course-completion.itest.ts",
+        "tests/shared/csrf.test.ts",
+        "tests/shared/db-hot-indexes.itest.ts",
+        "tests/shared/docs.test.ts",
+        "tests/shared/email/mailer-headers.test.ts",
+        "tests/shared/email/unsubscribe.test.ts",
+        "tests/shared/env-number.test.ts",
+        "tests/shared/env.test.ts",
+        "tests/shared/geo.test.ts",
+        "tests/shared/gh-handle-privesc.itest.ts",
+        "tests/shared/handle.test.ts",
+        "tests/shared/http/cache.test.ts",
+        "tests/shared/i18n/negotiate.test.ts",
+        "tests/shared/i18n/plural-forms.test.ts",
+        "tests/shared/jobs/backoff.test.ts",
+        "tests/shared/jobs/error-for-job.test.ts",
+        "tests/shared/jobs/finalizer.test.ts",
+        "tests/shared/jobs/handler-registry.test.ts",
+        "tests/shared/jobs/heartbeat.test.ts",
+        "tests/shared/jobs/maintenance.itest.ts",
+        "tests/shared/jobs/unfinalized.itest.ts",
+        "tests/shared/jsonld.test.ts",
+        "tests/shared/link-health.test.ts",
+        "tests/shared/moved-list.test.ts",
+        "tests/shared/nav/reserved-top.test.ts",
+        "tests/shared/needs-human-preserved.test.ts",
+        "tests/shared/needs-human.test.ts",
+        "tests/shared/ordinal-in-title.test.ts",
+        "tests/shared/precedent-filter.test.ts",
+        "tests/shared/quota-env.itest.ts",
+        "tests/shared/rate-limit-store.redis.test.ts",
+        "tests/shared/rate-limit.test.ts",
+        "tests/shared/retired-domain.test.ts",
+        "tests/shared/rrf.test.ts",
+        "tests/shared/sentry.test.ts",
+        "tests/shared/settings/media-singleflight.test.ts",
+        "tests/shared/settings/provider-switch.itest.ts",
+        "tests/shared/settings/readiness-settings.itest.ts",
+        "tests/shared/site-origin.test.ts",
+        "tests/shared/telegram/parse.test.ts",
+        "tests/shared/tr-key.test.ts",
+        "tests/shared/version.test.ts",
+        "tests/shared/voice.test.ts",
+        "tests/shared/wiki-links.test.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "S1",
+      "slug": "stand-access",
+      "phase": 3,
+      "title": "Матрица прав на живом стенде",
+      "role": "reviewer",
+      "goal": "Пройти по живому стенду матрицу «роль × действие × ресурс» и сверить с тем, что обещает код.",
+      "paths": [],
+      "ref_paths": [
+        "src/shared/list-visibility.ts",
+        "src/middleware.ts"
+      ]
+    },
+    {
+      "id": "S2",
+      "slug": "stand-mobile",
+      "phase": 3,
+      "title": "Мобильный проход 390/320",
+      "role": "reviewer",
+      "goal": "Пройти ключевые экраны на 390 и 320 px в живом браузере и найти то, что распирает ширину или недоступно пальцем.",
+      "paths": [],
+      "ref_paths": [
+        "src/shared/ui/**"
+      ]
+    },
+    {
+      "id": "S3",
+      "slug": "stand-smoke",
+      "phase": 3,
+      "title": "Смок и здоровье прода",
+      "role": "reviewer",
+      "goal": "Пройти прод как пользователь и как робот: коды ответов, заголовки, карта сайта, время отклика.",
+      "paths": [],
+      "ref_paths": [
+        "scripts/**"
+      ]
+    },
+    {
+      "id": "H14",
+      "slug": "migrations",
+      "phase": 3,
+      "role": "reviewer",
+      "title": "Миграции: применимость и сверка",
+      "goal": "Проверить миграции НЕ чтением, а исполнением: применить на чистой БД, сверить получившуюся схему с кодом схемы, найти расхождения и неприменимые шаги.",
+      "paths": [],
+      "ref_paths": [
+        "src/shared/db/**",
+        "drizzle.config.ts"
+      ]
+    },
+    {
+      "id": "V1b",
+      "slug": "list-editor",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Редактор списка",
+      "goal": "Пройти редактор целиком: перетаскивание, отмена, автосохранение, черновик — и найти, где показанное расходится с тем, что уйдёт в версию.",
+      "paths": [
+        "src/features/library/list-editor"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V1c",
+      "slug": "list-pages",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Страницы списка: обзор и содержание",
+      "goal": "Пройти страницы списка глазами посетителя: обзор, версии, сравнение, сырой вид, сертификат, аналитика, git-поверхность.",
+      "paths": [
+        "src/app/[handle]/[slug]/page.tsx",
+        "src/app/[handle]/[slug]/versions",
+        "src/app/[handle]/[slug]/raw",
+        "src/app/[handle]/[slug]/insights",
+        "src/app/[handle]/[slug]/certificate",
+        "src/app/[handle]/[slug]/[...git]",
+        "src/app/[handle]/[slug]/releases",
+        "src/app/[handle]/[slug]/discussions",
+        "src/app/[handle]/[slug]/issues"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V1cb",
+      "slug": "list-pages",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Страницы списка: правка и предложения",
+      "goal": "Пройти страницы, где список МЕНЯЮТ: редактор, настройки, предложения правок и их обсуждение.",
+      "paths": [
+        "src/app/[handle]/[slug]/ListAbout.tsx",
+        "src/app/[handle]/[slug]/ListAdNotices.tsx",
+        "src/app/[handle]/[slug]/ListAside.tsx",
+        "src/app/[handle]/[slug]/ListBlock.tsx",
+        "src/app/[handle]/[slug]/ListBlocks.tsx",
+        "src/app/[handle]/[slug]/ListDraftNotices.tsx",
+        "src/app/[handle]/[slug]/ListStepCard.tsx",
+        "src/app/[handle]/[slug]/ListToolbar.tsx",
+        "src/app/[handle]/[slug]/ListViewBanner.tsx",
+        "src/app/[handle]/[slug]/blame/page.tsx",
+        "src/app/[handle]/[slug]/compare/page.tsx",
+        "src/app/[handle]/[slug]/data.json/route.ts",
+        "src/app/[handle]/[slug]/edit/page.tsx",
+        "src/app/[handle]/[slug]/embed/route.ts",
+        "src/app/[handle]/[slug]/export/route.ts",
+        "src/app/[handle]/[slug]/fork/page.tsx",
+        "src/app/[handle]/[slug]/forks/page.tsx",
+        "src/app/[handle]/[slug]/layout.tsx",
+        "src/app/[handle]/[slug]/load.ts",
+        "src/app/[handle]/[slug]/milestones/page.tsx",
+        "src/app/[handle]/[slug]/releases.atom/route.ts",
+        "src/app/[handle]/[slug]/settings/page.tsx"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V8b",
+      "slug": "embeddings",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Эмбеддинги и смысловой поиск",
+      "goal": "Пройти путь вектора: построение, размерность, переиндексация, выдача. Найти, где смена модели обнуляет поиск молча.",
+      "paths": [],
+      "ref_paths": []
+    },
+    {
+      "id": "V9b",
+      "slug": "moderation",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Модерация",
+      "goal": "Пройти модерацию: гейты публикации, скрытие, обжалование, аудит решений.",
+      "paths": [
+        "src/app/api/mod-health",
+        "src/features/moderation",
+        "src/shared/audit.ts",
+        "src/shared/moderation",
+        "tests/features/moderation",
+        "tests/features/moderation-reason.test.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "H15",
+      "slug": "domain-core",
+      "phase": 1,
+      "role": "reviewer",
+      "title": "Доменное ядро",
+      "goal": "Прочитать чистые доменные правила целиком и найти, где правило, записанное здесь, расходится с тем, как его применяют вызывающие.",
+      "paths": [
+        "src/core"
+      ],
+      "ref_paths": [
+        "src/features/library"
+      ]
+    },
+    {
+      "id": "V1d",
+      "slug": "list-write",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Список: запись и версии",
+      "goal": "Прочитать все маршруты записи списка СРАЗУ и найти то, чего нет ни в одном: атомарность, сверку версии, общий гейт. Дефект такого рода не виден при чтении файла по отдельности.",
+      "paths": [
+        "src/features/library/actions",
+        "tests/features/library/actions-mutations.itest.ts",
+        "tests/features/library/catover-write-parity.itest.ts",
+        "tests/features/library/create-reason.test.ts",
+        "tests/features/library/create-refusal-keeps-input.test.ts",
+        "tests/features/library/create-wire.test.ts",
+        "tests/features/library/danger-store.itest.ts",
+        "tests/features/library/delete-promise.test.ts",
+        "tests/features/library/draft-publish.itest.ts",
+        "tests/features/library/fork-invariants.itest.ts",
+        "tests/features/library/fork-tree.itest.ts",
+        "tests/features/library/guard.itest.ts",
+        "tests/features/library/lineage.itest.ts",
+        "tests/features/library/merge-not-projected.test.ts",
+        "tests/features/library/merge-paths-parity.test.ts",
+        "tests/features/library/mirror-error.test.ts",
+        "tests/features/library/mirror-retry.test.ts",
+        "tests/features/library/mirror-sweep.itest.ts",
+        "tests/features/library/mirror-undelivered.itest.ts",
+        "tests/features/library/needs-human-write-paths.itest.ts",
+        "tests/features/library/owner-lists-isolation.itest.ts",
+        "tests/features/library/ownership-breadth.itest.ts",
+        "tests/features/library/publication-state.itest.ts",
+        "tests/features/library/publish.itest.ts",
+        "tests/features/library/version-sha-wiring.test.ts",
+        "tests/features/library/version-sha.test.ts",
+        "tests/features/library/write-out-of-sync.itest.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V1e",
+      "slug": "list-read",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Список: чтение и показ",
+      "goal": "Пройти путь от запроса к экрану: выборки, карточки, оглавление, экспорт — и найти, где показанное расходится с записанным.",
+      "paths": [
+        "src/features/library/queries"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V8c",
+      "slug": "gen-pipeline",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Конвейер генерации",
+      "goal": "Пройти путь запроса пользователя до кандидатов: подготовка, вызов модели, разбор ответа, отказы и повторы.",
+      "paths": [
+        "src/app/generate",
+        "src/features/generation",
+        "src/shared/gen",
+        "tests/features/generation/abandon.itest.ts",
+        "tests/features/generation/candidate-card-focus.test.tsx",
+        "tests/features/generation/chat-failed.test.tsx",
+        "tests/features/generation/drafts-idempotent.itest.ts",
+        "tests/features/generation/failure-note.test.tsx",
+        "tests/features/generation/prompt-examples.test.ts",
+        "tests/features/library/agent-draft-detail.itest.ts",
+        "tests/features/library/draft-tags-registry.itest.ts",
+        "tests/features/library/needs-human-store.itest.ts"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V8d",
+      "slug": "gardener",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Садовник и фоновые улучшения",
+      "goal": "Пройти автоматические улучшения списков: отбор кандидатов, бюджет, применение, следы в истории.",
+      "paths": [
+        "src/features/gardener",
+        "src/shared/agents",
+        "tests/features/gardener"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V12b",
+      "slug": "shared-lib",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Общие библиотеки",
+      "goal": "Прочитать общие помощники целиком: то, чем пользуются все, и потому ошибка здесь расходится по всему коду.",
+      "paths": [
+        "src/shared/lib",
+        "tests/shared/lib"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V1f",
+      "slug": "bulk-writes",
+      "phase": 2,
+      "role": "reviewer",
+      "title": "Пачечные операции над списками",
+      "goal": "Прочитать пачечные операции целиком и найти, где снимок состояния переживает одну запись: условие владельца, статуса, видимости и модерации обязано стоять В САМОМ UPDATE, а не быть прочитанным один раз до цикла.",
+      "paths": [
+        "src/features/library/bulk",
+        "tests/features/library/bulk-actions.itest.ts"
+      ],
+      "ref_paths": [
+        "src/features/library/actions"
+      ]
+    }
+  ]
 }
