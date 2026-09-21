@@ -270,6 +270,43 @@ def coverage_map() -> tuple[dict[str, list[str]], set[str], set[str]]:
     return owned, excluded, unassigned
 
 
+# Насколько дерево должно отстать по ВРЕМЕНИ, чтобы это значило «оно протухло».
+#
+# Мерить надо время, а не коммиты: в случае, ради которого проверка и заведена, копия
+# соседнего сервиса отставала всего на ДВА коммита — и на двенадцать суток. Два коммита
+# не насторожили бы никого, а за двенадцать дней дыру успели закрыть, и проверяющий
+# «подтвердил исполнением» дефект, которого уже не было.
+#
+# Порог ниже того замера (12 суток) и выше обычной жизни рабочей ветки: ветка живёт дни,
+# протухшая копия — недели. Счёт коммитов сознательно не используется: ветка, отведённая
+# час назад, отстаёт от master на десяток коммитов и не устарела ничуть.
+STALE_TREE_DAYS = 7
+
+
+def stale_tree() -> tuple[float, str] | None:
+    """Насколько вершина сервера свежее нашей — в сутках, если разрыв велик.
+
+    Сеть не трогаем (`fetch` — дело человека), смотрим то, что git уже знает.
+    """
+    ref = subprocess.run(
+        ["git", "-C", str(ROOT), "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+        capture_output=True, text=True,
+    ).stdout.strip()
+    if not ref:
+        return None
+
+    def stamp(rev: str) -> int | None:
+        out = subprocess.run(["git", "-C", str(ROOT), "log", "-1", "--format=%ct", rev],
+                             capture_output=True, text=True)
+        return int(out.stdout.strip()) if out.returncode == 0 and out.stdout.strip() else None
+
+    mine, theirs = stamp("HEAD"), stamp(ref)
+    if mine is None or theirs is None:
+        return None
+    days = (theirs - mine) / 86400
+    return (days, ref) if days > STALE_TREE_DAYS else None
+
+
 def head_commit() -> str:
     """Коммит, про который карта покрытия что-то утверждает.
 
@@ -1007,6 +1044,18 @@ def cmd_check(args) -> int:
                     f"{b['id']}: в отчёте охотника нет раздела об ограничениях охвата — "
                     f"что осознанно не смотрел и почему"
                 )
+
+    # Дерево, отставшее от сервера, показывает починенное как сломанное. Находки такого
+    # прохода описывают код, которого уже нет, а «проверено исполнением» звучит так же
+    # убедительно, как на свежем дереве.
+    stale = stale_tree()
+    if stale:
+        days, ref = stale
+        problems.append(
+            f"дерево старше {ref} на {days:.0f} суток — находки такого прохода могут "
+            f"описывать уже починенное; `git fetch` и сверьтесь с {ref} перед тем, как их "
+            f"оформлять"
+        )
 
     # Блок, который за сеанс не прочитать, — обещание, а не блок.
     for bid, b in idx.items():

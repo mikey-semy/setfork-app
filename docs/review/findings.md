@@ -3,15 +3,15 @@
 > Файл СГЕНЕРИРОВАН из `findings.jsonl` командой `npm run review -- findings`.
 > Не редактируй его руками — правь jsonl и перегенерируй.
 
-Открыто: **56** из 64 записей.
+Открыто: **55** из 64 записей.
 
-## high (5 открыто / 6)
+## high (4 открыто / 6)
 
 | id | блок | статус | место | что не так |
 |---|---|---|---|---|
 | H1-001 | H1 | open | `src/features/auth/actions.ts:47` | Регистрация по e-mail сверяет занятость ника прямым запросом в users и минует handleTaken(), то есть 180-дневное удержание прежнего ника в user_redirects |
 | H15-001 | H15 | fixed | `src/core/domain/destructive-command.ts:155` | Префикс echo/printf пропускает строку ЦЕЛИКОМ: PRINTS_ONLY снимает и запрет публикации, и пометку разрушительного пункта |
-| H15-002 | H15 | open | `src/app/[handle]/[slug]/[...git]/route.ts:200` | Версия, созданная проекцией git push, минует assertNoDestructiveSteps: страж стоит только на фасаде ListStore, а ядро проецирует коммит в версию мимо него |
+| H15-002 | H15 | fixed | `src/app/[handle]/[slug]/[...git]/route.ts:200` | Версия, созданная проекцией git push, минует assertNoDestructiveSteps: страж стоит только на фасаде ListStore, а ядро проецирует коммит в версию мимо него |
 | H5-002 | H5 | open | `src/shared/quota.ts:104` | На яндекс/гигачат/selectel обе денежные страховки могут молчать одновременно: цена модели вне прайс-книги пишется нулём, а пол баланса работает только у OpenRouter |
 | H5-011 | H5 | open | `src/shared/quota.ts:119` | Пол остатка OpenRouter применяется при ЛЮБОМ активном провайдере: пустой счёт OpenRouter останавливает ИИ, работающий на Яндексе/Selectel/GigaChat |
 | H5-019 | H5 | open | `src/shared/ai/credits.ts:33` | Ответ 200 с неожиданным телом даёт remaining=0, кладётся в кеш как валидный и глушит ИИ на всём инстансе — fail-closed там, где quota.ts:117 обещает best-effort |
