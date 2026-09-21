@@ -58,7 +58,10 @@ export async function writeProposed(
   proposed: ProposedItem[],
   note: string,
   meta: { tags: string[]; ordered: boolean },
-  expectedVersion?: number,
+  // Версия, от которой собран состав. ОБЯЗАТЕЛЬНА, а не «если знаете»: необязательной
+  // она была ровно один вызов, и `update_list` её не передавал — полная замена уезжала
+  // в ядро без сверки и молча вытесняла чужую версию, пока патч был защищён.
+  expectedVersion: number,
 ) {
   if (!proposed.length) return { error: 'at least one item with a title is required' }
   const dup = duplicateBid(proposed)
@@ -84,8 +87,10 @@ export async function writeProposed(
   } catch (e) {
     // Отказ ядра по устаревшей версии — не сбой, а нормальный исход гонки: пока
     // правку готовили, список ушёл вперёд. Агент перечитывает и накладывает заново.
+    // Текст НЕЙТРАЛЕН к инструменту: сюда приходят и патч, и полная замена, а «rebuild
+    // the ops» отправляло бы автора полной замены собирать то, чего он не посылал.
     if (e instanceof ListWriteError && e.code === 'stale')
-      return { error: 'list changed while the patch was being applied — read it again (get_list) and rebuild the ops' }
+      return { error: 'list changed while the edit was being written — read it again (get_list) and rebuild the change from the version it returns' }
     // Повторять НЕ предлагаем: расхождение git и базы чинит человек, и агент,
     // которому сказали «попробуй снова», будет долбиться в отказ бесконечно.
     if (e instanceof ListWriteError && e.code === 'out-of-sync')

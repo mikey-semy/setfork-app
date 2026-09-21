@@ -8,9 +8,14 @@
 // пропажа или переименование обязаны быть видны как падение, а не как тихое изменение
 // поверхности.
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import { registerTools } from '@/features/mcp/registry'
 
-type Captured = { name: string; config: { description?: string; annotations?: Record<string, unknown> }; cb: (args: unknown, extra: unknown) => Promise<{ content: { text: string }[]; isError?: boolean }> }
+type Captured = {
+  name: string
+  config: { description?: string; annotations?: Record<string, unknown>; inputSchema?: Record<string, z.ZodTypeAny> }
+  cb: (args: unknown, extra: unknown) => Promise<{ content: { text: string }[]; isError?: boolean }>
+}
 
 function collect(): Captured[] {
   const tools: Captured[] = []
@@ -231,5 +236,78 @@ describe('описания инструментов', () => {
       return !/version/i.test(d)
     })
     expect(silent, 'без слова о версии агент считает ref неподвижным').toEqual([])
+  })
+})
+
+
+/**
+ * КТО ЗАМЕНЯЕТ СОСТАВ СПИСКА ЦЕЛИКОМ — тот обязан назвать базу.
+ *
+ * Перечень задан НЕЗАВИСИМО от схем: выводить его из самих схем значило бы проверять
+ * код им же самим. Он и есть суть находки: механизм сверки версии существовал и
+ * работал, но `patch_list` его требовал, а `update_list` не объявлял поля вовсе — то
+ * есть защищён был более щадящий инструмент, а разрушающий (`destructiveHint: true`,
+ * «anything you omit is removed») писал вслепую и вытеснял чужую версию молча.
+ *
+ * Требование именно ОБЯЗАТЕЛЬНОСТИ, а не наличия: необязательное поле оставило бы
+ * дыру открытой ровно для того вызывающего, который про защиту не подумал.
+ */
+const MUST_REQUIRE_BASE_VERSION = ['update_list', 'patch_list']
+
+describe('полная замена состава называет базу', () => {
+  const tools = collect()
+
+  it('поле baseVersion объявлено и ОБЯЗАТЕЛЬНО', () => {
+    for (const name of MUST_REQUIRE_BASE_VERSION) {
+      const shape = tools.find((t) => t.name === name)?.config.inputSchema
+      expect(shape, `нет схемы у ${name}`).toBeTruthy()
+      const field = shape?.baseVersion
+      expect(field, `${name} не объявляет baseVersion — агент не может защититься тем, чего нет в схеме`).toBeTruthy()
+      expect(field?.isOptional(), `baseVersion у ${name} необязателен — защита есть только у того, кто о ней вспомнил`).toBe(false)
+    }
+  })
+
+  it('отказ без baseVersion учит следующему шагу, а не говорит «Required»', () => {
+    for (const name of MUST_REQUIRE_BASE_VERSION) {
+      const shape = tools.find((t) => t.name === name)?.config.inputSchema
+      const res = z.object(shape as Record<string, z.ZodTypeAny>).safeParse({ handle: 'me', slug: 'x' })
+      expect(res.success, `${name}: вызов без baseVersion обязан отбиваться`).toBe(false)
+      const msg = res.success ? '' : (res.error.issues.find((i) => i.path[0] === 'baseVersion')?.message ?? '')
+      // SDK печатает сообщение зод-проблемы как есть — это и есть текст, который увидит
+      // агент. «Required» отправило бы его гадать; «возьми version из get_list» — нет.
+      expect(msg, `${name}: отказ не называет, откуда взять base`).toMatch(/get_list/)
+    }
+  })
+})
+
+/**
+ * ОБЪЯВЛЕНИЕ НЕ ОБЕЩАЕТ БОЛЬШЕ, ЧЕМ ДЕЛАЕТ РЕАЛИЗАЦИЯ.
+ *
+ * Реализация различает вид предложения: у веточного отставшая база не значит ничего —
+ * расхождение разрешает git, — и `pending_suggestions` предупреждение там не ставит.
+ * А в ОПИСАНИИ стояло безусловное «старая basedOn значит, что принятие отбросит
+ * позднейшее содержимое». Агент видит описание на каждом запросе и проверить его не
+ * может: он поверит объявлению и станет избегать законных веточных слияний.
+ *
+ * Проверка держит ровно это: инструмент, чей ответ различает вид правки, обязан назвать
+ * различие и в описании. ⚠️ Она ловит ИСЧЕЗНОВЕНИЕ различия, а не любую неверную
+ * формулировку — переписать описание мимо смысла, сохранив слово, по-прежнему можно.
+ * Словарная проверка на «последствия» отвергнута по той же причине (см. mcp-surface.md);
+ * здесь перечень назван поимённо и потому точен машинно.
+ */
+const MUST_NAME_SUGGESTION_KIND = ['pending_suggestions', 'apply_suggestion']
+
+describe('описание различает вид предложения там, где его различает ответ', () => {
+  const tools = collect()
+
+  it('предупреждение об устаревшей базе объявлено НЕ безусловно', () => {
+    const flat = MUST_NAME_SUGGESTION_KIND.filter((name) => {
+      const d = tools.find((t) => t.name === name)?.config.description ?? ''
+      // Именно «branch»: слово «items» в этих описаниях стояло и ДО правки («its items
+      // REPLACE…»), и проверка по нему зеленела бы на безусловной формулировке — ноль в
+      // отчёте вместо дефекта. Различие называет только упоминание ВТОРОГО вида.
+      return !/\bbranch\b/i.test(d)
+    })
+    expect(flat, 'агент поверит объявлению и станет избегать законных веточных слияний').toEqual([])
   })
 })

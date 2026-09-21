@@ -12,6 +12,7 @@ import { toast } from '@/shared/ui/toast'
 // экшены библиотеки разом (react-doctor/no-barrel-import).
 import { publishList } from './actions/versions'
 import { translateList } from './actions/ai'
+import { translateErrorKey } from './translation-state'
 import { IconButton } from '@/shared/ui/IconButton'
 import { HintDot } from '@/shared/ui/HintDot'
 
@@ -177,7 +178,9 @@ export function ListActionsMenu({
       const res = await translateList(templateId, targetLang)
       if ('error' in res) {
         // Подсказка НЕ гаснет: перевода не случилось, действие всё ещё ждёт.
-        toast.error(t('translateFailed', lang))
+        // Причина — из общей таблицы: здесь стояло «не удалось перевести» на ЛЮБОЙ код,
+        // и человек, нажавший из меню, не узнавал ни про лимит, ни про сдвинувшийся список.
+        toast.error(t(translateErrorKey(res.error), lang))
       } else {
         accept('translate')
         router.refresh()

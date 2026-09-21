@@ -189,6 +189,18 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         if (res.result === 'nothing-new') {
           await journal('list.fresh-none', 'skipped', { reason: 'living list: the stream had nothing new' })
         }
+        // Гонка с владельцем журналируется ТЕМ ЖЕ помощником и с тем же полем `reason`,
+        // что два других отказа прохода: иначе три отказа одной природы лежат в журнале
+        // тремя способами, и сравнить их между собой нечем. Под `failed` (отказ модели)
+        // её прятать нельзя — это норма, которая повторится сама, а не повод чинить.
+        if (res.result === 'stale') {
+          await journal(
+            'list.grow',
+            'skipped',
+            { mode: 'grow-feed', reason: 'the list moved to a newer version while the feed was being grown', profession: byWhom },
+            { trigger: 'schedule' },
+          )
+        }
         skipped++
       }
       continue
@@ -270,7 +282,22 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     }
 
     if (ownedByCompany) {
-      await publishGardenerVersion(tpl.id, items, { note, authorId: tenderId })
+      // База правки — версия, ИЗ КОТОРОЙ прочитан состав: `snapshotOf` берёт шаги ровно
+      // `tpl.currentVersion`. Между тем чтением и этой строкой прошли обход ссылок и
+      // платный refine, за которые список мог уйти вперёд — решение по маршруту
+      // («отказ, а не запись поверх») описано в `publishGardenerVersion`.
+      const wrote = await publishGardenerVersion(tpl.id, items, { note, authorId: tenderId, expectedVersion: tpl.currentVersion })
+      if (wrote === 'stale') {
+        await journal(
+          'list.improve',
+          'skipped',
+          { mode: 'direct-edit', reason: 'the list moved to a newer version while the edit was being prepared', profession: byWhom },
+          { trigger: 'schedule', deadLinks: deadUrls.length },
+        )
+        skipped++
+        log.info('gardener: own list moved on, edit dropped', { slug: tpl.slug, base: tpl.currentVersion })
+        continue
+      }
       await journal(
         'list.improve',
         'ok',
@@ -299,6 +326,28 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       })
       .returning({ id: suggestions.id })
 
+    /**
+     * ПРЕДЛОЖЕНИЕ ОСТАЁТСЯ ЖДАТЬ ЧЕЛОВЕКА — уведомить владельца И записать в журнал.
+     *
+     * Одним местом, а не двумя: открытых предложений на этом проходе рождается два сорта
+     * (обычное и то, у которого сорвалось авто-слияние), и вторая ветка уже успела
+     * разойтись с первой — журнал писала, а уведомления не слала. Владелец, который
+     * полагается на уведомления, про такую правку не узнавал вовсе, и предложения
+     * копились молча.
+     */
+    const leaveSuggestionOpen = async (reason?: string) => {
+      await notify({ recipientId: tpl.ownerId, actorId: tenderId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+      // Запись в журнал — не отчётность ради отчётности: по нему считается «День
+      // компании» и правило остановки. Самая частая ветка прохода не писала в него
+      // НИЧЕГО, и владелец видел пустой день при работающей компании.
+      await journal(
+        'list.suggest',
+        'ok',
+        { mode: 'suggestion', ...(reason ? { reason } : {}), profession: byWhom },
+        { trigger: 'schedule', deadLinks: deadUrls.length },
+      )
+    }
+
     // Рецепты НЕ авто-мёрджим даже на кураторских — правка количеств требует
     // человеческого глаза, пока качество recipe-политики не оценено вручную.
     if (tpl.ownerCurated && kind !== 'recipe') {
@@ -308,13 +357,25 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       // Пометка «принято» идёт ДО уведомлений (afterVersion), а не после: сбой
       // уведомления или переиндексации иначе оставил бы предложение открытым при уже
       // записанной версии — и следующий проход смёржил бы его повторно.
-      await publishGardenerVersion(tpl.id, items, {
+      const wrote = await publishGardenerVersion(tpl.id, items, {
         note: '\u{1F9D9} gardener: refreshed steps',
         authorId: tenderId,
+        expectedVersion: tpl.currentVersion,
         afterVersion: async () => {
           await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, created.id))
         },
       })
+      if (wrote === 'stale') {
+        // Версии нет — значит `afterVersion` не сработал и предложение осталось ОТКРЫТЫМ.
+        // Это и есть нужный исход: правка не пропала, её просто решает человек (или
+        // следующий проход) на свежем составе, а чужая версия цела. Но раз решает теперь
+        // ЧЕЛОВЕК, он обязан об этом узнать — тем же уведомлением, что у обычного
+        // открытого предложения: «тихо оставили ждать» ничем не отличается от «потеряли».
+        await leaveSuggestionOpen('the list moved on — auto-merge refused, the suggestion stays open')
+        log.info('gardener: curated list moved on, suggestion left open', { slug: tpl.slug, suggestionId: created.id })
+        proposed++
+        continue
+      }
       await journal(
         'list.improve',
         'ok',
@@ -323,11 +384,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       )
       log.info('gardener: auto-merged on curated list', { slug: tpl.slug })
     } else {
-      await notify({ recipientId: tpl.ownerId, actorId: tenderId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
-      // Запись в журнал — не отчётность ради отчётности: по нему считается «День
-      // компании» и правило остановки. Самая частая ветка прохода не писала в него
-      // НИЧЕГО, и владелец видел пустой день при работающей компании.
-      await journal('list.suggest', 'ok', { mode: 'suggestion', profession: byWhom }, { trigger: 'schedule', deadLinks: deadUrls.length })
+      await leaveSuggestionOpen()
       log.info('gardener: suggestion opened', { slug: tpl.slug, suggestionId: created.id, tender: expertId || 'generic' })
     }
     proposed++

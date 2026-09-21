@@ -9,6 +9,7 @@
 // Причина измениться у модуля одна: меняется набор последствий записи.
 
 import 'server-only'
+import { ListWriteError } from '@/core'
 import { listStore } from '@/features/library/list-store'
 import { notifyMany } from '@/features/notifications/notify'
 import { getWatcherIds } from '@/features/watch/queries'
@@ -28,14 +29,44 @@ import type { ProposedItem } from '@/shared/db'
  * то сбой `getWatcherIds`/`enqueueReindex` оставит предложение открытым при уже
  * записанной версии — а следующий проход смёржит его повторно, второй такой же
  * версией. Обратный порядок в худшем случае теряет уведомление, и только.
+ *
+ * `expectedVersion` — версия, ИЗ КОТОРОЙ садовник прочитал состав (`snapshotOf`
+ * берёт шаги ровно `tpl.currentVersion`). Обязательное поле, а не «если знаете»:
+ * вызывающих трое, и необязательное означало бы, что защита есть у того, кто про
+ * неё вспомнил.
+ *
+ * ЗДЕСЬ ОТКАЗ — ПРАВИЛЬНЫЙ ИСХОД, и это решение принято по маршруту отдельно.
+ * Между чтением состава и записью стоят refine (или рост ленты), проверка ссылок и
+ * линзы — десятки секунд платных вызовов. Если владелец за это время опубликовал
+ * свою версию, садовник пишет содержимое, которого он уже не видел, и работа
+ * человека исчезает из текущей версии. Человек при этом НЕ ЖДЁТ у экрана: проход
+ * идёт по расписанию и повторится следующей ночью — уже от свежего состава. Цена
+ * отказа — один платный вызов модели, цена записи — чужая правка.
+ *
+ * Отказ отдаётся ЗНАЧЕНИЕМ (`'stale'`), а не исключением: проход идёт партией по
+ * спискам, и брошенное наружу исключение оборвало бы остальные кандидаты из-за
+ * гонки на одном. Последствия записи при отказе не наступают ВООБЩЕ — версии нет,
+ * значит и `afterVersion` (пометка предложения принятым) не срабатывает: оно
+ * остаётся открытым и доедет следующим проходом.
  */
 export async function publishGardenerVersion(
   templateId: string,
   items: ProposedItem[],
-  opts: { note: string; authorId: string; afterVersion?: () => Promise<void> },
-): Promise<void> {
-  await listStore.addVersion(templateId, { note: opts.note, steps: toStepInput(items), authorId: opts.authorId })
+  opts: { note: string; authorId: string; expectedVersion: number; afterVersion?: () => Promise<void> },
+): Promise<'published' | 'stale'> {
+  try {
+    await listStore.addVersion(templateId, {
+      note: opts.note,
+      steps: toStepInput(items),
+      authorId: opts.authorId,
+      expectedVersion: opts.expectedVersion,
+    })
+  } catch (e) {
+    if (e instanceof ListWriteError && e.code === 'stale') return 'stale'
+    throw e
+  }
   await opts.afterVersion?.()
   await notifyMany(await getWatcherIds(templateId, 'versions'), { actorId: opts.authorId, type: 'new_version', templateId })
   await enqueueReindex(templateId)
+  return 'published'
 }

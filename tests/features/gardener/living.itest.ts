@@ -30,7 +30,12 @@ const current = () => ({
   items: [item('Старый пункт', 'что делать')],
 })
 const tpl = () => ({ id: tplId, slug: 'devops-feed', tags: ['devops'] })
-const ctx = () => ({ tenderId: ownerId, agentId: 'coder', policyVersion: 1 })
+// `baseVersion` читаем из БД, а не подставляем числом: рост ленты уходит в ядро со
+// сверкой версии, и захардкоженная база разъехалась бы с фикстурой при первой же правке.
+const ctx = async () => {
+  const [row] = await db.select({ v: templates.currentVersion }).from(templates).where(eq(templates.id, tplId))
+  return { tenderId: ownerId, agentId: 'coder', policyVersion: 1, baseVersion: row.v }
+}
 
 const addItem = async (title: string, url: string, tags = ['devops']) => {
   const [row] = await db
@@ -70,7 +75,7 @@ const journal = async () => db.select().from(agentActions)
 
 describe('рост живого списка', () => {
   it('нет новостей — модель НЕ зовём и в журнал не пишем рост', async () => {
-    const res = await growLiving(tpl(), current(), 'ru', 'procedure', ctx())
+    const res = await growLiving(tpl(), current(), 'ru', 'procedure', await ctx())
     expect(res.result).toBe('nothing-new')
     // Главное: тишина ничего не стоит. Платный вызов на «нет новостей» был бы холостым ходом.
     expect(ai.calls).toHaveLength(0)
@@ -80,7 +85,7 @@ describe('рост живого списка', () => {
   it('есть новость — версия добавлена, материал списан на этот список, в журнале «рост»', async () => {
     const id = await addItem('Вышел релиз v2', 'https://a.example/v2')
 
-    const res = await growLiving(tpl(), current(), 'ru', 'procedure', ctx())
+    const res = await growLiving(tpl(), current(), 'ru', 'procedure', await ctx())
 
     expect(res.result).toBe('grown')
     expect(res.snapshot?.items.length).toBeGreaterThan(0)
@@ -98,14 +103,14 @@ describe('рост живого списка', () => {
 
   it('чужая тема лентой не подхватывается', async () => {
     await addItem('Новый сорт муки', 'https://a.example/flour', ['кулинария'])
-    const res = await growLiving(tpl(), current(), 'ru', 'procedure', ctx())
+    const res = await growLiving(tpl(), current(), 'ru', 'procedure', await ctx())
     expect(res.result).toBe('nothing-new')
     expect(ai.calls).toHaveLength(0)
   })
 
   it('событие уходит в инструкцию вместе с адресом источника — сноска, а не копия', async () => {
     await addItem('Вышел релиз v2', 'https://a.example/v2')
-    await growLiving(tpl(), current(), 'ru', 'procedure', ctx())
+    await growLiving(tpl(), current(), 'ru', 'procedure', await ctx())
     expect(ai.calls[0]).toContain('https://a.example/v2')
     // Запрет пересказа — часть инструкции, а не пожелание в документации.
     expect(ai.calls[0]).toMatch(/never a retelling|GROW THE LIST/)
@@ -115,7 +120,7 @@ describe('рост живого списка', () => {
     const id = await addItem('Вышел релиз v2', 'https://a.example/v2')
     ai.reply = null
 
-    const res = await growLiving(tpl(), current(), 'ru', 'procedure', ctx())
+    const res = await growLiving(tpl(), current(), 'ru', 'procedure', await ctx())
 
     expect(res.result).toBe('failed')
     const [row] = await db.select().from(feedItems).where(eq(feedItems.id, id))
@@ -132,10 +137,10 @@ describe('чем ищем материал', () => {
     await db.update(templates).set({ tags: ['kubernetes'] }).where(eq(templates.id, tplId))
     await addItem('Вышел релиз v2', 'https://a.example/v2', ['devops'])
 
-    const byTagsOnly = await growLiving({ ...tpl(), tags: ['kubernetes'] }, current(), 'ru', 'procedure', ctx())
+    const byTagsOnly = await growLiving({ ...tpl(), tags: ['kubernetes'] }, current(), 'ru', 'procedure', await ctx())
     expect(byTagsOnly.result).toBe('nothing-new')
 
-    const withDomains = await growLiving({ ...tpl(), tags: ['kubernetes'] }, current(), 'ru', 'procedure', { ...ctx(), domains: ['devops'] })
+    const withDomains = await growLiving({ ...tpl(), tags: ['kubernetes'] }, current(), 'ru', 'procedure', { ...(await ctx()), domains: ['devops'] })
     expect(withDomains.result).toBe('grown')
   })
 })
@@ -146,7 +151,7 @@ describe('находки ревью (Codex #535)', () => {
     // Ответ модели = текущее содержимое: события проигнорированы.
     ai.reply = { title: 'Что происходит в DevOps', desc: 'Лента изменений по инструментам', tags: ['devops'], items: [item('Старый пункт', 'что делать')] }
 
-    const res = await growLiving(tpl(), current(), 'ru', 'procedure', ctx())
+    const res = await growLiving(tpl(), current(), 'ru', 'procedure', await ctx())
 
     expect(res.result).toBe('failed')
     const [row] = await db.select().from(feedItems).where(eq(feedItems.id, id))
@@ -166,7 +171,7 @@ describe('частично использованный материал', () =>
       items: [item('Новое: перейти на v2', '2026-07-28 что сделать', [{ label: 'a.example', url: 'https://a.example/v2' }]), item('Старый пункт', 'что делать')],
     }
 
-    const res = await growLiving(tpl(), current(), 'ru', 'procedure', ctx())
+    const res = await growLiving(tpl(), current(), 'ru', 'procedure', await ctx())
     expect(res.result).toBe('grown')
 
     const [used] = await db.select().from(feedItems).where(eq(feedItems.id, landed))

@@ -49,10 +49,25 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
       // операция, и клиент вправе спросить человека. Точечная правка — patch_list.
       annotations: { destructiveHint: true },
       description:
-        'Replace ALL blocks of a list you own (steps and/or text/image/poll/video/quiz/file) — anything you omit is removed. For editing a few blocks use patch_list instead. Every write call makes a new version unless you pass publish:false — this holds for drafts and published lists alike. Layout rules are the same as in create_list — including that a single newline does NOT break a line.',
+        'Replace ALL blocks of a list you own (steps and/or text/image/poll/video/quiz/file) — anything you omit is removed. For editing a few blocks use patch_list instead. baseVersion is required, exactly as for patch_list: if the list changed meanwhile the replacement is rejected instead of dropping those edits. Every write call makes a new version unless you pass publish:false — this holds for drafts and published lists alike. Layout rules are the same as in create_list — including that a single newline does NOT break a line.',
       inputSchema: {
         handle: z.string().describe('Owner handle (must be you)'),
         slug: z.string().describe('List slug'),
+        // ⚠️ ОБЯЗАТЕЛЬНОЕ поле в поверхности, которая уезжает агенту в КАЖДОМ запросе и
+        // оплачивается пользователем. Заведено осознанно: инструмент стирает всё, чего в
+        // нём нет, и без базы он молча вытеснял версию, опубликованную между чтением
+        // агента и его записью. Необязательное поле эту дыру не закрыло бы — открытой
+        // осталась бы ровно у того, кто про защиту не подумал.
+        // `required_error` — не украшение: SDK печатает сообщение зод-проблемы как есть,
+        // и без него отказ звучал бы «Required» — тупик вместо следующего шага
+        // (docs/mcp-surface.md, свойство 4).
+        baseVersion: z
+          .number({
+            required_error:
+              'baseVersion is required: pass the "version" from get_list (or pendingEdits.baseVersion if edits are already pending) — without it a full replacement would silently drop edits made meanwhile. To change only some blocks, use patch_list.',
+          })
+          .int()
+          .describe('The "version" get_list returned — the replacement is rejected if the list moved on'),
         items: z
           .array(itemShapeLean)
           .min(1)
@@ -89,7 +104,12 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
         handle: z.string().describe('Owner handle (must be you)'),
         slug: z.string().describe('List slug'),
         baseVersion: z
-          .number()
+          // `required_error` виден только в отказе и в поверхность НЕ уезжает
+          // (zodToJsonSchema сообщений не сериализует) — то есть учит бесплатно.
+          .number({
+            required_error:
+              'baseVersion is required: pass the "version" from get_list (or pendingEdits.baseVersion if edits are already pending) — without it the patch could silently overwrite an edit made meanwhile.',
+          })
           .int()
           .describe('The "version" get_list returned — or pendingEdits.baseVersion if you already have pending edits, because the patch stacks on top of those'),
         ops: z
