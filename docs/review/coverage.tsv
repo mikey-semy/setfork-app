@@ -1274,6 +1274,8 @@ tests/architecture/step-converter-one-path.test.ts	H12
 tests/architecture/touch-zone-vs-position.test.ts	H12
 tests/architecture/ui-parity.test.ts	H12
 tests/architecture/verified-not-public.test.ts	H12
+tests/architecture/version-base-declared.marker.mutants.json	H12
+tests/architecture/version-base-declared.mutants.json	H12
 tests/architecture/version-base-declared.test.ts	H12
 tests/core/domain/access.test.ts	V12d
 tests/core/domain/affiliate.test.ts	V12d
@@ -1344,6 +1346,8 @@ tests/features/git/list-content.test.ts	H2
 tests/features/git/push-effects.itest.ts	H2
 tests/features/git/push-resilience.itest.ts	H2
 tests/features/git/push-role.test.ts	H2
+tests/features/git/snapshot-read-failure.mutants.json	H2
+tests/features/git/snapshot-read-failure.test.ts	H2
 tests/features/git/three-way.test.ts	H2
 tests/features/git/transport-access.itest.ts	H2
 tests/features/git/transport-error.test.ts	H2
@@ -1409,6 +1413,7 @@ tests/features/library/localized-content.test.ts	V1k
 tests/features/library/maintainer-parity.itest.ts	V1
 tests/features/library/merge-not-projected.test.ts	V1k,V1d
 tests/features/library/merge-paths-parity.test.ts	V1k,V1d
+tests/features/library/merge-snapshot-unreadable.test.ts	V1k
 tests/features/library/mirror-error.test.ts	V1k,V1d
 tests/features/library/mirror-retry.test.ts	V1k,V1d
 tests/features/library/mirror-sweep.itest.ts	V1d
@@ -1438,6 +1443,7 @@ tests/features/library/set-verification-level.itest.ts	V1h
 tests/features/library/slug.test.ts	V1k
 tests/features/library/suggest-refusal-keeps-edit.test.ts	V1k
 tests/features/library/suggestion-apply.test.ts	V1,V1k
+tests/features/library/suggestion-blocks.mutants.json	V1
 tests/features/library/suggestion-checks.test.ts	V1,V1k
 tests/features/library/suggestion-close-reopen.itest.ts	V1
 tests/features/library/suggestion-locked.itest.ts	V1

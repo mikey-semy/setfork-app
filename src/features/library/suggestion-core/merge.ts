@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm'
 import { db, suggestions, users } from '@/shared/db'
 import { captureError } from '@/shared/observability'
 import { findDestructiveSteps } from '@/core/domain/destructive-command'
-import { suggestionBlocks } from '../suggestion-blocks'
+import { readSuggestionBlocks } from '../suggestion-blocks'
 import { enqueueReindex } from '../jobs'
 import { withPrDefaults } from '../pr-settings'
 import { closeLinkedIssues, notifyWatchersNewVersion } from '../suggestion-side-effects'
@@ -91,8 +91,18 @@ export async function mergeSuggestion(
   // мог положить исполняемую команду в ветку, а владелец влить её одной кнопкой — и
   // она уезжает в исполняемый /raw. Содержимое берём тем же способом, что и просмотр
   // предложения, чтобы проверять ровно то, что вольётся.
-  const incoming = await suggestionBlocks(sug, owner, tpl.slug)
-  const destructive = findDestructiveSteps(incoming)
+  const incoming = await readSuggestionBlocks(sug, owner, tpl.slug)
+  // ⚠️ «ПРОЧИТАТЬ НЕ УДАЛОСЬ» — НЕ «КОМАНД НЕТ». Раньше сбой чтения снапшота приходил
+  // сюда пустым списком, и страж пропускал слияние: дверь открывалась ровно на обрыве
+  // связи с ядром, то есть проверка была fail-open в единственный момент, когда она
+  // нужна. Второго исполнителя у неё нет: merge-пути ядра спрашивают только право на
+  // запись (`gate::ensure_writable`), про содержимое — лишь на пуше. Отказываем и
+  // называем причину: обрыв преходящий, повтор осмыслен. Ровно так решило ядро в
+  // зеркальном случае — «фронт не ответил, ответил ошибкой или не уложился в таймаут —
+  // запись отклоняется. Дверь, открытая по умолчанию, обесценивает всю конструкцию»
+  // (setfork-core, `gate.rs`).
+  if (!incoming.ok) return { ok: false, reason: incoming.reason }
+  const destructive = findDestructiveSteps(incoming.blocks)
   if (destructive.length) {
     const { index, match } = destructive[0]
     return { ok: false, reason: `destructive command in step ${index + 1} (${match.reason})` }
@@ -106,6 +116,11 @@ export async function mergeSuggestion(
   }
 
   try {
+    // ⚠️ ВЕРСИЮ СОЗДАЁТ ЯДРО — фасад `listStore.addVersion` здесь не при чём, и базы
+    // правки (`expectedVersion`) у этого вызова нет намеренно: расхождение с main
+    // разрешает сам git, отставшая ветка даёт конфликт и отказ. Решение записано в узде
+    // `tests/architecture/version-base-declared` — не «чини» его, добавив базу.
+    //
     // Заголовок squash-коммита — «<название предложения> (#N)»: по нему в истории
     // main видно, откуда изменение, когда самой ветки уже нет.
     const head = sug.note.split(/\r?\n/)[0].trim().slice(0, 120)

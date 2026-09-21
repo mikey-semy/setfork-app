@@ -255,7 +255,10 @@ export interface GitCore {
   bundle(repo: GitRepoRef): Promise<Uint8Array | null>
   /** Ветки (A1 read-only): main первым; прочие — черновики без проекции. */
   listBranches(repo: GitRepoRef): Promise<GitBranch[]>
-  /** Материализация tip ветки (просмотр «на ветке»). null — ветки/list.json нет. */
+  /** Материализация tip ветки (просмотр «на ветке»). null — ветки/list.json нет,
+   *  и ТОЛЬКО это; сбой связи с ядром бросает GitTransportError. Разница не
+   *  косметическая: на ней стоит страж исполняемых команд при слиянии — «прочитать не
+   *  удалось» он обязан отличать от «команд нет». */
   branchSnapshot(repo: GitRepoRef, branch: string): Promise<BranchSnapshot | null>
   /** A2: создать ветку от базы (''=main). → tip sha; бросает BranchOpError. */
   createBranch(repo: GitRepoRef, name: string, from?: string): Promise<string>
