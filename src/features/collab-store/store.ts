@@ -33,6 +33,17 @@ function toPbStep(s: Suggestion['steps'][number]): PbStep {
     // Блочная модель: type/content_json — только у не-step блоков.
     type: s.type && s.type !== 'step' ? s.type : '',
     contentJson: s.type && s.type !== 'step' ? JSON.stringify(s.content ?? {}) : '',
+    // ⚠️ ИДЕНТИЧНОСТЬ И ЗАЩИТНЫЕ ПОМЕТКИ КЛАДЁМ НА ПРОВОД. Поля в `NewStep` есть с
+    // закрытия долга катовера, а этот конвертер их не отправлял — то есть при
+    // включённом SETFORK_DOMAIN_WRITES предложение уезжало в ядро без blockId, без
+    // «здесь нужен человек» и без «разрушительного пункта». Последнее видно снаружи:
+    // пункт без пометки попадает в собранный скрипт исполняемым, а не
+    // закомментированным. Комментарий в самом proto предупреждает, что этот баг
+    // «уже чинили дважды» — здесь он был в третий раз.
+    blockId: s.blockId ?? '',
+    needsHuman: s.needsHuman ?? false,
+    needsHumanAsk: { v: s.needsHumanAsk ?? {} },
+    danger: s.danger ?? false,
   } as PbStep
 }
 
@@ -59,6 +70,12 @@ function fromPbStep(s: PbStep, i: number): Suggestion['steps'][number] {
     subtasks: s.subtasks.map((t) => t.v ?? {}),
     refs: s.refs.map((r) => ({ label: r.label?.v ?? {}, ...(r.url ? { url: r.url } : {}) })),
     imageRef: s.imageRef || null,
+    // Обратная сторона: что положили на провод, то обязаны и снять. Иначе ответ ядра
+    // приезжает без пометок, и следующая запись затирает их уже в базе.
+    ...(s.blockId ? { blockId: s.blockId } : {}),
+    needsHuman: s.needsHuman,
+    needsHumanAsk: s.needsHumanAsk?.v ?? {},
+    danger: s.danger,
   }
 }
 

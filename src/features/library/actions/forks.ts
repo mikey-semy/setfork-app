@@ -3,7 +3,8 @@
 import { and, asc, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, steps, templates } from '@/shared/db'
+import { db, steps, templates, type ProposedItem } from '@/shared/db'
+import { toStepInput } from '@/shared/lib/step-input'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, type LocaleText } from '@/shared/i18n'
@@ -98,20 +99,13 @@ export async function useTemplate(templateId: string): Promise<void> {
     origin: 'authored', // шаблон — стартовая точка, не fork-связь
     forkedFromId: null,
     note: `from template ${src.slug}`,
-    steps: srcSteps.map((s, i) => ({
-      n: i + 1,
-      type: s.type ?? 'step', // блочная модель: копия не должна терять text/image блоки
-      content: s.content ?? {},
-      title: s.title,
-      desc: s.desc,
-      command: s.command,
-      level: s.level,
-      why: s.why,
-      section: s.section,
-      subtasks: s.subtasks,
-      refs: s.refs,
-      imageRef: s.imageKey ?? null,
-    })),
+    // ⚠️ КОПИЯ СОБИРАЕТСЯ ОБЩИМ КОНВЕРТЕРОМ, а не своим маппингом. Здесь был четвёртый
+    // рукописный: он терял «здесь нужен человек» с вопросом, идентичность блока и
+    // пометку «разрушительный пункт». Последнее видно снаружи и стоит дорого — без
+    // `danger` закомментированный `# make reset` собирается в исполняемый `make reset`.
+    // Соседний форк в этом же файле чинили дважды и всё равно не дочинили: пока каждый
+    // путь копирует поля сам, один из них однажды забудет очередное.
+    steps: toStepInput(srcSteps as unknown as ProposedItem[]),
   })
   // Копия публикуется — но состояние публикации ей задал фасад create, до записи.
   revalidatePath('/', 'layout')
@@ -211,30 +205,11 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
     origin: 'forked',
     forkedFromId: src.id,
     note: `forked from ${src.slug} v${srcCurrent?.version ?? 1}`,
-    steps: srcSteps.map((s, i) => ({
-      n: i + 1,
-      type: s.type ?? 'step', // блочная модель: копия не должна терять text/image блоки
-      content: s.content ?? {},
-      title: s.title,
-      desc: s.desc,
-      command: s.command,
-      level: s.level,
-      why: s.why,
-      section: s.section,
-      subtasks: s.subtasks,
-      refs: s.refs,
-      imageRef: s.imageKey ?? null,
-      // Пометка «здесь нужен человек» и её вопрос — часть шага, а не украшение. Шаг,
-      // про который автор честно сказал «этого я знать не могу, проверь у себя», после
-      // копирования выглядел обычным утверждением — при том что копия наследует ЧУЖОЙ
-      // опыт, и теряется ровно та отметка, которая от этого и защищает.
-      needsHuman: s.needsHuman,
-      needsHumanAsk: s.needsHumanAsk,
-      // Идентичность блока: на ней держатся комментарии к пункту и сравнение с
-      // источником. Без неё каждый блок форка выглядит новым, и различие с оригиналом
-      // показывает полную замену содержимого вместо реальных отличий.
-      blockId: s.blockId,
-    })),
+    // Копия собирается ОБЩИМ конвертером (см. выше, в «использовать как шаблон»):
+    // перенос полей — одно правило на все пути записи, а не список, который каждый путь
+    // ведёт сам. Прежний здешний маппинг дважды доучивали (needsHuman, blockId) и всё
+    // равно не доложили `danger`.
+    steps: toStepInput(srcSteps as unknown as ProposedItem[]),
   })
 
   // Гонку проиграли: параллельный запрос уже создал форк этого источника, и уникальный

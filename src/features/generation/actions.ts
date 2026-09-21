@@ -19,6 +19,7 @@ import { getAiSettings } from '@/shared/settings/ai'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { enqueueReindex } from '@/features/library/jobs'
 import { emptyItem, toProposedItems } from '@/features/library/editor'
+import { toStepInput } from '@/shared/lib/step-input'
 import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
 import { MAX_VARIANTS } from './limits'
@@ -328,18 +329,11 @@ export async function acceptCandidate(generationId: string, candidateId: string)
     status: 'draft', // черновик: не публичен, пока владелец не опубликует
     origin: 'ai_draft',
     note: 'ai draft',
-    steps: proposed.map((it, i) => ({
-      n: i + 1,
-      title: it.title,
-      desc: it.desc,
-      command: it.command,
-      level: it.level,
-      why: it.why,
-      section: it.section,
-      subtasks: it.subtasks,
-      refs: it.refs,
-      imageRef: it.imageKey ?? null,
-    })),
+    // ⚠️ ОБЩИЙ КОНВЕРТЕР, а не свой маппинг. Здесь был третий рукописный, и он
+    // выбрасывал «здесь нужен человек» вместе с вопросом — ВОСЕМЬЮ СТРОКАМИ ПОСЛЕ того,
+    // как их вычислил: `toProposedItems` пометку ставит, а этот список полей её не перечислял.
+    // Заодно терялись идентичность блока и пометка «разрушительный пункт».
+    steps: toStepInput(proposed),
   })
   await db.update(generations).set({ chosenTemplateId: list.id, chosenIdx: cand.idx }).where(eq(generations.id, gen.id))
   // Тип списка переезжает на template — иначе он умирал вместе с generation,

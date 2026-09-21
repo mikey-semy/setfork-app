@@ -266,6 +266,12 @@ export async function translateList(templateId: string, targetLang: string): Pro
       // отменяет. Набор шагов переписывается целиком, поэтому не перенести = стереть.
       needsHuman: s.needsHuman,
       needsHumanAsk: s.needsHumanAsk as LocaleText,
+      // ⚠️ «РАЗРУШИТЕЛЬНЫЙ ПУНКТ» — ТОЖЕ СВОЙСТВО ПУНКТА, А НЕ ЯЗЫКА, и переносить его
+      // надо ЯВНО. Без этой строки поле приезжало пустым, `toStepInput` честно включал
+      // свой тристейт и ставил пометку по виду команды — то есть перевод подменял
+      // решение автора мнением детектора. Автор, снявший пометку с безопасного
+      // `# make reset` в комментарии, после добавления языка получал её обратно.
+      danger: s.danger,
       subtasks: subs.map((st, k) => add(st, t.subtasks[k] ?? '')),
       refs: refs.map((r, k) => ({ label: add(r.label, t.refs[k]?.label ?? ''), ...(r.url ? { url: r.url } : {}) })),
     }
