@@ -10,6 +10,7 @@ import { userHasPush } from '@/shared/push/send'
 import { captureError } from '@/shared/observability'
 import { extractHandles } from './mentions'
 import type { NotificationType } from './queries'
+import { recipientSeesList } from './list-access'
 
 /** Тот же перечень, что в схеме и в колокольчике: один источник, см. `./queries`. */
 type NotifType = NotificationType
@@ -97,15 +98,23 @@ export async function notify(params: {
       suggestionId: params.suggestionId ?? null,
     }
 
+    // ⚠️ ДОСТАВКА НАРУЖУ — ТОЛЬКО ТОМУ, КТО СПИСОК ВИДИТ. Лента этот вопрос задаёт на
+    // чтении (`keepVisible`), а почта и пуш собирают текст в момент отправки и читали
+    // название по id без гейта: приватный заголовок уезжал в ТЕМЕ ПИСЬМА тому, кому
+    // колокольчик его прячет. Спрашиваем один раз на оба канала — и только когда
+    // уведомление вообще про список (подписка на человека и передача аккаунта не про
+    // доступ, у них templateId нет).
+    const deliverable = params.templateId ? await recipientSeesList(params.templateId, params.recipientId) : true
+
     // Дублируем на почту через очередь (durable + ретраи), если получатель включил
     // email-уведомления и SMTP настроен. Отправка уходит из request-пути к воркеру.
-    if (prefs.email === true && u?.email && (await emailEnabled())) {
+    if (deliverable && prefs.email === true && u?.email && (await emailEnabled())) {
       // userId нужен письму для ссылки отписки (List-Unsubscribe).
       await enqueueJob('email', { to: u.email, userId: params.recipientId, ...refPayload })
     }
 
     // Фоновый web-push, если включён browser-pref, есть подписка и VAPID настроен.
-    if (prefs.browser === true && (await pushEnabled()) && (await userHasPush(params.recipientId))) {
+    if (deliverable && prefs.browser === true && (await pushEnabled()) && (await userHasPush(params.recipientId))) {
       await enqueueJob('push', { userId: params.recipientId, ...refPayload })
     }
   } catch (e) {
