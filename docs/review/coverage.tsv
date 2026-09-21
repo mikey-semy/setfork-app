@@ -1261,6 +1261,7 @@ tests/architecture/rsc-client-boundary.test.ts	H12
 tests/architecture/security-headers.test.ts	H12
 tests/architecture/sidebar-search-server.test.ts	H12
 tests/architecture/stacked-touch.test.ts	H12
+tests/architecture/step-converter-one-path.test.ts	H12
 tests/architecture/touch-zone-vs-position.test.ts	H12
 tests/architecture/ui-parity.test.ts	H12
 tests/architecture/verified-not-public.test.ts	H12
@@ -1597,6 +1598,7 @@ tests/shared/lib/markdown.test.ts	V12b
 tests/shared/lib/paging.test.ts	V12b
 tests/shared/lib/safe-fetch.test.ts	V12b
 tests/shared/lib/safe-url.test.ts	V12b
+tests/shared/lib/step-field-parity.test.ts	V12b
 tests/shared/lib/text-input.test.ts	V12b
 tests/shared/lib/translit.test.ts	V12b
 tests/shared/link-health.test.ts	V12f
