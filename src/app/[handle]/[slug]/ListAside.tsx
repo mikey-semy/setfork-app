@@ -50,6 +50,15 @@ export function ListAside(props: Props) {
   const { lessons, viewer, backlinks, base, tpl, isOwner, lineage, lineageExact, lineageNames, contributors, lang } = props
   return (
     <PageAside>
+      {/* About ВЫШЕ содержания — как на мобиле (см. page.tsx) и как у GitHub.
+          Описание отвечает на «о чём это», оглавление — на «что внутри», и первый
+          вопрос человек задаёт раньше. Оглавление бывает на десятки пунктов, и
+          описание уезжало за экран ровно там, где оно нужнее всего: когда открыли
+          чужой список и решают, туда ли попали. */}
+      <div className="hidden flex-col gap-4 lg:flex">
+        <SectionLabel>{t('about', lang)}</SectionLabel>
+        <ListAbout {...props} layout="column" />
+      </div>
       <CourseOutline lessons={lessons} showProgress={!!viewer} lang={lang} />
       {backlinks.length > 0 && (
         <AsideCard title={t('list.linkedFrom', lang)}>
@@ -65,11 +74,6 @@ export function ListAside(props: Props) {
         </AsideCard>
       )}
       <div className="flex flex-col gap-4">
-        <div className="hidden flex-col gap-4 lg:flex">
-          <SectionLabel>{t('about', lang)}</SectionLabel>
-          <ListAbout {...props} layout="column" />
-        </div>
-
         {lineage && (
           <div className="hidden lg:block">
             <ListLineage lineage={lineage} exact={lineageExact} gnomeNames={lineageNames} lang={lang} />
