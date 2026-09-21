@@ -1,6 +1,7 @@
 // eslint-disable-next-line no-restricted-imports -- внутренний канал ядро→фронт: своя авторизация общим токеном, не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
 import { canEditList, editBlockReason } from '@/core'
+import { findDestructiveSteps } from '@/core/domain/destructive-command'
 
 /**
  * Внутренний эндпоинт «можно ли писать в этот список» — ядро спрашивает перед
@@ -15,11 +16,49 @@ import { canEditList, editBlockReason } from '@/core'
  * Направление вызова ОБРАТНОЕ обычному (обычно фронт зовёт ядро), поэтому здесь
  * не сессия и не пользовательский токен, а тот же общий токен канала
  * SETFORK_CORE_TOKEN. Наружу эндпоинт не публикуется.
+ *
+ * # Второй вопрос: БЕЗОПАСНО ЛИ ЭТО СОДЕРЖИМОЕ (H15-002)
+ *
+ * Запрет исполняемых команд (`assertNoDestructiveSteps`) стоит на фасаде
+ * `ListStore` — через него идут редактор, MCP, генерация, садовник и предложения.
+ * `git push` версию создаёт МИМО фасада: пак принимает ядро, оно же проецирует
+ * коммит в версию. Ядро при этом судит только ФОРМУ (pre-receive: удаление main,
+ * non-fast-forward, обязательный list.json, allowlist путей дерева), а `content`
+ * блока хранит непрозрачным JSON — про содержимое команд там нет ничего.
+ *
+ * Поэтому вопрос задаётся ТУТ ЖЕ, на том же канале и тем же правилом: решает
+ * приложение (набор правил — политика безопасности на TS, с кодами причин для
+ * словаря автора), принуждает ядро. Копии правила в Rust не заводим — две копии
+ * одной политики в этом проекте уже расходились (RULES против RISKY), и цена
+ * известна.
+ *
+ * ⚠️ Набор здесь РОВНО ТОТ ЖЕ, что на фасаде: `findDestructiveSteps` (RULES —
+ * запрет), а не `findRisky` (RISKY — пометка). Строже редактора этот вход быть не
+ * имеет права: пуш — рабочий путь, и отказ в нём, которого не было бы у той же
+ * правки из формы, стоит человеку потерянной работы.
+ *
+ * Отказ НАЗЫВАЕТ МЕСТО: номер шага (с единицы, как у `DestructiveCommandError`),
+ * код правила и совпавший кусок команды, — чтобы `pre-receive` напечатал человеку
+ * не «нельзя», а какой пункт и какая команда.
+ *
+ * ⚠️ Половина, которой здесь нет: блоки в запрос кладёт ЯДРО (setfork-core,
+ * `git/bundle.rs` + `gate.rs`), разобрав `list.json` пушнутого коммита своим уже
+ * существующим парсером (`git/project.rs`, `RawStep.command`). Без `blocks` ответ
+ * побайтово прежний — старое ядро и окно выкатки этот вход не ломают.
  */
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-type Verdict = { allow: true } | { allow: false; reason: 'archived' | 'frozen' | 'not-found' }
+/** Блок списка в вопросе ядра. Не-step блоки команды не несут и проходят. */
+interface AskedBlock {
+  command?: unknown
+}
+
+type Verdict =
+  | { allow: true }
+  | { allow: false; reason: 'archived' | 'frozen' | 'not-found' }
+  /** Запрещённая команда: причина + МЕСТО (шаг с единицы, код правила, фрагмент). */
+  | { allow: false; reason: 'destructive'; step: number; rule: string; fragment: string }
 
 const json = (v: Verdict, status = 200) =>
   new Response(JSON.stringify(v), { status, headers: { 'Content-Type': 'application/json' } })
@@ -33,10 +72,26 @@ function channelOk(req: Request): boolean {
   return req.headers.get('authorization') === `Bearer ${expected}`
 }
 
+/**
+ * Блоки из тела запроса: `undefined` — ядро не спрашивало про содержимое (старое
+ * ядро либо операция без пака), `null` — спросило, но форма не та.
+ *
+ * Форму различаем СТРОГО, а мягкость оставляем полям: массив не массив — это
+ * расхождение контракта, и открывать дверь на нём нельзя (ядро прочтёт 4xx как
+ * «ответ непонятен» и откажет). А вот блок без команды или с нестроковой
+ * командой — обычный не-step блок, он проходит, как проходит в любом другом
+ * пути записи.
+ */
+function readBlocks(raw: unknown): AskedBlock[] | null | undefined {
+  if (raw === undefined || raw === null) return undefined
+  if (!Array.isArray(raw)) return null
+  return raw.map((b) => (b && typeof b === 'object' ? (b as AskedBlock) : {}))
+}
+
 export async function POST(req: Request) {
   if (!channelOk(req)) return new Response('Unauthorized', { status: 401 })
 
-  let body: { owner?: unknown; slug?: unknown }
+  let body: { owner?: unknown; slug?: unknown; blocks?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -45,13 +100,28 @@ export async function POST(req: Request) {
   const owner = typeof body.owner === 'string' ? body.owner : ''
   const slug = typeof body.slug === 'string' ? body.slug : ''
   if (!owner || !slug) return new Response('Bad request', { status: 400 })
+  const blocks = readBlocks(body.blocks)
+  if (blocks === null) return new Response('Bad request', { status: 400 })
 
   const meta = await getListMeta(owner, slug)
   // Списка нет — писать некуда. Отдаём вердикт, а не 404: для ядра это такой же
   // ответ «нельзя», и различать транспортную ошибку от продуктовой не придётся.
   if (!meta) return json({ allow: false, reason: 'not-found' })
 
-  if (canEditList(meta)) return json({ allow: true })
-  // editBlockReason здесь не может вернуть null: canEditList уже сказал «нельзя».
-  return json({ allow: false, reason: editBlockReason(meta) ?? 'frozen' })
+  // Состояние списка — ПЕРВЫМ: если писать нельзя вовсе, содержимое не при чём, и
+  // человеку надо сказать про архив, а не про команду в шаге.
+  if (!canEditList(meta)) {
+    // editBlockReason здесь не может вернуть null: canEditList уже сказал «нельзя».
+    return json({ allow: false, reason: editBlockReason(meta) ?? 'frozen' })
+  }
+
+  if (blocks) {
+    const found = findDestructiveSteps(blocks.map((b) => ({ command: typeof b.command === 'string' ? b.command : null })))
+    const first = found[0]
+    if (first) {
+      return json({ allow: false, reason: 'destructive', step: first.index + 1, rule: first.match.reason, fragment: first.match.fragment })
+    }
+  }
+
+  return json({ allow: true })
 }

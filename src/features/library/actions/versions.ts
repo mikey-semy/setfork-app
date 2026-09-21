@@ -22,6 +22,7 @@ import { getDraft, getVersionSteps } from '../queries'
 import { publishOwnedDraft } from '../publish-draft'
 import { deleteDraft, publishDraftFor, upsertDraft, type PublishResult } from '../draft'
 import { listStore } from '../list-store'
+import { VERSION_ERR } from '../version-error'
 import { parseTags, slugify } from '../slug'
 import { notifyWatchersNewVersion } from '../suggestion-side-effects'
 import { enqueueReindex } from '../jobs'
@@ -287,13 +288,19 @@ export async function revertToVersion(templateId: string, version: number): Prom
       authorId: session.userId,
     })
   } catch (e) {
-    // Расхождение git и базы — не сбой кнопки: без этой ветки человек получал
-    // безымянный экран ошибки и не мог узнать, что откат вообще не при чём.
-    if (e instanceof ListWriteError && e.code === 'out-of-sync') {
-      // Ведём туда, ОТКУДА нажали, — в историю версий, и своим текстом: сообщение
-      // экрана правки обещает, что черновик цел, а у отката черновика обычно нет
-      // вовсе (замечание авто-ревью на #824).
-      redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/versions?e=outofsync`)
+    // Отказ записи — не сбой кнопки: без этой ветки человек получал безымянный
+    // экран ошибки и не мог узнать, что откат вообще не при чём. Ведём туда,
+    // ОТКУДА нажали, — в историю версий, и своим текстом: сообщение экрана правки
+    // обещает, что черновик цел, а у отката черновика обычно нет вовсе (замечание
+    // авто-ревью на #824).
+    //
+    // Перечислять коды здесь НЕЛЬЗЯ: своего гейта у этой кнопки нет (`canEditList`
+    // не спрашивается вовсе), и барьер фасада для неё — единственная проверка.
+    // Пока ветка знала один код, архив и заморозка улетали наружу безымянными.
+    // Теперь код едет в адрес как есть, а текст ему подбирает VERSION_ERR — общая
+    // со страницей таблица, и код без текста туда не попадёт (узда).
+    if (e instanceof ListWriteError && VERSION_ERR[e.code]) {
+      redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/versions?e=${e.code}`)
     }
     throw e
   }
