@@ -225,6 +225,9 @@ export async function toggleReviewRequest(suggestionId: string, handle: string):
 
   const [u] = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
   if (!u) return
+  // Запрета «просить о ревью только имеющих доступ» здесь нет по той же причине, что у
+  // назначения исполнителя (features/issues/actions.ts): он выключил бы ревью ГНОМА на
+  // приватном списке. Утечка была в доставке письма, и закрыта она там же.
   const [existing] = await db
     .select({ id: suggestionReviewRequests.id })
     .from(suggestionReviewRequests)
