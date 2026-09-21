@@ -535,8 +535,8 @@ src/features/library/ListActionsMenu.tsx	V1p
 src/features/library/ListCardMeta.tsx	V1p
 src/features/library/ListFormToggles.tsx	V1p
 src/features/library/ListLineage.tsx	V1p
-src/features/library/ListSettingsDanger.tsx	V1j
-src/features/library/ListSettingsSheet.tsx	V1j
+src/features/library/ListSettingsDanger.tsx	V1n
+src/features/library/ListSettingsSheet.tsx	V1n
 src/features/library/ListStateBadge.tsx	V1p
 src/features/library/ListStats.tsx	V1p
 src/features/library/LivingSection.tsx	V1p
@@ -547,7 +547,7 @@ src/features/library/MirrorSection.tsx	V1p
 src/features/library/NewListForm.tsx	V1n
 src/features/library/PendingReviewBar.tsx	V1p
 src/features/library/PinButton.tsx	V1p
-src/features/library/PrSettingsSection.tsx	V1j
+src/features/library/PrSettingsSection.tsx	V1n
 src/features/library/QualifierSearch.tsx	V1g
 src/features/library/ReviewPanel.tsx	V1p
 src/features/library/RunReportLine.tsx	V1p

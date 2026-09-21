@@ -684,32 +684,19 @@
       ]
     },
     {
-      "id": "V1j",
-      "slug": "lists",
-      "phase": 2,
-      "title": "Список: настройки и опасные действия",
-      "role": "reviewer",
-      "goal": "Пройти экраны, где список НАСТРАИВАЮТ: видимость, разделы, передача, удаление — и то, что необратимое спрашивает подтверждение и называет последствие.",
-      "paths": [
-        "src/features/library/ListSettings*",
-        "src/features/library/*Settings*",
-        "src/features/library/*Danger*"
-      ],
-      "ref_paths": [
-        "src/shared/db/schema.ts"
-      ]
-    },
-    {
       "id": "V1n",
       "slug": "lists",
       "phase": 2,
-      "title": "Список: блоки и правка содержимого",
+      "title": "Список: правка содержимого и настройки",
       "role": "reviewer",
-      "goal": "Пройти экранную правку содержимого: блоки, вставка, медиа, обложка, заметка к правке — и то, что показанное совпадает с тем, что запишется.",
+      "goal": "Пройти экранную правку списка: блоки и их вставка, медиа, обложка, заметка к правке, настройки списка и необратимые действия — и то, что показанное совпадает с тем, что запишется, а необратимое называет последствие до нажатия.",
       "paths": [
-        "src/features/library/CoverSection.tsx",
+        "src/features/library/*Danger*",
+        "src/features/library/*Settings*",
         "src/features/library/ChangeNoteField.tsx",
         "src/features/library/Commit*",
+        "src/features/library/CoverSection.tsx",
+        "src/features/library/ListSettings*",
         "src/features/library/NewListForm.tsx"
       ],
       "ref_paths": [
