@@ -9,6 +9,7 @@ import { buildScript, scriptRefusal, toExportList } from '@/features/library/exp
 import { AUTHORED_DIALECT, dialectExt, normalizeDialect } from '@/core/domain/script-dialect'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { SITE_URL, blockForMcp, detailByRefOrMoved, mcpCanView, type DetailStep } from './shared'
+import { headVersion } from './lists/base-version'
 import { isCollaborator } from '@/features/collab/queries'
 
 /**
@@ -66,7 +67,10 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     desc: tr(tpl.desc, 'en'),
     tags: tpl.tags,
     ordered: tpl.ordered,
-    version: currentVersion?.version ?? tpl.currentVersion,
+    // ⚠️ Это ЧИСЛО КОНТРАКТА: агент присылает его обратно в baseVersion, и запись
+    // сверяет им же. Правило поэтому общее (`headVersion`), а не выписанное здесь: своя
+    // арифметика у одной из сторон означала бы отказ по числу, которое выдала другая.
+    version: headVersion(tpl),
     /* ⚠️ ПОЛЯ `verified` ЗДЕСЬ НЕТ. Решение 0006: публичного знака проверки не
        существует, потому что видимый публичный список и есть прошедший проверку.
        Отдавать флаг агенту значило бы обещать вторую проверку, которой нет, — и агент

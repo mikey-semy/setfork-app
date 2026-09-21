@@ -11,7 +11,7 @@ import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { detailByRefOrMoved, toProposed, type DetailStep, type McpItemInput } from '../shared'
 import { patchBlock, rowsToProposed } from './patch-block'
 import { duplicateBid, listWritable, lockList } from './draft-store'
-import { draftBaseMismatch, staleBase } from './base-version'
+import { draftBaseMismatch, headVersion, staleBase } from './base-version'
 import { destructiveError, ownedList, writeProposed } from './write'
 
 /** Обновить список (только владелец): новая версия через ядро, либо накопление в рабочей
@@ -123,7 +123,11 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
   // Ранний отсев заведомо устаревшей замены — ровно как у патча: отбить её дешевле, чем
   // собирать состав. Решает не он: baseVersion уходит в ядро, и сверка происходит там,
   // в той же транзакции, где строка списка уже взята `for update`.
-  if (input.baseVersion !== tpl.currentVersion) return staleBase(tpl.currentVersion, input.baseVersion, 'replacement')
+  //
+  // Число берём у ОБЩЕГО правила (`headVersion`), а не у колонки: `get_list` называет
+  // агенту его же, и своя арифметика здесь отвергала бы ровно то, что мы сами выдали.
+  const current = headVersion(tpl)
+  if (input.baseVersion !== current) return staleBase(current, input.baseVersion, 'replacement')
 
   return writeProposed(
     tpl,
@@ -178,7 +182,8 @@ export async function mcpPatchList(
 
   const detail = await detailByRefOrMoved(handle, slug)
   if (!detail) return { error: 'list not found' }
-  const current = detail.currentVersion?.version ?? tpl.currentVersion
+  // То же общее правило, что у полной замены и у `get_list`: один номер на всех.
+  const current = headVersion(tpl)
 
   // publish:false — правки НЕ создают версию, а копятся в черновике (том же, что
   // видит редактор). Патч ложится ПОВЕРХ черновика, если он есть: иначе второй
@@ -282,7 +287,9 @@ export async function mcpPublishDraft(userId: string, handle: string, slug: stri
       ref: `${handle}/${slug}`,
       published: false,
       baseVersion: draft.baseVersion,
-      wouldBeVersion: tpl.currentVersion + 1,
+      // Номер по ОБЩЕМУ правилу: это то же число контракта, что отдаёт `get_list`, и
+      // своя арифметика здесь врала бы агенту в предпросмотре.
+      wouldBeVersion: headVersion(tpl) + 1,
       blocks: draft.items.length,
       note: (note ?? draft.note).trim() || 'edit',
       updatedAt: draft.updatedAt.toISOString(),

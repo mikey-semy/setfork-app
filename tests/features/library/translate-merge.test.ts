@@ -19,6 +19,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const h = vi.hoisted(() => ({
   written: [] as { steps: unknown[]; meta: unknown; expectedVersion?: number }[],
   throwOnWrite: null as null | Error,
+  // Модель вправе вернуть пустые строки — это не перевод, и версия из такого не родится.
+  emptyReply: false,
 }))
 
 vi.mock('@/shared/db', () => ({
@@ -57,9 +59,9 @@ vi.mock('@/shared/ai/generate', () => ({
   generateListRefine: vi.fn(),
   // Модель «переводит» приставкой EN: важно не качество, а куда ляжет результат.
   generateListTranslation: vi.fn(async (cur: { title: string; desc: string; items: { title: string }[] }) => ({
-    title: `EN ${cur.title}`,
-    desc: `EN ${cur.desc}`,
-    items: cur.items.map((it) => ({ title: `EN ${it.title}`, desc: '', why: '', subtasks: [], refs: [] })),
+    title: h.emptyReply ? '' : `EN ${cur.title}`,
+    desc: h.emptyReply ? '' : `EN ${cur.desc}`,
+    items: cur.items.map((it) => ({ title: h.emptyReply ? '' : `EN ${it.title}`, desc: '', why: '', subtasks: [], refs: [] })),
   })),
   generateTextTranslation: vi.fn(async (chunks: string[]) => chunks.map((c) => `EN ${c}`)),
 }))
@@ -68,7 +70,7 @@ const { ListWriteError } = await import('@/core')
 const { translateList } = await import('@/features/library/actions/ai')
 
 type Row = Record<string, unknown>
-const row = (bid: string, title: string, n: number): Row => ({
+const row = (bid: string | null, title: string, n: number): Row => ({
   blockId: bid,
   type: 'step',
   content: null,
@@ -105,6 +107,7 @@ const list = (version: number, rows: Row[]) => ({
 beforeEach(async () => {
   h.written = []
   h.throwOnWrite = null
+  h.emptyReply = false
   const { db } = await import('@/shared/db')
   vi.mocked(db.query.steps.findMany).mockReset()
   vi.mocked(db.query.templates.findFirst).mockReset()
@@ -200,5 +203,62 @@ describe('перевод: отказ ядра по версии', () => {
     h.throwOnWrite = new ListWriteError('out-of-sync')
     const before = list(5, [row('b1', 'Первый', 0)])
     await expect(translate(before)).rejects.toThrow('out-of-sync')
+  })
+})
+
+/**
+ * СТАРЫЙ СПИСОК БЕЗ blockId. Колонка `steps.block_id` в схеме nullable, и такие строки в
+ * базе есть. Запасным ключом слияния стояла ПОЗИЦИЯ — а её сдвигает любая вставка соседа,
+ * и тогда ни один блок не находил своего перевода: слияние обнулялось целиком, а версия
+ * всё равно писалась (заголовок-то перевёлся). Ключ теперь — отпечаток исходника, он от
+ * места не зависит.
+ */
+describe('перевод: у блоков нет blockId', () => {
+  it('вставка соседа не сбивает слияние — переводится всё, что модель видела', async () => {
+    const before = list(5, [row(null, 'Первый', 0), row(null, 'Второй', 1)])
+    const after = list(6, [row(null, 'Вставка соавтора', 0), row(null, 'Первый', 1), row(null, 'Второй', 2)])
+
+    const res = await translate(before, after)
+
+    expect(res).toEqual({ ok: true })
+    expect(stepsOf().map((s) => s.title.ru)).toEqual(['Вставка соавтора', 'Первый', 'Второй'])
+    // По позиции «Первый» совпал бы со вставкой и потерял бы перевод вместе с остальными.
+    expect(stepsOf().map((s) => s.title.en)).toEqual([undefined, 'EN Первый', 'EN Второй'])
+  })
+})
+
+/**
+ * ВЕРСИЯ РОЖДАЕТСЯ, ТОЛЬКО ЕСЛИ В НЕЙ ЕСТЬ ПЕРЕВОД.
+ *
+ * Прежний страж спрашивал, УСТАРЕЛИ ли заодно заголовок с описанием, а не перевелось ли
+ * хоть что-нибудь. Пока условие звучало так, «ничего не перевелось» проходило насквозь:
+ * человек получал `ok` без единого тоста, список оставался на прежнем языке, в истории
+ * висела заметка «translate → English», наблюдателям уходило уведомление, а платный вызов
+ * списывался.
+ */
+describe('перевод: переводить оказалось нечего', () => {
+  it('состав заменён целиком, а заголовок соавтор уже перевёл сам — версии нет', async () => {
+    const before = list(5, [row('b1', 'Первый', 0)])
+    const after = {
+      ...list(6, [row('b9', 'Совсем другой блок', 0)]),
+      // Соавтор перевёл заголовок и описание руками — прикладывать больше нечего.
+      title: { ru: 'Заголовок', en: 'Title' },
+      desc: { ru: 'Описание', en: 'Description' },
+    }
+
+    const res = await translate(before, after as ReturnType<typeof list>)
+
+    expect(h.written, 'версия не несла бы ни одного перевода').toHaveLength(0)
+    expect(res).toEqual({ error: 'stale' })
+  })
+
+  it('модель вернула пустой перевод на всё — совпавший блок переводом не стал', async () => {
+    h.emptyReply = true
+    const before = list(5, [row('b1', 'Первый', 0), row('b2', 'Второй', 1)])
+
+    const res = await translate(before)
+
+    expect(h.written, 'блоки совпали, но перевода в них нет').toHaveLength(0)
+    expect(res).toEqual({ error: 'stale' })
   })
 })

@@ -220,6 +220,13 @@ async function resolveSuggestionRef(ref: string, number: number): Promise<{ id: 
  * что появилось между ними. Человеку на сайте это говорят плашка и проверка `base`;
  * агент до сих пор видел только «items: 12» и принимал вслепую. Блокировать нечего —
  * устаревшая база у нас `warn`, а не `fail`, — но решать агент должен, зная.
+ *
+ * ⚠️ ТОЛЬКО У ПРЕДЛОЖЕНИЙ ИЗ ПУНКТОВ. У ВЕТОЧНОГО отставшая база не значит ничего:
+ * расхождение разрешает git, а конфликт он назовёт сам и отобьёт слияние. Сказать про
+ * ветку «принятие заменит весь состав» — соврать, и агент, поверивший очереди, отказался
+ * бы сливать законную правку. Вид предложения поэтому едет наружу ПОЛЕМ, а не
+ * подразумевается: тот же разрез, по которому расходятся `mergeSuggestion` и ответ
+ * принятия.
  */
 export async function mcpPendingSuggestions(userId: string, limit = 20) {
   const rows = await db
@@ -233,6 +240,7 @@ export async function mcpPendingSuggestions(userId: string, limit = 20) {
       createdAt: suggestions.createdAt,
       baseVersion: suggestions.baseVersion,
       listVersion: templates.currentVersion,
+      branchRef: suggestions.branchRef,
     })
     .from(suggestions)
     .innerJoin(templates, eq(templates.id, suggestions.templateId))
@@ -252,9 +260,13 @@ export async function mcpPendingSuggestions(userId: string, limit = 20) {
       at: r.createdAt,
       basedOn: r.baseVersion,
       listVersion: r.listVersion,
+      // Вид правки — то, от чего зависит СМЫСЛ отставшей базы, и агент обязан видеть его
+      // рядом с числами, а не выводить из их разницы.
+      kind: r.branchRef ? ('branch' as const) : ('items' as const),
       // Поле, а не только два числа: «сравни basedOn с listVersion» — работа, которую
       // агент сделает не всегда, а подсказка рядом стоит один раз и на месте.
-      ...(r.baseVersion < r.listVersion
+      // У ветки предупреждения НЕТ: там отставшую базу разрешает git.
+      ...(!r.branchRef && r.baseVersion < r.listVersion
         ? {
             staleBase: true,
             hint: `this edit was written against version ${r.baseVersion} but the list is at ${r.listVersion} — accepting it REPLACES the whole content, so read both (get_list) before deciding`,

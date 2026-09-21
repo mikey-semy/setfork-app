@@ -53,8 +53,11 @@ const draftList = async (title: string) => {
   const made = (await mcpCreateList(ownerId, { title, items: [{ title }] })) as { ref: string } | { error: string }
   if ('error' in made) throw new Error(made.error)
   const slug = made.ref.split('/')[1]
-  const [row] = await db.select({ id: templates.id }).from(templates).where(eq(templates.slug, slug))
-  return { id: row.id, slug }
+  const [row] = await db
+    .select({ id: templates.id, version: templates.currentVersion })
+    .from(templates)
+    .where(eq(templates.slug, slug))
+  return { id: row.id, slug, version: row.version }
 }
 
 /** Идентичность первого блока — та, что видит агент через get_list. */
@@ -76,10 +79,13 @@ description('запись через MCP: база против git', () => {
   })
 
   it('полная замена состава в черновике доезжает до git', async () => {
-    const { id, slug } = await draftList('ПЕРВОНАЧАЛЬНЫЙ')
+    const { id, slug, version } = await draftList('ПЕРВОНАЧАЛЬНЫЙ')
     expect(await gitTitles(slug)).toEqual(['ПЕРВОНАЧАЛЬНЫЙ'])
 
-    const res = await mcpUpdateList(ownerId, HANDLE, slug, { items: [{ title: 'ПРАВЛЕНЫЙ' }] } as never)
+    // База НАЗЫВАЕТСЯ, а не глушится `as never`: приведение прятало от tsc отсутствие
+    // обязательного поля — и правка, сделавшая его обязательным, узнала бы об этом
+    // только на прогоне с живым ядром.
+    const res = await mcpUpdateList(ownerId, HANDLE, slug, { baseVersion: version, items: [{ title: 'ПРАВЛЕНЫЙ' }] })
     if ('error' in (res as object)) console.log('ОТКАЗ:', JSON.stringify(res))
     expect(res).not.toHaveProperty('error')
     // Именно это и расходилось: в БД правка есть, в git её нет.

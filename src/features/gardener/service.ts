@@ -189,6 +189,18 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         if (res.result === 'nothing-new') {
           await journal('list.fresh-none', 'skipped', { reason: 'living list: the stream had nothing new' })
         }
+        // Гонка с владельцем журналируется ТЕМ ЖЕ помощником и с тем же полем `reason`,
+        // что два других отказа прохода: иначе три отказа одной природы лежат в журнале
+        // тремя способами, и сравнить их между собой нечем. Под `failed` (отказ модели)
+        // её прятать нельзя — это норма, которая повторится сама, а не повод чинить.
+        if (res.result === 'stale') {
+          await journal(
+            'list.grow',
+            'skipped',
+            { mode: 'grow-feed', reason: 'the list moved to a newer version while the feed was being grown', profession: byWhom },
+            { trigger: 'schedule' },
+          )
+        }
         skipped++
       }
       continue

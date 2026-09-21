@@ -239,6 +239,15 @@ export async function translateList(templateId: string, targetLang: string): Pro
     const base = (lt ?? {}) as LocaleText
     return val.trim() ? { ...base, [targetLang]: val.trim() } : base
   }
+  /**
+   * ПОЛЕ ДЕЙСТВИТЕЛЬНО ПОЛУЧИЛО ПЕРЕВОД — а не «было к чему приложить».
+   *
+   * Считать надо именно это. Совпавший блок с пустым ответом модели переводом не стал,
+   * и версия из одних таких блоков не несла бы ничего, зато сдвинула бы историю,
+   * разбудила наблюдателей и списала платный вызов.
+   */
+  const gotLang = (src: LocaleText | null | undefined, out: LocaleText): boolean =>
+    Boolean(out[targetLang]?.trim()) && !((src ?? {}) as LocaleText)[targetLang]?.trim()
 
   /**
    * СЛИЯНИЕ, А НЕ ОТКАЗ — решение по этому маршруту.
@@ -248,7 +257,8 @@ export async function translateList(templateId: string, targetLang: string): Pro
    * свою версию, отвергнуть перевод значит выбросить и минуту человека, и оплаченный
    * вызов — за чужое действие. Поэтому перевод накладывается на СВЕЖИЙ состав:
    *
-   *  • блок ищется по своему `blockId` (идентичность переживает версии, ADR-0013);
+   *  • блок ищется по своему `blockId` (идентичность переживает версии, ADR-0013), а у
+   *    старых списков, где его нет, — по отпечатку собственного исходника;
    *  • перевод ставится, только если исходник блока НЕ ИЗМЕНИЛСЯ — иначе перевод
    *    относился бы к тексту, которого больше нет, и врал бы читателю уверенно;
    *  • блок, которого модель не видела (добавлен соседом), остаётся без ключа языка —
@@ -271,20 +281,43 @@ export async function translateList(templateId: string, targetLang: string): Pro
       ? rows
       : await db.query.steps.findMany({ where: (s) => eq(s.versionId, head.id), orderBy: (s, { asc: a }) => a(s.n) })
 
-  // Ключ блока: `blockId`, а без него — позиция. Позиция годится ровно там, где состав
-  // не двигался; там, где двигался, ошибочное совпадение отсеет сверка исходника.
-  const keyOf = (s: TranslatableStep, i: number): string => s.blockId ?? `#${i}`
-  const byKey = new Map(rows.map((s, i) => [keyOf(s, i), { src: srcKey(s), t: translated.items[i], md: mdByIndex.get(i) }]))
+  // ЧЕМ ИЩЕМ БЛОК В СВЕЖЕМ СОСТАВЕ. Основной ключ — `blockId`. У старых списков его
+  // может не быть вовсе (`steps.block_id` в схеме nullable), и запасным ключом стояла
+  // ПОЗИЦИЯ — а она сдвигается от любой вставки соседа, и тогда слияние обнулялось
+  // целиком: ни один блок не находил своего перевода. Запасной ключ теперь — отпечаток
+  // самого исходника: он не зависит от места, а совпадение двух одинаковых блоков
+  // безвредно, перевод у них всё равно один.
+  const perBlock = rows.map((s, i) => ({ src: srcKey(s), t: translated.items[i], md: mdByIndex.get(i) }))
+  const byBid = new Map(rows.flatMap((s, i) => (s.blockId ? [[s.blockId, perBlock[i]] as const] : [])))
+  const bySrc = new Map(rows.flatMap((s, i) => (s.blockId ? [] : [[perBlock[i].src, perBlock[i]] as const])))
 
   let applied = 0
-  const proposed: ProposedItem[] = target.map((s, i) => {
-    const hit = byKey.get(keyOf(s, i))
-    const same = hit?.src === srcKey(s)
+  const proposed: ProposedItem[] = target.map((s) => {
+    const key = srcKey(s)
+    const hit = s.blockId ? byBid.get(s.blockId) : bySrc.get(key)
+    // Перевод ставится, только если исходник блока НЕ ИЗМЕНИЛСЯ: иначе он относился бы
+    // к тексту, которого больше нет, и врал бы читателю уверенно.
+    const same = hit?.src === key
     const t = same ? hit?.t : undefined
     const md = same ? hit?.md : undefined
-    if (t) applied++
     const subs = s.subtasks as LocaleText[]
     const refs = s.refs as { label: LocaleText; url?: string }[]
+    const title = add(s.title, t?.title ?? '')
+    const descOut = add(s.desc, t?.desc ?? '')
+    const why = add(s.why, t?.why ?? '')
+    const subtasks = subs.map((st, k) => add(st, t?.subtasks[k] ?? ''))
+    const refsOut = refs.map((r, k) => ({ label: add(r.label, t?.refs[k]?.label ?? ''), ...(r.url ? { url: r.url } : {}) }))
+    const gotMd = s.type === 'text' && Boolean(md?.trim())
+    // Считаем ПЕРЕВЕДЁННЫЕ блоки, а не совпавшие.
+    if (
+      gotMd ||
+      gotLang(s.title, title) ||
+      gotLang(s.desc, descOut) ||
+      gotLang(s.why, why) ||
+      subtasks.some((x, k) => gotLang(subs[k], x)) ||
+      refsOut.some((r, k) => gotLang(refs[k].label, r.label))
+    )
+      applied++
     return {
       // ИДЕНТИЧНОСТЬ БЛОКА переносим: перевод — это то же содержимое на другом языке,
       // а не новые пункты. Без blockId следующая версия получала новые id, и всё, что
@@ -294,17 +327,14 @@ export async function translateList(templateId: string, targetLang: string): Pro
       type: s.type,
       // Текст-блок переводится (это основной носитель смысла в списках-разборах);
       // poll/quiz/product-контент в v1 оставляем как есть.
-      content:
-        s.type === 'text' && md !== undefined
-          ? { ...s.content, md: addBlockTranslation(s.content?.md, sourceLang, targetLang, md) }
-          : s.content,
-      title: add(s.title, t?.title ?? ''),
-      desc: add(s.desc, t?.desc ?? ''),
+      content: gotMd ? { ...s.content, md: addBlockTranslation(s.content?.md, sourceLang, targetLang, md ?? '') } : s.content,
+      title,
+      desc: descOut,
       command: s.command,
       hasImage: s.hasImage,
       imageKey: s.imageKey ?? undefined,
       level: s.level,
-      why: add(s.why, t?.why ?? ''),
+      why,
       section: s.section as LocaleText, // секция — заголовок урока; переведём в v2
       // Пометка «здесь нужен человек» — свойство пункта, а не языка: перевод её не
       // отменяет. Набор шагов переписывается целиком, поэтому не перенести = стереть.
@@ -316,23 +346,26 @@ export async function translateList(templateId: string, targetLang: string): Pro
       // решение автора мнением детектора. Автор, снявший пометку с безопасного
       // `# make reset` в комментарии, после добавления языка получал её обратно.
       danger: s.danger,
-      subtasks: subs.map((st, k) => add(st, t?.subtasks[k] ?? '')),
-      refs: refs.map((r, k) => ({ label: add(r.label, t?.refs[k]?.label ?? ''), ...(r.url ? { url: r.url } : {}) })),
+      subtasks,
+      refs: refsOut,
     }
   })
 
   // Мету переводим по тому же правилу: заголовок и описание могли переписать, пока шёл
   // перевод, и тогда перевод относится к прежнему тексту.
-  const titleFresh = pick(after.title) === current.title
-  const descFresh = pick(after.desc) === current.desc
   const meta = {
-    title: add(after.title, titleFresh ? translated.title : ''),
-    desc: add(after.desc, descFresh ? translated.desc : ''),
+    title: add(after.title, pick(after.title) === current.title ? translated.title : ''),
+    desc: add(after.desc, pick(after.desc) === current.desc ? translated.desc : ''),
   }
-  // Накладывать оказалось нечего: список переписан целиком, пока работала модель.
-  // Версия из этого не родится — она не несла бы ни одного перевода, зато сдвинула бы
-  // историю. Говорим человеку, что случилось, и он жмёт ещё раз — уже по новому тексту.
-  if (!applied && !titleFresh && !descFresh) return { error: 'stale' }
+  // ВЕРСИЯ РОЖДАЕТСЯ, ТОЛЬКО ЕСЛИ В НЕЙ ЕСТЬ ПЕРЕВОД.
+  //
+  // Условие считает ПЕРЕВЕДЁННОЕ, а не «уцелевшее». Прежнее «и заголовок тоже устарел»
+  // пропускало самый обычный случай: соавтор переставил блоки, заголовок с описанием не
+  // тронул — ни один блок не нашёл своего перевода, а версия всё равно писалась. Человек
+  // получал `ok` без единого тоста, список оставался на прежнем языке, в истории висела
+  // заметка «translate → English», наблюдателям уходило уведомление, а платный вызов был
+  // списан. Тихая неудача под видом успеха — ровно то, чего у нас быть не должно.
+  if (!applied && !gotLang(after.title, meta.title) && !gotLang(after.desc, meta.desc)) return { error: 'stale' }
 
   const note = `translate → ${langEnName(targetLang)}`
   // Переведённые title/desc едут ВНУТРИ addVersion (Ф2a-довесок): одна транзакция

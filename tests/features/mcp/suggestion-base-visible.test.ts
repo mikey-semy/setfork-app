@@ -32,7 +32,7 @@ vi.mock('@/shared/db', () => ({
   db: { select: () => chain() },
   steps: {},
   suggestionReportedChecks: {},
-  suggestions: { id: {}, number: {}, note: {}, items: {}, createdAt: {}, baseVersion: {}, status: {}, templateId: {}, authorId: {} },
+  suggestions: { id: {}, number: {}, note: {}, items: {}, createdAt: {}, baseVersion: {}, branchRef: {}, status: {}, templateId: {}, authorId: {} },
   templates: { id: {}, slug: {}, ownerId: {}, currentVersion: {} },
   users: { id: {}, handle: {} },
 }))
@@ -50,7 +50,7 @@ vi.mock('@/features/collab/queries', () => ({ isCollaborator: async () => false 
 
 const { mcpApplySuggestion, mcpPendingSuggestions } = await import('@/features/mcp/tools/suggestions')
 
-const pending = (baseVersion: number, listVersion: number) => ({
+const pending = (baseVersion: number, listVersion: number, branchRef: string | null = null) => ({
   id: 's1',
   number: 7,
   note: 'правка',
@@ -60,6 +60,7 @@ const pending = (baseVersion: number, listVersion: number) => ({
   createdAt: new Date('2026-09-01'),
   baseVersion,
   listVersion,
+  branchRef,
 })
 
 describe('очередь предложений называет базу правки', () => {
@@ -80,8 +81,27 @@ describe('очередь предложений называет базу пра
     const s = (await mcpPendingSuggestions('owner')).suggestions[0] as Record<string, unknown>
 
     expect(s.basedOn).toBe(7)
+    expect(s.kind).toBe('items')
     expect(s.staleBase).toBeUndefined()
     expect(s.hint).toBeUndefined()
+  })
+
+  /**
+   * У ВЕТКИ ОТСТАВШАЯ БАЗА НЕ ЗНАЧИТ НИЧЕГО: расхождение разрешает git, а конфликт он
+   * назовёт сам и отобьёт слияние. Предупреждение «принятие ЗАМЕНИТ весь состав» здесь
+   * ложное — и агент, поверивший ему, откажется сливать законную правку. Ложное
+   * предупреждение хуже молчания: молчание агент перепроверит, предупреждению поверит.
+   */
+  it('веточное предложение с отставшей базой предупреждения НЕ носит', async () => {
+    h.rows = [pending(5, 7, 'suggest/7')]
+    const s = (await mcpPendingSuggestions('owner')).suggestions[0] as Record<string, unknown>
+
+    expect(s.kind).toBe('branch')
+    expect(s.staleBase, 'для ветки это неправда').toBeUndefined()
+    expect(s.hint).toBeUndefined()
+    // Числа остаются: смотреть на них не запрещено, врать про последствия — да.
+    expect(s.basedOn).toBe(5)
+    expect(s.listVersion).toBe(7)
   })
 })
 
