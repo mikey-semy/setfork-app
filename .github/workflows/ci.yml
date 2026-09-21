@@ -126,13 +126,21 @@ jobs:
       - run: npx tsx scripts/db-bootstrap.ts post
       # Ядро — sibling-контейнер ПОСЛЕ применения схемы (на старте оно ходит в БД).
       # С Ф1 (git-first) запись версий идёт ТОЛЬКО через ядро — без него все
-      # итесты путей записи падают ECONNREFUSED. Пакет GHCR приватный, но образ
-      # всегда лежит в кэше этого же docker-демона: job image ядра собирает его
-      # здесь на каждый push в master (pull — попытка освежить, не условие).
-      # Если образа вдруг нет — прогнать master-CI ядра или дать фронту read к пакету.
+      # итесты путей записи падают ECONNREFUSED.
+      #
+      # ⚠️ ПАКЕТ GHCR ПРИВАТНЫЙ, ЗНАЧИТ НУЖЕН ЛОГИН. Прежде здесь стояла ставка на
+      # кэш docker-демона: «образ всегда лежит локально, pull — попытка освежить».
+      # 21.09.2026 образа в кэше не оказалось, pull ответил `denied`, и `|| true`
+      # это проглотил — упал `docker run` с exit 125, без единой строки о причине.
+      # Логин стоит ДО pull и провал логина роняет шаг сразу: отказ в доступе
+      # должен выглядеть как отказ в доступе, а не как «нет такого контейнера».
       - name: setfork-core (sibling из GHCR — git-first запись версий, Ф1)
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           IMAGE=ghcr.io/mikey-semy/setfork-core:latest
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
           docker pull "$IMAGE" >/dev/null 2>&1 || true
           docker rm -f "core-$CI_NET" >/dev/null 2>&1 || true
           docker run -d --name "core-$CI_NET" --network "$CI_NET" \
@@ -215,8 +223,12 @@ jobs:
       - run: npx tsx scripts/db-bootstrap.ts post
       # Ядро для интеграционной части покрытия — та же причина и приём, что в job integration.
       - name: setfork-core (sibling из GHCR — git-first запись версий, Ф1)
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           IMAGE=ghcr.io/mikey-semy/setfork-core:latest
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
           docker pull "$IMAGE" >/dev/null 2>&1 || true
           docker rm -f "core-$CI_NET" >/dev/null 2>&1 || true
           docker run -d --name "core-$CI_NET" --network "$CI_NET" \
