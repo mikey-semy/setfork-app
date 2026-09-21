@@ -35,7 +35,21 @@ import { gitPort } from './git-port'
 export async function mergeSuggestion(
   suggestionId: string,
   actorUserId: string,
-): Promise<{ ok: true; owner: string; slug: string; kind: 'branch' | 'items'; version?: number } | { ok: false; reason: string }> {
+): Promise<
+  | {
+      ok: true
+      owner: string
+      slug: string
+      kind: 'branch' | 'items'
+      version?: number
+      /** От какой версии правка собрана и какую заменила. Только у предложения ИЗ
+       *  ПУНКТОВ: оно перезаписывает состав целиком, и «база отстала» — то, что
+       *  принимающий обязан видеть. У веточного расхождение разрешает git. */
+      baseVersion?: number
+      replacedVersion?: number
+    }
+  | { ok: false; reason: string }
+> {
   const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
   if (!sug) return { ok: false, reason: 'not found' }
   if (sug.status !== 'open') return { ok: false, reason: `already ${sug.status}` }
@@ -47,7 +61,15 @@ export async function mergeSuggestion(
     // Какой версией стала правка — иначе откат гадал бы по времени и тексту заметки.
     await db.update(suggestions).set({ mergedVersion: res.version }).where(eq(suggestions.id, suggestionId))
     const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, sug.template.ownerId))
-    return { ok: true, owner: u?.handle ?? '', slug: res.slug, kind: 'items', version: res.version }
+    return {
+      ok: true,
+      owner: u?.handle ?? '',
+      slug: res.slug,
+      kind: 'items',
+      version: res.version,
+      baseVersion: res.baseVersion,
+      replacedVersion: res.replacedVersion,
+    }
   }
 
   const tpl = sug.template

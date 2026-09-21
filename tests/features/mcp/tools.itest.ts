@@ -40,20 +40,21 @@ describe('mcp create/get/update — владение и видимость по 
     expect(row?.status).toBe('draft')
 
     // 2. Черновик виден владельцу, НЕ виден чужому (gate status='draft')
-    expect(await mcpGetList(ownerId, 'mowner', slug)).not.toBeNull()
+    const mine = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number }
+    expect(mine).not.toBeNull()
     expect(await mcpGetList(otherId, 'mowner', slug)).toBeNull()
 
     // 3. Обновлять может только владелец
-    const forbidden = await mcpUpdateList(otherId, 'mowner', slug, { items: [{ title: 'hax' }] })
+    const forbidden = await mcpUpdateList(otherId, 'mowner', slug, { baseVersion: mine.version, items: [{ title: 'hax' }] })
     expect(forbidden).toMatchObject({ error: expect.stringContaining('forbidden') })
 
-    const ok = await mcpUpdateList(ownerId, 'mowner', slug, { items: [{ title: 'install' }, { title: 'configure' }] })
+    const ok = await mcpUpdateList(ownerId, 'mowner', slug, { baseVersion: mine.version, items: [{ title: 'install' }, { title: 'configure' }] })
     expect(ok).toMatchObject({ status: 'draft' }) // черновик правится на месте
     expect('error' in ok).toBe(false)
   })
 
   it('update несуществующего списка → not found', async () => {
-    expect(await mcpUpdateList(ownerId, 'mowner', 'no-such-slug', { items: [{ title: 'x' }] })).toMatchObject({ error: expect.stringContaining('not found') })
+    expect(await mcpUpdateList(ownerId, 'mowner', 'no-such-slug', { baseVersion: 1, items: [{ title: 'x' }] })).toMatchObject({ error: expect.stringContaining('not found') })
   })
 
   // Ссылки: get_list их отдавал, а положить было нечем — записать через API стало
@@ -87,9 +88,9 @@ describe('mcp create/get/update — владение и видимость по 
       ],
     })
     const slug = refSlug((created as { ref: string }).ref)
-    const read = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    const read = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number; steps: McpItemInput[] }
     // Блоки чтения уходят в запись БЕЗ переименования полей.
-    const updated = await mcpUpdateList(ownerId, 'mowner', slug, { items: read.steps })
+    const updated = await mcpUpdateList(ownerId, 'mowner', slug, { baseVersion: read.version, items: read.steps })
     expect('error' in updated).toBe(false)
     const again = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
     expect(again.steps.find((b) => b.type === 'file')).toMatchObject({ url: 'https://example.com/spec.pdf', name: 'spec.pdf' })
@@ -110,13 +111,13 @@ describe('mcp create/get/update — владение и видимость по 
       ],
     })
     const slug = refSlug((created as { ref: string }).ref)
-    const before = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    const before = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number; steps: McpItemInput[] }
     // Идентичность видна снаружи — иначе патчить блок нечем.
     expect(before.steps.every((b) => !!b.bid)).toBe(true)
     const pollBefore = before.steps.find((b) => b.type === 'poll')
     expect(pollBefore?.options?.every((o) => !!o.id)).toBe(true)
 
-    const updated = await mcpUpdateList(ownerId, 'mowner', slug, { items: before.steps })
+    const updated = await mcpUpdateList(ownerId, 'mowner', slug, { baseVersion: before.version, items: before.steps })
     expect('error' in updated).toBe(false)
     const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
 
@@ -189,6 +190,40 @@ describe('patch_list — точечная правка вместо переза
     expect(after.steps.map((b) => b.bid)).toEqual(read.steps.map((b) => b.bid))
   })
 
+  /**
+   * ТО ЖЕ САМОЕ У ПОЛНОЙ ЗАМЕНЫ. Защищён был более щадящий инструмент: `patch_list`
+   * базу требовал, а `update_list` не объявлял её вовсе и писал вслепую — агент,
+   * собравший состав из версии 5, создавал версию 7 поверх чужой шестой и получал
+   * `{status, version}`, то есть рапортовал человеку успех.
+   *
+   * Проверяется ЗАПИСЬ, а не только текст отказа: ранний отсев в инструменте можно
+   * снять, и список всё равно обязан остаться прежним — решает сверка в ядре.
+   */
+  it('полная замена от чужой версии → отказ, состав не тронут', async () => {
+    const { slug, read } = await three()
+    const res = await mcpUpdateList(ownerId, 'mowner', slug, {
+      baseVersion: read.version + 5,
+      items: [{ title: 'вся замена из устаревшего снимка' }],
+    })
+    expect(res).toMatchObject({ error: expect.stringContaining('list changed') })
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number; steps: McpItemInput[] }
+    expect(after.version, 'версии быть не должно').toBe(read.version)
+    expect(after.steps.map((b) => b.bid)).toEqual(read.steps.map((b) => b.bid))
+  })
+
+  /** База, присланная агентом, ДОЕЗЖАЕТ до ядра, а не подменяется текущей по дороге:
+   *  иначе сверка формально есть, а сверяет она версию саму с собой. */
+  it('замена от той же версии, которую агент прочитал, проходит', async () => {
+    const { slug, read } = await three()
+    const res = await mcpUpdateList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      items: [{ title: 'свежая замена' }],
+    })
+    expect('error' in res, JSON.stringify(res)).toBe(false)
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number }
+    expect(after.version).toBe(read.version + 1)
+  })
+
   it('ошибка в одной операции отменяет весь патч — в списке ничего не изменилось', async () => {
     const { slug, read } = await three()
     const res = await mcpPatchList(ownerId, 'mowner', slug, {
@@ -206,6 +241,7 @@ describe('patch_list — точечная правка вместо переза
   it('нераспознанный bid не оставляет черновик пустым', async () => {
     const { slug, read } = await three()
     const res = await mcpUpdateList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
       items: read.steps.map((b, i) => (i === 0 ? { ...b, bid: 'not-a-uuid' } : b)),
     })
     expect('error' in res).toBe(false)
@@ -423,7 +459,7 @@ describe('patch_list — точечная правка вместо переза
     const [a] = read.steps.map((s) => s.bid)
     const [rPatch, rReplace] = await Promise.all([
       mcpPatchList(ownerId, 'mowner', slug, { baseVersion: read.version, ops: [{ op: 'update', bid: a, title: 'ИЗ ПАТЧА' }] }),
-      mcpUpdateList(ownerId, 'mowner', slug, { items: [...read.steps, { title: 'из полной замены' }] }),
+      mcpUpdateList(ownerId, 'mowner', slug, { baseVersion: read.version, items: [...read.steps, { title: 'из полной замены' }] }),
     ])
     // Хотя бы одна запись прошла; отказ, если он есть, — внятный.
     expect([rPatch, rReplace].filter((r) => !('error' in r)).length).toBeGreaterThanOrEqual(1)
@@ -504,6 +540,7 @@ describe('patch_list — точечная правка вместо переза
   it('два блока с одним bid отбиваются, список не теряет блок', async () => {
     const { slug, read } = await three()
     const res = await mcpUpdateList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
       items: [...read.steps, { ...read.steps[0], title: 'клон первого' }],
     })
     expect(res).toMatchObject({ error: expect.stringContaining('same bid') })

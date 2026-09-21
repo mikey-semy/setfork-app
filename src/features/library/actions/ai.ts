@@ -13,7 +13,7 @@ import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 import { aiQuota } from '@/shared/quota'
 import { textLang } from '@/shared/i18n/detect-text-lang'
 import { toStepInput } from '@/shared/lib/step-input'
-import { canEditList, canViewList } from '@/core'
+import { canEditList, canViewList, ListWriteError } from '@/core'
 import { isCollaborator } from '@/features/collab/queries'
 import { addBlockTranslation, blockText } from '../blocks'
 import { hasLang } from '../translation-state'
@@ -184,19 +184,22 @@ export async function translateList(templateId: string, targetLang: string): Pro
 
   // Исходный текст поля: значение на любом уже имеющемся языке (en → первый).
   const pick = (lt: LocaleText | null | undefined): string => (lt ? (lt.en ?? Object.values(lt).find(Boolean) ?? '') : '')
-  const current = {
-    title: pick(tpl.title),
-    desc: pick(tpl.desc),
-    items: rows.map((s) => ({
-      title: pick(s.title),
-      desc: pick(s.desc),
-      command: s.command,
-      level: s.level,
-      why: pick(s.why),
-      subtasks: (s.subtasks as LocaleText[]).map(pick),
-      refs: (s.refs as { label: LocaleText; url?: string }[]).map((r) => ({ label: pick(r.label), url: r.url ?? '' })),
-    })),
-  }
+  // Проекция блока в то, ЧТО УВИДИТ МОДЕЛЬ. Отдельной функцией, потому что по ней же
+  // потом сверяется, тот ли это текст: см. слияние ниже.
+  type TranslatableStep = (typeof rows)[number]
+  const srcOf = (s: TranslatableStep) => ({
+    title: pick(s.title),
+    desc: pick(s.desc),
+    command: s.command,
+    level: s.level,
+    why: pick(s.why),
+    subtasks: (s.subtasks as LocaleText[]).map(pick),
+    refs: (s.refs as { label: LocaleText; url?: string }[]).map((r) => ({ label: pick(r.label), url: r.url ?? '' })),
+  })
+  const mdOf = (s: TranslatableStep): string => (s.type === 'text' ? blockText((s.content as { md?: unknown } | null)?.md) : '')
+  /** Отпечаток исходника блока — всё, что уехало в модель, включая врезку. */
+  const srcKey = (s: TranslatableStep): string => JSON.stringify([srcOf(s), mdOf(s)])
+  const current = { title: pick(tpl.title), desc: pick(tpl.desc), items: rows.map(srcOf) }
 
   // Markdown-врезки переводятся отдельным вызовом: их нет в форме шага, и
   // проза внутри большого JSON у модели разъезжается — списки, таблицы,
@@ -204,8 +207,7 @@ export async function translateList(templateId: string, targetLang: string): Pro
   const mdIdx: number[] = []
   const mdChunks: string[] = []
   rows.forEach((s, i) => {
-    if (s.type !== 'text') return
-    const md = blockText((s.content as { md?: unknown } | null)?.md)
+    const md = mdOf(s)
     if (md.trim()) {
       mdIdx.push(i)
       mdChunks.push(md)
@@ -237,8 +239,50 @@ export async function translateList(templateId: string, targetLang: string): Pro
     const base = (lt ?? {}) as LocaleText
     return val.trim() ? { ...base, [targetLang]: val.trim() } : base
   }
-  const proposed: ProposedItem[] = rows.map((s, i) => {
-    const t = translated.items[i]
+
+  /**
+   * СЛИЯНИЕ, А НЕ ОТКАЗ — решение по этому маршруту.
+   *
+   * Между чтением `rows` и этой строкой стоят ДВА вызова модели: человек нажал
+   * «Перевести» и ждёт у экрана десятки секунд. Если за это время соавтор опубликовал
+   * свою версию, отвергнуть перевод значит выбросить и минуту человека, и оплаченный
+   * вызов — за чужое действие. Поэтому перевод накладывается на СВЕЖИЙ состав:
+   *
+   *  • блок ищется по своему `blockId` (идентичность переживает версии, ADR-0013);
+   *  • перевод ставится, только если исходник блока НЕ ИЗМЕНИЛСЯ — иначе перевод
+   *    относился бы к тексту, которого больше нет, и врал бы читателю уверенно;
+   *  • блок, которого модель не видела (добавлен соседом), остаётся без ключа языка —
+   *    а `hasLang` считает список переведённым только целиком, поэтому кнопка не
+   *    исчезает и недостающее дозаполняется следующим нажатием.
+   *
+   * Перезаписать чужую версию нельзя, потерять работу человека — тоже; слияние
+   * выполняет оба условия, а отказ остаётся только на случай, когда переводить в
+   * свежем составе оказалось вообще нечего.
+   */
+  const after = await db.query.templates.findFirst({
+    where: (t) => eq(t.id, templateId),
+    with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
+  })
+  const head = after?.versions.find((v) => v.version === after.currentVersion)
+  if (!after || !head) return { error: 'notfound' }
+  // Список не сдвинулся — те же строки, второго запроса не делаем.
+  const target =
+    head.id === cur.id
+      ? rows
+      : await db.query.steps.findMany({ where: (s) => eq(s.versionId, head.id), orderBy: (s, { asc: a }) => a(s.n) })
+
+  // Ключ блока: `blockId`, а без него — позиция. Позиция годится ровно там, где состав
+  // не двигался; там, где двигался, ошибочное совпадение отсеет сверка исходника.
+  const keyOf = (s: TranslatableStep, i: number): string => s.blockId ?? `#${i}`
+  const byKey = new Map(rows.map((s, i) => [keyOf(s, i), { src: srcKey(s), t: translated.items[i], md: mdByIndex.get(i) }]))
+
+  let applied = 0
+  const proposed: ProposedItem[] = target.map((s, i) => {
+    const hit = byKey.get(keyOf(s, i))
+    const same = hit?.src === srcKey(s)
+    const t = same ? hit?.t : undefined
+    const md = same ? hit?.md : undefined
+    if (t) applied++
     const subs = s.subtasks as LocaleText[]
     const refs = s.refs as { label: LocaleText; url?: string }[]
     return {
@@ -251,16 +295,16 @@ export async function translateList(templateId: string, targetLang: string): Pro
       // Текст-блок переводится (это основной носитель смысла в списках-разборах);
       // poll/quiz/product-контент в v1 оставляем как есть.
       content:
-        s.type === 'text' && mdByIndex.has(i)
-          ? { ...s.content, md: addBlockTranslation(s.content?.md, sourceLang, targetLang, mdByIndex.get(i) ?? '') }
+        s.type === 'text' && md !== undefined
+          ? { ...s.content, md: addBlockTranslation(s.content?.md, sourceLang, targetLang, md) }
           : s.content,
-      title: add(s.title, t.title),
-      desc: add(s.desc, t.desc),
+      title: add(s.title, t?.title ?? ''),
+      desc: add(s.desc, t?.desc ?? ''),
       command: s.command,
       hasImage: s.hasImage,
       imageKey: s.imageKey ?? undefined,
       level: s.level,
-      why: add(s.why, t.why),
+      why: add(s.why, t?.why ?? ''),
       section: s.section as LocaleText, // секция — заголовок урока; переведём в v2
       // Пометка «здесь нужен человек» — свойство пункта, а не языка: перевод её не
       // отменяет. Набор шагов переписывается целиком, поэтому не перенести = стереть.
@@ -272,20 +316,42 @@ export async function translateList(templateId: string, targetLang: string): Pro
       // решение автора мнением детектора. Автор, снявший пометку с безопасного
       // `# make reset` в комментарии, после добавления языка получал её обратно.
       danger: s.danger,
-      subtasks: subs.map((st, k) => add(st, t.subtasks[k] ?? '')),
-      refs: refs.map((r, k) => ({ label: add(r.label, t.refs[k]?.label ?? ''), ...(r.url ? { url: r.url } : {}) })),
+      subtasks: subs.map((st, k) => add(st, t?.subtasks[k] ?? '')),
+      refs: refs.map((r, k) => ({ label: add(r.label, t?.refs[k]?.label ?? ''), ...(r.url ? { url: r.url } : {}) })),
     }
   })
+
+  // Мету переводим по тому же правилу: заголовок и описание могли переписать, пока шёл
+  // перевод, и тогда перевод относится к прежнему тексту.
+  const titleFresh = pick(after.title) === current.title
+  const descFresh = pick(after.desc) === current.desc
+  const meta = {
+    title: add(after.title, titleFresh ? translated.title : ''),
+    desc: add(after.desc, descFresh ? translated.desc : ''),
+  }
+  // Накладывать оказалось нечего: список переписан целиком, пока работала модель.
+  // Версия из этого не родится — она не несла бы ни одного перевода, зато сдвинула бы
+  // историю. Говорим человеку, что случилось, и он жмёт ещё раз — уже по новому тексту.
+  if (!applied && !titleFresh && !descFresh) return { error: 'stale' }
 
   const note = `translate → ${langEnName(targetLang)}`
   // Переведённые title/desc едут ВНУТРИ addVersion (Ф2a-довесок): одна транзакция
   // с версией, канон коммита сразу несёт свежую мету.
-  await listStore.addVersion(tpl.id, {
-    note,
-    steps: toStepInput(proposed),
-    authorId: session.userId,
-    meta: { title: add(tpl.title, translated.title), desc: add(tpl.desc, translated.desc) },
-  })
+  try {
+    await listStore.addVersion(tpl.id, {
+      note,
+      steps: toStepInput(proposed),
+      authorId: session.userId,
+      meta,
+      // Слияние выше закрыло ДОЛГОЕ окно (два вызова модели); эта строка закрывает
+      // короткое — между перечитыванием свежего состава и записью. Сверку делает ядро
+      // в той же транзакции, где строка списка уже взята `for update`.
+      expectedVersion: after.currentVersion,
+    })
+  } catch (e) {
+    if (e instanceof ListWriteError && e.code === 'stale') return { error: 'stale' }
+    throw e
+  }
   await notifyWatchersNewVersion(tpl.id, session.userId)
 
   const owner = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)

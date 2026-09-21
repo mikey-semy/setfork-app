@@ -1143,6 +1143,7 @@ export const ru: Record<DictKey, string> = {
   translateInto: 'Перевести на {lang}',
   translating: 'Перевод…',
   translateFailed: 'Не удалось перевести — попробуйте ещё раз.',
+  translateListMoved: 'Список изменился, пока шёл перевод, — нажмите ещё раз, чтобы перевести новый текст.',
   productBlockTitle: 'Купить по списку',
   productTierBudget: 'Бюджет',
   productTierMid: 'Средний',

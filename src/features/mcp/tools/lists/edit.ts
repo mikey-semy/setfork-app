@@ -11,12 +11,24 @@ import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { detailByRefOrMoved, toProposed, type DetailStep, type McpItemInput } from '../shared'
 import { patchBlock, rowsToProposed } from './patch-block'
 import { duplicateBid, listWritable, lockList } from './draft-store'
+import { draftBaseMismatch, staleBase } from './base-version'
 import { destructiveError, ownedList, writeProposed } from './write'
 
 /** Обновить список (только владелец): новая версия через ядро, либо накопление в рабочей
  *  копии при publish:false. Статус списка на механику записи не влияет (ADR-0020). */
 export interface McpUpdateInput {
   items: McpItemInput[]
+  /**
+   * Версия, ОТ КОТОРОЙ собран новый состав, — обязательна, как у `patch_list`.
+   *
+   * Решение по контракту: поля не было вовсе, и полная замена молча вытесняла версию,
+   * опубликованную между чтением агента и его записью. Необязательным его делать нельзя —
+   * незащищённым остался бы ровно тот вызывающий, который про защиту не подумал, а
+   * инструмент этот помечен `destructiveHint: true` и стирает всё, чего в нём нет.
+   * Лишнего круга это не стоит: `get_list` уже отдаёт `version`, и агент читает список
+   * перед полной заменой в любом случае — иначе ему нечего посылать.
+   */
+  baseVersion: number
   note?: string
   tags?: string[]
   ordered?: boolean
@@ -61,6 +73,10 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
         // База НЕ сдвигается у уже начатого черновика: сказать «правки сделаны от свежей
         // версии», когда они сделаны от старой, значит затереть чужую работу при публикации.
         const base = existing?.baseVersion ?? fresh.current
+        // Сверка та же, что у патча в рабочую копию: полная замена ложится ПОВЕРХ
+        // накопленного, и прислать её от другой базы — значит стереть накопленное чужой
+        // рукой. Отказ называет, какую базу взять и как выйти из тупика.
+        if (input.baseVersion !== base) return draftBaseMismatch(base, input.baseVersion, 'replacement')
         // Страж исполняемого выхода стоит и на рабочей копии: иначе `rm -rf /` доехал бы
         // до человека при публикации, на непонятном ему шаге.
         assertNoDestructiveSteps(stepInput(proposed))
@@ -104,10 +120,20 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
     }
   }
 
-  return writeProposed(tpl, handle, slug, proposed, input.note?.trim() || 'updated via API', {
-    tags,
-    ordered: input.ordered ?? tpl.ordered,
-  })
+  // Ранний отсев заведомо устаревшей замены — ровно как у патча: отбить её дешевле, чем
+  // собирать состав. Решает не он: baseVersion уходит в ядро, и сверка происходит там,
+  // в той же транзакции, где строка списка уже взята `for update`.
+  if (input.baseVersion !== tpl.currentVersion) return staleBase(tpl.currentVersion, input.baseVersion, 'replacement')
+
+  return writeProposed(
+    tpl,
+    handle,
+    slug,
+    proposed,
+    input.note?.trim() || 'updated via API',
+    { tags, ordered: input.ordered ?? tpl.ordered },
+    input.baseVersion,
+  )
 }
 
 /**
@@ -175,10 +201,7 @@ export async function mcpPatchList(
           .limit(1)
         // База — та, от которой сделаны НАКОПЛЕННЫЕ правки: патч ложится поверх них.
         const base = existing?.baseVersion ?? fresh.current
-        if (input.baseVersion !== base)
-          return {
-            error: `your patch is based on version ${input.baseVersion}, but the pending edits are based on ${base} — pass baseVersion ${base} (see pendingEdits in get_list), or drop them with discard_draft`,
-          }
+        if (input.baseVersion !== base) return draftBaseMismatch(base, input.baseVersion, 'patch')
         const source = existing ? existing.items : rowsToProposed(detail.steps)
         const appliedDraft = applyPatchOps<ProposedItem>(source, ops, patchIO)
         if ('error' in appliedDraft) return appliedDraft
@@ -221,8 +244,7 @@ export async function mcpPatchList(
     }
   }
 
-  if (input.baseVersion !== current)
-    return { error: `list changed: it is at version ${current}, your patch is based on ${input.baseVersion} — read it again (get_list) and rebuild the ops` }
+  if (input.baseVersion !== current) return staleBase(current, input.baseVersion, 'patch')
 
   const applied = applyPatchOps<ProposedItem>(rowsToProposed(detail.steps), ops, patchIO)
   if ('error' in applied) return applied

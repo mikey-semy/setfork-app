@@ -33,7 +33,29 @@ import { SITE_URL, mcpCanView, resolveListRefOrMoved, toProposed, type McpItemIn
 export async function mcpApplySuggestion(userId: string, suggestionId: string) {
   const res = await mergeSuggestion(suggestionId, userId)
   if (!res.ok) return { error: res.reason }
-  return { ref: `${res.owner}/${res.slug}`, version: res.version, note: 'Accepted — a new version was created.' }
+  return { ref: `${res.owner}/${res.slug}`, version: res.version, ...acceptedNote(res) }
+}
+
+/**
+ * ЧТО ИМЕННО СЛУЧИЛОСЬ ПРИ ПРИНЯТИИ — с упоминанием отставшей базы.
+ *
+ * Принятие предложения из пунктов ЗАМЕНЯЕТ состав целиком, и если база правки отстала,
+ * версии между ней и текущей из состава уходят. На сайте про это написано плашкой и
+ * проверкой `base`; агенту не приходило ничего, и он рапортовал человеку чистый успех.
+ * Отказом это не делаем (см. решение в `suggestion-core/apply.ts`) — говорим фактом и
+ * называем следующий шаг: посмотреть, что ушло, и при нужде вернуть.
+ */
+const acceptedNote = (res: { baseVersion?: number; replacedVersion?: number }) => {
+  const stale = res.baseVersion !== undefined && res.replacedVersion !== undefined && res.baseVersion < res.replacedVersion
+  if (!stale) return { note: 'Accepted — a new version was created.' }
+  return {
+    basedOn: res.baseVersion,
+    replacedVersion: res.replacedVersion,
+    note:
+      `Accepted — a new version was created. Its items were written against version ${res.baseVersion}, but the list was already at ${res.replacedVersion},` +
+      ` and accepting REPLACED the whole content: anything added in between is no longer in the current version (the history keeps it).` +
+      ` Compare the versions and, if something was dropped, restore it with patch_list.`,
+  }
 }
 
 /**
@@ -158,6 +180,9 @@ export async function mcpMergeSuggestion(userId: string, input: { list: string; 
     kind: res.kind,
     version: res.version,
     url: `${SITE_URL}/${res.owner}/${res.slug}`,
+    // Та же половина ответа, что у apply_suggestion: инструмента два, действие одно —
+    // и знать про отставшую базу обязаны оба, иначе защита есть у того, кто угадал имя.
+    ...acceptedNote(res),
   }
 }
 
@@ -187,7 +212,15 @@ async function resolveSuggestionRef(ref: string, number: number): Promise<{ id: 
   return row ? { id: row.id } : { error: 'suggestion not found' }
 }
 
-/** Открытые правки на списках пользователя — что вообще ждёт его решения. */
+/**
+ * Открытые правки на списках пользователя — что вообще ждёт его решения.
+ *
+ * Отдаём и БАЗУ правки, и текущую версию списка. Не для полноты: принятие из пунктов
+ * заменяет состав целиком, и правка от версии 5 на списке, ушедшем к 7, стирает всё,
+ * что появилось между ними. Человеку на сайте это говорят плашка и проверка `base`;
+ * агент до сих пор видел только «items: 12» и принимал вслепую. Блокировать нечего —
+ * устаревшая база у нас `warn`, а не `fail`, — но решать агент должен, зная.
+ */
 export async function mcpPendingSuggestions(userId: string, limit = 20) {
   const rows = await db
     .select({
@@ -198,6 +231,8 @@ export async function mcpPendingSuggestions(userId: string, limit = 20) {
       items: sql<number>`jsonb_array_length(${suggestions.items})`,
       authorHandle: users.handle,
       createdAt: suggestions.createdAt,
+      baseVersion: suggestions.baseVersion,
+      listVersion: templates.currentVersion,
     })
     .from(suggestions)
     .innerJoin(templates, eq(templates.id, suggestions.templateId))
@@ -207,7 +242,25 @@ export async function mcpPendingSuggestions(userId: string, limit = 20) {
     .limit(Math.min(50, Math.max(1, limit)))
   return {
     pending: rows.length,
-    suggestions: rows.map((r) => ({ id: r.id, list: r.slug, number: r.number, note: r.note, items: r.items, author: r.authorHandle, at: r.createdAt })),
+    suggestions: rows.map((r) => ({
+      id: r.id,
+      list: r.slug,
+      number: r.number,
+      note: r.note,
+      items: r.items,
+      author: r.authorHandle,
+      at: r.createdAt,
+      basedOn: r.baseVersion,
+      listVersion: r.listVersion,
+      // Поле, а не только два числа: «сравни basedOn с listVersion» — работа, которую
+      // агент сделает не всегда, а подсказка рядом стоит один раз и на месте.
+      ...(r.baseVersion < r.listVersion
+        ? {
+            staleBase: true,
+            hint: `this edit was written against version ${r.baseVersion} but the list is at ${r.listVersion} — accepting it REPLACES the whole content, so read both (get_list) before deciding`,
+          }
+        : {}),
+    })),
   }
 }
 

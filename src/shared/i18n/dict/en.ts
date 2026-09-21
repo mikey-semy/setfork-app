@@ -1149,6 +1149,7 @@ export const en = {
   translateInto: 'Translate to {lang}',
   translating: 'Translating…',
   translateFailed: 'Translation failed — try again.',
+  translateListMoved: 'The list changed while it was being translated — press again to translate the new text.',
   productBlockTitle: 'Shop this list',
   productTierBudget: 'Budget',
   productTierMid: 'Mid-range',

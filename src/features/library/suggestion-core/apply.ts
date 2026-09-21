@@ -32,7 +32,10 @@ import { currentRevision } from './revision'
 export async function applySuggestion(
   suggestionId: string,
   actorUserId: string,
-): Promise<{ ok: true; templateId: string; slug: string; version: number } | { ok: false; reason: string }> {
+): Promise<
+  | { ok: true; templateId: string; slug: string; version: number; baseVersion: number; replacedVersion: number }
+  | { ok: false; reason: string }
+> {
   const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
   if (!sug) return { ok: false, reason: 'not found' }
   if (sug.status !== 'open') return { ok: false, reason: `already ${sug.status}` }
@@ -54,6 +57,23 @@ export async function applySuggestion(
   if (blocked) return { ok: false, reason: blocked }
 
   const tpl = sug.template
+  /**
+   * ЗДЕСЬ НАМЕРЕННО НЕТ `expectedVersion` — решение по маршруту, а не забытая строка.
+   *
+   * База предложения (`sug.baseVersion`) почти всегда отстаёт от текущей версии: правку
+   * прислали неделю назад, владелец с тех пор публиковал своё. Отвергать такое значило бы
+   * сделать принятие предложений невозможным на любом живом списке — у GitHub и Gitea
+   * пулл-реквест от старой базы тоже сливается, а не отклоняется. Наш собственный домен
+   * это уже говорит: `suggestionChecks` числит устаревшую базу `warn`, а не `fail`
+   * (`suggestion-checks.ts`), и `reviewGates` её не знает вовсе — то есть принимает
+   * ЧЕЛОВЕК, зная, что состав будет заменён целиком.
+   *
+   * Дефект был не в записи, а в ЗАМОЛЧАННОСТИ: на сайте про устаревшую базу написано
+   * (плашка и проверка `base`), а через MCP агенту не приходило ничего. Поэтому отсюда
+   * наружу едут обе версии — от какой правка сделана и какую она заменяет, — и решает по
+   * ним вызывающий, а не этот модуль.
+   */
+  const replacedVersion = tpl.currentVersion
   // Новая версия из принятого предложения — через доменный порт.
   // Отказ ядра по предусловию — ОТВЕТ этой функции, а не исключение: её контракт
   // ({ ok: false, reason }) читают и веб-действие, и MCP, и оба показывают причину
@@ -77,5 +97,5 @@ export async function applySuggestion(
   await notify({ recipientId: sug.authorId, actorId: actorUserId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   await notifyWatchersNewVersion(tpl.id, actorUserId)
   await enqueueReindex(tpl.id)
-  return { ok: true, templateId: tpl.id, slug: tpl.slug, version: ver.version }
+  return { ok: true, templateId: tpl.id, slug: tpl.slug, version: ver.version, baseVersion: sug.baseVersion, replacedVersion }
 }
