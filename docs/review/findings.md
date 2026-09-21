@@ -1,0 +1,65 @@
+# Находки ревью
+
+> Файл СГЕНЕРИРОВАН из `findings.jsonl` командой `npm run review -- findings`.
+> Не редактируй его руками — правь jsonl и перегенерируй.
+
+Открыто: **41** из 43 записей.
+
+## high (3 открыто / 3)
+
+| id | блок | статус | место | что не так |
+|---|---|---|---|---|
+| H1-001 | H1 | open | `src/features/auth/actions.ts:47` | Регистрация по e-mail сверяет занятость ника прямым запросом в users и минует handleTaken(), то есть 180-дневное удержание прежнего ника в user_redirects |
+| H15-001 | H15 | open | `src/core/domain/destructive-command.ts:155` | Префикс echo/printf пропускает строку ЦЕЛИКОМ: PRINTS_ONLY снимает и запрет публикации, и пометку разрушительного пункта |
+| H15-002 | H15 | open | `src/app/[handle]/[slug]/[...git]/route.ts:200` | Версия, созданная проекцией git push, минует assertNoDestructiveSteps: страж стоит только на фасаде ListStore, а ядро проецирует коммит в версию мимо него |
+
+## medium (18 открыто / 18)
+
+| id | блок | статус | место | что не так |
+|---|---|---|---|---|
+| H1-004 | H1 | open | `src/features/mcp/tools/lists/write.ts:43` | Пишущие инструменты MCP отвечают «forbidden: you are not the owner» на список, который проситель не вправе видеть, а на несуществующий — «list not found»: разница ответов подтверждает существование приватного |
+| H1-011 | H1 | open | `src/features/notifications/display.ts:43` | Письмо и web-push берут заголовок и адрес списка без проверки видимости, хотя лента уведомлений и счётчик непрочитанного те же строки прогоняют через canViewList |
+| H15-003 | H15 | open | `src/core/domain/destructive-command.ts:44` | Запрет rm -rf / снимают кавычки вокруг пути и длинные флаги GNU; haltsMachine якорен на конец строки, breaksPermissions требует флаг перед режимом, mkfs не знает формы -t |
+| H15-005 | H15 | open | `src/core/domain/quiz.ts:54` | shuffleSort на самых частых для sort-теста данных возвращает эталонный порядок без изменений, то есть показывает ученику готовый правильный ответ |
+| H15-006 | H15 | open | `src/core/domain/quiz.ts:72` | shuffleSort и matchRights сортируют через localeCompare без явной локали: чистая функция ядра даёт разный ответ на одних входных данных в зависимости от окружения |
+| H15-007 | H15 | open | `src/core/domain/access.ts:129` | canRunList не зовёт ни одна строка продукта (только тест), и путь MCP start_run запускает прогон архивного списка |
+| H15-013 | H15 | open | `src/features/collab-store/store.ts:22` | Предложение правки теряет danger, needsHuman и needsHumanAsk на границе порта CollabStore, а удалённая реализация — ещё и blockId, хотя проводной NewStep все четыре поля объявляет |
+| V1d-001 | V1d | open | `src/features/library/actions/forks.ts:101` | «Использовать как шаблон» собирает шаги рукописным маппингом и теряет needsHuman, needsHumanAsk, blockId и danger — соседняя forkTemplate в том же файле три из них переносит, общий toStepInput не зовётся |
+| V1d-002 | V1d | open | `src/features/library/actions/forks.ts:214` | Форк теряет пометку «разрушительный пункт»: маппинг чинили дважды (needsHuman, blockId), а danger не доложили, и toStepInput с его тристейтом не зовётся |
+| V1d-003 | V1d | open | `src/features/generation/actions.ts:333` | Приём сгенерированного кандидата пишет шаги третьим рукописным маппингом и выбрасывает needsHuman/needsHumanAsk, вычисленные восемью строками выше, а также blockId и danger |
+| V1d-004 | V1d | open | `tests/features/library/fork-invariants.itest.ts:88` | Тест «копия шага несёт защитные поля» не импортирует forkTemplate вовсе: проверяемый маппинг переписан внутри теста, то есть подменено само проверяемое правило |
+| V1d-005 | V1d | open | `src/features/library/actions/versions.ts:127` | updateListMeta — единственный путь записи канонической меты без гейта архива и заморозки: проверяется только владение, canEditList не зовётся, форма GeneralSection про состояние списка не знает |
+| V1d-006 | V1d | open | `src/features/mcp/tools/lists/edit.ts:107` | update_list пишет полную замену состава без expectedVersion, и baseVersion нет даже в схеме инструмента, хотя patch_list его требует, а обзор сервера обещает агенту защиту от перезаписи чужой правки |
+| V1d-007 | V1d | open | `src/features/library/suggestion-core/apply.ts:65` | Принятие предложения «из пунктов» пишет версию без expectedVersion и без сравнения base_version с текущей, и через MCP об устаревшей базе не сообщает ничто: ни очередь, ни описание инструмента, ни ворота |
+| V1d-010 | V1d | open | `src/features/library/actions/forks.ts:75` | useTemplate проверяет видимость источника своим условием (только visibility === 'private') вместо доменного canViewList, который зовёт форк: черновик и снятый модерацией список копируются |
+| V1d-011 | V1d | open | `src/features/library/actions/ai.ts:277` | Перевод списка и проход садовника пишут версию без expectedVersion, хотя механизм существует, применён соседями и по-настоящему сверяет версию в транзакции ядра под замком строки |
+| V1d-012 | V1d | open | `src/features/library/actions/ai.ts:243` | Перевод списка — четвёртый рукописный конвертер шагов: он переносит blockId, type, content и «нужен человек» с комментариями, а danger не переносит, и тристейт в toStepInput подменяет решение автора мнением детектора |
+| V1d-013 | V1d | open | `src/features/library/draft.ts:30` | Замок рабочей копии сериализует только MCP против MCP: сохранение из редактора идёт мимо lockList и не сверяет rev, поэтому гонка «патч и сохранение человеком», названная в комментарии к замку, открыта |
+
+## low (20 открыто / 22)
+
+| id | блок | статус | место | что не так |
+|---|---|---|---|---|
+| H1-002 | H1 | open | `src/shared/auth/oauth-server.ts:141` | Одноразовость кода авторизации и ротация refresh-токена проверяются ПЕРЕД UPDATE, а условия в самом UPDATE нет и число затронутых строк не смотрят |
+| H1-003 | H1 | open | `src/app/api/auth/yandex/callback/route.ts:8` | Callback Яндекса и VK и поллинг Telegram не спрашивают oauthEnabled(), хотя для GitHub это правило написано и исполнено: «провайдер проверяется на ОБОИХ концах» |
+| H1-005 | H1 | open | `src/app/sitemap.ts:67` | Карта сайта подаёт поисковику адреса профилей всех авторов индексируемых списков, не спрашивая users.profilePrivate, хотя сама страница закрытого профиля отвечает 404 и ставит noindex |
+| H1-006 | H1 | open | `src/features/auth/passkeys.ts:148` | Вход по passkey создаёт сессию напрямую, минуя развилку totpEnabled, которая есть на пути пароля и OAuth; userVerification стоит 'preferred', то есть вторым фактором сам ключ не гарантирован |
+| H1-007 | H1 | open | `src/app/[handle]/[slug]/releases.atom/route.ts:60` | Atom-фид релизов не входит в единую кеш-политику машинных поверхностей: отдаёт public, max-age=60 без ETag, а отказ — вообще без заголовков кеша |
+| H1-008 | H1 | open | `src/app/[handle]/[slug]/export/route.ts:15` | export и repo.bundle не разбирают Authorization: Bearer, хотя raw, data.json и git-транспорт того же списка токен принимают |
+| H1-009 | H1 | open | `tests/security/server-action-actor-identity.test.ts:54` | Караул «личность не приходит аргументом в экшен» не видит стрелочные экспорты и обрывает разбор списка параметров на первой закрывающей скобке |
+| H1-010 | H1 | open | `src/features/digest/queries.ts:61` | Предикат «опубликован + публичный + прошёл модерацию» живёт рукописными копиями в 14 файлах помимо publiclyVisible()/isPubliclyVisible(), заведённых ровно против этих копий |
+| H1-012 | H1 | open | `src/features/collab/actions.ts:26` | Выдача прав соавтору ищет человека точным eq(users.handle) и при промахе молча ничего не делает: ник в другом регистре, прежний ник или опечатка выглядят как принятые |
+| H15-004 | H15 | open | `src/core/domain/quiz-fingerprint.ts:21` | В отпечаток теста входит ПОРЯДОК вариантов ответа, хотя докстрока обещает, что порядок отображения в него не входит |
+| H15-008 | H15 | open | `src/core/domain/quiz.ts:145` | gradeBlank обходит массив blanks, а не число пропусков в шаблоне: лишние пропуски не оцениваются вовсе |
+| H15-009 | H15 | open | `src/core/domain/links.ts:25` | normalizeUrl проверяет длину ВХОДА, а выход после percent-encoding режет slice — возвращается обрезанная строка вместо null |
+| H15-010 | H15 | open | `src/core/domain/quiz.ts:121` | stripQuizAnswers снимает только поля СВОЕГО вида теста: при любом kind в контенте остаются носители эталона остальных видов, а ветка default не снимает ничего, кроме correct |
+| H15-011 | H15 | open | `src/core/domain/links.ts:59` | walkStrings обходит произвольный JSON прямой рекурсией без ограничения глубины и без множества посещённых |
+| H15-012 | H15 | rejected | `src/core/domain/quiz-fingerprint.ts:19` | Отвергнуто: «редактор при первом сохранении пишет kind:'choice' явно и отпечаток легаси-теста меняется» — такого пути нет, kind для choice намеренно опускается |
+| H15-014 | H15 | open | `src/shared/ai/adapter.ts:7` | Адаптер AiPort.embed выбрасывает объявленный портом meta для учёта стоимости, а в EmbedMeta нет поля feature вовсе |
+| V1d-008 | V1d | rejected | `src/features/mcp/tools/lists/edit.ts:168` | Отвергнуто: patch_list с publish:false и правда не зовёт listWritable под замком, но сценария за этим нет — ownedList спрашивает canEditList в начале КАЖДОГО вызова, и остаётся окно в доли миллисекунды |
+| V1d-009 | V1d | open | `src/features/library/actions/verification.ts:314` | setVerificationLevel адресует версию номером, прочитанным до записи, без условия «эта версия всё ещё текущая», и возвращает ok:true, когда уровень лёг на версию, переставшую быть текущей |
+| V1d-014 | V1d | open | `src/features/library/draft.ts:33` | Сохранение черновика из редактора — единственная запись в рабочую копию без стража исполняемых команд: обе ветки MCP зовут assertNoDestructiveSteps и объясняют зачем, upsertDraft не зовёт |
+| V1d-015 | V1d | open | `src/features/gardener/sweep/readiness-gate.ts:80` | Садовник публикует свой черновик безусловным UPDATE мимо publishOwnedDrafts: ни статуса, ни видимости, ни владельца, ни архива с заморозкой, ни модерации в условии запроса нет |
+| V1d-016 | V1d | open | `src/features/library/actions/versions.ts:283` | «Вернуть эту версию» и «Принять правку» не спрашивают canEditList, а бэкстоп фасада бросает обычный Error вместо ListWriteError — в архиве и заморозке человек получает безымянную страницу ошибки |
+| V1d-017 | V1d | open | `src/shared/db/schema.ts:865` | У embeddings.ref_id нет внешнего ключа на templates, поэтому удаление списка не трогает его строки в корпусе: текст удалённого списка лежит там плейнтекстом до следующего ПОЛНОГО реиндекса |
+

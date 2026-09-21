@@ -1,5 +1,11 @@
 {
   "review_id": "setfork-frontend-2026-09",
+  "project": "SetFork",
+  "gates": [
+    "npm run lint",
+    "npm test",
+    "npm run typecheck"
+  ],
   "created": "2026-09-19",
   "note": "Нарезка на три фазы: сквозные задают язык, доменные читают свой срез целиком, стендовые работают на запущенной системе и файлами не владеют.",
   "exclusions": [
@@ -1040,7 +1046,9 @@
         "tests/features/notifications/keyset.itest.ts",
         "tests/features/notifications/mentions.test.ts",
         "tests/features/watch/watch-visibility.itest.ts",
-        "tests/features/watch/watcher-delivery.itest.ts"
+        "tests/features/watch/watcher-delivery.itest.ts",
+        "src/features/notifications/list-access.ts",
+        "tests/features/notifications/delivery-visibility.itest.ts"
       ],
       "ref_paths": []
     },
@@ -1242,7 +1250,8 @@
         "src/app/verify-email/**",
         "src/features/settings/**",
         "src/shared/telegram/**",
-        "tests/features/settings"
+        "tests/features/settings",
+        "tests/shared/auth/oauth-single-use.itest.ts"
       ],
       "ref_paths": []
     },
@@ -1617,7 +1626,8 @@
         "tests/features/library/publish.itest.ts",
         "tests/features/library/version-sha-wiring.test.ts",
         "tests/features/library/version-sha.test.ts",
-        "tests/features/library/write-out-of-sync.itest.ts"
+        "tests/features/library/write-out-of-sync.itest.ts",
+        "src/features/library/version-error.ts"
       ],
       "ref_paths": []
     },

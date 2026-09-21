@@ -1,3 +1,4 @@
+# коммит 111a5592
 file	blocks
 .claude/hooks/ui-guard.mjs	V12c
 .claude/launch.json	V12c
@@ -118,6 +119,7 @@ scripts/migrate-push.ts	H13c
 scripts/probe/touch-sweep.mjs	H13f
 scripts/purge-lists.ts	H13f
 scripts/restore.sh	H13f
+scripts/review/__pycache__/review.cpython-314.pyc	H13d
 scripts/review/review.py	H13d
 scripts/seed-demo.ts	H13c
 scripts/seed-ops.ts	H13f
@@ -182,6 +184,7 @@ src/app/[handle]/[slug]/suggestions/[id]/SuggestionNotices.tsx	V2
 src/app/[handle]/[slug]/suggestions/[id]/SuggestionReview.tsx	V2
 src/app/[handle]/[slug]/suggestions/[id]/edit/page.tsx	V2
 src/app/[handle]/[slug]/suggestions/[id]/load.ts	V2
+src/app/[handle]/[slug]/suggestions/[id]/merge-err.ts	V2
 src/app/[handle]/[slug]/suggestions/[id]/page.tsx	V2
 src/app/[handle]/[slug]/suggestions/page.tsx	V2
 src/app/[handle]/[slug]/versions/page.tsx	V1c
@@ -709,6 +712,7 @@ src/features/library/suggestion-side-effects.ts	V1
 src/features/library/translation-carry.ts	V1h
 src/features/library/translation-state.ts	V1h
 src/features/library/verification-report.ts	V1m
+src/features/library/version-error.ts	V1d
 src/features/library/version-sha.ts	V1m
 src/features/library/viewed-actions.ts	V1m
 src/features/library/viewed-fingerprint.ts	V1m
@@ -775,6 +779,7 @@ src/features/notifications/display.ts	V7b
 src/features/notifications/email.ts	V7b
 src/features/notifications/href.ts	V7b
 src/features/notifications/jobs.ts	V7b
+src/features/notifications/list-access.ts	V7b
 src/features/notifications/mentions.ts	V7b
 src/features/notifications/notify.ts	V7b
 src/features/notifications/push-client.ts	V7b
@@ -1222,8 +1227,10 @@ src/widgets/TopNav/use-crumb.ts	V12
 src/widgets/explore/ExploreNav.tsx	V12
 src/widgets/explore/TrendControls.tsx	V12
 src/widgets/sidebar-context.tsx	V12
+tests/app/api/auth/provider-gate-both-ends.test.ts	V12d
 tests/app/api/ready.itest.ts	V12d
 tests/app/api/user-search-order.itest.ts	V12d
+tests/app/api/write-allowed-content.test.ts	V12d
 tests/app/cache-policy.itest.ts	V12d
 tests/app/git-transport.itest.ts	V12d
 tests/app/healthz.test.ts	V12d
@@ -1245,6 +1252,7 @@ tests/architecture/day-sensitive-list.test.ts	H12
 tests/architecture/font-size-merge.test.ts	H12
 tests/architecture/gate-reason-codes.test.ts	H12
 tests/architecture/gnomes-coupling.test.ts	H12
+tests/architecture/handle-check-one-canon.test.ts	H12
 tests/architecture/hint-dot-one-view.test.ts	H12
 tests/architecture/index-nulls-order.test.ts	H12
 tests/architecture/issue-write-one-path.test.ts	H12
@@ -1286,7 +1294,9 @@ tests/features/auth/login-keeps-email.test.tsx	H1
 tests/features/auth/oauth-next.test.ts	H1
 tests/features/auth/passkey-error.test.ts	H1
 tests/features/auth/passkey-options.test.ts	H1
+tests/features/auth/passkey-second-factor.itest.ts	H1
 tests/features/auth/register-admin-handle.itest.ts	H1
+tests/features/auth/register-honours-handle-taken.itest.ts	H1
 tests/features/backoffice/ai-watch.itest.ts	V9d
 tests/features/backoffice/loops.itest.ts	V9d
 tests/features/badges/svg.test.ts	V7
@@ -1433,6 +1443,7 @@ tests/features/library/translation-carry.test.ts	V1h,V1k
 tests/features/library/translation-state.test.ts	V1h,V1k
 tests/features/library/verification-levels.itest.ts	V1h
 tests/features/library/verification-report.itest.ts	V1h
+tests/features/library/version-blocked-reason.test.ts	V1k
 tests/features/library/version-sha-wiring.test.ts	V1k,V1d
 tests/features/library/version-sha.test.ts	V1k,V1d
 tests/features/library/viewed-fingerprint.test.ts	V1k
@@ -1468,6 +1479,7 @@ tests/features/moderation/gate.itest.ts	V9b
 tests/features/monetization/pro-interest.itest.ts	H5
 tests/features/money/budget-window.itest.ts	H5
 tests/features/money/retry-idempotent.itest.ts	H5
+tests/features/notifications/delivery-visibility.itest.ts	V7b
 tests/features/notifications/href.test.ts	V7b
 tests/features/notifications/keyset.itest.ts	V7b
 tests/features/notifications/mentions.test.ts	V7b
@@ -1484,6 +1496,7 @@ tests/features/releases/tag-name.test.ts	V1i
 tests/features/reports/validate.test.ts	V2
 tests/features/runs/paging.itest.ts	H10
 tests/features/runs/report-blocked.itest.ts	H10
+tests/features/settings/handle-change-keeps-foreign-hold.itest.ts	V11
 tests/features/settings/handle-change-sessions.itest.ts	V11
 tests/features/settings/set-password.itest.ts	V11
 tests/features/tags/array-params.itest.ts	V5
@@ -1563,6 +1576,7 @@ tests/shared/auth/api-token-scope.itest.ts	V12f
 tests/shared/auth/api-token.test.ts	V12f
 tests/shared/auth/handle.test.ts	V12f
 tests/shared/auth/oauth-server.itest.ts	V12f
+tests/shared/auth/oauth-single-use.itest.ts	V11
 tests/shared/auth/oauth.test.ts	V12f
 tests/shared/auth/totp.test.ts	V12f
 tests/shared/block-identity-on-write.test.ts	V12f
