@@ -7,6 +7,7 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
 import { enqueueReindex } from '@/features/library/jobs'
+import { publishIfStillEligible } from '@/features/library/publish-draft'
 import { globalBudgetOk } from '@/shared/quota'
 import { countDuplicateSteps, readinessDecision, structuralBlockers, DEFAULT_BAR, type ReadinessBar, type ReadinessFacts } from '@/shared/ai/readiness'
 import { featuresOf, gradeList } from '@/shared/ai/list-grade'
@@ -76,12 +77,24 @@ export async function gateOwnDraft(
     decision.blockers.push(`суточная квота автопубликаций исчерпана (${settings.readinessPerDay})`)
   }
 
+  // ⚠️ Запись — через общую функцию с условиями В САМОМ `UPDATE`. Между решением выше и
+  // этой строкой прошли минуты: вызов модели, три линзы, проверка ссылок. Админ за это
+  // время мог снять список модерацией или заархивировать — безусловный `update … where
+  // id` публиковал вопреки этому, а журнал писал успех.
   if (decision.publish) {
-    await db.update(templates).set({ status: 'published', updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-    // Публикация компании проходит МОДЕРАЦИЮ как любая другая: гейт готовности решает
-    // «готово ли», модерация — «безопасно ли показывать». Смешивать эти вопросы нельзя.
-    await moderateNewPublication(tpl.id)
-    await enqueueReindex(tpl.id)
+    const published = await publishIfStillEligible(tpl.id)
+    if (published) {
+      // Публикация компании проходит МОДЕРАЦИЮ как любая другая: гейт готовности решает
+      // «готово ли», модерация — «безопасно ли показывать». Смешивать эти вопросы нельзя.
+      await moderateNewPublication(tpl.id)
+      await enqueueReindex(tpl.id)
+    } else {
+      // Состояние списка изменилось, пока планка думала. Это не ошибка петли и не сбой:
+      // решение администратора старше нашего, и журнал обязан сказать правду, а не
+      // записать несостоявшуюся публикацию успехом.
+      decision.publish = false
+      decision.blockers.push('состояние списка изменилось, пока шла проверка готовности')
+    }
   }
 
   await recordAgentAction({

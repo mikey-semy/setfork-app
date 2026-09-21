@@ -31,14 +31,34 @@ export async function upsertDraft(
   tpl: ListRow,
   authorId: string,
   data: { items: ProposedItem[]; meta: DraftMeta; note: string },
-): Promise<void> {
-  await db
-    .insert(listDrafts)
-    .values({ templateId: tpl.id, authorId, baseVersion: tpl.currentVersion, items: data.items, meta: data.meta, note: data.note })
-    .onConflictDoUpdate({
-      target: [listDrafts.templateId, listDrafts.authorId],
-      set: { items: data.items, meta: data.meta, note: data.note, rev: sql`${listDrafts.rev} + 1`, updatedAt: new Date() },
-    })
+  opts: { expectedRev?: number } = {},
+): Promise<{ rev: number; overwrote: boolean }> {
+  // ⚠️ ПОД ЗАМКОМ СПИСКА — тем же, что берут правки через MCP. Черновик у автора один
+  // на список, а входов в него два: редактор и агент, действующий ОТ ЕГО ЖЕ ИМЕНИ
+  // (`patch_list` с publish:false кладёт правки в эту же строку). Без замка две записи
+  // чередовались бы внутри одной операции; замок их выстраивает в очередь.
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${templates} where ${templates.id} = ${tpl.id} for update`)
+    const [before] = await tx
+      .select({ rev: listDrafts.rev })
+      .from(listDrafts)
+      .where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, authorId)))
+      .limit(1)
+    // Ушёл ли черновик вперёд с тех пор, как его показали автору. Сравниваем ТОЛЬКО
+    // когда вызывающий сказал, от какой редакции правил: MCP правит от свежего чтения
+    // под тем же замком, ему сверять не с чем.
+    const overwrote = opts.expectedRev !== undefined && before !== undefined && before.rev !== opts.expectedRev
+
+    const [row] = await tx
+      .insert(listDrafts)
+      .values({ templateId: tpl.id, authorId, baseVersion: tpl.currentVersion, items: data.items, meta: data.meta, note: data.note })
+      .onConflictDoUpdate({
+        target: [listDrafts.templateId, listDrafts.authorId],
+        set: { items: data.items, meta: data.meta, note: data.note, rev: sql`${listDrafts.rev} + 1`, updatedAt: new Date() },
+      })
+      .returning({ rev: listDrafts.rev })
+    return { rev: row.rev, overwrote }
+  })
 }
 
 /** Убрать черновик автора (публикация его исчерпала либо от правок отказались). */

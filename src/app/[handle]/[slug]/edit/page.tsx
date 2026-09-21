@@ -32,7 +32,7 @@ export default async function EditPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ blocked?: string; step?: string; saved?: string; e?: string }>
+  searchParams: Promise<{ blocked?: string; step?: string; saved?: string; e?: string; over?: string; warn?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   if (!session) redirect('/login')
@@ -86,6 +86,10 @@ export default async function EditPage({
       )}
 
       <form action={action}>
+        {/* Редакция черновика, от которой правит автор. Запись сверит её с текущей и
+            скажет, если черновик ушёл вперёд — например, его патчил агент по MCP в тот
+            же черновик (он действует от имени того же человека). */}
+        <input type="hidden" name="rev" value={draft?.rev ?? ''} />
         {/* Заголовок НЕ обещает новую версию: правки копятся в черновике, а версия
             появляется только при публикации (жалоба владельца: «там всегда смена
             версий»). Куда приедет черновик — написано у самой кнопки публикации. */}
@@ -103,6 +107,22 @@ export default async function EditPage({
         {sp.saved && !sp.e && (
           <Alert variant="ok" className="mb-4">
             <span className="block">{t('draftSaved', lang)}</span>
+          </Alert>
+        )}
+        {/* Сохранение ЛЕГЛО ПОВЕРХ чужих правок в тот же черновик. Раньше об этом не
+            узнавал никто: ни автор, ни агент, получавший в ответ «успех». */}
+        {sp.saved && sp.over && (
+          <Alert variant="warn" className="mb-4">
+            <span className="block">{t('draftOverwroteAgent', lang)}</span>
+          </Alert>
+        )}
+        {/* Запрещённая команда: сказать СРАЗУ и тому, кто её написал. Отказ приходил
+            при публикации — позже и, как правило, другому человеку. */}
+        {sp.saved && sp.warn === 'destructive' && (
+          <Alert variant="warn" className="mb-4">
+            <span className="block">
+              {t('draftDestructiveWarn', lang).replace('{step}', String(sp.step ?? ''))}
+            </span>
           </Alert>
         )}
         {sp.e === 'stale' && (

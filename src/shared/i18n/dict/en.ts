@@ -910,6 +910,8 @@ export const en = {
   draftEditsPendingHint: 'Draft saved {when}. Readers still see the published version.',
   openDraft: 'Open draft',
   draftSaved: 'Draft saved.',
+  draftOverwroteAgent: 'Saved over edits that reached this draft through an agent. If you needed them, ask it to repeat.',
+  draftDestructiveWarn: 'Step {step} has a command publishing will refuse. Fix it, or you will not be able to publish.',
   draftStaleRefused: 'The list moved on while your edits sat in the draft. Publishing was cancelled — nothing was overwritten.',
   draftOutOfSync:
     'This list’s history and its repository disagree, so writing is paused until it is repaired. Your draft is untouched — retrying will not help, we already know about it.',

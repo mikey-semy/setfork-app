@@ -10,7 +10,8 @@ import { type LocaleText } from '@/shared/i18n'
 import { listQuota } from '@/shared/quota'
 import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, editBlockReason, ListWriteError } from '@/core'
-import { DestructiveCommandError } from '@/core/domain/destructive-command'
+import { DestructiveCommandError, findDestructiveSteps } from '@/core/domain/destructive-command'
+import { saveOutcomeQuery } from '../save-outcome'
 import { isCollaborator } from '@/features/collab/queries'
 // eslint-disable-next-line boundaries/dependencies -- полки принадлежат каталогам; правило «положить на полку» держим ОДНОЙ точкой на все три входа (форма, MCP, пачка MCP), а не копией здесь
 import { assignCatalogByName } from '@/features/catalogs/assign'
@@ -162,9 +163,20 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
  * успел уйти вперёд, публикация об этом скажет, а не перезапишет чужое молча.
  */
 export async function saveDraft(templateId: string, formData: FormData): Promise<void> {
-  const { tpl, handle } = await upsertDraftFromForm(templateId, formData)
+  const { tpl, handle, overwrote, destructive } = await upsertDraftFromForm(templateId, formData)
   revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
-  redirect(`/${handle}/${tpl.slug}/edit?saved=1`)
+  // ⚠️ СОХРАНЯЕМ ВСЕГДА, НО ГОВОРИМ ПРАВДУ О ПОСЛЕДСТВИЯХ.
+  //
+  // Отказать здесь нельзя: форма серверная, отказ уходит редиректом, страница
+  // перечитывает черновик из базы — и набранное пропадает. Отказ, после которого
+  // работа потеряна, хуже той гонки, от которой он защищает. Поэтому запись идёт, а
+  // человек узнаёт, что именно случилось:
+  //   over=1      — его состав лёг поверх правок, пришедших через агента в тот же
+  //                 черновик (до этого обе стороны не узнавали ни о чём);
+  //   warn=destructive — в шаге есть запрещённая команда, и публикация откажет. Раньше
+  //                 этот отказ приходил ПОЗЖЕ и ДРУГОМУ человеку — владельцу, нажавшему
+  //                 «Опубликовать», по шагу, которого он не писал.
+  redirect(`/${handle}/${tpl.slug}/edit?${saveOutcomeQuery({ overwrote, destructiveStep: destructive?.step ?? null })}`)
 }
 
 /**
@@ -204,8 +216,17 @@ async function upsertDraftFromForm(templateId: string, formData: FormData) {
   // сказать «правки сделаны от свежей версии», а они сделаны от старой — и следующая
   // публикация затёрла бы чужую работу молча. Признак устаревания снимает только
   // осознанный отказ от правок (discardDraft), а не автосохранение.
-  await upsertDraft(tpl, session.userId, { items, meta, note })
-  return { tpl, handle }
+  // Редакция черновика, от которой правил автор: форма несёт её скрытым полем, чтобы
+  // запись могла понять, ушёл ли черновик вперёд, пока редактор был открыт.
+  const revRaw = formData.get('rev')
+  const expectedRev = revRaw === null || revRaw === '' ? undefined : Number(revRaw)
+  const { overwrote } = await upsertDraft(tpl, session.userId, { items, meta, note }, {
+    expectedRev: Number.isFinite(expectedRev) ? expectedRev : undefined,
+  })
+  // Страж исполняемых команд — ТОТ ЖЕ, что на обеих ветках MCP. Здесь он не отказывает,
+  // а предупреждает: см. комментарий в `saveDraft` про цену отказа в серверной форме.
+  const [first] = findDestructiveSteps(items)
+  return { tpl, handle, overwrote, destructive: first ? { step: first.index + 1 } : null }
 }
 
 /** Убрать черновик и вернуться к опубликованному состоянию. */
