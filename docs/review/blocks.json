@@ -522,6 +522,7 @@
       "role": "reviewer",
       "goal": "Проверить инструменты, которые СУДЯТ о коде: оснастка сплошного ревью, узда шкалы контролов, проверки покрытия — и то, что они не зеленеют на пустом месте.",
       "paths": [
+        "scripts/mutate.mjs",
         "scripts/review/**",
         "scripts/ui-parity.mjs"
       ],
@@ -1592,6 +1593,7 @@
       "goal": "Прочитать все маршруты записи списка СРАЗУ и найти то, чего нет ни в одном: атомарность, сверку версии, общий гейт. Дефект такого рода не виден при чтении файла по отдельности.",
       "paths": [
         "src/features/library/actions",
+        "src/features/library/version-error.ts",
         "tests/features/library/actions-mutations.itest.ts",
         "tests/features/library/catover-write-parity.itest.ts",
         "tests/features/library/create-reason.test.ts",

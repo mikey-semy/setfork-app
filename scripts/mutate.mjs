@@ -104,11 +104,16 @@ const restore = () => {
     /* убрать похоронку не вышло — файл уже верен, это не повод падать */
   }
 }
-// Обрыв по Ctrl+C оставил бы в дереве мутанта: восстанавливаем и на нём.
-for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => (restore(), process.exit(130)))
+// ⚠️ Именно `exit`, а не try/finally: `process.exit()` завершает процесс НЕМЕДЛЕННО,
+// finally при этом не выполняется. С ним выход по красной базе оставлял бы похоронку, и
+// напечатанная команда возврата предлагала бы затереть уже исправленный файл старой
+// копией. Обработчик `exit` зовётся на любом выходе — обычном и по исключению.
+process.on('exit', restore)
+// Обрыв по Ctrl+C: без своего обработчика процесс умирает от сигнала, а `exit` не наступает.
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => process.exit(130))
 
 let failures = 0
-try {
+{
   // ⚠️ Без этого шага стенд врёт: на красной базе мутант «убивает» тест, который и без
   // него лежал, и любая порча выглядит пойманной.
   process.stdout.write('база (без порчи)… ')
@@ -123,6 +128,16 @@ try {
   process.stdout.write('зелёная\n\n')
 
   const chosen = passport.mutants.filter((m) => !only || m.name.includes(only))
+  // Опечатка в `--only` или снятая порча дали бы «0/0 порч поймано» и успешный выход:
+  // заказанная проверка не выполнилась бы вовсе, а выглядело бы это как пройденная.
+  if (chosen.length === 0) {
+    process.stderr.write(
+      only
+        ? `по отбору «${only}» не нашлось ни одной порчи из ${passport.mutants.length} — опечатка или порча снята\n`
+        : 'в паспорте нет ни одной порчи\n',
+    )
+    process.exit(2)
+  }
   for (const m of chosen) {
     const hits = original.split(m.from).length - 1
     if (hits !== 1) {
@@ -147,8 +162,6 @@ try {
   }
 
   process.stdout.write(`\n${chosen.length - failures}/${chosen.length} порч поймано\n`)
-} finally {
-  restore()
 }
 
 process.exit(failures > 0 ? 1 : 0)
