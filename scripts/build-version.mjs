@@ -21,10 +21,26 @@ const TYPES = /^(feat|fix|docs|refactor|perf|test|chore|build|ci|style|revert)(\
 // Рабочий каталог передаётся ОПЦИЕЙ, а не куском команды: путь с пробелом (а такой
 // бывает у checkout на своём раннере) развалил бы строку, и git прочитал бы её как
 // несколько аргументов. Вызов и так идёт без шелла — аргументы разбирает не оболочка.
+// ⚠️ Ошибка git НЕ ГЛОТАЕТСЯ. Прежняя редакция возвращала пустоту одинаково и когда
+// истории нет, и когда git отказал, — и выкатка 21.09.2026 прошла с номером из
+// package.json, сказав только «посчитать не удалось». Причина осталась неизвестной,
+// потому что её никто не напечатал. Теперь она уезжает в stderr: stdout остаётся
+// чистым (его читает подстановка в CI), а человек видит, что именно случилось.
+//
+// `safe.directory` — отдельная мера: actions/checkout прописывает его во ВРЕМЕННЫЙ
+// HOME и возвращает прежний сразу после своего шага, так что на нашем шаге записи
+// уже нет. Каталог сборки принадлежит тому, кто его создал, и git вправе отказаться
+// читать чужой репозиторий.
 function git(args, cwd) {
   try {
-    return execSync(`git ${args}`, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
-  } catch {
+    return execSync(`git -c safe.directory='*' ${args}`, {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim()
+  } catch (e) {
+    const why = (e?.stderr || e?.message || String(e)).toString().trim().split('\n')[0]
+    process.stderr.write(`build-version: git ${args} → ${why}\n`)
     return ''
   }
 }
