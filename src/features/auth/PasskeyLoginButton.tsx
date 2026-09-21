@@ -34,7 +34,9 @@ export function PasskeyLoginButton({ lang }: { lang: Lang }) {
         setBusy(false)
         return
       }
-      router.push('/')
+      // Ключ подтверждён, но пользователь им не проверен, а 2FA включена — вход
+      // продолжается кодом, как на пути пароля.
+      router.push(res.totp ? '/login/2fa' : '/')
       router.refresh()
     } catch {
       setErr(ru ? 'Отменено или не поддерживается.' : 'Cancelled or not supported.')

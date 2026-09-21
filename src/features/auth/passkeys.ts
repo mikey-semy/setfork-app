@@ -79,7 +79,8 @@ export async function beginPasskeyRegistration(kind: PasskeyKind = 'device') {
   return options
 }
 
-export type PasskeyResult = { ok: true } | { error: string }
+/** `totp: true` — ключ подтверждён, но вход ещё не завершён: нужен код второго фактора. */
+export type PasskeyResult = { ok: true; totp?: true } | { error: string }
 
 export async function finishPasskeyRegistration(response: RegistrationResponseJSON, name: string): Promise<PasskeyResult> {
   const session = await requireSession()
@@ -145,6 +146,30 @@ export async function finishPasskeyLogin(response: AuthenticationResponseJSON): 
 
   const [user] = await db.select().from(users).where(eq(users.id, pk.userId)).limit(1)
   if (!user) return { error: 'unknown' }
+
+  // ⚠️ ВТОРОЙ ФАКТОР — ПО ФАКТУ ПРОВЕРКИ, А НЕ ПО НАЗВАНИЮ СПОСОБА.
+  //
+  // Passkey часто считают двумя факторами сразу: владение ключом плюс PIN или
+  // биометрия. Так и есть — но ТОЛЬКО если аутентификатор пользователя действительно
+  // проверил. У нас `userVerification: 'preferred'` на обоих концах, то есть он вправе
+  // ответить без проверки вовсе, и тогда ключ — один фактор, владение. А ключ
+  // синхронизируется связкой и лежит на всех устройствах человека (ради этого стоит
+  // `residentKey: 'required'`), поэтому «владение» здесь слабее, чем кажется.
+  //
+  // Человек, включивший 2FA, вправе рассчитывать, что вход требует код. Путь пароля и
+  // путь OAuth его и требуют; passkey создавал полноценную сессию мимо развилки —
+  // расхождение между путями входа, о котором пользователь не знает.
+  //
+  // Решение не «всегда требовать TOTP поверх ключа» (это лишний шаг там, где ключ уже
+  // проверил человека) и не «никогда» (это дыра там, где не проверил), а по
+  // `userVerified` из ответа аутентификатора: он говорит, что произошло на самом деле.
+  if (!verification.authenticationInfo.userVerified && user.totpEnabled) {
+    const { startPendingLogin } = await import('./signed-cookies')
+    await startPendingLogin(user.id)
+    await recordAudit('passkey.login-needs-2fa', { actorId: user.id })
+    return { ok: true, totp: true }
+  }
+
   await startSession({ userId: user.id, handle: user.handle, name: user.name ?? undefined, avatarUrl: (await avatarSrc(user.avatarUrl, 64)) ?? undefined })
   await recordAudit('passkey.login', { actorId: user.id })
   return { ok: true }
