@@ -1,4 +1,4 @@
-# коммит 111a5592
+# коммит 3cfdc663
 file	blocks
 .claude/hooks/ui-guard.mjs	V12c
 .claude/launch.json	V12c
@@ -57,6 +57,7 @@ docs/review/blocks/H1-access.md	V12c
 docs/review/blocks/H15-domain-core.md	V12c
 docs/review/blocks/V1d-list-write.md	V12c
 docs/review/findings.jsonl	V12e
+docs/review/findings.md	V12c
 docs/review/invariants.md	V12c
 docs/review/journal.md	V12c
 docs/review/prompts/fix.md	V12c

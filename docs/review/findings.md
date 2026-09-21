@@ -3,23 +3,23 @@
 > Файл СГЕНЕРИРОВАН из `findings.jsonl` командой `npm run review -- findings`.
 > Не редактируй его руками — правь jsonl и перегенерируй.
 
-Открыто: **41** из 43 записей.
+Открыто: **39** из 43 записей.
 
-## high (3 открыто / 3)
+## high (2 открыто / 3)
 
 | id | блок | статус | место | что не так |
 |---|---|---|---|---|
 | H1-001 | H1 | open | `src/features/auth/actions.ts:47` | Регистрация по e-mail сверяет занятость ника прямым запросом в users и минует handleTaken(), то есть 180-дневное удержание прежнего ника в user_redirects |
-| H15-001 | H15 | open | `src/core/domain/destructive-command.ts:155` | Префикс echo/printf пропускает строку ЦЕЛИКОМ: PRINTS_ONLY снимает и запрет публикации, и пометку разрушительного пункта |
+| H15-001 | H15 | fixed | `src/core/domain/destructive-command.ts:155` | Префикс echo/printf пропускает строку ЦЕЛИКОМ: PRINTS_ONLY снимает и запрет публикации, и пометку разрушительного пункта |
 | H15-002 | H15 | open | `src/app/[handle]/[slug]/[...git]/route.ts:200` | Версия, созданная проекцией git push, минует assertNoDestructiveSteps: страж стоит только на фасаде ListStore, а ядро проецирует коммит в версию мимо него |
 
-## medium (18 открыто / 18)
+## medium (17 открыто / 18)
 
 | id | блок | статус | место | что не так |
 |---|---|---|---|---|
 | H1-004 | H1 | open | `src/features/mcp/tools/lists/write.ts:43` | Пишущие инструменты MCP отвечают «forbidden: you are not the owner» на список, который проситель не вправе видеть, а на несуществующий — «list not found»: разница ответов подтверждает существование приватного |
 | H1-011 | H1 | open | `src/features/notifications/display.ts:43` | Письмо и web-push берут заголовок и адрес списка без проверки видимости, хотя лента уведомлений и счётчик непрочитанного те же строки прогоняют через canViewList |
-| H15-003 | H15 | open | `src/core/domain/destructive-command.ts:44` | Запрет rm -rf / снимают кавычки вокруг пути и длинные флаги GNU; haltsMachine якорен на конец строки, breaksPermissions требует флаг перед режимом, mkfs не знает формы -t |
+| H15-003 | H15 | fixed | `src/core/domain/destructive-command.ts:44` | Запрет rm -rf / снимают кавычки вокруг пути и длинные флаги GNU; haltsMachine якорен на конец строки, breaksPermissions требует флаг перед режимом, mkfs не знает формы -t |
 | H15-005 | H15 | open | `src/core/domain/quiz.ts:54` | shuffleSort на самых частых для sort-теста данных возвращает эталонный порядок без изменений, то есть показывает ученику готовый правильный ответ |
 | H15-006 | H15 | open | `src/core/domain/quiz.ts:72` | shuffleSort и matchRights сортируют через localeCompare без явной локали: чистая функция ядра даёт разный ответ на одних входных данных в зависимости от окружения |
 | H15-007 | H15 | open | `src/core/domain/access.ts:129` | canRunList не зовёт ни одна строка продукта (только тест), и путь MCP start_run запускает прогон архивного списка |
