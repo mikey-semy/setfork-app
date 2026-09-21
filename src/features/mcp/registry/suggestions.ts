@@ -37,7 +37,7 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
     {
       title: 'Suggest an edit to a list',
       description:
-        "Propose a change to someone else's list: it becomes a suggestion the owner can accept or reject. The items you pass REPLACE the list content when accepted, so send the full intended list, not just the new lines. Use get_list first to see what is there — its \"version\" tells you which bytes you are proposing against, and blocks keep their \"bid\" across versions, so per-block comments and diffs stay attached. For your own lists use update_list instead — it edits directly.",
+        "Propose a change to someone else's list: it becomes a suggestion the owner can accept or reject. The items you pass REPLACE the list content when accepted, so send the full intended list, not just the new lines. Use get_list first to see what is there — its \"version\" tells you which bytes you are proposing against, and blocks keep their \"bid\" across versions, so per-block comments and diffs stay attached. For your own lists use update_list instead — it edits directly. Layout rules are the same as in create_list — including that a single newline does NOT break a line.",
       inputSchema: {
         list: z.string().describe('List reference: "handle/slug" or just "slug"'),
         note: z.string().describe('What you changed and why — the owner reads this first'),

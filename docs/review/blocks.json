@@ -522,6 +522,7 @@
       "role": "reviewer",
       "goal": "Проверить инструменты, которые СУДЯТ о коде: оснастка сплошного ревью, узда шкалы контролов, проверки покрытия — и то, что они не зеленеют на пустом месте.",
       "paths": [
+        "scripts/mutate.mjs",
         "scripts/review/**",
         "scripts/ui-parity.mjs"
       ],
@@ -784,9 +785,9 @@
       "id": "V1m",
       "slug": "lists",
       "phase": 2,
-      "title": "Список: тесты на настоящей базе",
+      "title": "Список: точки входа и страницы создания",
       "role": "reviewer",
-      "goal": "Пройти интеграционные тесты библиотеки: проверяют ли они то, что обещают названием, и предъявлен ли каждый живому дефекту.",
+      "goal": "Пройти пути, которыми список ЗАВОДЯТ и находят: роуты создания и поиска, страница нового списка, «мои списки» — и найти, где вход обещает не то, что записывает.",
       "paths": [
         "src/app/api/list-title/route.ts",
         "src/app/api/lists/by-owner/route.ts",
@@ -1592,6 +1593,7 @@
       "goal": "Прочитать все маршруты записи списка СРАЗУ и найти то, чего нет ни в одном: атомарность, сверку версии, общий гейт. Дефект такого рода не виден при чтении файла по отдельности.",
       "paths": [
         "src/features/library/actions",
+        "src/features/library/version-error.ts",
         "tests/features/library/actions-mutations.itest.ts",
         "tests/features/library/catover-write-parity.itest.ts",
         "tests/features/library/create-reason.test.ts",

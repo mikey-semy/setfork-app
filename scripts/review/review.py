@@ -93,6 +93,24 @@ def git_files(pathspecs: list[str]) -> set[str]:
     return {p for p in out.split("\0") if p}
 
 
+def excluded_files() -> set[str]:
+    """Файлы, исключённые из ревью с обоснованием (см. blocks.json → exclusions)."""
+    return git_files([e["pattern"] for e in blocks().get("exclusions", [])])
+
+
+def block_files(pathspecs: list[str]) -> set[str]:
+    """ЧТО БЛОК ПОЛУЧАЕТ В РАБОТУ — один ответ на всех потребителей.
+
+    ⚠️ Раньше каждый считал сам, и они разошлись: карта покрытия вычитала исключения,
+    счёт строк — нет (H13 «весил» 30 388 строк, из которых 19 181 — package-lock.json),
+    а сборка промпта продолжала ПЕРЕДАВАТЬ агенту исключённые файлы уже после того, как
+    счёт починили. Третий потребитель того же набора — третье расхождение.
+
+    Не зовите `git_files` напрямую для путей блока: она не знает про исключения.
+    """
+    return git_files(pathspecs) - excluded_files()
+
+
 def all_files() -> set[str]:
     out = subprocess.run(
         ["git", "-C", str(ROOT), "ls-files", "-z"], capture_output=True, text=True, check=True
@@ -230,11 +248,11 @@ def cmd_next(args) -> int:
 def coverage_map() -> tuple[dict[str, list[str]], set[str], set[str]]:
     """file -> owning block ids, plus the excluded and the unassigned sets."""
     defn = blocks()
-    excluded = git_files([e["pattern"] for e in defn.get("exclusions", [])])
+    excluded = excluded_files()
     everything = all_files() - excluded
     owned: dict[str, list[str]] = {}
     for b in defn["blocks"]:
-        for f in git_files(b.get("paths", [])) - excluded:
+        for f in block_files(b.get("paths", [])):
             owned.setdefault(f, []).append(b["id"])
     unassigned = everything - set(owned)
     return owned, excluded, unassigned
@@ -331,8 +349,12 @@ def cmd_prompt(args) -> int:
     if not template.exists():
         die(f"prompt template missing: {template.relative_to(ROOT)}")
 
-    files = sorted(git_files(b.get("paths", [])))
-    refs = sorted(git_files(b.get("ref_paths", [])) - set(files))
+    # ⚠️ ИСКЛЮЧЁННОЕ НЕ ПОПАДАЕТ В ПРОМПТ. Счёт строк исключения вычитал, а этот список
+    # — нет: отчёт показывал H13 в 2 085 строк, а агенту вместе с ним уезжал
+    # package-lock.json на 19 тысяч. То есть «читаемый блок» и «что дали читать»
+    # разъезжались молча.
+    files = sorted(block_files(b.get("paths", [])))
+    refs = sorted(block_files(b.get("ref_paths", [])) - set(files))
     report = f"docs/review/reports/{b['id']}-{b['slug']}.{args.role}.md"
 
     body = template.read_text(encoding="utf-8")
@@ -550,9 +572,7 @@ def block_lines(pathspecs: list[str]) -> tuple[int, int]:
     Число выходило втрое больше настоящего и требовало резать то, что и так не читают.
     Считать надо ровно тот набор, который блок получит в работу.
     """
-    defn = blocks()
-    excluded = git_files([e["pattern"] for e in defn.get("exclusions", [])])
-    files = git_files(pathspecs) - excluded
+    files = block_files(pathspecs)
     total = 0
     for f in files:
         try:

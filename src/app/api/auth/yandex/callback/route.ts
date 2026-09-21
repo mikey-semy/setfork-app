@@ -4,9 +4,27 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { upsertOauthUser } from '@/shared/auth/users'
 import { enterWithIdentity } from '@/features/auth/oauth-entry'
 import { appOrigin } from '@/shared/auth/app-origin'
+import { oauthEnabled } from '@/shared/auth/oauth'
 
 export async function GET(req: NextRequest) {
   const appUrl = appOrigin()
+  // ⚠️ ПРОВАЙДЕР ПРОВЕРЯЕТСЯ НА ОБОИХ КОНЦАХ. Без этого при AUTH_DISABLED_PROVIDERS
+  // выключение держалось на побочном эффекте: стартовый маршрут переставал пускать, а
+  // у всех, кто ушёл к провайдеру за последние десять минут, кука состояния ещё жива —
+  // и их возврат доводил вход до конца тем же секретом из env. Штатный повод выключить
+  // провайдера — утечка ключей приложения, то есть ровно тот случай, когда десять минут
+  // работы «выключенного» входа недопустимы.
+  if (!oauthEnabled().yandex) {
+    return NextResponse.redirect(`${appUrl}/login?e=oauth_off`)
+  }
+
+  // ⚠️ ПРОВАЙДЕР ПРОВЕРЯЕТСЯ НА ОБОИХ КОНЦАХ. Без этого при AUTH_DISABLED_PROVIDERS
+  // выключение держалось на побочном эффекте: стартовый маршрут переставал пускать, а
+  // у всех, кто ушёл к провайдеру за последние десять минут, кука состояния ещё жива —
+  // и их возврат доводил вход до конца тем же секретом из env. Штатный повод выключить
+  // провайдера — утечка ключей приложения, то есть ровно тот случай, когда десять минут
+  // работы «выключенного» входа недопустимы.
+
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
   const state = searchParams.get('state')

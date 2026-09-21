@@ -41,6 +41,7 @@ const META: Record<AuditAction, { icon: typeof KeyRound; label: TKey; cls: strin
   'passkey.add': { icon: Fingerprint, label: 'audit.passkeyAdd', cls: 'text-ok' },
   'passkey.remove': { icon: Fingerprint, label: 'audit.passkeyRemove', cls: 'text-warn' },
   'passkey.login': { icon: Fingerprint, label: 'audit.passkeyLogin', cls: 'text-ink-2' },
+  'passkey.login-needs-2fa': { icon: Fingerprint, label: 'audit.passkeyNeeds2fa', cls: 'text-warn' },
   'account.delete': { icon: Trash2, label: 'audit.accountDelete', cls: 'text-danger' },
   'account.handle-change': { icon: AtSign, label: 'audit.accountHandleChange', cls: 'text-warn' },
   'auth.identity-link': { icon: Link2, label: 'audit.identityLink', cls: 'text-ok' },

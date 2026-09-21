@@ -139,7 +139,17 @@ export async function exchangeCode(input: {
   if (!pkceMatches(input.verifier, row.codeChallenge)) return { error: 'invalid_grant' }
   if (row.audience !== MCP_RESOURCE) return { error: 'invalid_target' }
 
-  await db.update(oauthCodes).set({ usedAt: new Date() }).where(eq(oauthCodes.id, row.id))
+  // ⚠️ УСЛОВИЕ В САМОМ UPDATE, а решение — по числу затронутых строк. Проверка
+  // `row.usedAt` выше сделана по СНИМКУ, прочитанному раньше: между чтением и записью
+  // помещается второй такой же обмен, и тогда обе копии видят «не использован», обе
+  // гасят одну строку и обе получают токены. Гасит код тот, чей `UPDATE` реально
+  // изменил строку; остальным — отказ, как при повторном предъявлении.
+  const claimed = await db
+    .update(oauthCodes)
+    .set({ usedAt: new Date() })
+    .where(and(eq(oauthCodes.id, row.id), isNull(oauthCodes.usedAt)))
+    .returning({ id: oauthCodes.id })
+  if (!claimed.length) return { error: 'invalid_grant' }
   return issueTokens(row.userId, row.clientId, row.scope === 'write' ? 'write' : 'read')
 }
 
@@ -156,7 +166,16 @@ export async function refreshTokens(refreshToken: string, clientId: string): Pro
     .limit(1)
   if (!row || row.expiresAt.getTime() < Date.now() || row.clientId !== clientId) return { error: 'invalid_grant' }
 
-  await db.update(oauthRefreshTokens).set({ revokedAt: new Date() }).where(eq(oauthRefreshTokens.id, row.id))
+  // Та же причина, что и с кодом: `isNull(revokedAt)` стоял в SELECT, а гашение шло
+  // безусловно по id. Здесь дефект ещё заметнее — между чтением и записью нет ни одной
+  // синхронной операции, поэтому восемь одновременных обменов давали ВОСЕМЬ живых пар,
+  // и ротация переставала обнаруживать кражу, ради чего она и заведена.
+  const revoked = await db
+    .update(oauthRefreshTokens)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(oauthRefreshTokens.id, row.id), isNull(oauthRefreshTokens.revokedAt)))
+    .returning({ id: oauthRefreshTokens.id })
+  if (!revoked.length) return { error: 'invalid_grant' }
   if (row.accessTokenId) await db.delete(apiTokens).where(eq(apiTokens.id, row.accessTokenId))
 
   return issueTokens(row.userId, row.clientId, row.scope === 'write' ? 'write' : 'read')

@@ -15,9 +15,15 @@ import { enterWithIdentity } from '@/features/auth/oauth-entry'
 import { rateLimit } from '@/shared/rate-limit'
 import { telegramLoginCode } from '@/shared/telegram'
 import { appOrigin } from '@/shared/auth/app-origin'
+import { oauthEnabled } from '@/shared/auth/oauth'
 
 export async function POST(req: Request) {
   const appUrl = appOrigin()
+  // ⚠️ Провайдер проверяется на ОБОИХ концах — см. колбэки OAuth. Здесь второй конец
+  // это поллинг: стартовый маршрут перестаёт выдавать ссылку в бота, а живой `tg_login`
+  // у ушедших доводил бы вход до конца ещё десять минут. Ответ тот же, что у истёкшего
+  // токена: страница входа уже умеет его показывать, и новых состояний не заводим.
+  if (!oauthEnabled().telegram) return NextResponse.json({ error: 'expired' })
   const c = await cookies()
   const token = c.get('tg_login')?.value
   if (!token) return NextResponse.json({ error: 'expired' })

@@ -1549,6 +1549,7 @@ export const ru: Record<DictKey, string> = {
   'audit.passkeyAdd': 'Добавлен passkey',
   'audit.passkeyRemove': 'Удалён passkey',
   'audit.passkeyLogin': 'Вход по passkey',
+  'audit.passkeyNeeds2fa': 'Passkey подтверждён, ждём код 2FA',
   'audit.accountDelete': 'Удалён аккаунт',
   'audit.accountHandleChange': 'Смена ника',
   'admin.create': 'Создать',

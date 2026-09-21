@@ -1554,6 +1554,7 @@ export const en = {
   'audit.passkeyAdd': 'Passkey added',
   'audit.passkeyRemove': 'Passkey removed',
   'audit.passkeyLogin': 'Passkey sign-in',
+  'audit.passkeyNeeds2fa': 'Passkey verified, waiting for 2FA code',
   'audit.accountDelete': 'Account deleted',
   'audit.accountHandleChange': 'Handle changed',
   'admin.create': 'Create',
