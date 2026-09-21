@@ -5,6 +5,7 @@ import { t } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { FloatingActions } from '@/shared/ui/FloatingActions'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { NewListForm } from '@/features/library/NewListForm'
@@ -125,12 +126,9 @@ export default async function NewListPage() {
             на длинном списке кнопка в конце формы уезжает за экран, и до неё надо
             доскроллить. Слева внизу уже живёт плавающий «назад» — пара занимает
             оба нижних угла, между ними центр остаётся свободным под инсертер. */}
-        {/* `data-sticky-input` — признак нижней плавающей панели: по нему кнопка
-            «наверх» садится ВЫШЕ неё, а не поверх (механика ScrollToTop, она же
-            разводит чат раскопок и полосу сохранения). */}
-        <div data-sticky-input className="fixed right-5 bottom-5 z-40 print:hidden">
+        <FloatingActions>
           <SubmitButton className="shadow-card">{t('listCreate', lang)}</SubmitButton>
-        </div>
+        </FloatingActions>
       </NewListForm>
     </div>
   )

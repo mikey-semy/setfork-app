@@ -15,6 +15,7 @@ import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { buttonClass } from '@/shared/ui/button-style'
+import { FloatingActions } from '@/shared/ui/FloatingActions'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -74,9 +75,13 @@ export default async function SuggestPage({
 
         <ListEditor name="items" initialItems={initial} lang={lang} />
 
-        <button type="submit" className={buttonClass({ variant: 'primary', size: 'lg', className: 'mt-6' })}>
-          {t('sendSuggestion', lang)}
-        </button>
+        {/* Та же плавающая панель, что в создании и правке: предложение пишут к чужому
+            списку, и он ровно так же может быть длинным. */}
+        <FloatingActions>
+          <button type="submit" className={buttonClass({ variant: 'primary', className: 'shadow-card' })}>
+            {t('sendSuggestion', lang)}
+          </button>
+        </FloatingActions>
       </SuggestForm>
     </div>
   )
