@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import { versionShaMap } from '@/features/library/version-sha'
+import { VERSION_ERR } from '@/features/library/version-error'
 import { listStore } from '@/features/library/list-store'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -93,10 +94,12 @@ export default async function CommitsPage({
   return (
     <div className={PAGE}>
       {/* Отказ отката — здесь, а не молча: действие начинается на этой странице,
-          и ответ на него человек ждёт тоже здесь. */}
-      {sp.e === 'outofsync' && (
+          и ответ на него человек ждёт тоже здесь. Какой код каким текстом —
+          в VERSION_ERR: та же таблица, что читает экшен, и добавить код, не дав
+          ему текста, нельзя (узда version-blocked-reason). */}
+      {sp.e && VERSION_ERR[sp.e] && (
         <Alert variant="danger" className="mb-4">
-          <span className="block">{t('versionRestoreOutOfSync', lang)}</span>
+          <span className="block">{t(VERSION_ERR[sp.e], lang)}</span>
         </Alert>
       )}
       <HistoryNav

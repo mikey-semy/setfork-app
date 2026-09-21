@@ -1,7 +1,7 @@
 import 'server-only'
 import { notFound } from 'next/navigation'
 import type { BadgeVariant } from '@/shared/ui/badge'
-import { t, type Lang, type TKey } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import type { ProposedItem } from '@/shared/db'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getIssuesByNumbers, getSuggestion, getSuggestionAssignees, getSuggestionCommentsPage, getSuggestionParticipants, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails, getUsersByIds, getVersionSteps, getViewedMarks } from '@/features/library/queries'
@@ -29,30 +29,7 @@ import { getReactionsFor } from '@/features/reactions/queries'
 import { getListLabels, getOpenIssuesForPicker } from '@/features/issues/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
-
-// Почему merge не прошёл — по коду из ?e=. Тексты в словаре: это то, что человек
-// читает, а не техническая метка.
-const MERGE_ERR: Record<string, TKey> = {
-  // Ответ не ушёл, потому что обсуждение заперли: раньше это был молчаливый `return`,
-  // и человек не получал вообще ничего (см. actions/suggestion-comments).
-  locked: 'pr.lockedRefused',
-  conflict: 'prMergeErrConflict',
-  'nothing-to-merge': 'prMergeErrNothing',
-  'not-linear': 'prMergeErrNotLinear',
-  unresolved: 'prMergeErrUnresolved',
-  // Правку не записали, потому что ветку подвинули: чужой пуш не затираем.
-  stale: 'prStaleWrite',
-  // Применяли предложенную правку, а пункта уже нет — применять некуда.
-  orphaned: 'prMergeErrOrphaned',
-  // Хранилище списка разошлось с базой: слияние ждёт починки, а не повтора.
-  'out-of-sync': 'prMergeErrOutOfSync',
-  // Спросить о праве на запись не удалось. Два случая, и советы противоположные:
-  // связь сорвалась — повторить; ответ не разобран — повтор бесполезен. Без этих
-  // строк оба падали в общий `prMergeErrGeneric` («не удалось»), то есть человек
-  // не узнавал ни причины, ни того, ждать ему или нет.
-  'gate-unavailable': 'branch.errGateUnavailable',
-  'gate-malformed': 'branch.errGateMalformed',
-}
+import { MERGE_ERR } from './merge-err'
 
 /**
  * Всё, что странице предложения нужно знать, прежде чем что-то показать: доступ,

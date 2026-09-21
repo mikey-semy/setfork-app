@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import type { List, ListStore, Moderation, NewStepInput } from '@/core'
-import { canEditList, editBlockReason } from '@/core'
+import { canEditList, editBlockReason, ListWriteError } from '@/core'
 import { db, templateVersions, templates } from '@/shared/db'
 import { initialModeration } from '@/shared/moderation/publication-state'
 import { captureError } from '@/shared/observability'
@@ -57,6 +57,13 @@ async function moderate(templateId: string): Promise<void> {
 // списка — это правка; в архиве/заморозке запрещена. Экшены гейтят раньше и
 // по-человечески (редирект), сюда доходит только обход/гонка → бросаем. create
 // (новый список) не трогаем — у нового id состояния нет.
+//
+// Бросаем `ListWriteError`, а не безымянный `Error`: «сюда доходит только обход» —
+// это про происхождение вызова, а не про то, кто смотрит на экран. Гейты есть не у
+// всех экшенов: «Вернуть эту версию» и «Принять правку» `canEditList` не спрашивают
+// вовсе, и барьер для них — ЕДИНСТВЕННАЯ проверка. Оба ловят `ListWriteError` и
+// показывают причину; на обычном `Error` человек получал безымянную страницу ошибки,
+// хотя причина известна ровно здесь и называется одним словом.
 async function assertVersionAllowed(templateId: string): Promise<void> {
   const [st] = await db
     .select({ archivedAt: templates.archivedAt, frozenAt: templates.frozenAt })
@@ -64,7 +71,7 @@ async function assertVersionAllowed(templateId: string): Promise<void> {
     .where(eq(templates.id, templateId))
     .limit(1)
   if (st && !canEditList(st)) {
-    throw new Error(`list ${editBlockReason(st) ?? 'frozen'}: new versions are not allowed`)
+    throw new ListWriteError(editBlockReason(st) ?? 'frozen')
   }
 }
 
