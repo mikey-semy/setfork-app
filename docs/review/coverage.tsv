@@ -1,4 +1,4 @@
-# коммит bab6c488
+# коммит f5253cdb
 file	blocks
 .claude/hooks/ui-guard.mjs	V12c
 .claude/launch.json	V12c
@@ -51,29 +51,6 @@ docs/kz_pay.md	V12c
 docs/mcp-surface.md	H4,V12c
 docs/pagination.md	V12c
 docs/phase1-wire-contract.md	V12c
-docs/review/README.md	V12c
-docs/review/blocks.json	V12e
-docs/review/blocks/H1-access.md	V12c
-docs/review/blocks/H15-domain-core.md	V12c
-docs/review/blocks/V1d-list-write.md	V12c
-docs/review/findings.jsonl	V12e
-docs/review/findings.md	V12c
-docs/review/invariants.md	V12c
-docs/review/journal.md	V12c
-docs/review/prompts/fix.md	V12c
-docs/review/prompts/hunter.md	V12c
-docs/review/prompts/verify.md	V12c
-docs/review/reports/H1-access.hunter.md	V12c
-docs/review/reports/H1-access.verify.md	V12c
-docs/review/reports/H1-findings.jsonl	V12e
-docs/review/reports/H15-domain-core.hunter.md	V12c
-docs/review/reports/H15-domain-core.verify.md	V12c
-docs/review/reports/H15-findings.jsonl	V12e
-docs/review/reports/H15-verifier-calibration.md	V12c
-docs/review/reports/V1d-findings.jsonl	V12e
-docs/review/reports/V1d-list-write.hunter.md	V12c
-docs/review/reports/V1d-list-write.verify.md	V12c
-docs/review/state.json	V12e
 docs/rust-core-plan.md	V12c
 drizzle.config.ts	H13
 eslint-suppressions.json	H13
@@ -122,7 +99,7 @@ scripts/probe/touch-sweep.mjs	H13f
 scripts/purge-lists.ts	H13f
 scripts/restore.sh	H13f
 scripts/review/__pycache__/review.cpython-314.pyc	H13d
-scripts/review/review.py	H13d
+scripts/review/review.py	H13d,V12e
 scripts/seed-demo.ts	H13c
 scripts/seed-ops.ts	H13f
 scripts/seed.ts	H13c
