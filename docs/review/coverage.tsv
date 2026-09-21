@@ -67,6 +67,9 @@ docs/review/reports/H1-findings.jsonl	V12e
 docs/review/reports/H15-domain-core.hunter.md	V12c
 docs/review/reports/H15-domain-core.verify.md	V12c
 docs/review/reports/H15-findings.jsonl	V12e
+docs/review/reports/H2-findings.jsonl	V12e
+docs/review/reports/H2-git-contract.hunter.md	V12c
+docs/review/reports/H2-git-contract.verify.md	V12c
 docs/review/reports/V1d-findings.jsonl	V12e
 docs/review/reports/V1d-list-write.hunter.md	V12c
 docs/review/reports/V1d-list-write.verify.md	V12c
@@ -1277,6 +1280,7 @@ tests/architecture/verified-not-public.test.ts	H12
 tests/architecture/version-base-declared.marker.mutants.json	H12
 tests/architecture/version-base-declared.mutants.json	H12
 tests/architecture/version-base-declared.test.ts	H12
+tests/architecture/workflow-node-declared.test.ts	H12
 tests/core/domain/access.test.ts	V12d
 tests/core/domain/affiliate.test.ts	V12d
 tests/core/domain/destructive-command.mutants.json	V12d
@@ -1543,6 +1547,7 @@ tests/shared/ai/allowlist-pool.test.ts	V8g
 tests/shared/ai/assist.test.ts	V8g
 tests/shared/ai/council-anonymity.test.ts	V8g
 tests/shared/ai/craft-rules.itest.ts	V8g
+tests/shared/ai/credits-unknown-shape.test.ts	V8g
 tests/shared/ai/dehydrate.test.ts	V8g
 tests/shared/ai/embed-capability.test.ts	V8g
 tests/shared/ai/embed-space.test.ts	V8g
