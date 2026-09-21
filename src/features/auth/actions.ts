@@ -8,7 +8,7 @@ import { startSession } from '@/shared/auth/session'
 import { dummyVerify, hashPassword, verifyPassword } from '@/shared/auth/password'
 import { MIN_PASSWORD_LENGTH } from '@/shared/auth/password-policy'
 import { clientIpFromHeaders } from '@/shared/auth/app-origin'
-import { isHandleShapeValid } from '@/shared/auth/handle'
+import { handleBlock, isHandleShapeValid } from '@/shared/auth/handle'
 import { rateLimit } from '@/shared/rate-limit'
 import { envNumber } from '@/shared/env'
 import { avatarSrc } from '@/shared/media'
@@ -44,8 +44,21 @@ export async function registerWithPassword(_prev: AuthResult | null, formData: F
 
   const [byEmail] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
   if (byEmail) return { error: t('emailTaken', lang) }
-  const [byHandle] = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
-  if (byHandle) return { error: t('handleTaken', lang) }
+  // ⚠️ ЧЕРЕЗ КАНОН, а не своим запросом в users. Прямая проверка знала только про живые
+  // ники и потому пропускала УДЕРЖАНИЕ: после переименования alice → alice-dev прежний
+  // ник ещё ведёт на своего человека — из внешних ссылок и из git remote в клонах его
+  // списков, — а посторонний занимал его регистрацией, и чужой трафик уходил к нему
+  // (H1-001). Тем же способом здесь уже отставала проверка админ-ников (#476): когда
+  // проверок две, отстаёт всегда та, что списана.
+  const block = await handleBlock(handle)
+  if (block) {
+    return {
+      error:
+        block.reason === 'held'
+          ? t('handleHeld', lang).replace('{date}', block.until.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US'))
+          : t('handleTaken', lang),
+    }
+  }
 
   let created
   try {
