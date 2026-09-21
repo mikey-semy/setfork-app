@@ -59,6 +59,14 @@ const TYPE_PREF: Record<NotifType, keyof NotifyPrefs | null> = {
   transfer_declined: null,
 }
 
+/**
+ * Уведомления о передаче владения: получатель законно НЕ видит список — приглашённый
+ * ещё не владелец, а прежний владелец уже не владелец. Гейт видимости к ним не
+ * применяется (см. `notify`), и отключить их нельзя (см. TYPE_PREF): без них передача
+ * зависает, и обе стороны об этом не узнают.
+ */
+export const TRANSFER_TYPES = new Set<NotifType>(['transfer_incoming', 'transfer_accepted', 'transfer_declined'])
+
 /** Создаёт уведомление. Себе не шлём; уважаем предпочтения получателя. Ошибки глотаем. */
 export async function notify(params: {
   recipientId: string
@@ -104,7 +112,17 @@ export async function notify(params: {
     // колокольчик его прячет. Спрашиваем один раз на оба канала — и только когда
     // уведомление вообще про список (подписка на человека и передача аккаунта не про
     // доступ, у них templateId нет).
-    const deliverable = params.templateId ? await recipientSeesList(params.templateId, params.recipientId) : true
+    // ⚠️ ПЕРЕДАЧА ВЛАДЕНИЯ — ИСКЛЮЧЕНИЕ, И ОНО НЕСУЩЕЕ. У этих писем получатель ПО
+    // ОПРЕДЕЛЕНИЮ не видит список: приглашённый ещё не владелец и не соредактор, а
+    // прежний владелец только что перестал им быть. Гейт по обычному предикату
+    // видимости убил бы ровно те уведомления, без которых передача зависает молча —
+    // человек не узнал бы, что ему предложили список, и что его предложение приняли.
+    // Утечки тут нет: название списка и есть содержание предложения, как имя
+    // репозитория в приглашении GitHub.
+    const deliverable =
+      !params.templateId || TRANSFER_TYPES.has(params.type)
+        ? true
+        : await recipientSeesList(params.templateId, params.recipientId)
 
     // Дублируем на почту через очередь (durable + ретраи), если получатель включил
     // email-уведомления и SMTP настроен. Отправка уходит из request-пути к воркеру.

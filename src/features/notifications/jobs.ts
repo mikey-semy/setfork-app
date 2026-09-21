@@ -5,6 +5,7 @@ import { resolveNotificationDisplay } from './display'
 import { sendNotificationEmail } from './email'
 import type { NotificationType } from './queries'
 import { recipientSeesList } from './list-access'
+import { TRANSFER_TYPES } from './notify'
 
 export interface EmailJobPayload {
   to: string
@@ -30,7 +31,7 @@ export interface EmailJobPayload {
  */
 export async function runEmailJob(payload: unknown): Promise<void> {
   const p = payload as EmailJobPayload
-  if (p.templateId && p.userId && !(await recipientSeesList(p.templateId, p.userId))) return
+  if (!TRANSFER_TYPES.has(p.type) && p.templateId && p.userId && !(await recipientSeesList(p.templateId, p.userId))) return
   const ok = await sendNotificationEmail(p)
   if (!ok) throw new Error('email not sent (SMTP error)')
 }
@@ -49,7 +50,7 @@ export interface PushJobPayload {
  *  Доступ переспрашивается перед показом — по той же причине, что у письма выше. */
 export async function runPushJob(payload: unknown): Promise<void> {
   const p = payload as PushJobPayload
-  if (p.templateId && !(await recipientSeesList(p.templateId, p.userId))) return
+  if (!TRANSFER_TYPES.has(p.type) && p.templateId && !(await recipientSeesList(p.templateId, p.userId))) return
   const d = await resolveNotificationDisplay(p)
   await sendPushToUser(p.userId, { title: 'SetFork', body: d.text, url: d.url })
 }

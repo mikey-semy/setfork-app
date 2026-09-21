@@ -86,6 +86,21 @@ describe('доставка наружу уважает видимость спи
     expect(kinds()).toEqual([])
   })
 
+  it('⚠️ ПРИГЛАШЕНИЕ ПРИНЯТЬ СПИСОК доходит, хотя приглашённый его ещё не видит', async () => {
+    // Иначе гейт убивает ровно то уведомление, без которого передача зависает молча:
+    // приглашённый по определению не владелец и не соредактор. Название списка тут —
+    // содержание предложения, а не утечка.
+    await db.update(templates).set({ visibility: 'private' }).where(eq(templates.id, tplId))
+    await notify({ recipientId: uid['dv-outsider'], actorId: uid['dv-owner'], type: 'transfer_incoming', templateId: tplId })
+    expect(kinds(), 'предложение владения обязано дойти').toEqual(['email', 'push'])
+  })
+
+  it('⚠️ и ПОДТВЕРЖДЕНИЕ приёма доходит прежнему владельцу, который доступ уже потерял', async () => {
+    await db.update(templates).set({ visibility: 'private', ownerId: uid['dv-outsider'] }).where(eq(templates.id, tplId))
+    await notify({ recipientId: uid['dv-owner'], actorId: uid['dv-outsider'], type: 'transfer_accepted', templateId: tplId })
+    expect(kinds()).toEqual(['email', 'push'])
+  })
+
   it('уведомление БЕЗ списка (подписка на человека) доставляется всегда', async () => {
     await notify({ recipientId: uid['dv-outsider'], actorId: uid['dv-owner'], type: 'follow' })
     expect(kinds(), 'тут нечего скрывать: список не при чём').toEqual(['email', 'push'])
