@@ -30,4 +30,22 @@ describe('номер версии из истории', () => {
   it('разбирает вид изменения из заголовка, включая область и восклицательный знак', () => {
     expect(commitTypes('feat(mcp): что-то\nfix!: иначе\nПросто строка')).toEqual(['feat', 'fix', 'other'])
   })
+
+  it('⚠️ отказ git называет причину в stderr, а не молчит', async () => {
+    // Выкатка 21.09.2026 прошла с прежним номером, и в журнале было только
+    // «посчитать не удалось». Причина осталась неизвестной, потому что её никто
+    // не напечатал: пустая строка возвращалась одинаково и когда истории нет, и
+    // когда git отказал. Здесь проверяется ИМЕННО это — что причина видна.
+    const { buildVersion } = await import('../../scripts/build-version.mjs')
+    const said: string[] = []
+    const orig = process.stderr.write.bind(process.stderr)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- подменяем только сток вывода
+    ;(process.stderr as any).write = (chunk: string) => (said.push(String(chunk)), true)
+    try {
+      expect(buildVersion('/nonexistent-for-this-test')).toBe('')
+    } finally {
+      ;(process.stderr as any).write = orig
+    }
+    expect(said.join('')).toContain('build-version: git')
+  })
 })
