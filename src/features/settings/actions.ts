@@ -2,12 +2,13 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { and, eq, inArray, ne, sql } from 'drizzle-orm'
+import { and, eq, inArray, ne, or, sql } from 'drizzle-orm'
 import { db, stars, suggestions, templates, userRedirects, users, sessions } from '@/shared/db'
 import type { Social } from '@/shared/db/schema'
 import { clearSessionCookie, refreshSessionCookie, requireSession } from '@/shared/auth/session'
 import { recordAudit } from '@/shared/audit'
 import { handleTaken, isHandleShapeValid, normalizeHandle } from '@/shared/auth/handle'
+import { handleHoldAlive } from '@/shared/db/resolve-list'
 import { removeAvatar, saveAvatar } from './avatar'
 
 export type ActionResult = { ok?: true; error?: string }
@@ -113,8 +114,27 @@ export async function changeHandle(_prev: ActionResult | null, formData: FormDat
     // снимаем записи на оба имени — на новое, чтобы уникальность пустила его занять,
     // и на старое, если человек к нему возвращается, — потом заводим прежнее.
     await db.transaction(async (tx) => {
-      await tx.delete(userRedirects).where(inArray(userRedirects.handle, [session.handle, next]))
-      await tx.insert(userRedirects).values({ handle: session.handle, userId: session.userId })
+      // ⚠️ ТОЛЬКО СВОИ ИЛИ УЖЕ ИСТЁКШИЕ. Удаление шло по одному `handle`, и под него
+      // попадала ЖИВАЯ запись ДРУГОГО человека: его прежний ник ещё вёл на него, а
+      // чужое переименование стирало эту связь молча. Занять чужой живой ник не даёт
+      // канон — то есть запрос держался не на себе, а на том, что рядом никто не
+      // ошибётся; ровно так он и оказался достижим через H1-001 (регистрация ходила
+      // мимо канона). Истёкшие чужие снимаем по-прежнему: без этого unique на `handle`
+      // не пустил бы завести новое удержание на освободившееся имя.
+      await tx.delete(userRedirects).where(
+        and(
+          inArray(userRedirects.handle, [session.handle, next]),
+          or(eq(userRedirects.userId, session.userId), sql`not (${handleHoldAlive()})`),
+        ),
+      )
+      // `onConflictDoNothing` — на случай, когда на покидаемом имени уже стоит ЖИВОЕ
+      // удержание другого человека (аномалия: так можно было сесть только через дыру
+      // H1-001). Тогда имя остаётся за ним, а уходящий просто уходит: его собственного
+      // удержания на чужое имя не заводится. Без этого вставка падала бы на unique, вся
+      // транзакция откатывалась — и человек не мог переименоваться ВООБЩЕ, застряв на
+      // чужом нике с сообщением «Этот ник уже занят», которое к его действию
+      // не относится.
+      await tx.insert(userRedirects).values({ handle: session.handle, userId: session.userId }).onConflictDoNothing()
       await tx.update(users).set({ handle: next }).where(eq(users.id, session.userId))
     })
   } catch {
