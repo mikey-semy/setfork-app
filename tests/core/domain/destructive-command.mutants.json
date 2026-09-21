@@ -1,0 +1,106 @@
+{
+  "target": "src/core/domain/destructive-command.ts",
+  "tests": ["tests/core/domain/destructive-command.test.ts"],
+  "mutants": [
+    {
+      "name": "H1 обёртки не пропускаются",
+      "from": "  while (i < tokens.length && isWrapper(tokens[i])) {",
+      "to": "  while (false) {"
+    },
+    {
+      "name": "H2 значение флага не пропускается",
+      "from": "        if (v && !isFlagToken(v) && !isWrapper(v) && !HALT_COMMANDS.has(bareCommand(v)) && !isAssignToken(v) && !isNumberToken(v)) i++",
+      "to": "        void v"
+    },
+    {
+      "name": "H3 значением может стать команда выключения",
+      "from": "!HALT_COMMANDS.has(bareCommand(v)) && ",
+      "to": ""
+    },
+    {
+      "name": "H4 путь перед командой не отбрасывается",
+      "from": "    .replace(/^.*\\//, '')\n",
+      "to": ""
+    },
+    {
+      "name": "H5 хвост после команды не проверяется",
+      "from": "  return i === tokens.length ? part.trim() : null",
+      "to": "  return part.trim()"
+    },
+    {
+      "name": "H6 присваивания и числа не считаются аргументами",
+      "from": "      if (isAssignToken(t) || isNumberToken(t)) {",
+      "to": "      if (false) {"
+    },
+    {
+      "name": "M1 строка пропускается целиком по префиксу",
+      "from": "    for (const part of executableParts(stripComment(joined))) {",
+      "to": "    const l0 = stripComment(joined).trim()\n    if (!l0 || PRINTS_ONLY.test(l0)) continue\n    for (const part of [l0]) {"
+    },
+    {
+      "name": "M2 нет якоря конца слова",
+      "from": "(?:(?:echo|printf)\\b|cat\\s*<<|#)",
+      "to": "(?:echo|printf|cat\\s*<<|#)"
+    },
+    {
+      "name": "M3 запись в устройство считается печатью",
+      "from": "const printsOnly = (s: Segment): boolean => !s.writesDevice && PRINTS_ONLY.test(s.text)",
+      "to": "const printsOnly = (s: Segment): boolean => PRINTS_ONLY.test(s.text)"
+    },
+    {
+      "name": "M4 rm только -rf без кавычек",
+      "from": "re: new RegExp(String.raw`\\brm\\s+${RM_FLAGS}${Q}(?:\\/|~|\\$HOME)[\\/*]*${Q}(?:\\s|$)`, 'i')",
+      "to": "re: /\\brm\\s+(-[a-z]*[rf][a-z]*\\s+)+(--no-preserve-root\\s+)?(\\/|~|\\/\\*|\\$HOME)(\\s|$|\\*|[\"'`])/i"
+    },
+    {
+      "name": "M5 mkfs только суффикс без кавычек",
+      "from": "re: new RegExp(String.raw`\\bmkfs(?:\\.[a-z0-9]+)?\\b(?:\\s+${FLAG}(?:\\s+[\\w.=][\\w.=-]*)?)*\\s+${Q}\\/dev\\/`, 'i')",
+      "to": "re: /\\bmkfs(\\.[a-z0-9]+)?\\s+\\/dev\\//i"
+    },
+    {
+      "name": "M6 chmod требует флаг перед режимом",
+      "from": "\\bchmod\\s+(?:(?:${bundle('R')}\\s+)+(?:777|a\\+rwx)|(?:777|a\\+rwx)\\s+(?:${bundle('R')}))\\s+",
+      "to": "\\bchmod\\s+(?:${bundle('R')}\\s+)+(?:777|a\\+rwx)\\s+"
+    },
+    {
+      "name": "M7 пометка rm только -rf",
+      "from": "re: new RegExp(String.raw`\\brm\\s+${RM_FLAGS}\\S`, 'i')",
+      "to": "re: /\\brm\\s+(-[a-z]*[rf][a-z]*\\s+)+\\S/i"
+    },
+    {
+      "name": "M8 findRisky без опоры на RULES",
+      "from": "return firstMatch(command, RISKY) ?? findDestructive(command)",
+      "to": "return firstMatch(command, RISKY)"
+    },
+    {
+      "name": "N8 правило > /dev/ без кавычки и >|",
+      "from": "re: new RegExp(String.raw`>\\|?\\s*${Q}\\/dev\\/(sd|nvme|hd|vd|disk)[a-z0-9]*`, 'i')",
+      "to": "re: />\\s*\\/dev\\/(sd|nvme|hd|vd|disk)[a-z0-9]*/i"
+    },
+    {
+      "name": "N10 пучок флагов снова двусмыслен (-RR)",
+      "from": "const bundle = (letters: string) => String.raw`-(?=[a-z]*[${letters}])[a-z]+`",
+      "to": "const bundle = (letters: string) => String.raw`-[a-z]*[${letters}][a-z]*`"
+    },
+    {
+      "name": "N11 хвост пути — одна звезда",
+      "from": "${Q}(?:\\/|~|\\$HOME)[\\/*]*${Q}",
+      "to": "${Q}(?:\\/|~|\\$HOME)(?:\\/)?\\*?${Q}"
+    },
+    {
+      "name": "N2 печать снимает ЛЮБОЕ перенаправление",
+      "from": "if (DEVICE_TARGET.test(line.slice(i + 1).replace(/^>/, ''))) writesDevice = true",
+      "to": "writesDevice = true"
+    },
+    {
+      "name": "N3 незакрытая кавычка не перепроверяется",
+      "from": "  if (quote && !ignoreQuote) return segments(line, quote)\n",
+      "to": ""
+    },
+    {
+      "name": "N4 дедуп массивом вместо множества",
+      "from": "    if (t && !seen.has(t)) {\n      seen.add(t)\n      parts.push(t)\n    }",
+      "to": "    if (t && !parts.includes(t)) parts.push(t)"
+    }
+  ]
+}
