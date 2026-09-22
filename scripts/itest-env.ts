@@ -50,7 +50,32 @@ function waitFor(what: string, check: () => boolean, seconds = 90) {
   throw new Error(`${what} не поднялся за ${seconds}с — посмотри docker logs`)
 }
 
+/**
+ * Отвечает ли уже поднятое окружение. Настоящим запросом, а не `docker inspect`:
+ * контейнер может «бежать» и не принимать соединения.
+ */
+function alive(): boolean {
+  return spawnSync('docker', ['exec', PG, 'psql', '-U', 'ci', '-d', 'ci', '-c', 'select 1']).status === 0
+}
+
 function up() {
+  // ⚠️ ЖИВОЕ ОКРУЖЕНИЕ НЕ СНОСИМ. Раньше `up` безусловно начинался с `docker rm -f`, и
+  // второй запуск — в соседней вкладке, по ошибке, из привычки — убивал базу ИДУЩЕГО
+  // прогона. Со стороны это выглядело как `ECONNREFUSED` на ровном месте, и соседняя
+  // сессия 22.09.2026 дважды искала дефект в своём коде, прежде чем посмотреть на
+  // контейнеры.
+  //
+  // От столкновения РАЗНЫХ сессий защита уже была: имена выводятся из порта. А внутри
+  // одного порта защиты не было вовсе — этот случай и закрывается.
+  //
+  // Пересоздать нарочно: `itest-env.ts down` и затем `up`, либо `up --recreate`.
+  if (!process.argv.includes('--recreate') && alive()) {
+    out(`окружение на порту ${PG_PORT} уже поднято и отвечает — оставляю как есть`)
+    out('пересоздать нарочно: npx tsx scripts/itest-env.ts down && npx tsx scripts/itest-env.ts up')
+    printEnv()
+    return
+  }
+
   docker(['network', 'create', NET])
   docker(['rm', '-f', PG, CORE])
 
