@@ -9,7 +9,7 @@ import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { requireViewableMeta } from '@/features/library/guard'
-import { getSuggestion } from '@/features/library/queries'
+import { getItemPreviews, getSuggestion } from '@/features/library/queries'
 import { EditItemsForm } from '@/features/library/EditItemsForm'
 import { canEditSuggestionItems } from '@/features/library/suggestion-perms'
 import { blocksFrom } from '@/features/library/suggestion-blocks'
@@ -54,7 +54,10 @@ export default async function EditSuggestionPage({
     : null
   if (sug.branchRef && !snapshot) redirect(`${path}?e=not-found`)
   const items: ProposedItem[] = blocksFrom(sug, snapshot)
-  const initial = toEditorItems(items as never, lang, {})
+  // Превью нужны и здесь: у ветки картинки приходят ключами, а без подписанной
+  // ссылки редактор рисует пустой слот — человек читает это как «картинку
+  // потеряли при правке».
+  const initial = toEditorItems(items as never, lang, await getItemPreviews(items))
 
   return (
     <div className={PAGE_NARROW}>
