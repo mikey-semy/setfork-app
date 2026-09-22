@@ -39,7 +39,7 @@ export async function generateMetadata() {
   // То есть у русского читателя вкладка называлась по-русски, а ссылка, отправленная им
   // в мессенджер, разворачивалась по-английски (замер 03.09.2026).
   const title = `SetFork — ${t('homeTagline', lang)}`
-  return { ...pageMeta({ title, description: t('heroSub', lang), path: '/' }), title: { absolute: title } }
+  return { ...pageMeta({ title, description: t('heroSub', lang), path: '/', lang }), title: { absolute: title } }
 }
 
 export default async function HomePage() {

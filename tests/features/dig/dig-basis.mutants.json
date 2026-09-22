@@ -1,0 +1,41 @@
+{
+  "target": "src/features/dig/basis.ts",
+  "tests": ["tests/features/dig/dig-basis.test.ts"],
+  "mutants": [
+    {
+      "name": "шаги снова выбрасываются",
+      "from": "  const precedents = [...listLines, ...stepLines]",
+      "to": "  const precedents = [...listLines]"
+    },
+    {
+      "name": "шаги идут мимо линзы ремесла",
+      "from": "  const steps = pickPrecedentsDetailed(found.steps, domains)",
+      "to": "  const steps = { items: found.steps.slice(0, 3), matched: found.steps.length > 0 }"
+    },
+    {
+      "name": "чужие списки подмешиваются к своим шагам",
+      "from": "  const listLines = (!own || lists.matched ? lists.items : [])",
+      "to": "  const listLines = (lists.items)"
+    },
+    {
+      "name": "чужие шаги подмешиваются к своим спискам",
+      "from": "  const stepLines = (!own || steps.matched ? steps.items : [])",
+      "to": "  const stepLines = (steps.items)"
+    },
+    {
+      "name": "своё только по спискам — шаги своего ремесла не в счёт",
+      "from": "  const own = lists.matched || steps.matched",
+      "to": "  const own = lists.matched"
+    },
+    {
+      "name": "пометка чужой жилы потеряна",
+      "from": "  return { precedents, offCraft: precedents.length > 0 && !own }",
+      "to": "  return { precedents, offCraft: false }"
+    },
+    {
+      "name": "длина шага не ограничена",
+      "from": "s.content.slice(0, STEP_CLIP)",
+      "to": "s.content"
+    }
+  ]
+}

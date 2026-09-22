@@ -19,7 +19,7 @@ import { pageMeta } from '@/shared/seo/page-meta'
 // Так же разведены разделы у GitHub: /trending и /trending/developers.
 export async function generateMetadata() {
   const lang = await getLang()
-  return pageMeta({ title: t('trending', lang), path: '/trending' })
+  return pageMeta({ title: t('trending', lang), path: '/trending', lang })
 }
 
 export default async function TrendingListsPage() {

@@ -1,0 +1,31 @@
+{
+  "target": "src/shared/ai/gnomes.ts",
+  "tests": ["tests/shared/ai/gnome-identity.test.ts"],
+  "mutants": [
+    {
+      "name": "имя снова только в подписи — в промпт уходит одна профессия",
+      "from": "  const identity = `You are ${name}${guildName ? `, of the ${guildName}` : ''} — ${e.persona}",
+      "to": "  const identity = `You are ${e.persona}"
+    },
+    {
+      "name": "имя всегда английское: по-русски мастер зовётся Glóinn",
+      "from": "const gname = (e: Expert, lang: Lang) => (lang === 'ru' ? e.nameRu : e.nameEn)",
+      "to": "const gname = (e: Expert, lang: Lang) => e.nameEn"
+    },
+    {
+      "name": "гильдия потеряна — мастер не знает своего цеха",
+      "from": "const gguild = (e: Expert, lang: Lang) => (lang === 'ru' ? e.guildRu : e.guildEn)",
+      "to": "const gguild = (e: Expert, lang: Lang) => ''"
+    },
+    {
+      "name": "имя вытеснило ремесло: собеседник не знает, что умеет",
+      "from": "  const identity = `You are ${name}${guildName ? `, of the ${guildName}` : ''} — ${e.persona}",
+      "to": "  const identity = `You are ${name}."
+    },
+    {
+      "name": "в ростере созыва снова только id — коллегу зовут технической строкой",
+      "from": "${others.map((x) => `${x.id} — ${gname(x, opts.lang)}${gguild(x, opts.lang) ? `, ${gguild(x, opts.lang)}` : ''}: ${x.domains.join(', ')}`).join('\\n')}",
+      "to": "${others.map((x) => `${x.id}: ${x.domains.join(', ')}`).join('\\n')}"
+    }
+  ]
+}

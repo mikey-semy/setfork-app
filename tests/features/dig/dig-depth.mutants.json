@@ -1,0 +1,38 @@
+{
+  "target": "src/features/dig/depth.ts",
+  "tests": [
+    "tests/features/dig/dig-depth.test.ts"
+  ],
+  "mutants": [
+    {
+      "name": "глубина не растёт — разговор топчется на первом слое",
+      "from": "  return Math.min(answered + 1, DIG_MAX_LEVEL)",
+      "to": "  return 1"
+    },
+    {
+      "name": "считаются реплики мастеров: созыв коллеги перескакивает слой",
+      "from": "    else if (awaiting) {",
+      "to": "    else if (true) {"
+    },
+    {
+      "name": "считаются вопросы: сорвавшийся вызов уводит глубже",
+      "from": "    if (m.role === 'user') awaiting = true",
+      "to": "    if (m.role === 'user') answered++"
+    },
+    {
+      "name": "ответ не закрывает вопрос — счёт идёт по репликам",
+      "from": "      awaiting = false\n",
+      "to": "\n"
+    },
+    {
+      "name": "предел снят — глубина растёт бесконечно",
+      "from": "  return Math.min(answered + 1, DIG_MAX_LEVEL)",
+      "to": "  return answered + 1"
+    },
+    {
+      "name": "счёт с нуля — первый вопрос попадает не на тот слой",
+      "from": "  return Math.min(answered + 1, DIG_MAX_LEVEL)",
+      "to": "  return Math.min(answered, DIG_MAX_LEVEL)"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "target": "src/features/dig/history.ts",
+  "tests": ["tests/features/dig/dig-history.test.ts"],
+  "mutants": [
+    {
+      "name": "безличный голос: все мастера снова говорят как один",
+      "from": "    return (lang === 'ru' ? x.nameRu : x.nameEn) || 'GNOME'",
+      "to": "    return 'GNOME'"
+    },
+    {
+      "name": "имя всегда английское — по-русски мастер зовётся Glóinn",
+      "from": "    return (lang === 'ru' ? x.nameRu : x.nameEn) || 'GNOME'",
+      "to": "    return x.nameEn || 'GNOME'"
+    },
+    {
+      "name": "вопрос человека подписан мастером — тот отвечает сам себе",
+      "from": "    .map((m) => `${m.role === 'user' ? 'USER' : nameOf(m.who)}: ${String(m.text).slice(0, TEXT_CAP)}`)",
+      "to": "    .map((m) => `${nameOf(m.who)}: ${String(m.text).slice(0, TEXT_CAP)}`)"
+    },
+    {
+      "name": "хвост снят — в промпт едет вся беседа целиком",
+      "from": "    .slice(-HISTORY_TAIL)",
+      "to": "    .slice(0)"
+    },
+    {
+      "name": "берётся НАЧАЛО беседы вместо конца",
+      "from": "    .slice(-HISTORY_TAIL)",
+      "to": "    .slice(0, HISTORY_TAIL)"
+    },
+    {
+      "name": "длина реплики не ограничена — одна простыня съедает контекст",
+      "from": "${String(m.text).slice(0, TEXT_CAP)}",
+      "to": "${String(m.text)}"
+    }
+  ]
+}

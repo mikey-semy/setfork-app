@@ -11,6 +11,7 @@ import { gnomeCard } from './gnome-character'
 import { gnomeMood, gnomeReflection, gnomeReputation, gnomeThanksCounts, gnomeUserThanks, gnomeUserAccepts } from './gnome-reputation'
 import { NEXT_TEMPLATE, parseFollowups, parseSummon } from './reply-parse'
 import { langEnName, type Lang } from '@/shared/i18n'
+import { digLevelBrief } from './dig'
 
 /**
  * ДОМ ГНОМОВ — единый источник правды для чата гнома (идея владельца: не
@@ -42,10 +43,27 @@ export interface GnomeSpeakOpts {
   history?: string
   /** Прецеденты из базы (KAG/retrieval) — «использовать, не копировать вслепую». */
   precedents?: string[]
+  /**
+   * Прецеденты пришли НЕ ПО ЕГО РЕМЕСЛУ (доменная линза не нашла совпадений, отдан общий
+   * фолбэк). Гному об этом говорят прямо: иначе он опирается на чужую жилу так же
+   * уверенно, как на свою, и человек не отличит «основано на нашей библиотеке» от
+   * «основано на том, что подвернулось». Тот же признак совет пишет в провенанс.
+   */
+  precedentsOffCraft?: boolean
   /** short: одна короткая реплика (диалог-реакция), без фоллоу-апов/созыва. */
   short?: boolean
   /** Добавлять строку NEXT (фоллоу-апы) — для чат-поверхностей, ведущих вглубь. */
   followups?: boolean
+  /**
+   * Какой это СЛОЙ раскопки (1, 2, 3…). Лестница глубины из лоры: «копать» — идти
+   * вглубь темы причинами, механизмом, исключениями, слой за слоем. Без неё разговор
+   * топчется на одном уровне: человек спрашивает третий раз, а получает ту же глубину,
+   * что и в первый.
+   *
+   * Ремесло даёт УГОЛ, слой даёт ГЛУБИНУ — это разные оси, и вместе они и есть
+   * «многогранность» из лоры: много мастеров на одном камне, и каждый копает вглубь.
+   */
+  depth?: number
   /** Ростер для реального созыва: гном может передать вопрос коллеге. */
   summonRoster?: Expert[]
   feature: AiFeature
@@ -54,6 +72,11 @@ export interface GnomeSpeakOpts {
   userId?: string | null
   maxTokens?: number
 }
+
+/** Имя мастера на языке ответа: им он подписан в ленте и им же себя называет. */
+const gname = (e: Expert, lang: Lang) => (lang === 'ru' ? e.nameRu : e.nameEn)
+/** Гильдия на языке ответа — цех, к которому он принадлежит (не имя и не должность). */
+const gguild = (e: Expert, lang: Lang) => (lang === 'ru' ? e.guildRu : e.guildEn)
 
 const forProviderOf = (provider: string) => (m: string) =>
   provider === 'yandex' ? m.startsWith('gpt://') : provider === 'gigachat' ? !m.includes('/') : true
@@ -104,7 +127,24 @@ export async function gnomeSpeak(
       bond = `\nYOU REMEMBER THIS PERSON: they have thanked you before${thanked >= 3 ? ' several times — a familiar, valued face' : ''}. A brief, genuine note of recognition fits if it feels natural — warm, never servile or overfamiliar.`
   }
 
-  const persona = `You are ${e.persona}
+  /**
+   * ⚠️ КАК ЕГО ЗОВУТ. Имя и гильдия жили ТОЛЬКО в подписи интерфейса: в промпт уходила
+   * одна профессия («a test engineer»), и сам мастер своего имени не знал. Расплата
+   * видна в упор — на прямой вопрос «Глоин, ты кто?» модель отвечала «я не Глоин, а
+   * Броккр» и придумывала себе имя из общего знания о гномах. Человек при этом выбрал
+   * собеседника руками и видел его подпись в шапке, так что выглядело это как сломанный
+   * выбор, хотя отвечал ровно тот, кого позвали.
+   *
+   * Имя и цех на языке ответа: по-русски он Глоин из Гильдии кодеров, а не Glóinn of the
+   * Coders' Guild. Имя отделено от ремесла намеренно — «повар» это цех, а не имя, и
+   * путать их значит разговаривать с функцией вместо собеседника.
+   */
+  const name = gname(e, opts.lang)
+  const guildName = gguild(e, opts.lang)
+  const identity = `You are ${name}${guildName ? `, of the ${guildName}` : ''} — ${e.persona}
+YOUR NAME IS ${name}: if asked who you are, give THIS name, never invent another one and never answer with your craft instead of your name.`
+
+  const persona = `${identity}
 Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now: ${mood}.` : ''}${reflection ? ` Where your craft stands: ${reflection}.` : ''}${bond}${guild}${memory}`
 
   // Аккуратность специалиста: вне ремесла — честная оговорка (generalist '*' — по всему).
@@ -115,8 +155,10 @@ Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now
   // Реальный созыв коллеги (MCP-подобное действие): только если дан ростер и гном не универсал.
   const others = (opts.summonRoster ?? []).filter((x) => x.id !== e.id && !x.domains.includes('*'))
   const canSummon = !opts.short && others.length > 0 && !e.domains.includes('*')
+  // ⚠️ В ростере созыва стоит ИМЯ коллеги, а не только id: без имени зовущий выкрикивал
+  // техническую строку («зову chef»), потому что имён соседнего цеха попросту не знал.
   const summonBlock = canSummon
-    ? `\nYOU CAN CALL A COLLEAGUE: if this question truly belongs to another craft, hand it off — reply with ONE short in-character line that you're calling them, then on the FINAL line put exactly "SUMMON: <id>" (id from ROSTER). Only for a real domain mismatch; if you can answer well, just answer. When summoning, do NOT add the NEXT line.\nROSTER (id: craft):\n${others.map((x) => `${x.id}: ${x.domains.join(', ')}`).join('\n')}`
+    ? `\nYOU CAN CALL A COLLEAGUE: if this question truly belongs to another craft, hand it off — reply with ONE short in-character line that you're calling them BY NAME, then on the FINAL line put exactly "SUMMON: <id>" (id from ROSTER). Only for a real domain mismatch; if you can answer well, just answer. When summoning, do NOT add the NEXT line.\nROSTER (id — name, craft):\n${others.map((x) => `${x.id} — ${gname(x, opts.lang)}${gguild(x, opts.lang) ? `, ${gguild(x, opts.lang)}` : ''}: ${x.domains.join(', ')}`).join('\n')}`
     : ''
 
   const followupsRule =
@@ -129,11 +171,17 @@ Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now
     : `A user is talking to you in the SetFork workshop. Answer as this expert — practical, specific, in character; admit "no reliable data" instead of inventing. Keep it tight (2-5 short paragraphs or a compact list)${opts.followups ? ', ~4 sentences so there is room for the NEXT line' : ''}. Answer in ${langEnName(opts.lang)}.
 SPEAK LIKE A PERSON, NOT A FORM. Never expose your working method: no headings or labels such as "Task/Method/Understanding/Plan/Execution/Verification" (or their equivalents in any language), no restating the question, no announcing what you are about to do, no closing self-assessment. Just say the answer the way a knowledgeable colleague would say it out loud.`
 
+  // Лестница глубины — та же, что у слоёв раскопки (единый источник, не копия).
+  const ladder = opts.depth ? `\n${digLevelBrief(opts.depth)}` : ''
   const lore = opts.precedents?.length
-    ? `\n\nFrom the SetFork knowledge base (use what helps, don't copy blindly):\n${sp.wrap('PRECEDENTS', opts.precedents.join('\n'))}`
+    ? `\n\nFrom the SetFork knowledge base (use what helps, don't copy blindly)${
+        opts.precedentsOffCraft
+          ? ' — NOTE: none of these are from YOUR craft, they are general matches. Say so plainly if you lean on them, and do not present them as your guild\u2019s experience'
+          : ''
+      }:\n${sp.wrap('PRECEDENTS', opts.precedents.join('\n'))}`
     : ''
   const system = `${persona}${lane}${summonBlock}
-${task}${followupsRule}
+${task}${ladder}${followupsRule}
 ${sp.rule()}`
   const prompt = `${opts.context ? `${sp.wrap('CONTEXT', opts.context)}\n\n` : ''}${opts.history ? `CHAT SO FAR:\n${sp.wrap('HISTORY', opts.history)}\n\n` : ''}${sp.wrap('QUESTION', question)}${lore}`
 
@@ -172,8 +220,6 @@ ${sp.rule()}`
   }
 }
 
-const gname = (e: Expert, lang: Lang) => (lang === 'ru' ? e.nameRu : e.nameEn)
-
 /**
  * Полный ход чата: гном отвечает, и если он РЕАЛЬНО созвал коллегу — тот входит
  * и отвечает сам (глубина 1). Возвращает массив реплик (обычно 1, при созыве 2).
@@ -186,7 +232,15 @@ export async function gnomeConverse(primary: Expert, question: string, opts: Gno
   if (first.summonId && opts.summonRoster) {
     const target = opts.summonRoster.find((x) => x.id === first.summonId)
     if (target) {
-      const second = await gnomeSpeak(target, question, { ...opts, summonRoster: undefined }) // созванный дальше не зовёт
+      // ⚠️ Прецеденты отбирались доменной линзой ПЕРВОГО гнома — для созванного это чужая
+      // жила. Отдать их как есть значит дать ему опереться на материал не своего ремесла
+      // и говорить об этом так же уверенно, как о своём. Пересобрать здесь нечем (отбор
+      // сделан вызывающим), поэтому честно помечаем: опора не по его ремеслу.
+      const second = await gnomeSpeak(target, question, {
+        ...opts,
+        summonRoster: undefined, // созванный дальше не зовёт
+        precedentsOffCraft: opts.precedents?.length ? true : opts.precedentsOffCraft,
+      })
       if (second) replies.push({ who: target.id, name: gname(target, opts.lang), text: second.text, followups: second.followups })
     }
   }

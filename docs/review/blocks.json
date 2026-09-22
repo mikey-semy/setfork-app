@@ -44,6 +44,10 @@
       "reason": "графика"
     },
     {
+      "pattern": "docs/img/*.webp",
+      "reason": "графика (иллюстрации README)"
+    },
+    {
       "pattern": "public/fonts/**",
       "reason": "шрифты"
     },
@@ -216,7 +220,8 @@
       "role": "reviewer",
       "goal": "Найти текст мимо словаря, расхождения ru/en, нарушения словаря продукта: «PR» вместо «Предложение», slug на виду, слово «гном» в тексте.",
       "paths": [
-        "src/shared/i18n/**"
+        "src/shared/i18n/**",
+        "tests/shared/i18n/lang-url.test.ts"
       ],
       "ref_paths": [
         "src/features/**"
@@ -441,7 +446,8 @@
         "src/shared/seo/**",
         "src/shared/site.ts",
         "tests/shared/seo/page-meta-image.test.ts",
-        "tests/shared/seo/site-jsonld.test.ts"
+        "tests/shared/seo/site-jsonld.test.ts",
+        "tests/shared/seo/page-meta-lang.test.ts"
       ],
       "ref_paths": []
     },

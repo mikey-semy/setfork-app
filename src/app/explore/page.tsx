@@ -28,7 +28,7 @@ export async function generateMetadata() {
   // Canonical у обзора — по той же причине, что у корня: страница принимает параметры
   // (прежние `?tab=` перенаправляет middleware), и каждый из них без этой строки
   // выглядел бы для обходчика отдельной страницей с тем же содержимым.
-  return pageMeta({ title: t('explore', lang), description: t('heroSub', lang), path: '/explore' })
+  return pageMeta({ title: t('explore', lang), description: t('heroSub', lang), path: '/explore', lang })
 }
 
 export default async function ExplorePage() {

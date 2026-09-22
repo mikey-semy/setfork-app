@@ -219,6 +219,12 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
       sendAriaLabel={t('dig.sendEnter', lang)}
       sendTooltip={t('dig.enterSendShiftEnter', lang)}
       lang={lang}
+      // Кто говорит: имя с цехом под каждым ответом. Мастер может передать вопрос
+      // коллеге — тот входит в беседу своим голосом, и в ленте это должно быть видно.
+      speakerName={(who) => {
+        const g = gnomes.find((x) => x.id === who)
+        return g ? `${g.name}${g.guild ? ` · ${g.guild}` : ''}` : ''
+      }}
       bubbleActions={(i, m) => (
         <>
           <ThankButton who={m.who ?? 'generalist'} thanked={thanked.has(i)} onThank={() => thank(i, m.who ?? 'generalist')} lang={lang} />
