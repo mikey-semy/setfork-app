@@ -1,13 +1,15 @@
 {
   "review_id": "setfork-frontend-2026-09",
-  "updated_at": "2026-09-22T03:29:17Z",
+  "updated_at": "2026-09-22T20:04:37Z",
   "blocks": {
     "H1": {
       "status": "verified",
       "started": null,
       "finished": "2026-09-19T09:05:03Z",
       "reports": [],
-      "note": ""
+      "note": "",
+      "reviewed_sha": "11c22f2719a08e7b",
+      "restamped_at": "2026-09-22T20:04:37Z"
     },
     "H2": {
       "status": "verified",
@@ -17,7 +19,9 @@
         "docs/review/reports/H2-core-contract.hunter.md",
         "docs/review/reports/H2-core-contract.verify.md"
       ],
-      "note": "13 находок, отклонённых нет; корень K42 (сбой чтения выдан за ответ) — 6 из 13. ⚠️ МАНИФЕСТ НАПИСАН ПОСЛЕ ПРОХОДА: охотник шёл по заданию из переписки, гипотезы совпадают, но против манифеста проход не сверялся. Второй проход по манифесту ОБЯЗАТЕЛЕН — статус verified означает «работа сделана и проверена», а не «блок закрыт навсегда»."
+      "note": "13 находок, отклонённых нет; корень K42 (сбой чтения выдан за ответ) — 6 из 13. ⚠️ МАНИФЕСТ НАПИСАН ПОСЛЕ ПРОХОДА: охотник шёл по заданию из переписки, гипотезы совпадают, но против манифеста проход не сверялся. Второй проход по манифесту ОБЯЗАТЕЛЕН — статус verified означает «работа сделана и проверена», а не «блок закрыт навсегда».",
+      "reviewed_sha": "f0cd6237bd820990",
+      "restamped_at": "2026-09-22T20:04:37Z"
     },
     "H3": {
       "status": "todo",
@@ -38,7 +42,9 @@
       "started": "2026-09-21T14:44:30Z",
       "finished": null,
       "reports": [],
-      "note": ""
+      "note": "",
+      "reviewed_sha": "6411f4c228a97c58",
+      "restamped_at": "2026-09-22T20:04:37Z"
     },
     "H6": {
       "status": "todo",
@@ -241,14 +247,18 @@
       "started": null,
       "finished": null,
       "reports": [],
-      "note": ""
+      "note": "",
+      "reviewed_sha": "fbb7bfb18d9677fa",
+      "restamped_at": "2026-09-22T20:04:37Z"
     },
     "V1d": {
       "status": "verified",
       "started": null,
       "finished": null,
       "reports": [],
-      "note": ""
+      "note": "",
+      "reviewed_sha": "6a8cfa6dd5f798af",
+      "restamped_at": "2026-09-22T20:04:37Z"
     },
     "V1e": {
       "status": "todo",
