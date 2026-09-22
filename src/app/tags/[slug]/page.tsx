@@ -60,9 +60,8 @@ export default async function TagPage({
 }) {
   const { slug: raw } = await params
   const slug = decodeSegment(raw).toLowerCase()
-  const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
-  // Адреса в разметке — на языке адреса страницы (см. `urlLangAt`).
-  const at = await urlLangAt()
+  // `at` — адреса в разметке на языке адреса страницы (см. `urlLangAt`).
+  const [lang, session, sp, at] = await Promise.all([getLang(), getSession(), searchParams, urlLangAt()])
   // Сначала СЧЁТ, потом окно: у популярного тега списков могут быть сотни, и страница
   // тянула их все вместе с аватарами авторов, чтобы показать экран.
   const [tag, total] = await Promise.all([getTag(slug), countLists({ tag: slug }, session?.userId)])

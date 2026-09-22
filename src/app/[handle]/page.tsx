@@ -80,11 +80,10 @@ export default async function ProfilePage({
   params: Promise<{ handle: string }>
   searchParams: Promise<ProfileSearchParams>
 }) {
-  const [{ handle }, sp, lang] = await Promise.all([params, searchParams, getLang()])
+  // `at` — адреса в разметке на языке адреса страницы (см. `urlLangAt`).
+  const [{ handle }, sp, lang, at] = await Promise.all([params, searchParams, getLang(), urlLangAt()])
   const loaded = await loadProfilePage({ handle, sp, lang })
   const { tab, isPeopleTab, isOwner, counts, followCounts, catalogs, people, quotaHit, user } = loaded
-  // Адреса в разметке — на языке адреса страницы (см. `urlLangAt`).
-  const at = await urlLangAt()
 
   return (
     <div className="w-full">

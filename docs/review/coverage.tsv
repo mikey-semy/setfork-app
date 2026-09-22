@@ -1089,6 +1089,7 @@ src/shared/redis.ts	V12
 src/shared/request-ip.ts	H9
 src/shared/request-path.ts	H9
 src/shared/sentry.ts	H8
+src/shared/seo/howto-eligible.ts	H11
 src/shared/seo/jsonld.tsx	H11
 src/shared/seo/llms.ts	H11
 src/shared/seo/localize.ts	H11
@@ -1283,6 +1284,7 @@ tests/architecture/handle-check-one-canon.test.ts	H12
 tests/architecture/hint-dot-one-view.test.ts	H12
 tests/architecture/index-nulls-order.test.ts	H12
 tests/architecture/issue-write-one-path.test.ts	H12
+tests/architecture/jsonld-paths-follow-url-lang.test.ts	H12
 tests/architecture/like-escaping.test.ts	H12
 tests/architecture/login-return.test.ts	H12
 tests/architecture/migration-entrypoint.test.ts	H12
@@ -1692,6 +1694,7 @@ tests/shared/rate-limit.test.ts	V12f
 tests/shared/retired-domain.test.ts	V12f
 tests/shared/rrf.test.ts	V12f
 tests/shared/sentry.test.ts	V12f
+tests/shared/seo/howto-eligible.test.ts	H11
 tests/shared/seo/localize-metadata.test.ts	H11
 tests/shared/seo/page-meta-image.test.ts	H11
 tests/shared/seo/page-meta-lang.test.ts	H11

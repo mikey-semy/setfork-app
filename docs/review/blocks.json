@@ -448,7 +448,8 @@
         "tests/shared/seo/page-meta-image.test.ts",
         "tests/shared/seo/site-jsonld.test.ts",
         "tests/shared/seo/page-meta-lang.test.ts",
-        "tests/shared/seo/localize-metadata.test.ts"
+        "tests/shared/seo/localize-metadata.test.ts",
+        "tests/shared/seo/howto-eligible.test.ts"
       ],
       "ref_paths": []
     },
@@ -1734,19 +1735,27 @@
     {
       "id": "V12g",
       "slug": "seo-docs",
+      "phase": 2,
       "title": "Документы продвижения",
+      "role": "reviewer",
+      "goal": "Прочитать документы продвижения как обещание: аудит, план работ и инструкции по SEO — и найти, где текст утверждает про сайт то, чего код не делает (адреса, разметку, карту сайта, заголовки).",
       "paths": [
         "docs/seo/**",
         "docs/seo-audit-2026-09.md"
-      ]
+      ],
+      "ref_paths": []
     },
     {
       "id": "V12h",
       "slug": "review-reports",
+      "phase": 2,
       "title": "Отчёты пройденных блоков ревью",
+      "role": "reviewer",
+      "goal": "Прочитать отчёты пройденных блоков как свидетельство: сходятся ли выводы с реестром находок и с кодом на момент проверки, и не объявлено ли проверенным то, чего отчёт не показывает.",
       "paths": [
         ":(glob)docs/review/reports/*.md"
-      ]
+      ],
+      "ref_paths": []
     }
   ]
 }
