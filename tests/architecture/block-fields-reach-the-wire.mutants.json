@@ -1,0 +1,16 @@
+{
+  "target": "src/features/git/list-content.ts",
+  "tests": ["tests/architecture/block-fields-reach-the-wire.test.ts", "tests/features/git/list-content.test.ts"],
+  "mutants": [
+    {
+      "name": "пометки снова не кладутся на провод (прежнее поведение: у нового блока ветки их переносить неоткуда)",
+      "from": "      danger: s.danger ?? false,\n      imageKey: s.imageKey ?? '',\n      needsHuman: s.needsHuman ?? false,\n      needsHumanAsk: s.needsHumanAsk ?? '',\n",
+      "to": ""
+    },
+    {
+      "name": "вопрос к пометке «нужен человек» теряется молча — пометка без вопроса читается как шум",
+      "from": "      needsHumanAsk: s.needsHumanAsk ?? '',",
+      "to": "      needsHumanAsk: '',"
+    }
+  ]
+}
