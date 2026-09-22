@@ -100,6 +100,7 @@ scripts/council-eval.ts	H13f
 scripts/coverage-merge.mjs	H13f
 scripts/day-sensitive-tests.mjs	H13c
 scripts/db-bootstrap.ts	H13c
+scripts/dev.mjs	H13f
 scripts/eval-retrieval.ts	H13f
 scripts/facet-eval.ts	H13f
 scripts/fix-degenerate-slugs.ts	H13f

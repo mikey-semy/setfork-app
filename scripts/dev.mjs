@@ -18,6 +18,7 @@
 // и против неё нужен `MemoryMax` в юните systemd — см. docs/dev-server-unit.md.
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const HEAP_MB = Number(process.env.SETFORK_DEV_HEAP_MB ?? 2048)
 
@@ -26,7 +27,11 @@ const HEAP_MB = Number(process.env.SETFORK_DEV_HEAP_MB ?? 2048)
 const existing = process.env.NODE_OPTIONS ?? ''
 process.env.NODE_OPTIONS = `${existing} --max-old-space-size=${HEAP_MB}`.trim()
 
-const root = new URL('..', import.meta.url).pathname
+// ⚠️ `fileURLToPath`, а не `.pathname`: последний оставляет URL-кодирование, и путь
+// с пробелом («/home/mike/setfork app/») превращается в «/home/mike/setfork%20app/».
+// Node пошёл бы искать Next в несуществующем каталоге с литеральным «%20», и запуск
+// падал бы ещё до старта сборки (находка авто-ревью).
+const root = fileURLToPath(new URL('..', import.meta.url))
 // `.bin/next` на Windows — это `next.cmd`, и запустить его напрямую нельзя; поэтому зовём
 // сам файл Next через текущий node, минуя оболочку вовсе.
 const next = join(root, 'node_modules', 'next', 'dist', 'bin', 'next')
