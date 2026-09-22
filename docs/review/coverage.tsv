@@ -1,4 +1,4 @@
-# собрано от 87c066c6; состав файлов сверяется при проверке
+# собрано от 7719cf3d; состав файлов сверяется при проверке
 file	blocks
 .claude/hooks/ui-guard.mjs	V12c
 .claude/launch.json	V12c
@@ -46,12 +46,15 @@ docs/backups.md	V12c
 docs/boundaries-todo.md	V12c
 docs/branches-design.md	V12c
 docs/deploy.md	V12c
+docs/dev-server-unit.md	V12c
 docs/github-parity.md	V12c
 docs/kz_pay.md	V12c
 docs/mcp-surface.md	H4,V12c
 docs/pagination.md	V12c
 docs/phase1-wire-contract.md	V12c
 docs/rust-core-plan.md	V12c
+docs/seo-audit-2026-09.md	V12c
+docs/seo/home-cache-2026-09.md	V12c
 drizzle.config.ts	H13
 eslint-suppressions.json	H13
 eslint.config.mjs	H13
@@ -79,6 +82,7 @@ scripts/council-eval.ts	H13f
 scripts/coverage-merge.mjs	H13f
 scripts/day-sensitive-tests.mjs	H13c
 scripts/db-bootstrap.ts	H13c
+scripts/dev.mjs	H13f
 scripts/eval-retrieval.ts	H13f
 scripts/facet-eval.ts	H13f
 scripts/fix-degenerate-slugs.ts	H13f
@@ -100,7 +104,7 @@ scripts/probe/touch-sweep.mjs	H13f
 scripts/purge-lists.ts	H13f
 scripts/restore.sh	H13f
 scripts/review/__pycache__/review.cpython-314.pyc	H13d
-scripts/review/review.py	H13d,V12e
+scripts/review/review.py	H13d
 scripts/seed-demo.ts	H13c
 scripts/seed-ops.ts	H13f
 scripts/seed.ts	H13c
@@ -662,6 +666,7 @@ src/features/library/review-actions.ts	V1
 src/features/library/review-model.ts	V1
 src/features/library/review-queries.ts	V1
 src/features/library/sample-titles.ts	V1m
+src/features/library/save-outcome.ts	V1d
 src/features/library/saved-queries-actions.ts	V1m
 src/features/library/saved-queries.ts	V1m
 src/features/library/search-href.ts	V1g
@@ -1102,6 +1107,7 @@ src/shared/ui/EmojiPickerPopover.tsx	H7b
 src/shared/ui/EmptyState.tsx	H7
 src/shared/ui/Field.tsx	H7
 src/shared/ui/FilterMenu.tsx	H7b
+src/shared/ui/FloatingActions.tsx	H7
 src/shared/ui/FloatingBack.tsx	H7b
 src/shared/ui/FloatingInput.tsx	H7
 src/shared/ui/FormSaveBar.tsx	H7
@@ -1232,6 +1238,7 @@ tests/architecture/build-offline-fonts.test.ts	H12
 tests/architecture/button-class-merge.test.ts	H12
 tests/architecture/command-one-view.test.ts	H12
 tests/architecture/day-sensitive-list.test.ts	H12
+tests/architecture/editor-floating-actions.test.ts	H12
 tests/architecture/editor-previews-one-rule.mutants.json	H12
 tests/architecture/editor-previews-one-rule.test.ts	H12
 tests/architecture/font-size-merge.test.ts	H12
@@ -1375,6 +1382,8 @@ tests/features/library/delete-promise.test.ts	V1k,V1d
 tests/features/library/diff.test.ts	V1,V1k
 tests/features/library/dismiss-review.itest.ts	V1
 tests/features/library/domain-read-parity.itest.ts	V1h
+tests/features/library/draft-moved.mutants.json	V1d
+tests/features/library/draft-overwrite-visible.itest.ts	V1d
 tests/features/library/draft-publish.itest.ts	V1d
 tests/features/library/draft-tags-registry.itest.ts	V8c
 tests/features/library/drag-geometry.test.ts	V1k
@@ -1412,11 +1421,14 @@ tests/features/library/ownership-breadth.itest.ts	V1d
 tests/features/library/page-stability.itest.ts	V1g
 tests/features/library/pr-settings.test.ts	V1,V1k
 tests/features/library/publication-state.itest.ts	V1d
+tests/features/library/publish-still-eligible.itest.ts	V1d
 tests/features/library/publish.itest.ts	V1d
 tests/features/library/raw-contract.itest.ts	V1g
 tests/features/library/reindex-staleness.itest.ts	V1h
 tests/features/library/required-checks.itest.ts	V1
 tests/features/library/review-visibility.itest.ts	V1
+tests/features/library/save-outcome-tells.test.ts	V1k
+tests/features/library/save-outcome.mutants.json	V1d
 tests/features/library/script-dialect.test.ts	V1k
 tests/features/library/script-injection.test.ts	V1k
 tests/features/library/search-href.test.ts	V1g,V1k
@@ -1578,7 +1590,7 @@ tests/shared/auth/api-token-scope.itest.ts	V12f
 tests/shared/auth/api-token.test.ts	V12f
 tests/shared/auth/handle.test.ts	V12f
 tests/shared/auth/oauth-server.itest.ts	V12f
-tests/shared/auth/oauth-single-use.itest.ts	H1,V11
+tests/shared/auth/oauth-single-use.itest.ts	H1
 tests/shared/auth/oauth.test.ts	V12f
 tests/shared/auth/totp.test.ts	V12f
 tests/shared/block-identity-on-write.test.ts	V12f
@@ -1630,6 +1642,7 @@ tests/shared/rate-limit.test.ts	V12f
 tests/shared/retired-domain.test.ts	V12f
 tests/shared/rrf.test.ts	V12f
 tests/shared/sentry.test.ts	V12f
+tests/shared/seo/page-meta-image.test.ts	H11
 tests/shared/settings/media-singleflight.test.ts	V12f
 tests/shared/settings/provider-switch.itest.ts	V12f
 tests/shared/settings/readiness-settings.itest.ts	V12f
@@ -1650,6 +1663,7 @@ tests/shared/ui/code-wrap.test.ts	H7c
 tests/shared/ui/command-text.test.tsx	H7c
 tests/shared/ui/copy-row.test.tsx	H7c
 tests/shared/ui/field-alert.test.tsx	H7c
+tests/shared/ui/floating-actions-dock.test.tsx	H7c
 tests/shared/ui/highlight-code.test.ts	H7c
 tests/shared/ui/markdown-editor.test.tsx	H7c
 tests/shared/ui/overlay-focus-stays.test.tsx	H7c

@@ -1,0 +1,52 @@
+// Запуск dev-сервера с пределом JS-кучи — одинаково на всех системах.
+//
+// ⚠️ Почему не `NODE_OPTIONS=... next dev` прямо в скрипте package.json: npm запускает
+// скрипты через оболочку системы, и на Windows это `cmd.exe`, который читает
+// `NODE_OPTIONS=--max-old-space-size=2048` как ИМЯ КОМАНДЫ и падает, не дойдя до Next.
+// Проект открытый, репозиторий клонируют под Windows, и «npm run dev не работает» —
+// плохая первая встреча с ним. (Найдено авто-ревью 22.09.2026.)
+//
+// Зависимости вроде cross-env ради одной строки не заводим: в проекте её нет, а лишняя
+// зависимость в сборке дороже пятнадцати строк своего кода.
+//
+// Зачем предел вообще: на редакторе списка в 120 пунктов куча next-server дорастает до
+// 2 ГБ за пять с половиной минут и не останавливается. Без предела она идёт до
+// умолчания V8 (здесь 4288 МБ), машина начинает выгружать всё подряд, и вместе с dev
+// умирает редактор — 22.09.2026 так и случилось. С пределом падает только сборка.
+//
+// ⚠️ Предел V8 ограничивает ТОЛЬКО JS-часть. Нативная часть Turbopack живёт вне кучи,
+// и против неё нужен `MemoryMax` в юните systemd — см. docs/dev-server-unit.md.
+import { spawn } from 'node:child_process'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+// ⚠️ Проверяем значение, а не доверяем ему. `Number('')` даёт 0, а `--max-old-space-size=0`
+// для V8 означает «умолчание», то есть предел молча ВЫКЛЮЧАЕТСЯ — ровно то, ради чего
+// скрипт и заведён. Прочий мусор даёт NaN, с которым node не стартует вовсе.
+// (Находка авто-ревью 22.09.2026.)
+const raw = process.env.SETFORK_DEV_HEAP_MB
+const asked = raw === undefined || raw === '' ? 2048 : Number(raw)
+const HEAP_MB = Number.isInteger(asked) && asked > 0 ? asked : 2048
+if (asked !== HEAP_MB) {
+  process.stderr.write(`SETFORK_DEV_HEAP_MB=${JSON.stringify(raw)} — не целое положительное, беру 2048\n`)
+}
+
+// Дописываем к уже заданным настройкам, а не затираем их: снаружи может прийти свой
+// NODE_OPTIONS (отладчик, флаги профилирования), и молча его потерять — плохой сюрприз.
+const existing = process.env.NODE_OPTIONS ?? ''
+process.env.NODE_OPTIONS = `${existing} --max-old-space-size=${HEAP_MB}`.trim()
+
+// ⚠️ `fileURLToPath`, а не `.pathname`: последний оставляет URL-кодирование, и путь
+// с пробелом («/home/mike/setfork app/») превращается в «/home/mike/setfork%20app/».
+// Node пошёл бы искать Next в несуществующем каталоге с литеральным «%20», и запуск
+// падал бы ещё до старта сборки (находка авто-ревью).
+const root = fileURLToPath(new URL('..', import.meta.url))
+// `.bin/next` на Windows — это `next.cmd`, и запустить его напрямую нельзя; поэтому зовём
+// сам файл Next через текущий node, минуя оболочку вовсе.
+const next = join(root, 'node_modules', 'next', 'dist', 'bin', 'next')
+
+const child = spawn(process.execPath, [next, 'dev', ...process.argv.slice(2)], {
+  stdio: 'inherit',
+  env: process.env,
+})
+child.on('exit', (code, signal) => process.exit(signal ? 1 : (code ?? 0)))

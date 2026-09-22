@@ -1,0 +1,58 @@
+{
+  "target": "src/features/library/save-outcome.ts",
+  "tests": [
+    "tests/features/library/save-outcome-tells.test.ts"
+  ],
+  "mutants": [
+    {
+      "name": "P1-1 черновика нет — поле снова пустое (сверка отключается целиком)",
+      "from": "  return `${listVersion}@${draft ? `${draft.id}:${draft.rev}` : 'none'}`",
+      "to": "  return `${listVersion}@${draft ? `${draft.id}:${draft.rev}` : ''}`"
+    },
+    {
+      "name": "P1-2 ABA: поле несёт один номер, без строки",
+      "from": "  return `${listVersion}@${draft ? `${draft.id}:${draft.rev}` : 'none'}`",
+      "to": "  return `${listVersion}@${draft ? `${draft.rev}` : 'none'}`"
+    },
+    {
+      "name": "P1-3 поле теряет версию списка (событие со списком становится незаметным)",
+      "from": "  return `${listVersion}@${draft ? `${draft.id}:${draft.rev}` : 'none'}`",
+      "to": "  return `${draft ? `${draft.id}:${draft.rev}` : 'none'}`"
+    },
+    {
+      "name": "неразбираемое поле выдаётся за осмысленное",
+      "from": "  if (at <= 0) return undefined",
+      "to": "  if (at <= 0) return 'none'"
+    },
+    {
+      "name": "P1-2 затирание обнаружено, а публикация всё равно идёт",
+      "from": "  return o.overwrote\n}",
+      "to": "  return false\n}"
+    },
+    {
+      "name": "обратная сторона: публикация останавливается всегда",
+      "from": "  return o.overwrote\n}",
+      "to": "  return true\n}"
+    },
+    {
+      "name": "остановка молчит о том, что версия не вышла",
+      "from": "  return 'saved=1&over=1&held=1'",
+      "to": "  return 'saved=1&over=1'"
+    },
+    {
+      "name": "остановка молчит о причине",
+      "from": "  return 'saved=1&over=1&held=1'",
+      "to": "  return 'saved=1&held=1'"
+    },
+    {
+      "name": "молчим про затирание при сохранении",
+      "from": "  if (o.overwrote) parts.push('over=1')",
+      "to": "  void o.overwrote"
+    },
+    {
+      "name": "молчим про запрещённую команду",
+      "from": "  if (o.destructiveStep !== null) parts.push('warn=destructive', `step=${o.destructiveStep}`)",
+      "to": "  void o.destructiveStep"
+    }
+  ]
+}

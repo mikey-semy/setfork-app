@@ -1,0 +1,64 @@
+{
+  "target": "src/features/library/draft.ts",
+  "tests": [
+    "tests/features/library/draft-overwrite-visible.itest.ts"
+  ],
+  "config": "vitest.integration.config.ts",
+  "mutants": [
+    {
+      "name": "P1-3 полный цикл: версия списка выпала из признака",
+      "from": "  if (expected.listVersion !== now.listVersion) return true",
+      "to": "  void now.listVersion"
+    },
+    {
+      "name": "P1-2 ABA: сравнивается голый номер, без строки",
+      "from": "  return now.draft.id !== expected.draft.id || now.draft.rev !== expected.draft.rev",
+      "to": "  return now.draft.rev !== expected.draft.rev"
+    },
+    {
+      "name": "P1-1 «черновика не было» перестаёт быть поводом",
+      "from": "  if (expected.draft === 'none') return true",
+      "to": "  if (expected.draft === 'none') return false"
+    },
+    {
+      "name": "обратная сторона: затирание объявляется всегда",
+      "from": "  return now.draft.id !== expected.draft.id || now.draft.rev !== expected.draft.rev",
+      "to": "  return true"
+    },
+    {
+      "name": "обратная сторона: путь MCP получает ложное затирание",
+      "from": "  if (expected === undefined) return false",
+      "to": "  if (expected === undefined) return true"
+    },
+    {
+      "name": "обратная сторона: отсутствие черновика с ОБЕИХ сторон объявляется расхождением",
+      "from": "  if (now.draft === undefined) return expected.draft !== 'none'",
+      "to": "  if (now.draft === undefined) return true"
+    },
+    {
+      "name": "номер черновика перестаёт расти — сравнивать станет нечего",
+      "from": "rev: sql`${listDrafts.rev} + 1`",
+      "to": "rev: sql`${listDrafts.rev}`"
+    },
+    {
+      "name": "P2 исчезнувший черновик, который автор видел, считается неизменившимся",
+      "from": "  if (now.draft === undefined) return expected.draft !== 'none'",
+      "to": "  if (now.draft === undefined) return false"
+    },
+    {
+      "name": "P1 удаление идёт БЕЗ сверки (как было в ранней ветке)",
+      "from": "    if (draftMoved(expected, { listVersion: tpl.currentVersion, draft: before })) return { overwrote: true }",
+      "to": "    void before"
+    },
+    {
+      "name": "обратная сторона: удаление не проходит НИКОГДА",
+      "from": "    if (draftMoved(expected, { listVersion: tpl.currentVersion, draft: before })) return { overwrote: true }",
+      "to": "    return { overwrote: true }"
+    },
+    {
+      "name": "удаление сверяет, но всё равно удаляет",
+      "from": "    if (draftMoved(expected, { listVersion: tpl.currentVersion, draft: before })) return { overwrote: true }",
+      "to": "    const moved = draftMoved(expected, { listVersion: tpl.currentVersion, draft: before })\n    void moved"
+    }
+  ]
+}

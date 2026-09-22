@@ -10,7 +10,8 @@ import { type LocaleText } from '@/shared/i18n'
 import { listQuota } from '@/shared/quota'
 import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, editBlockReason, ListWriteError } from '@/core'
-import { DestructiveCommandError } from '@/core/domain/destructive-command'
+import { DestructiveCommandError, findDestructiveSteps } from '@/core/domain/destructive-command'
+import { parseDraftRef, publishHeldQuery, saveOutcomeQuery, shouldHoldPublish } from '../save-outcome'
 import { isCollaborator } from '@/features/collab/queries'
 // eslint-disable-next-line boundaries/dependencies -- полки принадлежат каталогам; правило «положить на полку» держим ОДНОЙ точкой на все три входа (форма, MCP, пачка MCP), а не копией здесь
 import { assignCatalogByName } from '@/features/catalogs/assign'
@@ -20,7 +21,7 @@ import { parseEditorItems, toProposedItems } from '../editor'
 import { carryField } from '../translation-carry'
 import { getDraft, getVersionSteps } from '../queries'
 import { publishOwnedDraft } from '../publish-draft'
-import { deleteDraft, publishDraftFor, upsertDraft, type PublishResult } from '../draft'
+import { deleteDraftIfUnchanged, publishDraftFor, upsertDraft, type DraftRef, type PublishResult } from '../draft'
 import { listStore } from '../list-store'
 import { VERSION_ERR } from '../version-error'
 import { parseTags, slugify } from '../slug'
@@ -162,9 +163,20 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
  * успел уйти вперёд, публикация об этом скажет, а не перезапишет чужое молча.
  */
 export async function saveDraft(templateId: string, formData: FormData): Promise<void> {
-  const { tpl, handle } = await upsertDraftFromForm(templateId, formData)
+  const { tpl, handle, overwrote, destructive } = await upsertDraftFromForm(templateId, formData, 'save')
   revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
-  redirect(`/${handle}/${tpl.slug}/edit?saved=1`)
+  // ⚠️ СОХРАНЯЕМ ВСЕГДА, НО ГОВОРИМ ПРАВДУ О ПОСЛЕДСТВИЯХ.
+  //
+  // Отказать здесь нельзя: форма серверная, отказ уходит редиректом, страница
+  // перечитывает черновик из базы — и набранное пропадает. Отказ, после которого
+  // работа потеряна, хуже той гонки, от которой он защищает. Поэтому запись идёт, а
+  // человек узнаёт, что именно случилось:
+  //   over=1      — его состав лёг поверх правок, пришедших через агента в тот же
+  //                 черновик (до этого обе стороны не узнавали ни о чём);
+  //   warn=destructive — в шаге есть запрещённая команда, и публикация откажет. Раньше
+  //                 этот отказ приходил ПОЗЖЕ и ДРУГОМУ человеку — владельцу, нажавшему
+  //                 «Опубликовать», по шагу, которого он не писал.
+  redirect(`/${handle}/${tpl.slug}/edit?${saveOutcomeQuery({ overwrote, destructiveStep: destructive?.step ?? null })}`)
 }
 
 /**
@@ -174,12 +186,29 @@ export async function saveDraft(templateId: string, formData: FormData): Promise
  * бы молча (находка self-review).
  */
 export async function publishEdits(templateId: string, formData: FormData): Promise<void> {
-  await upsertDraftFromForm(templateId, formData)
-  await publishDraft(templateId)
+  // Режим передаётся ВНУТРЬ общей записи, а исход наружу не возвращается. Так сделано
+  // намеренно: первая редакция возвращала `overwrote` вызывающему, и `publishEdits`
+  // его выбрасывал — сторож срабатывал, а дверь открывалась. Пока решение принимает
+  // вызывающий, его можно забыть принять; здесь забыть нечего.
+  const { saved } = await upsertDraftFromForm(templateId, formData, 'publish')
+  // ⚠️ Публикуем ИМЕННО сохранённый снимок. Запись отпустила замок, а публикация
+  // читает черновик заново — в зазор успевает `patch_list(publish:false)`, и в версию
+  // уходит текст, которого человек не видел. Удержание от затирания это не ловит: оно
+  // смотрело до зазора (P1 авто-ревью по #945).
+  await publishDraft(templateId, {
+    listVersion: saved.listVersion,
+    draft: { id: saved.id, rev: saved.rev },
+  })
 }
 
-/** Общая часть: собрать черновик из формы редактора и записать его. */
-async function upsertDraftFromForm(templateId: string, formData: FormData) {
+/**
+ * Общая часть: собрать черновик из формы редактора и записать его.
+ *
+ * `mode` говорит, что будет дальше. В режиме `publish` затирание ОСТАНАВЛИВАЕТ поездку
+ * прямо здесь — иначе исход пришлось бы возвращать наверх и надеяться, что там его
+ * разберут; именно так он однажды и потерялся (P1 авто-ревью по #945).
+ */
+async function upsertDraftFromForm(templateId: string, formData: FormData, mode: 'save' | 'publish') {
   const session = await requireSession()
   const [lang, tpl] = await Promise.all([getLang(), db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })])
   if (!tpl) redirect('/')
@@ -194,27 +223,55 @@ async function upsertDraftFromForm(templateId: string, formData: FormData) {
   }
   const note = String(formData.get('note') ?? '').trim()
   const handle = await ownerHandle(tpl.ownerId)
+  // Какой черновик видел автор: разбирается ЗДЕСЬ, до любых действий. Раньше разбор
+  // стоял ниже, и ранняя ветка «состав опустел» успевала удалить черновик, ни с чем
+  // его не сверив, — самое необратимое действие оказывалось единственным без проверки.
+  const expected = parseDraftRef(formData.get('draftRef'))
   // Пустой состав в черновике не храним: он подменил бы опубликованный список
   // пустотой в редакторе, а опубликовать его всё равно нельзя.
   if (items.length === 0) {
-    await deleteDraft(tpl.id, session.userId)
-    redirect(`/${handle}/${tpl.slug}/edit?e=empty`)
+    const { overwrote } = await deleteDraftIfUnchanged(tpl, session.userId, expected)
+    // Расхождение — не удаляем: человек убрал бы вместе со своим и чужое, не увидев.
+    redirect(`/${handle}/${tpl.slug}/edit?${overwrote ? 'saved=1&over=1&held=1' : 'e=empty'}`)
   }
   // base_version НЕ переписываем у уже устаревшего черновика: сдвинуть его значит
   // сказать «правки сделаны от свежей версии», а они сделаны от старой — и следующая
   // публикация затёрла бы чужую работу молча. Признак устаревания снимает только
   // осознанный отказ от правок (discardDraft), а не автосохранение.
-  await upsertDraft(tpl, session.userId, { items, meta, note })
-  return { tpl, handle }
+  // Какой черновик видел автор: форма несёт строку и её номер, чтобы запись могла
+  // понять, не подменили ли черновик, пока редактор был открыт.
+  const saved = await upsertDraft(tpl, session.userId, { items, meta, note }, { expected })
+  const overwrote = saved.overwrote
+  // ⚠️ Публикация поверх обнаруженного затирания НЕ ИДЁТ. Отказ здесь безопасен, в
+  // отличие от «Сохранить»: черновик уже записан строкой выше, набранное не теряется.
+  // Человек читает, что случилось, и жмёт «Опубликовать» второй раз — страница к тому
+  // моменту перечитала черновик, ревизия совпадает, публикация проходит.
+  if (mode === 'publish' && shouldHoldPublish({ overwrote })) {
+    revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
+    redirect(`/${handle}/${tpl.slug}/edit?${publishHeldQuery()}`)
+  }
+  // Страж исполняемых команд — ТОТ ЖЕ, что на обеих ветках MCP. Здесь он не отказывает,
+  // а предупреждает: см. комментарий в `saveDraft` про цену отказа в серверной форме.
+  const [first] = findDestructiveSteps(items)
+  return { tpl, handle, overwrote, saved, destructive: first ? { step: first.index + 1 } : null }
 }
 
 /** Убрать черновик и вернуться к опубликованному состоянию. */
-export async function discardDraft(templateId: string): Promise<void> {
+export async function discardDraft(templateId: string, formData?: FormData): Promise<void> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-  await deleteDraft(tpl.id, session.userId)
+  // ⚠️ ТРЕТЬЯ ВЕТКА, которая удаляла черновик вовсе без сверки. «Отказаться от правок» —
+  // про СВОИ правки; если в тот же черновик успел дописать агент, человек отказывается
+  // и от чужого, о чём не знает. Останавливаемся один раз и показываем, что там есть.
+  const expected = parseDraftRef(formData?.get('draftRef'))
+  const { overwrote } = await deleteDraftIfUnchanged(tpl, session.userId, expected)
+  if (overwrote) {
+    const owner = await ownerHandle(tpl.ownerId)
+    revalidatePath(`/${owner}/${tpl.slug}`, 'layout')
+    redirect(`/${owner}/${tpl.slug}/edit?saved=1&over=1&held=1`)
+  }
   const handle = await ownerHandle(tpl.ownerId)
   revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
   redirect(`/${handle}/${tpl.slug}`)
@@ -229,7 +286,7 @@ export async function discardDraft(templateId: string): Promise<void> {
  * черновике), публикацию не делаем: молча перезаписать чужую работу хуже, чем
  * попросить перечитать. Автор увидит это на странице редактора.
  */
-async function publishDraft(templateId: string): Promise<void> {
+async function publishDraft(templateId: string, expect?: DraftRef): Promise<void> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return
@@ -242,7 +299,7 @@ async function publishDraft(templateId: string): Promise<void> {
   // однажды уже разъехался — у MCP его просто не было.
   let res: PublishResult
   try {
-    res = await publishDraftFor(tpl, session.userId)
+    res = await publishDraftFor(tpl, session.userId, undefined, { expect })
   } catch (e) {
     // Запрещённая команда — показываем автору причину и номер шага, как при
     // обычном сохранении: молчаливый отказ читается как «кнопка не работает».
@@ -252,8 +309,19 @@ async function publishDraft(templateId: string): Promise<void> {
   // Причины РАЗНЫЕ: «нечего публиковать» и «черновик опустел» — разные сообщения,
   // иначе человек читает про удаление, которого не было.
   if ('error' in res) {
+    // `moved` — черновик подменили между сохранением и публикацией. Причина своя:
+    // «нечего публиковать» и «опубликовали бы не то, что вы видели» — разные вещи,
+    // и второе требует посмотреть состав, а не нажать ещё раз наугад.
     const reason =
-      res.error === 'stale' ? 'stale' : res.error === 'empty' ? 'empty' : res.error === 'out-of-sync' ? 'outofsync' : 'nodraft'
+      res.error === 'stale'
+        ? 'stale'
+        : res.error === 'empty'
+          ? 'empty'
+          : res.error === 'out-of-sync'
+            ? 'outofsync'
+            : res.error === 'moved'
+              ? 'moved'
+              : 'nodraft'
     redirect(`/${handle}/${tpl.slug}/edit?e=${reason}`)
   }
 
