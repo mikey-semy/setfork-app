@@ -13,6 +13,7 @@ import { getAiSettings } from '@/shared/settings/ai'
 import { tr, trLoose, type Lang, type LocaleText } from '@/shared/i18n'
 import { pickExpert } from './pick-expert'
 import { digDepth } from './depth'
+import { formatHistory } from './history'
 import { findPrecedents } from '@/shared/ai/retrieval'
 import { pickPrecedentsDetailed } from '@/shared/ai/precedent-filter'
 
@@ -30,7 +31,6 @@ export interface DigChatMsg {
 }
 
 const DIG_RATE_PER_MIN = 6
-const HISTORY_TAIL = 8
 
 
 
@@ -89,10 +89,9 @@ export async function digChatAsk(input: {
   ]
     .filter(Boolean)
     .join('\n')
-  const hist = input.history
-    .slice(-HISTORY_TAIL)
-    .map((m) => `${m.role === 'user' ? 'USER' : 'GNOME'}: ${String(m.text).slice(0, 400)}`)
-    .join('\n')
+  // Хвост беседы — с ИМЕНАМИ говоривших (см. `formatHistory`): без них сменившийся
+  // мастер принимает реплики предшественника за свои.
+  const hist = formatHistory(input.history, roster, input.lang)
 
   // БАЗА ЗНАНИЙ ГНОМА. Раскопка шла вовсе без прецедентов: гном отвечал из общих знаний
   // модели, а наша библиотека — то, чем он отличается от чат-бота, — не участвовала.

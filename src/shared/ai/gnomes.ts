@@ -73,6 +73,11 @@ export interface GnomeSpeakOpts {
   maxTokens?: number
 }
 
+/** Имя мастера на языке ответа: им он подписан в ленте и им же себя называет. */
+const gname = (e: Expert, lang: Lang) => (lang === 'ru' ? e.nameRu : e.nameEn)
+/** Гильдия на языке ответа — цех, к которому он принадлежит (не имя и не должность). */
+const gguild = (e: Expert, lang: Lang) => (lang === 'ru' ? e.guildRu : e.guildEn)
+
 const forProviderOf = (provider: string) => (m: string) =>
   provider === 'yandex' ? m.startsWith('gpt://') : provider === 'gigachat' ? !m.includes('/') : true
 
@@ -122,7 +127,24 @@ export async function gnomeSpeak(
       bond = `\nYOU REMEMBER THIS PERSON: they have thanked you before${thanked >= 3 ? ' several times — a familiar, valued face' : ''}. A brief, genuine note of recognition fits if it feels natural — warm, never servile or overfamiliar.`
   }
 
-  const persona = `You are ${e.persona}
+  /**
+   * ⚠️ КАК ЕГО ЗОВУТ. Имя и гильдия жили ТОЛЬКО в подписи интерфейса: в промпт уходила
+   * одна профессия («a test engineer»), и сам мастер своего имени не знал. Расплата
+   * видна в упор — на прямой вопрос «Глоин, ты кто?» модель отвечала «я не Глоин, а
+   * Броккр» и придумывала себе имя из общего знания о гномах. Человек при этом выбрал
+   * собеседника руками и видел его подпись в шапке, так что выглядело это как сломанный
+   * выбор, хотя отвечал ровно тот, кого позвали.
+   *
+   * Имя и цех на языке ответа: по-русски он Глоин из Гильдии кодеров, а не Glóinn of the
+   * Coders' Guild. Имя отделено от ремесла намеренно — «повар» это цех, а не имя, и
+   * путать их значит разговаривать с функцией вместо собеседника.
+   */
+  const name = gname(e, opts.lang)
+  const guildName = gguild(e, opts.lang)
+  const identity = `You are ${name}${guildName ? `, of the ${guildName}` : ''} — ${e.persona}
+YOUR NAME IS ${name}: if asked who you are, give THIS name, never invent another one and never answer with your craft instead of your name.`
+
+  const persona = `${identity}
 Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now: ${mood}.` : ''}${reflection ? ` Where your craft stands: ${reflection}.` : ''}${bond}${guild}${memory}`
 
   // Аккуратность специалиста: вне ремесла — честная оговорка (generalist '*' — по всему).
@@ -133,8 +155,10 @@ Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now
   // Реальный созыв коллеги (MCP-подобное действие): только если дан ростер и гном не универсал.
   const others = (opts.summonRoster ?? []).filter((x) => x.id !== e.id && !x.domains.includes('*'))
   const canSummon = !opts.short && others.length > 0 && !e.domains.includes('*')
+  // ⚠️ В ростере созыва стоит ИМЯ коллеги, а не только id: без имени зовущий выкрикивал
+  // техническую строку («зову chef»), потому что имён соседнего цеха попросту не знал.
   const summonBlock = canSummon
-    ? `\nYOU CAN CALL A COLLEAGUE: if this question truly belongs to another craft, hand it off — reply with ONE short in-character line that you're calling them, then on the FINAL line put exactly "SUMMON: <id>" (id from ROSTER). Only for a real domain mismatch; if you can answer well, just answer. When summoning, do NOT add the NEXT line.\nROSTER (id: craft):\n${others.map((x) => `${x.id}: ${x.domains.join(', ')}`).join('\n')}`
+    ? `\nYOU CAN CALL A COLLEAGUE: if this question truly belongs to another craft, hand it off — reply with ONE short in-character line that you're calling them BY NAME, then on the FINAL line put exactly "SUMMON: <id>" (id from ROSTER). Only for a real domain mismatch; if you can answer well, just answer. When summoning, do NOT add the NEXT line.\nROSTER (id — name, craft):\n${others.map((x) => `${x.id} — ${gname(x, opts.lang)}${gguild(x, opts.lang) ? `, ${gguild(x, opts.lang)}` : ''}: ${x.domains.join(', ')}`).join('\n')}`
     : ''
 
   const followupsRule =
@@ -195,8 +219,6 @@ ${sp.rule()}`
     return null
   }
 }
-
-const gname = (e: Expert, lang: Lang) => (lang === 'ru' ? e.nameRu : e.nameEn)
 
 /**
  * Полный ход чата: гном отвечает, и если он РЕАЛЬНО созвал коллегу — тот входит

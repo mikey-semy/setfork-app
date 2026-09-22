@@ -1,0 +1,16 @@
+{
+  "target": "src/shared/ui/ChatDock.tsx",
+  "tests": ["tests/features/dig/dig-speaker.test.tsx"],
+  "mutants": [
+    {
+      "name": "подписи нет — голоса снова неразличимы",
+      "from": "                {speakerName?.(m.who) && <div className=\"text-caption font-medium text-muted\">{speakerName(m.who)}</div>}",
+      "to": "                {null}"
+    },
+    {
+      "name": "подпись всегда одна и та же: пришедший коллега выдан за первого",
+      "from": "                {speakerName?.(m.who) && <div className=\"text-caption font-medium text-muted\">{speakerName(m.who)}</div>}",
+      "to": "                {speakerName?.(messages[0]?.who) && <div className=\"text-caption font-medium text-muted\">{speakerName(messages[0]?.who)}</div>}"
+    }
+  ]
+}
