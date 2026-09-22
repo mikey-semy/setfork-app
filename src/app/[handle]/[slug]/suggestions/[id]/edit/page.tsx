@@ -8,6 +8,7 @@ import { t, tr } from '@/shared/i18n'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { FloatingActions } from '@/shared/ui/FloatingActions'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getItemPreviews, getSuggestion } from '@/features/library/queries'
 import { EditItemsForm } from '@/features/library/EditItemsForm'
@@ -89,13 +90,13 @@ export default async function EditSuggestionPage({
 
         <ListEditor name="items" initialItems={initial} lang={lang} />
 
-        {/* Primary — внизу справа (зона большого пальца); на мобиле кнопка во всю
-            ширину строки действий, чтобы не жаться к краю. */}
-        <div className="mt-6 flex justify-end">
-          <SubmitButton className="max-sm:w-full">
-            {t('saveChanges', lang)}
-          </SubmitButton>
-        </div>
+        {/* Плавающая панель, как в создании, правке и предложении: правку пунктов
+            открывают на списках любой длины, и кнопка в конце формы уезжает за экран.
+            Эту страницу нашла УЗДА, а не человек: я чинил три известные и не знал про
+            четвёртую — ровно то, ради чего узда и заведена. */}
+        <FloatingActions>
+          <SubmitButton className="shadow-card">{t('saveChanges', lang)}</SubmitButton>
+        </FloatingActions>
       </EditItemsForm>
     </div>
   )
