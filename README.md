@@ -1,3 +1,13 @@
+<p align="center">
+  <img src="docs/img/hero.webp" width="860"
+       alt="Шахта SetFork: гномы разбирают список, форкают его, ведут версии v1.0→v2.1, добывают ИИ-подсказки и обсуждают правки">
+</p>
+
+<p align="center">
+  <img src="docs/img/mark.webp" width="28" alt=""><br>
+  <em>Small lists, big possibilities</em>
+</p>
+
 # SetFork — списки-эталоны, которые создаёт сообщество и ИИ
 
 SetFork — площадка для **канонических списков-инструкций**: не статичный док и не

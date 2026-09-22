@@ -42,8 +42,16 @@ export function KeyboardDock({ scopeRef, children }: { scopeRef: RefObject<HTMLE
   }, [scopeRef])
 
   if (!docked) return children
+  // `data-keyboard-dock` — признак «полоса над клавиатурой сейчас занята». По нему
+  // плавающие действия формы прячутся: они садятся на 20px выше и накрыли бы правый край
+  // дока, то есть отмену и повтор. Тап по «отменить» отправлял бы форму, а на странице
+  // правки мог и ОПУБЛИКОВАТЬ версию (находка авто-ревью 22.09.2026, P1).
   return (
-    <div className={`fixed inset-x-0 border-t border-border bg-surface px-3 py-2 ${LAYER.sticky}`} style={{ bottom: gap }}>
+    <div
+      data-keyboard-dock
+      className={`fixed inset-x-0 border-t border-border bg-surface px-3 py-2 ${LAYER.sticky}`}
+      style={{ bottom: gap }}
+    >
       {children}
     </div>
   )

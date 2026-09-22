@@ -691,6 +691,7 @@ src/features/library/review-actions.ts	V1
 src/features/library/review-model.ts	V1
 src/features/library/review-queries.ts	V1
 src/features/library/sample-titles.ts	V1m
+src/features/library/save-outcome.ts	V1d
 src/features/library/saved-queries-actions.ts	V1m
 src/features/library/saved-queries.ts	V1m
 src/features/library/search-href.ts	V1g
@@ -1131,6 +1132,7 @@ src/shared/ui/EmojiPickerPopover.tsx	H7b
 src/shared/ui/EmptyState.tsx	H7
 src/shared/ui/Field.tsx	H7
 src/shared/ui/FilterMenu.tsx	H7b
+src/shared/ui/FloatingActions.tsx	H7
 src/shared/ui/FloatingBack.tsx	H7b
 src/shared/ui/FloatingInput.tsx	H7
 src/shared/ui/FormSaveBar.tsx	H7
@@ -1261,6 +1263,7 @@ tests/architecture/build-offline-fonts.test.ts	H12
 tests/architecture/button-class-merge.test.ts	H12
 tests/architecture/command-one-view.test.ts	H12
 tests/architecture/day-sensitive-list.test.ts	H12
+tests/architecture/editor-floating-actions.test.ts	H12
 tests/architecture/editor-previews-one-rule.mutants.json	H12
 tests/architecture/editor-previews-one-rule.test.ts	H12
 tests/architecture/font-size-merge.test.ts	H12
@@ -1404,6 +1407,8 @@ tests/features/library/delete-promise.test.ts	V1k,V1d
 tests/features/library/diff.test.ts	V1,V1k
 tests/features/library/dismiss-review.itest.ts	V1
 tests/features/library/domain-read-parity.itest.ts	V1h
+tests/features/library/draft-moved.mutants.json	V1d
+tests/features/library/draft-overwrite-visible.itest.ts	V1d
 tests/features/library/draft-publish.itest.ts	V1d
 tests/features/library/draft-tags-registry.itest.ts	V8c
 tests/features/library/drag-geometry.test.ts	V1k
@@ -1441,11 +1446,14 @@ tests/features/library/ownership-breadth.itest.ts	V1d
 tests/features/library/page-stability.itest.ts	V1g
 tests/features/library/pr-settings.test.ts	V1,V1k
 tests/features/library/publication-state.itest.ts	V1d
+tests/features/library/publish-still-eligible.itest.ts	V1d
 tests/features/library/publish.itest.ts	V1d
 tests/features/library/raw-contract.itest.ts	V1g
 tests/features/library/reindex-staleness.itest.ts	V1h
 tests/features/library/required-checks.itest.ts	V1
 tests/features/library/review-visibility.itest.ts	V1
+tests/features/library/save-outcome-tells.test.ts	V1k
+tests/features/library/save-outcome.mutants.json	V1d
 tests/features/library/script-dialect.test.ts	V1k
 tests/features/library/script-injection.test.ts	V1k
 tests/features/library/search-href.test.ts	V1g,V1k
@@ -1681,6 +1689,7 @@ tests/shared/ui/code-wrap.test.ts	H7c
 tests/shared/ui/command-text.test.tsx	H7c
 tests/shared/ui/copy-row.test.tsx	H7c
 tests/shared/ui/field-alert.test.tsx	H7c
+tests/shared/ui/floating-actions-dock.test.tsx	H7c
 tests/shared/ui/highlight-code.test.ts	H7c
 tests/shared/ui/markdown-editor.test.tsx	H7c
 tests/shared/ui/overlay-focus-stays.test.tsx	H7c

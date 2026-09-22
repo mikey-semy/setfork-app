@@ -35,6 +35,40 @@ const isBlocked = (row: { moderation: string }) => row.moderation === 'flagged' 
 const needsGate = (row: { moderation: string; visibility: string }) => row.visibility === 'public' && !isBlocked(row)
 
 /**
+ * Опубликовать черновик, ЕСЛИ он всё ещё черновик и всё ещё публикуемый.
+ *
+ * ⚠️ Условия стоят В САМОМ `UPDATE`, а не в предшествующем чтении. Между решением
+ * «публиковать» и записью у автономной петли проходят МИНУТЫ: вызов модели, три линзы
+ * готовности, проверка ссылок. За это время админ успевает снять список модерацией или
+ * заархивировать его — и безусловный `update … where id` публиковал вопреки этому
+ * решению, а журнал петли писал `list.publish` как успех.
+ *
+ * Владелец здесь НЕ проверяется, и это осознанно: садовник действует от `tenderId`
+ * (смотритель или он сам), владельцем списка быть не обязан, — требование `ownerId =
+ * userId`, как в `publishOwnedDrafts`, молча остановило бы автопубликацию вовсе.
+ * Поэтому повторены именно те условия, которые говорят о СОСТОЯНИИ списка.
+ *
+ * @returns опубликовали ли на самом деле — по числу затронутых строк, а не по тому,
+ * что мы прочитали минутой раньше.
+ */
+export async function publishIfStillEligible(templateId: string): Promise<boolean> {
+  const done = await db
+    .update(templates)
+    .set({ status: 'published', updatedAt: new Date() })
+    .where(
+      and(
+        eq(templates.id, templateId),
+        eq(templates.status, 'draft'),
+        isNull(templates.archivedAt),
+        isNull(templates.frozenAt),
+        notInArray(templates.moderation, ['flagged', 'hidden']),
+      ),
+    )
+    .returning({ id: templates.id })
+  return done.length > 0
+}
+
+/**
  * Куда засчитать список — ОДНО правило на план и на запись.
  *
  * Раньше их было два: план считал снятым модерацией любой такой список, а запись — только

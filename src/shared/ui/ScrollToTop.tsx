@@ -61,10 +61,19 @@ export function ScrollToTop({ label = 'Наверх' }: { label?: string }) {
     // высоты не хватало — кнопка «наверх» садилась ровно на её верхнюю кромку.
     const measure = () => setBarH(Math.max(0, window.innerHeight - bar.getBoundingClientRect().top))
     measure()
-    if (typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(measure)
-    ro.observe(bar)
-    return () => ro.disconnect()
+    // ⚠️ Панель может ПЕРЕЕХАТЬ, не изменившись в размере: действия редактора поднимаются
+    // над полосой клавиатуры, когда человек ставит фокус в поле. `ResizeObserver` на такое
+    // не срабатывает — он про размер, а не про положение, — и «наверх» осталась бы на
+    // прежней высоте, накрыв верх кнопки отправки (находка авто-ревью 22.09.2026).
+    // Поэтому вдобавок следим за атрибутами: переезд делается через `style`.
+    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(measure) : null
+    mo?.observe(bar, { attributes: true, attributeFilter: ['style', 'class'] })
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    ro?.observe(bar)
+    return () => {
+      mo?.disconnect()
+      ro?.disconnect()
+    }
   }, [bar])
 
   if (!show) return null
