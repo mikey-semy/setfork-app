@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useEffect } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePagePath } from '@/shared/i18n/use-page-path'
 import { Menu } from 'lucide-react'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
@@ -41,7 +41,7 @@ export function TopNav({
   unread?: number
   notifications?: NotificationItem[]
 }) {
-  const pathname = usePathname()
+  const pathname = usePagePath()
   const { toggle: toggleSidebar } = useSidebar() // ☰ = лого-символ списка + тумблер сайдбара
   const { crumb, title: crumbTitle, visibility, isListPage } = useCrumb(pathname)
   // На странице поиска поле в шапке не нужно: оно живёт в контенте во всю ширину.

@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
-import { isLang, DEFAULT_LANG, t, type Lang } from '@/shared/i18n'
+import { isLang, DEFAULT_LANG, LANG_COOKIE, t, type Lang } from '@/shared/i18n'
+import { negotiateLang } from '@/shared/i18n/negotiate'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { maintenanceEnabled } from '@/shared/settings/maintenance'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
+import { LANG_HEADER, langHref, splitLangPath } from '@/shared/i18n/url'
 import { dialectMime, errorScript, normalizeDialect } from '@/core/domain/script-dialect'
 
 // Режим «сайт на ремонте»: включается админом из /admin (флаг в БД, кэш 5с)
@@ -72,6 +74,68 @@ function pass(req: NextRequest): NextResponse {
 }
 
 /**
+ * ЯЗЫК ИЗ АДРЕСА: `/ru/explore` рисуется тем же маршрутом, что `/explore`, но по-русски.
+ *
+ * Зачем: до сентября 2026 языки жили по ОДНОМУ адресу, а выбирал `Accept-Language`.
+ * YandexBot его не шлёт и всегда получал английскую страницу — русского SetFork в
+ * индексе не существовало вовсе (аудит 22.09.2026, работа 1).
+ *
+ * Почему переписыванием, а не каталогом `app/[lang]/`: маршрутов и страниц под сотню,
+ * и физический перенос — это огромная правка ради одного сегмента адреса. Переписывание
+ * даёт ровно то, что нужно поисковику (свой адрес у каждого языка), не трогая структуру.
+ *
+ * ⚠️ ПРЕФИКС СНИМАЕТСЯ В НАЧАЛЕ, А ЯЗЫК ВОССТАНАВЛИВАЕТСЯ НА ВЫХОДЕ — одной функцией на
+ * все ветки. Первая редакция снимала префикс и сразу возвращала ответ, и всё, что
+ * middleware делает ниже, для `/ru/…` не происходило: `.md` к адресу списка давал 404,
+ * старые адреса «открытия» не перенаправлялись, а режим ремонта не включался вовсе —
+ * страница отдавалась и ходила в базу (две находки авто-ревью, третья — по их следу).
+ * Теперь правила смотрят на путь без префикса, как на любой другой, а этот выход
+ * только собирает ответ.
+ *
+ * Язык едет рендеру ДВУМЯ путями, и оба нужны:
+ *  • заголовком запроса — для ЭТОГО ответа: кука, поставленная ответом, текущий рендер
+ *    уже не видит;
+ *  • кукой — для СЛЕДУЮЩИХ переходов. Внутренние ссылки идут без префикса
+ *    (`/explore`), а корневой layout при клиентском переходе не перерисовывается. Без
+ *    куки гость, пришедший по `/ru/…`, первым же кликом получал страницу на языке
+ *    своего `Accept-Language`, а шапка оставалась русской — две половины экрана на
+ *    разных языках (находка авто-ревью к SEO-1).
+ *
+ * Куку ставим, как next-intl: только когда язык адреса РАСХОДИТСЯ с тем, что и так
+ * выбралось бы (кука, иначе `Accept-Language`). Совпадает — писать нечего. Атрибуты те
+ * же, что у переключателя языка в шапке: это тот же выбор, сделанный переходом по ссылке.
+ * Роботу кука ничего не меняет — он её не хранит и каждый адрес получает по префиксу.
+ */
+function proceed(req: NextRequest, lang: Lang | null, rest: string, target?: string): NextResponse {
+  if (!lang && !target) return pass(req)
+  const headers = new Headers(req.headers)
+  if (lang) headers.set(LANG_HEADER, lang)
+  // ⚠️ Путь БЕЗ префикса. Его читает сверка переехавших адресов (`moved-list.ts`), а она
+  // сравнивает с адресом, записанным при переезде, — там префикса нет и быть не может.
+  // С префиксом сравнение не совпадало НИКОГДА, и старая ссылка вида `/ru/old/list`
+  // уводила не туда, куда переехал список (находка авто-ревью).
+  //
+  // Язык при этом не теряется: он приезжает отдельным заголовком выше, и метаданные
+  // собирают из этой пары и адрес своего языка, и `hreflang`.
+  headers.set(REQUEST_PATH_HEADER, rest + req.nextUrl.search)
+  let url: URL
+  if (target) url = new URL(target, req.url)
+  else {
+    url = req.nextUrl.clone()
+    url.pathname = rest
+  }
+  const res = NextResponse.rewrite(url, { request: { headers } })
+  if (lang) {
+    const cookie = req.cookies.get(LANG_COOKIE)?.value
+    const current = isLang(cookie) ? cookie : negotiateLang(req.headers.get('accept-language'))
+    if (current !== lang) {
+      res.cookies.set(LANG_COOKIE, lang, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' })
+    }
+  }
+  return res
+}
+
+/**
  * Прежние адреса раздела «открытие» → их нынешние страницы.
  *
  * Вкладки жили параметрами одной страницы (`/explore?tab=trending&view=people`), а
@@ -83,13 +147,13 @@ function pass(req: NextRequest): NextResponse {
  * ответ оставался 200 со старой страницей). Тем же образом когда-то «не найдено»
  * уезжало с кодом 200. Маршрутизации здесь и место: ни базы, ни сессии не нужно.
  */
-function legacyExploreTarget(url: NextRequest['nextUrl']): string | null {
-  if (url.pathname !== '/explore') return null
-  const tab = url.searchParams.get('tab')
+function legacyExploreTarget(pathname: string, params: URLSearchParams): string | null {
+  if (pathname !== '/explore') return null
+  const tab = params.get('tab')
   if (tab === 'topics') return '/tags'
   if (tab === 'collections') return '/collections'
   if (tab !== 'trending') return null
-  if (url.searchParams.get('view') === 'people') return '/trending/people'
+  if (params.get('view') === 'people') return '/trending/people'
   // Период раздела убран (он давал одну и ту же выдачу на всех значениях), поэтому
   // старые адреса с `?range=` ведут на саму страницу, а не тащат мёртвый параметр.
   return '/trending'
@@ -106,8 +170,8 @@ function legacyExploreTarget(url: NextRequest['nextUrl']): string | null {
  * Только два сегмента: `/a/b.md` — список, а `/a/b/c.md` уже не он. Точка в слаге
  * невозможна (слаг строится транслитерацией), поэтому `.md` в конце однозначен.
  */
-function markdownSuffixTarget(url: URL): string | null {
-  const m = /^\/([^/]+)\/([^/]+)\.md$/.exec(url.pathname)
+function markdownSuffixTarget(pathname: string): string | null {
+  const m = /^\/([^/]+)\/([^/]+)\.md$/.exec(pathname)
   if (!m) return null
   const [, handle, slug] = m
   return `/${handle}/${slug}/export?format=md`
@@ -118,8 +182,13 @@ function markdownSuffixTarget(url: URL): string | null {
 const PROBE_PATHS = new Set(['/api/health', '/api/ready', '/healthz'])
 
 export async function middleware(req: NextRequest) {
-  const legacy = legacyExploreTarget(req.nextUrl)
-  if (legacy) return NextResponse.redirect(new URL(legacy, req.url), 308)
+  // Путь без языкового префикса — на нём держатся ВСЕ правила ниже; язык адреса
+  // возвращается в ответ на выходе (`proceed`).
+  const { lang: urlLang, rest: pathname } = splitLangPath(req.nextUrl.pathname)
+  const go = (target?: string) => proceed(req, urlLang, pathname, target)
+
+  const legacy = legacyExploreTarget(pathname, req.nextUrl.searchParams)
+  if (legacy) return NextResponse.redirect(new URL(urlLang ? langHref(legacy, urlLang) : legacy, req.url), 308)
 
   // ПРОБЫ ПРОПУСКАЕМ ДО обращения к БД. `maintenanceEnabled()` ходит в ту же
   // базу и своего потолка ожидания не имеет: при исчерпанном пуле или зависшем
@@ -132,7 +201,6 @@ export async function middleware(req: NextRequest) {
   // из роутинга → 404 на весь сайт, и заглушка «ремонт» даже не показывается).
   // /api/ready — readiness для внешнего монитора: она обязана отвечать САМА,
   // в том числе когда база мертва (в этом её работа), и в ремонте тоже.
-  const { pathname } = req.nextUrl
   // ⚠️ `/healthz` — ТОТ ЖЕ ОБХОД. Это общепринятый адрес пробы, и внешний монитор ходит
   // именно туда. Без этой строки он не начинается с `/api/`, значит в ремонте уходит в
   // ЧЕЛОВЕЧЕСКУЮ ветку и отвечает 503 с HTML-страницей: балансировщик выкидывает живой
@@ -143,21 +211,20 @@ export async function middleware(req: NextRequest) {
   // предела ожидания не имеет: проба перевалила бы за таймаут и здоровый контейнер
   // получил бы перезапуск. Ровно перевёрнутый сигнал, ради починки которого адрес и
   // заведён.
-  if (PROBE_PATHS.has(pathname)) return pass(req)
+  if (PROBE_PATHS.has(pathname)) return go()
 
   if (!(await maintenanceEnabled())) {
     // ⚠️ `.md` ПОСЛЕ проверки режима, а не до неё. Стоя выше, переписывание отдавало
     // 200 с полным содержимым и продолжало ходить в базу ровно тогда, когда режим
     // обслуживания существует, чтобы база молчала. Машинная поверхность — не повод
     // обходить ремонт: `/raw` и `/api/` его не обходят.
-    const md = markdownSuffixTarget(req.nextUrl)
-    return md ? NextResponse.rewrite(new URL(md, req.url)) : pass(req)
+    return go(markdownSuffixTarget(pathname) ?? undefined)
   }
   // Дверь для админа: страница входа и auth-эндпоинты (GitHub OAuth, POST
   // server actions самого /login) остаются открыты.
-  if (pathname === '/login' || pathname.startsWith('/api/auth/')) return pass(req)
+  if (pathname === '/login' || pathname.startsWith('/api/auth/')) return go()
 
-  if (await isAdminRequest(req)) return pass(req)
+  if (await isAdminRequest(req)) return go()
 
   // Машинные поверхности — короткий text/plain (curl, git, MCP, ридеры фидов).
   const machine =
@@ -202,8 +269,9 @@ export async function middleware(req: NextRequest) {
     })
   }
 
-  const raw = req.cookies.get('lang')?.value ?? ''
-  const lang = isLang(raw) ? raw : DEFAULT_LANG
+  // Заглушка — на языке адреса, если он есть: человек пришёл по `/ru/…`.
+  const raw = req.cookies.get(LANG_COOKIE)?.value ?? ''
+  const lang = urlLang ?? (isLang(raw) ? raw : DEFAULT_LANG)
   return new NextResponse(maintenanceHtml(lang), {
     status: 503,
     headers: { 'Retry-After': RETRY_AFTER_SEC, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
