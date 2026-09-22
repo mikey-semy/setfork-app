@@ -30,7 +30,10 @@ export function FloatingActions({ children }: { children: ReactNode }) {
   // висит посередине. Это уже было жалобой владельца 03.08.2026 про чат и «наверх»;
   // в странице создания поправку не применили, и там кнопка вела себя так же.
   const { gap } = useViewportBottom()
-  const [dockBusy, setDockBusy] = useState(false)
+  const [dockHeight, setDockHeight] = useState(0)
+  // Отдельной переменной, а не выражением в зависимостях: линт требует, чтобы состав
+  // зависимостей можно было проверить статически.
+  const docked = dockHeight > 0
 
   // ⚠️ Пока человек правит текст, полосу над клавиатурой занимает `KeyboardDock` с
   // отменой и повтором — он садится на `bottom: gap`, а панель встала бы на 20px выше
@@ -38,22 +41,37 @@ export function FloatingActions({ children }: { children: ReactNode }) {
   // правки мог и ОПУБЛИКОВАТЬ версию: кнопка публикации ровно там и оказывается
   // (находка авто-ревью 22.09.2026, P1).
   //
-  // Прячем панель целиком, а не сдвигаем: правя текст, человек тянется к отмене, а не
-  // к «Сохранить», и две панели друг над другом на узком экране съедают треть высоты.
-  // Как только фокус уходит из поля, док исчезает и панель возвращается.
-  //
-  // Слежение — как у `ScrollToTop` за `[data-sticky-input]`: док появляется и исчезает
-  // по фокусу, и без наблюдения за DOM панель узнала бы об этом только на следующей
-  // перерисовке, то есть уже налезши.
+  // ⚠️ Первая починка ПРЯТАЛА панель целиком — и передвинула беду, а не убрала:
+  //   · кнопка «наверх» ищет нижнюю панель по `[data-sticky-input]`; исчезала она —
+  //     и «наверх» садилась ровно на правый край дока, то есть на ту же отмену;
+  //   · док включается по фокусу на узком экране, даже если клавиатура физическая:
+  //     человек, идущий по форме табом, переставал находить «Сохранить» и
+  //     «Опубликовать» вовсе — они пропадали из дерева.
+  // Поэтому панель не исчезает, а ВСТАЁТ НАД доком: обе полосы доступны, порядок
+  // обхода цел, а «наверх» по-прежнему видит панель и садится выше неё.
   useEffect(() => {
-    const find = () => setDockBusy(!!document.querySelector('[data-keyboard-dock]'))
-    find()
-    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(find) : null
+    const measure = () => {
+      const dock = document.querySelector<HTMLElement>('[data-keyboard-dock]')
+      setDockHeight(dock ? dock.getBoundingClientRect().height : 0)
+    }
+    measure()
+    // Док появляется и исчезает по фокусу, а его высота меняется от переноса кнопок:
+    // следим и за деревом, и за размером — одного наблюдателя мало.
+    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(measure) : null
     mo?.observe(document.body, { childList: true, subtree: true })
-    return () => mo?.disconnect()
-  }, [])
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    const dock = document.querySelector('[data-keyboard-dock]')
+    if (dock && ro) ro.observe(dock)
+    window.addEventListener('resize', measure)
+    return () => {
+      mo?.disconnect()
+      ro?.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [docked])
 
-  if (dockBusy) return null
+  // Над доком — с зазором, чтобы полосы не слипались; без дока — обычные 20px от низа.
+  const bottom = gap + (docked ? dockHeight + 12 : 20)
   return (
     <div
       // `data-sticky-input` — общий признак нижней плавающей панели: по нему кнопка
@@ -64,12 +82,12 @@ export function FloatingActions({ children }: { children: ReactNode }) {
       // выбор, док чата), и они получали бы 112px пустоты на своих экранах, а временные
       // — ещё и дёргали бы высоту документа при появлении (находка авто-ревью).
       data-floating-actions
-      style={gap ? { bottom: gap + 20 } : undefined}
+      style={{ bottom }}
       // ⚠️ Ширина ограничена, и кнопки переносятся. На 320px две кнопки с русскими
       // подписями («Сохранить черновик» + «Опубликовать v5») уезжали влево на плавающий
       // «назад» и перекрывали его — обе панели на одном слое, а эта рисуется позже
       // (находка авто-ревью, P2). 4.5rem слева — место под ту кнопку с её отступами.
-      className={`fixed right-5 z-40 flex max-w-[calc(100vw-4.5rem)] flex-wrap items-center justify-end gap-2 print:hidden ${gap ? '' : 'bottom-5'}`}
+      className="fixed right-5 z-40 flex max-w-[calc(100vw-4.5rem)] flex-wrap items-center justify-end gap-2 print:hidden"
     >
       {children}
     </div>
