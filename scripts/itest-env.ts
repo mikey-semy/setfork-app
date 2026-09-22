@@ -50,12 +50,31 @@ function waitFor(what: string, check: () => boolean, seconds = 90) {
   throw new Error(`${what} не поднялся за ${seconds}с — посмотри docker logs`)
 }
 
+/** Существует ли контейнер — безотносительно того, отвечает ли он. */
+function exists(name: string): boolean {
+  return spawnSync('docker', ['inspect', '--format', '{{.Name}}', name]).status === 0
+}
+
 /**
- * Отвечает ли уже поднятое окружение. Настоящим запросом, а не `docker inspect`:
- * контейнер может «бежать» и не принимать соединения.
+ * ГОТОВО ЛИ ОКРУЖЕНИЕ ЦЕЛИКОМ, а не только база.
+ *
+ * ⚠️ Проверять один Postgres мало: `db:init` мог упасть, ядро — свалиться, а порт ядра
+ * поменяться при неизменном порте базы. Тогда `up` сказал бы «уже поднято» и вернул
+ * переменные для окружения, в котором нет схемы или нет ядра, — прогон упал бы дальше и
+ * непонятно где (находка авто-ревью 22.09.2026).
+ *
+ * Схему проверяем существованием таблицы, а не фактом «psql отвечает»: пустая база
+ * отвечает так же бодро, как накатанная.
  */
-function alive(): boolean {
-  return spawnSync('docker', ['exec', PG, 'psql', '-U', 'ci', '-d', 'ci', '-c', 'select 1']).status === 0
+function ready(): boolean {
+  const pg = spawnSync('docker', ['exec', PG, 'psql', '-U', 'ci', '-d', 'ci', '-c', 'select 1']).status === 0
+  if (!pg) return false
+  const schema =
+    spawnSync('docker', ['exec', PG, 'psql', '-U', 'ci', '-d', 'ci', '-tAc', "select to_regclass('public.templates') is not null"])
+      .stdout?.toString()
+      .trim() === 't'
+  const core = docker(['inspect', '--format', '{{.State.Health.Status}}', CORE]) === 'healthy'
+  return schema && core
 }
 
 function up() {
@@ -69,9 +88,33 @@ function up() {
   // одного порта защиты не было вовсе — этот случай и закрывается.
   //
   // Пересоздать нарочно: `itest-env.ts down` и затем `up`, либо `up --recreate`.
-  if (!process.argv.includes('--recreate') && alive()) {
-    out(`окружение на порту ${PG_PORT} уже поднято и отвечает — оставляю как есть`)
+  const forced = process.argv.includes('--recreate')
+  if (!forced && ready()) {
+    out(`окружение на порту ${PG_PORT} уже поднято целиком (база, схема, ядро) — оставляю как есть`)
     out('пересоздать нарочно: npx tsx scripts/itest-env.ts down && npx tsx scripts/itest-env.ts up')
+    printEnv()
+    return
+  }
+
+  // ⚠️ НЕ ОТВЕЧАЕТ — ещё не значит «можно сносить». Если контейнер СУЩЕСТВУЕТ, но проба
+  // молчит, он может быть в процессе старта: два `up` внахлёст, и второй снёс бы базу,
+  // которую первый как раз поднимает — ровно тот случай, ради которого вся эта ветка и
+  // написана (находка авто-ревью). Поэтому ждём, пока он договорится сам, и сносим
+  // только по явному требованию.
+  if (!forced && exists(PG)) {
+    out(`контейнер ${PG} существует, но окружение ещё не готово — жду, не снося`)
+    // ⚠️ `waitFor` БРОСАЕТ при неудаче, а не возвращает признак: проверка возвращённого
+    // значения была бы мёртвой веткой. Перехватываем и объясняем по-человечески — здесь
+    // «не дождались» значит не «сломано», а «возможно, поднимает кто-то другой».
+    try {
+      waitFor('окружение', () => ready(), 120)
+    } catch {
+      throw new Error(
+        `окружение на порту ${PG_PORT} не поднялось за 120 с и НЕ снесено: возможно, его поднимает другой прогон. ` +
+          'Если оно точно ничьё — `itest-env.ts down`, затем `up`, либо `up --recreate`.',
+      )
+    }
+    out('дождался: окружение поднялось')
     printEnv()
     return
   }
