@@ -2,6 +2,8 @@ import 'server-only'
 import { headers } from 'next/headers'
 import { permanentRedirect } from 'next/navigation'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
+import { isLang } from '@/shared/i18n'
+import { LANG_HEADER, langHref } from '@/shared/i18n/url'
 import { resolveListOrMoved, resolveUserByHandle } from './resolve-list'
 
 /**
@@ -40,8 +42,16 @@ export function movedPath(requestPath: string | null, from: string, to: string):
  * а смысл у них один.
  */
 export async function permanentRedirectTo(from: string, to: string): Promise<never> {
-  const requestPath = (await headers()).get(REQUEST_PATH_HEADER)
-  permanentRedirect(movedPath(requestPath, from, to))
+  const h = await headers()
+  const requestPath = h.get(REQUEST_PATH_HEADER)
+  const target = movedPath(requestPath, from, to)
+  // ⚠️ Язык из адреса НЕ теряем при переезде. Путь приходит сюда уже без префикса (его
+  // снимает middleware, чтобы сверка с адресом переезда сравнивала сравнимое), а язык —
+  // отдельным заголовком. Без этой строки старая ссылка `/ru/old/list` уводила бы на
+  // `/new/list` — страницу без языка в адресе, то есть ровно в то состояние, из-за
+  // которого русская версия и была невидима поисковику.
+  const lang = h.get(LANG_HEADER)
+  permanentRedirect(isLang(lang) ? langHref(target, lang) : target)
 }
 
 /**

@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/shared/providers/theme-provider'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { t, isLang } from '@/shared/i18n'
 import { avatarSrc } from '@/shared/media'
 import { getBrowserNotifyEnabled, getNotifications, getUnreadCount } from '@/features/notifications/queries'
 import { getUserTemplates } from '@/features/library/queries'
@@ -30,7 +30,7 @@ import { ScrollToTop } from '@/shared/ui/ScrollToTop'
 import './globals.css'
 import { SITE_ORIGIN } from '@/shared/site'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
-import { langAlternates, langHref, splitLangPath } from '@/shared/i18n/url'
+import { LANG_HEADER, langAlternates, langHref, splitLangPath } from '@/shared/i18n/url'
 
 /**
  * ШРИФТЫ ЛЕЖАТ В РЕПОЗИТОРИИ, а не качаются на сборке.
@@ -133,7 +133,12 @@ export async function generateMetadata(): Promise<Metadata> {
   // Путь ставит middleware: в самих метаданных адреса запроса нет.
   const raw = h.get(REQUEST_PATH_HEADER) ?? '/'
   const path = raw.split('?')[0] || '/'
-  const { lang: fromPath, rest } = splitLangPath(path)
+  // ⚠️ Язык — из СВОЕГО заголовка, а не из пути: путь здесь уже без префикса (его снял
+  // middleware, чтобы сверка переехавших адресов сравнивала сравнимое). Разбор пути
+  // оставлен для случая, когда заголовка нет вовсе — например, при прямом рендере.
+  const fromHeader = h.get(LANG_HEADER)
+  const { lang: inPath, rest } = splitLangPath(path)
+  const fromPath = isLang(fromHeader) ? fromHeader : inPath
   const { languages, xDefault } = langAlternates(path)
   return {
     ...baseMetadata,

@@ -78,6 +78,8 @@ docs/review/reports/V1d-list-write.hunter.md	V12c
 docs/review/reports/V1d-list-write.verify.md	V12c
 docs/review/state.json	V12e
 docs/rust-core-plan.md	V12c
+docs/seo-audit-2026-09.md	V12c
+docs/seo/home-cache-2026-09.md	V12c
 drizzle.config.ts	H13
 eslint-suppressions.json	H13
 eslint.config.mjs	H13
@@ -1029,6 +1031,7 @@ src/shared/i18n/dict/ru.ts	H6
 src/shared/i18n/index.ts	H6
 src/shared/i18n/negotiate.ts	H6
 src/shared/i18n/server.ts	H6
+src/shared/i18n/url.ts	H6
 src/shared/jobs/backoff.ts	H10
 src/shared/jobs/error.ts	H10
 src/shared/jobs/queue.ts	H10

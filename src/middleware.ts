@@ -94,7 +94,14 @@ function stripLangPrefix(req: NextRequest): NextResponse | null {
   url.pathname = rest
   const headers = new Headers(req.headers)
   headers.set(LANG_HEADER, lang)
-  headers.set(REQUEST_PATH_HEADER, req.nextUrl.pathname + req.nextUrl.search)
+  // ⚠️ Путь БЕЗ префикса. Его читает сверка переехавших адресов (`moved-list.ts`), а она
+  // сравнивает с адресом, записанным при переезде, — там префикса нет и быть не может.
+  // С префиксом сравнение не совпадало НИКОГДА, и старая ссылка вида `/ru/old/list`
+  // уводила не туда, куда переехал список (находка авто-ревью).
+  //
+  // Язык при этом не теряется: он приезжает отдельным заголовком выше, и метаданные
+  // собирают из этой пары и адрес своего языка, и `hreflang`.
+  headers.set(REQUEST_PATH_HEADER, rest + req.nextUrl.search)
   return NextResponse.rewrite(url, { request: { headers } })
 }
 
