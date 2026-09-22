@@ -1,3 +1,5 @@
+import type { Metadata } from 'next'
+import { withLang } from '@/shared/seo/with-lang'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { FolderGit2 } from 'lucide-react'
@@ -17,7 +19,7 @@ import { PAGE } from '@/shared/ui/control'
  *  уже разошлись на именах с пробелом и кириллицей. */
 const catalogPath = (handle: string, name: string) => `/${handle}/catalogs/${name}`
 
-export async function generateMetadata({
+async function baseMetadata({
   params,
   searchParams,
 }: {
@@ -37,6 +39,13 @@ export async function generateMetadata({
     },
   }
 }
+
+// Канон и `og:url` — на языке адреса, плюс `hreflang` (см. `withLang`): страница собирает
+// метаданные сама, мимо `pageMeta`, и без обёртки назвала бы каноном версию без языка.
+export async function generateMetadata(props: Parameters<typeof baseMetadata>[0]): Promise<Metadata> {
+  return withLang(await baseMetadata(props))
+}
+
 
 export default async function CatalogPage({
   params,

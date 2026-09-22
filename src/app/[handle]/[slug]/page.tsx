@@ -3,6 +3,7 @@
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
 import type { Metadata } from 'next'
+import { withLang } from '@/shared/seo/with-lang'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { DigChatHost } from '@/features/dig/DigChat'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -33,7 +34,7 @@ import { loadListPage } from './load'
  * показывалось название САЙТА, а не название списка (замер 28.08). То же и с
  * `description`: свой заголовок был, описание приезжало общесайтовое.
  */
-export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }): Promise<Metadata> {
+async function baseMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }): Promise<Metadata> {
   const { handle, slug } = await params
   // Вкладка браузера = человеческий title, а не slug (title гейтит requireViewableMeta).
   const [meta, lang] = await Promise.all([requireViewableMeta(handle, slug), getLang()])
@@ -56,6 +57,13 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
     twitter: { card: 'summary_large_image', title, description },
   }
 }
+
+// Канон и `og:url` — на языке адреса, плюс `hreflang` (см. `withLang`): страница собирает
+// метаданные сама, мимо `pageMeta`, и без обёртки назвала бы каноном версию без языка.
+export async function generateMetadata(props: Parameters<typeof baseMetadata>[0]): Promise<Metadata> {
+  return withLang(await baseMetadata(props))
+}
+
 
 /** Описание для поисковика: своё, если автор его написал, иначе честная замена.
  *  Режем по границе слова — обрезка на середине слова читается как поломка. */
