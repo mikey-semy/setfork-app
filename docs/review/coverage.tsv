@@ -67,9 +67,9 @@ docs/review/reports/H1-findings.jsonl	V12e
 docs/review/reports/H15-domain-core.hunter.md	V12c
 docs/review/reports/H15-domain-core.verify.md	V12c
 docs/review/reports/H15-findings.jsonl	V12e
+docs/review/reports/H2-core-contract.hunter.md	V12c
+docs/review/reports/H2-core-contract.verify.md	V12c
 docs/review/reports/H2-findings.jsonl	V12e
-docs/review/reports/H2-git-contract.hunter.md	V12c
-docs/review/reports/H2-git-contract.verify.md	V12c
 docs/review/reports/V1d-findings.jsonl	V12e
 docs/review/reports/V1d-list-write.hunter.md	V12c
 docs/review/reports/V1d-list-write.verify.md	V12c
