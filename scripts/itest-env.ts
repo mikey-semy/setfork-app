@@ -50,6 +50,20 @@ function waitFor(what: string, check: () => boolean, seconds = 90) {
   throw new Error(`${what} не поднялся за ${seconds}с — посмотри docker logs`)
 }
 
+/**
+ * Порт, на который контейнер ядра РЕАЛЬНО проброшен, — или `null`, если его нет.
+ *
+ * ⚠️ Имя ядра выводится из порта БАЗЫ, не из своего: сменив `ITEST_CORE_PORT` при
+ * прежнем `ITEST_PG_PORT`, получаешь тот же контейнер со старым пробросом. Проверка
+ * «healthy» его пропускала, а `printEnv` объявлял новый адрес, где никто не слушает
+ * (находка авто-ревью 22.09.2026).
+ */
+function corePublishedPort(): string | null {
+  const line = docker(['port', CORE, '50051/tcp']).split('\n')[0] ?? ''
+  const m = /:(\d+)$/.exec(line.trim())
+  return m ? m[1] : null
+}
+
 /** Существует ли контейнер — безотносительно того, отвечает ли он. */
 function exists(name: string): boolean {
   return spawnSync('docker', ['inspect', '--format', '{{.Name}}', name]).status === 0
@@ -77,6 +91,38 @@ function ready(): boolean {
   return schema && core
 }
 
+/**
+ * Ядро поднято на ДРУГОМ порту, чем просят сейчас. Не «не готово», а другое окружение:
+ * ждать бесполезно — оно так и останется на старом порту. Сносить молча тоже нельзя:
+ * им может пользоваться идущий прогон, для этого вся проверка и заведена.
+ */
+function assertCorePort() {
+  if (!exists(CORE)) return
+  const actual = corePublishedPort()
+  if (actual && actual !== CORE_PORT) {
+    throw new Error(
+      `ядро окружения на порту базы ${PG_PORT} проброшено на ${actual}, а просят ${CORE_PORT}. ` +
+        `Верни ITEST_CORE_PORT=${actual} или пересоздай нарочно: \`itest-env.ts up --recreate\`.`,
+    )
+  }
+}
+
+/**
+ * Довести схему живой базы до ТЕКУЩЕГО кода.
+ *
+ * ⚠️ Проба `ready()` знает лишь, что схему когда-то накатывали, — одна таблица не
+ * говорит, накатана ли ЭТА схема. После переключения на ветку с новой колонкой прогон
+ * шёл бы по старой базе (находка авто-ревью). Сверять таблицы по списку здесь значило бы
+ * завести вторую копию схемы, которая отстанет. `db:init` — это `drizzle-kit push`: он
+ * сам сравнивает базу со схемой целиком и на совпадающей ничего не трогает, так что
+ * повторный вызов дёшев и безопасен для идущего прогона.
+ */
+function syncSchema() {
+  out('схема: свожу живую базу с текущим кодом (db:init)…')
+  const init = spawnSync('npm', ['run', 'db:init'], { stdio: 'inherit', shell: true, env: { ...process.env, DATABASE_URL } })
+  if (init.status !== 0) throw new Error('db:init не прошёл на живой базе — схема не совпадает с кодом, прогон по ней бессмыслен')
+}
+
 function up() {
   // ⚠️ ЖИВОЕ ОКРУЖЕНИЕ НЕ СНОСИМ. Раньше `up` безусловно начинался с `docker rm -f`, и
   // второй запуск — в соседней вкладке, по ошибке, из привычки — убивал базу ИДУЩЕГО
@@ -89,8 +135,10 @@ function up() {
   //
   // Пересоздать нарочно: `itest-env.ts down` и затем `up`, либо `up --recreate`.
   const forced = process.argv.includes('--recreate')
+  if (!forced) assertCorePort()
   if (!forced && ready()) {
     out(`окружение на порту ${PG_PORT} уже поднято целиком (база, схема, ядро) — оставляю как есть`)
+    syncSchema()
     out('пересоздать нарочно: npx tsx scripts/itest-env.ts down && npx tsx scripts/itest-env.ts up')
     printEnv()
     return
@@ -115,6 +163,7 @@ function up() {
       )
     }
     out('дождался: окружение поднялось')
+    syncSchema()
     printEnv()
     return
   }
