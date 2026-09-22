@@ -1019,7 +1019,13 @@ def cmd_check(args) -> int:
                 f"«по общим соображениям»; раздел «Гипотезы», по пункту на гипотезу"
             )
             continue
-        if stt not in ("verified", "closed"):
+        # ⚠️ Раньше здесь стояло `not in ("verified", "closed")`, и статусы МЕЖДУ ними —
+        # `triaged`, `fixing` — проверку пропускали. Значит `set-status <блок> triaged`
+        # озеленял падающий гейт, не добавив ни одного вердикта: блок уходил дальше по
+        # процессу, а гипотезы так и оставались без ответа. Инвариант держится на всех
+        # состояниях ПОСЛЕ проверки, а не на двух выбранных.
+        after_verified = stt in STATUSES and STATUSES.index(stt) >= STATUSES.index("verified")
+        if not after_verified or stt == "blocked":
             continue
         seen = verdicts_for(b)
         missing = [h for h in ids if h not in seen]

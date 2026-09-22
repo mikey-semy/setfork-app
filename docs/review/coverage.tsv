@@ -1,4 +1,4 @@
-# коммит defdda04
+# коммит ff521254
 file	blocks
 .claude/hooks/ui-guard.mjs	V12c
 .claude/launch.json	V12c
@@ -1226,11 +1226,14 @@ tests/app/sitemap-verification.itest.ts	V12d
 tests/app/sitemap.itest.ts	V12d
 tests/app/telegram-link-page.test.tsx	V12d
 tests/architecture/audit-gate-split.test.ts	H12
+tests/architecture/block-fields-reach-the-wire.mutants.json	H12
 tests/architecture/block-fields-reach-the-wire.test.ts	H12
 tests/architecture/build-offline-fonts.test.ts	H12
 tests/architecture/button-class-merge.test.ts	H12
 tests/architecture/command-one-view.test.ts	H12
 tests/architecture/day-sensitive-list.test.ts	H12
+tests/architecture/editor-previews-one-rule.mutants.json	H12
+tests/architecture/editor-previews-one-rule.test.ts	H12
 tests/architecture/font-size-merge.test.ts	H12
 tests/architecture/gate-reason-codes.test.ts	H12
 tests/architecture/gnomes-coupling.test.ts	H12
