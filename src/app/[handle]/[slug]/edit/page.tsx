@@ -20,6 +20,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { Alert } from '@/shared/ui/Alert'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { FloatingActions } from '@/shared/ui/FloatingActions'
 import { timeAgo } from '@/shared/ui/timeAgo'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -185,17 +186,24 @@ export default async function EditPage({
             сейчас, а не прошлое сохранение (иначе дописанное пропадает молча).
             SubmitButton сам блокируется на время отправки — публикация это git-коммит,
             и второй клик создавал бы вторую версию. */}
-        <div className="mt-6 flex flex-wrap items-center gap-2">
-          <SubmitButton variant="outline" className="max-sm:flex-1">
+        <p className="mt-6 text-body-sm text-muted">{t('draftKeepsVersion', lang)}</p>
+
+        {/* Кнопки — в ПЛАВАЮЩЕЙ панели, а не последней строкой: правят как раз длинные
+            списки, и на списке в 120 пунктов владелец до конца страницы не добрался
+            вовсе. Обе живут в ОДНОЙ форме: публикация обязана взять то, что человек
+            видит сейчас, а не прошлое сохранение (иначе дописанное пропадает молча).
+            SubmitButton сам блокируется на время отправки — публикация это git-коммит,
+            и второй клик создавал бы вторую версию. */}
+        <FloatingActions>
+          <SubmitButton variant="outline" className="shadow-card">
             {t('saveDraft', lang)}
           </SubmitButton>
           {!stale && (
-            <SubmitButton variant="primary" className="max-sm:flex-1" formAction={publishEdits.bind(null, tpl.id)}>
+            <SubmitButton variant="primary" className="shadow-card" formAction={publishEdits.bind(null, tpl.id)}>
               {t('publishVersion', lang).replace('{v}', String(tpl.currentVersion + 1))}
             </SubmitButton>
           )}
-        </div>
-        <p className="mt-2 text-body-sm text-muted">{t('draftKeepsVersion', lang)}</p>
+        </FloatingActions>
       </form>
 
       {draft && (
