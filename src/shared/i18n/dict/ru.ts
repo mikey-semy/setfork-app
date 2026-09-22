@@ -969,6 +969,7 @@ export const ru: Record<DictKey, string> = {
   detailed: 'Подробно',
   compact: 'Кратко',
   markDone: 'Отметить',
+  expand: 'Развернуть',
   collapse: 'Свернуть',
   subTasks: 'Подшаги',
   references: 'Ссылки',

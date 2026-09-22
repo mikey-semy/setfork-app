@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChatComposer } from './ChatComposer'
+import { Maximize2, Minimize2 } from 'lucide-react'
 import { PanelFoot, PanelHead } from './panel-parts'
+import { IconButton } from './IconButton'
 import { GnomeAvatar } from './GnomeAvatar'
 import { Markdown } from './Markdown'
 import { Button } from './button'
@@ -23,6 +25,11 @@ import { Spinner } from '@/shared/ui/Spinner'
  * visual viewport — панели мобильного браузера, открытая клавиатура — окно иначе
  * встаёт посреди экрана. `data-sticky-input` — общий признак нижней панели, по нему
  * кнопка «наверх» садится выше.
+ *
+ * РАЗВОРОТ НА ВЕСЬ ЭКРАН (просьба владельца). В углу окно занимает от силы 70% высоты
+ * телефона, и длинный разговор читается в щель на несколько реплик. Развёрнутое окно
+ * отдаёт ленте всё видимое место; низ по-прежнему считается от ВИДИМОГО низа, иначе
+ * открытая клавиатура спрячет под собой поле ввода.
  */
 export type ChatBubble = { role: 'user' | 'gnome'; text: string; who?: string }
 
@@ -46,6 +53,7 @@ export function ChatDock({
   sendAriaLabel,
   sendTooltip,
   bubbleActions,
+  speakerName,
   footer,
   lang,
 }: {
@@ -72,11 +80,18 @@ export function ChatDock({
   sendTooltip: string
   /** Действия под ответом: «спасибо» и копирование у раскопки, «применить» у правки. */
   bubbleActions?: (index: number, message: ChatBubble) => ReactNode
+  /**
+   * Подпись отвечавшего по `who` (имя, при желании с цехом). Без неё реплики разных
+   * мастеров отличаются только аватаркой: когда мастер передаёт вопрос коллеге, в ленте
+   * молча появляется второй голос, и понять, кто пришёл, не по чему.
+   */
+  speakerName?: (who?: string) => string
   /** Постоянная строка под лентой — например, предупреждение о перезаписи. */
   footer?: ReactNode
   lang: Lang
 }) {
   const { gap, visibleHeight } = useViewportBottom()
+  const [full, setFull] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const lastReplyRef = useRef<HTMLDivElement>(null)
 
@@ -94,8 +109,20 @@ export function ChatDock({
   return (
     <div
       data-sticky-input
-      style={gap ? { bottom: gap + 16, maxHeight: Math.round(visibleHeight * 0.7) } : undefined}
-      className={`fixed right-4 bottom-4 flex cap-screen w-panel-xl cap-viewport flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card ${LAYER.modal}`}
+      style={
+        full
+          ? gap
+            ? { bottom: gap } // развёрнуто: от видимого низа до самого верха
+            : undefined
+          : gap
+            ? { bottom: gap + 16, maxHeight: Math.round(visibleHeight * 0.7) }
+            : undefined
+      }
+      className={`fixed flex flex-col overflow-hidden border-border bg-surface ${LAYER.modal} ${
+        full
+          ? 'inset-0 rounded-none border-0 sm:inset-4 sm:rounded-lg sm:border sm:shadow-card'
+          : 'right-4 bottom-4 cap-screen w-panel-xl cap-viewport rounded-lg border shadow-card'
+      }`}
     >
       <PanelHead
         icon={icon}
@@ -104,6 +131,17 @@ export function ChatDock({
             <div className="truncate">{title}</div>
             {subtitle}
           </>
+        }
+        actions={
+          <IconButton
+            variant="ghost"
+            size="sm"
+            touch="hit"
+            label={full ? t('collapse', lang) : t('expand', lang)}
+            onClick={() => setFull((v) => !v)}
+          >
+            {full ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </IconButton>
         }
         onClose={onClose}
         closeLabel={t('close', lang)}
@@ -120,6 +158,7 @@ export function ChatDock({
             <div key={i} ref={i === messages.length - 1 ? lastReplyRef : undefined} className="group flex items-start gap-2">
               <GnomeAvatar src={`/gnomes/${m.who ?? 'generalist'}.webp`} size={32} className="size-8 shrink-0" />
               <div className="min-w-0 rounded-2xl rounded-bl-md bg-surface-2 px-3 py-1.5">
+                {speakerName?.(m.who) && <div className="text-caption font-medium text-muted">{speakerName(m.who)}</div>}
                 <Markdown className="text-body leading-[1.5] text-ink-2">{m.text}</Markdown>
                 {bubbleActions && (
                   <div className="mt-1 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100">

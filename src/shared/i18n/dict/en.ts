@@ -975,6 +975,7 @@ export const en = {
   detailed: 'Detailed',
   compact: 'Compact',
   markDone: 'Mark done',
+  expand: 'Expand',
   collapse: 'Collapse',
   subTasks: 'Sub-tasks',
   references: 'References',
