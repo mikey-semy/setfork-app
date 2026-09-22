@@ -1,16 +1,23 @@
 {
   "target": "src/features/library/save-outcome.ts",
-  "tests": ["tests/features/library/save-outcome-tells.test.ts"],
+  "tests": [
+    "tests/features/library/save-outcome-tells.test.ts"
+  ],
   "mutants": [
     {
       "name": "P1-1 черновика нет — поле снова пустое (сверка отключается целиком)",
-      "from": "  return draft ? `${draft.id}:${draft.rev}` : 'none'",
-      "to": "  return draft ? `${draft.id}:${draft.rev}` : ''"
+      "from": "  return `${listVersion}@${draft ? `${draft.id}:${draft.rev}` : 'none'}`",
+      "to": "  return `${listVersion}@${draft ? `${draft.id}:${draft.rev}` : ''}`"
     },
     {
       "name": "P1-2 ABA: поле несёт один номер, без строки",
-      "from": "  return draft ? `${draft.id}:${draft.rev}` : 'none'",
-      "to": "  return draft ? `:${draft.rev}` : 'none'"
+      "from": "  return `${listVersion}@${draft ? `${draft.id}:${draft.rev}` : 'none'}`",
+      "to": "  return `${listVersion}@${draft ? `${draft.rev}` : 'none'}`"
+    },
+    {
+      "name": "P1-3 поле теряет версию списка (событие со списком становится незаметным)",
+      "from": "  return `${listVersion}@${draft ? `${draft.id}:${draft.rev}` : 'none'}`",
+      "to": "  return `${draft ? `${draft.id}:${draft.rev}` : 'none'}`"
     },
     {
       "name": "неразбираемое поле выдаётся за осмысленное",

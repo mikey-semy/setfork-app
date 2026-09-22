@@ -195,7 +195,10 @@ export async function publishEdits(templateId: string, formData: FormData): Prom
   // читает черновик заново — в зазор успевает `patch_list(publish:false)`, и в версию
   // уходит текст, которого человек не видел. Удержание от затирания это не ловит: оно
   // смотрело до зазора (P1 авто-ревью по #945).
-  await publishDraft(templateId, { id: saved.id, rev: saved.rev })
+  await publishDraft(templateId, {
+    listVersion: saved.listVersion,
+    draft: { id: saved.id, rev: saved.rev },
+  })
 }
 
 /**

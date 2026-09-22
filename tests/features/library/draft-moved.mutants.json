@@ -1,27 +1,39 @@
 {
   "target": "src/features/library/draft.ts",
-  "tests": ["tests/features/library/draft-overwrite-visible.itest.ts"],
+  "tests": [
+    "tests/features/library/draft-overwrite-visible.itest.ts"
+  ],
   "config": "vitest.integration.config.ts",
   "mutants": [
     {
+      "name": "P1-3 полный цикл: версия списка выпала из признака",
+      "from": "  if (expected.listVersion !== now.listVersion) return true",
+      "to": "  void now.listVersion"
+    },
+    {
       "name": "P1-2 ABA: сравнивается голый номер, без строки",
-      "from": "  return before.id !== expected.id || before.rev !== expected.rev",
-      "to": "  return before.rev !== expected.rev"
+      "from": "  return now.draft.id !== expected.draft.id || now.draft.rev !== expected.draft.rev",
+      "to": "  return now.draft.rev !== expected.draft.rev"
     },
     {
       "name": "P1-1 «черновика не было» перестаёт быть поводом",
-      "from": "  if (expected === 'none') return true",
-      "to": "  if (expected === 'none') return false"
+      "from": "  if (expected.draft === 'none') return true",
+      "to": "  if (expected.draft === 'none') return false"
     },
     {
       "name": "обратная сторона: затирание объявляется всегда",
-      "from": "  return before.id !== expected.id || before.rev !== expected.rev",
+      "from": "  return now.draft.id !== expected.draft.id || now.draft.rev !== expected.draft.rev",
       "to": "  return true"
     },
     {
       "name": "обратная сторона: путь MCP получает ложное затирание",
       "from": "  if (expected === undefined) return false",
       "to": "  if (expected === undefined) return true"
+    },
+    {
+      "name": "обратная сторона: пустой черновик при той же версии объявляется затиранием",
+      "from": "  if (now.draft === undefined) return false",
+      "to": "  if (now.draft === undefined) return true"
     },
     {
       "name": "номер черновика перестаёт расти — сравнивать станет нечего",

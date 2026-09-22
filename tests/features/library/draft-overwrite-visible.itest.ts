@@ -41,8 +41,13 @@ beforeEach(async () => {
 })
 
 type DraftRef = { id: string; rev: number } | 'none'
-const save = (author: string, title: string, expected?: DraftRef) =>
-  upsertDraft(tpl, author, { items: items(title), meta: {}, note: '' }, { expected })
+const save = (author: string, title: string, expected?: DraftRef, listVersion?: number) =>
+  upsertDraft(
+    tpl,
+    author,
+    { items: items(title), meta: {}, note: '' },
+    { expected: expected === undefined ? undefined : { listVersion: listVersion ?? tpl.currentVersion, draft: expected } },
+  )
 
 const storedTitle = async (author: string) => {
   const [row] = await db
@@ -113,6 +118,30 @@ describe('рабочая копия сообщает о затирании', () 
     const res = await save(ownerId, 'из старого редактора', { id: seen.id, rev: seen.rev })
 
     expect(res.overwrote, 'ABA: номер совпал, объект другой — правки агента заменены молча').toBe(true)
+  })
+
+  // ⚠️ ПОЛНЫЙ ЦИКЛ none → черновик → опубликован → none. Третий P1 авто-ревью: признак
+  // «строка + номер» опознаёт СТРОКУ ЧЕРНОВИКА, а событие произошло со СПИСКОМ. Автор
+  // открыл редактор на версии N без черновика; агент завёл черновик и опубликовал его
+  // как N+1, строка исчезла — и автор снова видит «черновика нет», своё исходное
+  // состояние. Признак совпадает, удержания нет, а правка агента уже в версии.
+  it('черновик появился и БЫЛ ОПУБЛИКОВАН — затирание замечено', async () => {
+    // Автор открыл страницу: версия 1, черновика нет.
+    const seenAt = { ...tpl }
+
+    // Агент поработал и опубликовал: список ушёл на версию 2, черновика снова нет.
+    tpl = { ...tpl, currentVersion: seenAt.currentVersion + 1 }
+
+    const res = await save(ownerId, 'из редактора', 'none', seenAt.currentVersion)
+
+    expect(res.overwrote, 'опубликованная правка агента затирается молча').toBe(true)
+  })
+
+  // ⚠️ Обратная сторона: версия не менялась и черновика нет — удерживать нечего,
+  // иначе первое же сохранение на чистом списке пугает человека без повода.
+  it('черновика нет и версия та же — предупреждения нет', async () => {
+    const res = await save(ownerId, 'первый', 'none', tpl.currentVersion)
+    expect(res.overwrote, 'предупреждение на ровном месте').toBe(false)
   })
 
   it('запись без ожидаемой редакции (путь MCP) ведёт себя как прежде', async () => {

@@ -59,21 +59,31 @@ describe('признак затирания доходит до решения',
   it('черновика нет — поле несёт явное «none», а не пустоту', () => {
     // Пустая строка доезжает до записи как `undefined` = «сравнивать не с чем», и
     // сверка отключается вовсе. `none` говорит «черновика не было» и сравнению не мешает.
-    expect(draftRefField(null), 'сверка отключится, и правки агента сотрутся молча').toBe('none')
-    expect(draftRefField(undefined)).toBe('none')
+    expect(draftRefField(3, null), 'сверка отключится, и правки агента сотрутся молча').toBe('3@none')
+    expect(draftRefField(3, undefined)).toBe('3@none')
   })
 
   // ⚠️ ABA: номер нового черновика всегда 1, поэтому опознавать объект одним числом
   // нельзя — строку могли заменить на другую с тем же номером.
   it('черновик есть — поле несёт СТРОКУ и номер, а не один номер', () => {
-    const field = draftRefField({ id: 'd-1', rev: 7 })
+    const field = draftRefField(3, { id: 'd-1', rev: 7 })
     expect(field, 'опознаётся возраст, а не объект').toContain('d-1')
     expect(field).toContain('7')
   })
 
-  it('разбор возвращает ту же пару', () => {
-    expect(parseDraftRef(draftRefField({ id: 'd-1', rev: 7 }))).toEqual({ id: 'd-1', rev: 7 })
-    expect(parseDraftRef('none')).toBe('none')
+  it('разбор возвращает то же самое', () => {
+    expect(parseDraftRef(draftRefField(3, { id: 'd-1', rev: 7 }))).toEqual({
+      listVersion: 3,
+      draft: { id: 'd-1', rev: 7 },
+    })
+    expect(parseDraftRef(draftRefField(3, null))).toEqual({ listVersion: 3, draft: 'none' })
+  })
+
+  // ⚠️ Версия списка в признаке — не украшение: «черновика не было при версии 3» и
+  // «черновика нет при версии 4» это РАЗНЫЕ состояния, и второе означает, что между
+  // ними что-то опубликовали (третий P1 авто-ревью по #945).
+  it('поле несёт ВЕРСИЮ СПИСКА, а не только состояние черновика', () => {
+    expect(draftRefField(3, null), 'событие со списком станет неотличимо').not.toBe(draftRefField(4, null))
   })
 
   it('неразбираемое поле — как «поля не прислали», а не как совпадение', () => {
@@ -81,6 +91,12 @@ describe('признак затирания доходит до решения',
     expect(parseDraftRef(''), 'пустое поле прочиталось как осмысленное').toBeUndefined()
     expect(parseDraftRef(null)).toBeUndefined()
     expect(parseDraftRef('мусор')).toBeUndefined()
+    expect(parseDraftRef('none'), 'без версии списка признак неполон').toBeUndefined()
+    // ⚠️ Эту порчу стенд поймал ВЫЖИВШЕЙ: версия есть, а состояние черновика — мусор.
+    // Прочитать его как «черновика не было» значит выдумать совпадение и отключить
+    // удержание ровно там, где о состоянии ничего не известно.
+    expect(parseDraftRef('3@abc'), 'мусор после версии выдан за «черновика не было»').toBeUndefined()
+    expect(parseDraftRef('x@d-1:2'), 'нечисловая версия прочитана как осмысленная').toBeUndefined()
   })
 
   it('затирание обнаружено — публикация останавливается', () => {

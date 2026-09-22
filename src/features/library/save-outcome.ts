@@ -41,7 +41,8 @@ export function publishHeldQuery(): string {
 }
 
 /**
- * Что кладёт форма редактора в скрытое поле: КАКОЙ черновик видел автор.
+ * Что кладёт форма редактора в скрытое поле: ЧТО именно видел автор — версию списка
+ * и состояние его черновика.
  *
  * ⚠️ СТРОКА И НОМЕР, а не номер сам по себе: `rev` каждого нового черновика начинается
  * с 1, поэтому голый счётчик опознаёт возраст, а не объект. Черновик опубликовали,
@@ -55,8 +56,11 @@ export function publishHeldQuery(): string {
  *
  * Правило живёт здесь, а не в разметке, чтобы его можно было проверить тестом.
  */
-export function draftRefField(draft: { id: string; rev: number } | null | undefined): string {
-  return draft ? `${draft.id}:${draft.rev}` : 'none'
+export function draftRefField(
+  listVersion: number,
+  draft: { id: string; rev: number } | null | undefined,
+): string {
+  return `${listVersion}@${draft ? `${draft.id}:${draft.rev}` : 'none'}`
 }
 
 /**
@@ -64,11 +68,15 @@ export function draftRefField(draft: { id: string; rev: number } | null | undefi
  * не с чем, и выдумывать здесь опаснее, чем промолчать.
  */
 export function parseDraftRef(raw: unknown): DraftRef | undefined {
-  if (raw === 'none') return 'none'
   if (typeof raw !== 'string') return undefined
-  const at = raw.lastIndexOf(':')
+  const split = raw.indexOf('@')
+  if (split <= 0) return undefined
+  const listVersion = Number(raw.slice(0, split))
+  if (!Number.isFinite(listVersion)) return undefined
+  const rest = raw.slice(split + 1)
+  if (rest === 'none') return { listVersion, draft: 'none' }
+  const at = rest.lastIndexOf(':')
   if (at <= 0) return undefined
-  const id = raw.slice(0, at)
-  const rev = Number(raw.slice(at + 1))
-  return Number.isFinite(rev) ? { id, rev } : undefined
+  const rev = Number(rest.slice(at + 1))
+  return Number.isFinite(rev) ? { listVersion, draft: { id: rest.slice(0, at), rev } } : undefined
 }
