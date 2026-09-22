@@ -23,6 +23,22 @@ export async function getStepPreviews(
 }
 
 
+/** Превью для блоков РЕДАКТОРА: ключ картинки лежит в двух разных местах —
+ *  у шага в `imageKey`, у блока-картинки в `content.ref`. Вывод этого списка
+ *  обязан быть ОДИН на все точки входа: без превью редактор рисует пустой слот
+ *  вместо загруженной картинки, и человек решает, что она пропала. Эту ловушку
+ *  ловили уже трижды и трижды чинили в месте находки — на странице правки
+ *  списка, на применении канона текстом, — а соседние входы оставались. */
+export async function getItemPreviews(
+  items: { imageKey?: string | null; content?: Record<string, unknown> | null }[],
+  options?: string,
+): Promise<Record<string, string>> {
+  const keys = items.map((it) => ({
+    imageKey: it.imageKey ?? (typeof it.content?.ref === 'string' ? it.content.ref : null),
+  }))
+  return options ? getStepPreviews(keys, options) : getStepPreviews(keys)
+}
+
 export type FeedSort = 'trending' | 'newest' | 'mostStarred'
 
 /** Обложка+акцент списка (для настроек и шапки). coverUrl — готовый URL или null. */
