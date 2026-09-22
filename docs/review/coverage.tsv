@@ -78,6 +78,8 @@ docs/review/reports/V1d-list-write.hunter.md	V12c
 docs/review/reports/V1d-list-write.verify.md	V12c
 docs/review/state.json	V12e
 docs/rust-core-plan.md	V12c
+docs/seo-audit-2026-09.md	V12c
+docs/seo/home-cache-2026-09.md	V12c
 drizzle.config.ts	H13
 eslint-suppressions.json	H13
 eslint.config.mjs	H13
@@ -422,6 +424,7 @@ src/features/dig/DigPanel.tsx	V6
 src/features/dig/actions.ts	V6
 src/features/dig/chat-actions.ts	V6
 src/features/dig/followups.ts	V6
+src/features/dig/pick-expert.ts	V6
 src/features/dig/queries.ts	V6
 src/features/digest/jobs.ts	V6
 src/features/digest/queries.ts	V6
@@ -1325,7 +1328,10 @@ tests/features/comments/quote.test.ts	V3
 tests/features/comments/state.test.ts	V3
 tests/features/comments/threads-bounded.itest.ts	V3
 tests/features/dig-followups.test.ts	V12f
+tests/features/dig/craft-basis.test.ts	V6
 tests/features/dig/dig-chat-history.test.tsx	V6
+tests/features/dig/pick-expert.mutants.json	V6
+tests/features/dig/pick-expert.test.ts	V6
 tests/features/discussions/feature-flag-write.itest.ts	V3b
 tests/features/discussions/gates.itest.ts	V3b
 tests/features/discussions/limits.test.ts	V3b

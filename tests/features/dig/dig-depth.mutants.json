@@ -1,0 +1,28 @@
+{
+  "target": "src/features/dig/depth.ts",
+  "tests": [
+    "tests/features/dig/dig-depth.test.ts"
+  ],
+  "mutants": [
+    {
+      "name": "глубина не растёт — разговор топчется на первом слое",
+      "from": "  return Math.min(answered + 1, DIG_MAX_LEVEL)",
+      "to": "  return 1"
+    },
+    {
+      "name": "считаются ВСЕ реплики: сорвавшийся вызов уводит глубже",
+      "from": "  const answered = history.filter((m) => m.role !== 'user').length",
+      "to": "  const answered = history.length"
+    },
+    {
+      "name": "предел снят — глубина растёт бесконечно",
+      "from": "  return Math.min(answered + 1, DIG_MAX_LEVEL)",
+      "to": "  return answered + 1"
+    },
+    {
+      "name": "счёт с нуля — первый вопрос попадает не на тот слой",
+      "from": "  return Math.min(answered + 1, DIG_MAX_LEVEL)",
+      "to": "  return Math.min(answered, DIG_MAX_LEVEL)"
+    }
+  ]
+}

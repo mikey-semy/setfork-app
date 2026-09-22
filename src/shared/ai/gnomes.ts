@@ -11,6 +11,7 @@ import { gnomeCard } from './gnome-character'
 import { gnomeMood, gnomeReflection, gnomeReputation, gnomeThanksCounts, gnomeUserThanks, gnomeUserAccepts } from './gnome-reputation'
 import { NEXT_TEMPLATE, parseFollowups, parseSummon } from './reply-parse'
 import { langEnName, type Lang } from '@/shared/i18n'
+import { digLevelBrief } from './dig'
 
 /**
  * ДОМ ГНОМОВ — единый источник правды для чата гнома (идея владельца: не
@@ -42,10 +43,27 @@ export interface GnomeSpeakOpts {
   history?: string
   /** Прецеденты из базы (KAG/retrieval) — «использовать, не копировать вслепую». */
   precedents?: string[]
+  /**
+   * Прецеденты пришли НЕ ПО ЕГО РЕМЕСЛУ (доменная линза не нашла совпадений, отдан общий
+   * фолбэк). Гному об этом говорят прямо: иначе он опирается на чужую жилу так же
+   * уверенно, как на свою, и человек не отличит «основано на нашей библиотеке» от
+   * «основано на том, что подвернулось». Тот же признак совет пишет в провенанс.
+   */
+  precedentsOffCraft?: boolean
   /** short: одна короткая реплика (диалог-реакция), без фоллоу-апов/созыва. */
   short?: boolean
   /** Добавлять строку NEXT (фоллоу-апы) — для чат-поверхностей, ведущих вглубь. */
   followups?: boolean
+  /**
+   * Какой это СЛОЙ раскопки (1, 2, 3…). Лестница глубины из лоры: «копать» — идти
+   * вглубь темы причинами, механизмом, исключениями, слой за слоем. Без неё разговор
+   * топчется на одном уровне: человек спрашивает третий раз, а получает ту же глубину,
+   * что и в первый.
+   *
+   * Ремесло даёт УГОЛ, слой даёт ГЛУБИНУ — это разные оси, и вместе они и есть
+   * «многогранность» из лоры: много мастеров на одном камне, и каждый копает вглубь.
+   */
+  depth?: number
   /** Ростер для реального созыва: гном может передать вопрос коллеге. */
   summonRoster?: Expert[]
   feature: AiFeature
@@ -129,11 +147,17 @@ Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now
     : `A user is talking to you in the SetFork workshop. Answer as this expert — practical, specific, in character; admit "no reliable data" instead of inventing. Keep it tight (2-5 short paragraphs or a compact list)${opts.followups ? ', ~4 sentences so there is room for the NEXT line' : ''}. Answer in ${langEnName(opts.lang)}.
 SPEAK LIKE A PERSON, NOT A FORM. Never expose your working method: no headings or labels such as "Task/Method/Understanding/Plan/Execution/Verification" (or their equivalents in any language), no restating the question, no announcing what you are about to do, no closing self-assessment. Just say the answer the way a knowledgeable colleague would say it out loud.`
 
+  // Лестница глубины — та же, что у слоёв раскопки (единый источник, не копия).
+  const ladder = opts.depth ? `\n${digLevelBrief(opts.depth)}` : ''
   const lore = opts.precedents?.length
-    ? `\n\nFrom the SetFork knowledge base (use what helps, don't copy blindly):\n${sp.wrap('PRECEDENTS', opts.precedents.join('\n'))}`
+    ? `\n\nFrom the SetFork knowledge base (use what helps, don't copy blindly)${
+        opts.precedentsOffCraft
+          ? ' — NOTE: none of these are from YOUR craft, they are general matches. Say so plainly if you lean on them, and do not present them as your guild\u2019s experience'
+          : ''
+      }:\n${sp.wrap('PRECEDENTS', opts.precedents.join('\n'))}`
     : ''
   const system = `${persona}${lane}${summonBlock}
-${task}${followupsRule}
+${task}${ladder}${followupsRule}
 ${sp.rule()}`
   const prompt = `${opts.context ? `${sp.wrap('CONTEXT', opts.context)}\n\n` : ''}${opts.history ? `CHAT SO FAR:\n${sp.wrap('HISTORY', opts.history)}\n\n` : ''}${sp.wrap('QUESTION', question)}${lore}`
 
@@ -186,7 +210,15 @@ export async function gnomeConverse(primary: Expert, question: string, opts: Gno
   if (first.summonId && opts.summonRoster) {
     const target = opts.summonRoster.find((x) => x.id === first.summonId)
     if (target) {
-      const second = await gnomeSpeak(target, question, { ...opts, summonRoster: undefined }) // созванный дальше не зовёт
+      // ⚠️ Прецеденты отбирались доменной линзой ПЕРВОГО гнома — для созванного это чужая
+      // жила. Отдать их как есть значит дать ему опереться на материал не своего ремесла
+      // и говорить об этом так же уверенно, как о своём. Пересобрать здесь нечем (отбор
+      // сделан вызывающим), поэтому честно помечаем: опора не по его ремеслу.
+      const second = await gnomeSpeak(target, question, {
+        ...opts,
+        summonRoster: undefined, // созванный дальше не зовёт
+        precedentsOffCraft: opts.precedents?.length ? true : opts.precedentsOffCraft,
+      })
       if (second) replies.push({ who: target.id, name: gname(target, opts.lang), text: second.text, followups: second.followups })
     }
   }
