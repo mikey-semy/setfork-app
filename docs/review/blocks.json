@@ -1599,6 +1599,7 @@
       "goal": "Прочитать все маршруты записи списка СРАЗУ и найти то, чего нет ни в одном: атомарность, сверку версии, общий гейт. Дефект такого рода не виден при чтении файла по отдельности.",
       "paths": [
         "src/features/library/actions",
+        "src/features/library/save-outcome.ts",
         "src/features/library/version-error.ts",
         "tests/features/library/actions-mutations.itest.ts",
         "tests/features/library/catover-write-parity.itest.ts",
@@ -1607,6 +1608,7 @@
         "tests/features/library/create-wire.test.ts",
         "tests/features/library/danger-store.itest.ts",
         "tests/features/library/delete-promise.test.ts",
+        "tests/features/library/draft-overwrite-visible.itest.ts",
         "tests/features/library/draft-publish.itest.ts",
         "tests/features/library/fork-invariants.itest.ts",
         "tests/features/library/fork-tree.itest.ts",
@@ -1622,6 +1624,7 @@
         "tests/features/library/owner-lists-isolation.itest.ts",
         "tests/features/library/ownership-breadth.itest.ts",
         "tests/features/library/publication-state.itest.ts",
+        "tests/features/library/publish-still-eligible.itest.ts",
         "tests/features/library/publish.itest.ts",
         "tests/features/library/version-sha-wiring.test.ts",
         "tests/features/library/version-sha.test.ts",

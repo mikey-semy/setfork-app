@@ -11,7 +11,7 @@ import { listQuota } from '@/shared/quota'
 import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, editBlockReason, ListWriteError } from '@/core'
 import { DestructiveCommandError, findDestructiveSteps } from '@/core/domain/destructive-command'
-import { saveOutcomeQuery } from '../save-outcome'
+import { publishHeldQuery, saveOutcomeQuery, shouldHoldPublish } from '../save-outcome'
 import { isCollaborator } from '@/features/collab/queries'
 // eslint-disable-next-line boundaries/dependencies -- полки принадлежат каталогам; правило «положить на полку» держим ОДНОЙ точкой на все три входа (форма, MCP, пачка MCP), а не копией здесь
 import { assignCatalogByName } from '@/features/catalogs/assign'
@@ -163,7 +163,7 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
  * успел уйти вперёд, публикация об этом скажет, а не перезапишет чужое молча.
  */
 export async function saveDraft(templateId: string, formData: FormData): Promise<void> {
-  const { tpl, handle, overwrote, destructive } = await upsertDraftFromForm(templateId, formData)
+  const { tpl, handle, overwrote, destructive } = await upsertDraftFromForm(templateId, formData, 'save')
   revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
   // ⚠️ СОХРАНЯЕМ ВСЕГДА, НО ГОВОРИМ ПРАВДУ О ПОСЛЕДСТВИЯХ.
   //
@@ -186,12 +186,22 @@ export async function saveDraft(templateId: string, formData: FormData): Promise
  * бы молча (находка self-review).
  */
 export async function publishEdits(templateId: string, formData: FormData): Promise<void> {
-  await upsertDraftFromForm(templateId, formData)
+  // Режим передаётся ВНУТРЬ общей записи, а исход наружу не возвращается. Так сделано
+  // намеренно: первая редакция возвращала `overwrote` вызывающему, и `publishEdits`
+  // его выбрасывал — сторож срабатывал, а дверь открывалась. Пока решение принимает
+  // вызывающий, его можно забыть принять; здесь забыть нечего.
+  await upsertDraftFromForm(templateId, formData, 'publish')
   await publishDraft(templateId)
 }
 
-/** Общая часть: собрать черновик из формы редактора и записать его. */
-async function upsertDraftFromForm(templateId: string, formData: FormData) {
+/**
+ * Общая часть: собрать черновик из формы редактора и записать его.
+ *
+ * `mode` говорит, что будет дальше. В режиме `publish` затирание ОСТАНАВЛИВАЕТ поездку
+ * прямо здесь — иначе исход пришлось бы возвращать наверх и надеяться, что там его
+ * разберут; именно так он однажды и потерялся (P1 авто-ревью по #945).
+ */
+async function upsertDraftFromForm(templateId: string, formData: FormData, mode: 'save' | 'publish') {
   const session = await requireSession()
   const [lang, tpl] = await Promise.all([getLang(), db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })])
   if (!tpl) redirect('/')
@@ -223,6 +233,14 @@ async function upsertDraftFromForm(templateId: string, formData: FormData) {
   const { overwrote } = await upsertDraft(tpl, session.userId, { items, meta, note }, {
     expectedRev: Number.isFinite(expectedRev) ? expectedRev : undefined,
   })
+  // ⚠️ Публикация поверх обнаруженного затирания НЕ ИДЁТ. Отказ здесь безопасен, в
+  // отличие от «Сохранить»: черновик уже записан строкой выше, набранное не теряется.
+  // Человек читает, что случилось, и жмёт «Опубликовать» второй раз — страница к тому
+  // моменту перечитала черновик, ревизия совпадает, публикация проходит.
+  if (mode === 'publish' && shouldHoldPublish({ overwrote })) {
+    revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
+    redirect(`/${handle}/${tpl.slug}/edit?${publishHeldQuery()}`)
+  }
   // Страж исполняемых команд — ТОТ ЖЕ, что на обеих ветках MCP. Здесь он не отказывает,
   // а предупреждает: см. комментарий в `saveDraft` про цену отказа в серверной форме.
   const [first] = findDestructiveSteps(items)

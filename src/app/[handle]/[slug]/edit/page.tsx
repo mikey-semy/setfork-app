@@ -7,6 +7,7 @@ import { getStepPreviews, getTemplateDetail, getDraft } from '@/features/library
 import { canWriteList } from '@/features/collab/queries'
 import { canEditList } from '@/core'
 import { discardDraft, publishEdits, saveDraft } from '@/features/library/actions'
+import { draftRevField } from '@/features/library/save-outcome'
 import { BackLink } from '@/shared/ui/BackLink'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
 import { GatedToggle, ListTypeToggle } from '@/features/library/ListFormToggles'
@@ -32,7 +33,7 @@ export default async function EditPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ blocked?: string; step?: string; saved?: string; e?: string; over?: string; warn?: string }>
+  searchParams: Promise<{ blocked?: string; step?: string; saved?: string; e?: string; over?: string; warn?: string; held?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   if (!session) redirect('/login')
@@ -88,8 +89,13 @@ export default async function EditPage({
       <form action={action}>
         {/* Редакция черновика, от которой правит автор. Запись сверит её с текущей и
             скажет, если черновик ушёл вперёд — например, его патчил агент по MCP в тот
-            же черновик (он действует от имени того же человека). */}
-        <input type="hidden" name="rev" value={draft?.rev ?? ''} />
+            же черновик (он действует от имени того же человека).
+            ⚠️ Черновика ещё нет — шлём 0, а НЕ пустую строку. Пустая превращалась в
+            `undefined`, а `undefined` значит «сравнивать не с чем» и отключал сверку
+            целиком: агент успевал создать черновик, пока страница открыта, и первое же
+            «Сохранить» стирало его правки молча — ровно тот случай, ради которого
+            сверка и заведена. Ноль отличает «черновика не было» от «поля не прислали». */}
+        <input type="hidden" name="rev" value={draftRevField(draft)} />
         {/* Заголовок НЕ обещает новую версию: правки копятся в черновике, а версия
             появляется только при публикации (жалоба владельца: «там всегда смена
             версий»). Куда приедет черновик — написано у самой кнопки публикации. */}
@@ -114,6 +120,9 @@ export default async function EditPage({
         {sp.saved && sp.over && (
           <Alert variant="warn" className="mb-4">
             <span className="block">{t('draftOverwroteAgent', lang)}</span>
+            {/* Публикация остановлена — сказать об этом отдельно: иначе человек решит,
+                что версия вышла, и уйдёт со страницы. */}
+            {sp.held ? <span className="block font-semibold">{t('publishHeldRepeat', lang)}</span> : null}
           </Alert>
         )}
         {/* Запрещённая команда: сказать СРАЗУ и тому, кто её написал. Отказ приходил
