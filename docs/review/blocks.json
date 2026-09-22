@@ -1,6 +1,7 @@
 {
   "review_id": "setfork-frontend-2026-09",
   "project": "SetFork",
+  "readable_lines": 6000,
   "gates": [
     "npm run lint",
     "npm test",

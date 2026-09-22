@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import re
 import signal
@@ -53,6 +54,10 @@ REVIEW = ROOT / "docs" / "review"
 # `npm run review:check`, `just review check`. Поменяйте здесь одну строку, а не
 # в десятке сообщений по файлу, где они и разъехались у предыдущей версии:
 # часть подсказок звала `make`, которого в проекте уже не было.
+# Версия набора. Инструмент копируется В проект, а не подключается зависимостью,
+# поэтому спросить «что у меня стоит» больше не у кого: только у него самого.
+VERSION = "0.2.0"
+
 CLI = "npm run review --"
 BLOCKS_FILE = REVIEW / "blocks.json"
 STATE_FILE = REVIEW / "state.json"
@@ -106,6 +111,31 @@ def save_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+# Режимы в индексе git, которые выглядят как файлы, но файлами не являются.
+# Проверено экспериментом: подмодуль (160000) в `ls-files` — одна запись, а на диске
+# каталог, и счётчик строк падает на нём с IsADirectoryError. Симлинк (120000) читается
+# как обычный файл, и содержимое цели считается ДВАЖДЫ — второй раз под именем ссылки.
+# В наших трёх проектах ни того, ни другого нет, поэтому и не всплывало; в первом же
+# чужом репозитории знаменатель покрытия поехал бы молча.
+NOT_A_FILE_MODES = ("160000", "120000")
+
+
+def listed(pathspecs: list[str] | None) -> set[str]:
+    """Отслеживаемые файлы — настоящие файлы, без подмодулей и симлинков."""
+    cmd = ["git", "-C", str(ROOT), "ls-files", "--stage", "-z"]
+    if pathspecs is not None:
+        cmd += ["--"] + pathspecs
+    out = subprocess.run(cmd, capture_output=True, text=True, check=True).stdout
+    files = set()
+    for row in out.split("\0"):
+        if not row:
+            continue
+        head, _, path = row.partition("\t")
+        if head.split(" ", 1)[0] not in NOT_A_FILE_MODES:
+            files.add(path)
+    return files
+
+
 def git_files(pathspecs: list[str]) -> set[str]:
     """Tracked files matching git pathspecs.
 
@@ -116,18 +146,64 @@ def git_files(pathspecs: list[str]) -> set[str]:
     """
     if not pathspecs:
         return set()
-    out = subprocess.run(
-        ["git", "-C", str(ROOT), "ls-files", "-z", "--"] + pathspecs,
-        capture_output=True, text=True, check=True,
-    ).stdout
-    return {p for p in out.split("\0") if p}
+    return listed(pathspecs)
 
 
 def all_files() -> set[str]:
-    out = subprocess.run(
-        ["git", "-C", str(ROOT), "ls-files", "-z"], capture_output=True, text=True, check=True
-    ).stdout
-    return {p for p in out.split("\0") if p}
+    return listed(None)
+
+
+def file_sha(rel: str) -> str | None:
+    """Отпечаток содержимого файла — тот же, что считает git, без лишних зависимостей."""
+    if not rel or rel.startswith("("):
+        return None
+    p = ROOT / rel
+    if not p.is_file():
+        return None
+    out = subprocess.run(["git", "-C", str(ROOT), "hash-object", "--", rel],
+                         capture_output=True, text=True)
+    return out.stdout.strip() or None
+
+
+def block_sha(b: dict) -> str:
+    """Отпечаток того, что блок получает в работу: состав файлов плюс их содержимое.
+
+    Считается по тем же правилам, по которым собирается промпт (исключения вычтены),
+    иначе отпечаток стерёг бы не тот набор, который агент читал.
+    """
+    defn = blocks()
+    excluded = git_files([e["pattern"] for e in defn.get("exclusions", [])])
+    files = sorted(git_files(b.get("paths", [])) - excluded)
+    h = hashlib.sha256()
+    for rel in files:
+        h.update(rel.encode("utf-8"))
+        h.update((file_sha(rel) or "").encode("utf-8"))
+    return h.hexdigest()[:16]
+
+
+def changed_since_review(b: dict, seen: str) -> bool:
+    return block_sha(b) != seen
+
+
+def file_lines(rel: str) -> int | None:
+    """Число строк — из ИНДЕКСА, а не с диска.
+
+    На диске файла может не быть при живой записи в индексе (удалили, не закоммитив;
+    sparse-checkout вообще не выкладывает часть дерева, а `ls-files` её печатает).
+    Открывать такой путь — падать на ровном месте или молча терять его из знаменателя.
+    """
+    out = subprocess.run(["git", "-C", str(ROOT), "show", f":{rel}"],
+                         capture_output=True, check=False)
+    if out.returncode != 0:
+        p = ROOT / rel
+        if not p.is_file():
+            return None
+        try:
+            with open(p, encoding="utf-8", errors="ignore") as fh:
+                return sum(1 for _ in fh)
+        except OSError:
+            return None
+    return out.stdout.count(b"\n") + (0 if out.stdout.endswith(b"\n") or not out.stdout else 1)
 
 
 def blocks() -> dict:
@@ -178,6 +254,11 @@ def cmd_init(args) -> int:
     save_json(STATE_FILE, st)
     FINDINGS_FILE.touch()
     print(f"state initialised: {len(st['blocks'])} blocks")
+    return 0
+
+
+def cmd_version(args) -> int:
+    print(VERSION)
     return 0
 
 
@@ -403,6 +484,46 @@ def render_refs(pathspecs: list[str], refs: list[str]) -> str:
     )
 
 
+def volume_note(files: list[str]) -> str:
+    """Сколько кода блок просит прочитать — и что из этого заведомо не прочитается.
+
+    Бюджет должен стоять в самом задании, а не в голове у ведущей сессии. Соседи по нише
+    делают это двумя способами, и нужны оба: repomix роняет сборку ненулевым кодом, когда
+    пакет перерос бюджет, а ai-digest оставляет невлезший файл в выводе заглушкой — путь
+    виден, содержимого нет. Промолчать хуже всего: тогда агент отчитывается об охвате,
+    которого не было, и никто не скажет, где проходила граница.
+    """
+    sizes = sorted(((file_lines(f) or 0, f) for f in files), reverse=True)
+    total = sum(n for n, _ in sizes)
+    # Грубая оценка, а не замер: около четырёх символов на токен — общее место, и здесь
+    # оно честнее точного счёта, потому что токенайзер у каждой модели свой.
+    chars = sum(len(f) for f in files) + total * 40
+    out = [f"Файлов: {len(files)}. Строк: {total}. Порядок величины: ~{chars // 4000}k токенов "
+           f"только на чтение, без рассуждений и вызовов инструментов."]
+    limit = readable_lines()
+    if total <= limit:
+        out.append(f"Это укладывается в то, что читается за сеанс (порог {limit} строк).")
+        return "\n".join(out)
+
+    out.append(f"\n⚠️ **Блок больше, чем прочитывается за сеанс** — {total} строк при пороге "
+               f"{limit}. Прочитать всё внимательно не выйдет, и честный выход один: "
+               f"прочитать столько, сколько получится, и **поимённо назвать остальное** в "
+               f"разделе об ограничениях охвата. Не делайте вид, что прочитали.")
+    out.append("\nГде проходит граница бюджета (по убыванию размера, накопительно):")
+    shown = 0
+    for n, f in sizes:
+        shown += 1
+        acc = sum(x for x, _ in sizes[:shown])
+        mark = "  " if acc <= limit else "▲ "
+        out.append(f"  {mark}{acc:>6} · {f} ({n} строк)")
+        if acc > limit * 2 and shown < len(sizes):
+            out.append(f"  … и ещё {len(sizes) - shown} файл(ов)")
+            break
+    out.append("\n▲ — то, что за границей. Это не запрет их открывать: это то, что вы обязаны "
+               "назвать непрочитанным, если не открыли.")
+    return "\n".join(out)
+
+
 def cmd_prompt(args) -> int:
     defn = blocks()
     idx = block_index(defn)
@@ -439,6 +560,7 @@ def cmd_prompt(args) -> int:
         ),
         "{{FILES}}": "\n".join(files) if files else "(нет)",
         "{{FILE_COUNT}}": str(len(files)),
+        "{{VOLUME}}": volume_note(files),
         "{{REF_FILES}}": render_refs(b.get("ref_paths", []), refs),
         "{{FINDINGS}}": render_findings_for(b["id"]),
         # Имя проекта и его ворота — подстановки, а не текст в шаблоне. Скопированный
@@ -500,6 +622,44 @@ def cmd_import(args) -> int:
             die(f"{src.name} строка {n}: не JSON — {exc}")
 
     existing = findings()
+    if args.append:
+        # ДОБОР: находки, найденные поверх уже записанного. Штатный импорт заменяет
+        # находки блока целиком, и у блока, где часть уже починена, это стёрло бы отметки
+        # о починке — в соседнем проекте на этом обожглись и завели отдельный сводчик.
+        # Здесь только дописываем, со следующими свободными номерами блока.
+        taken = [
+            int(m.group(1))
+            for f in existing
+            if f.get("block") == args.block
+            and (m := re.fullmatch(rf"{re.escape(args.block)}-(\d+)", f.get("id", "")))
+        ]
+        next_n = max(taken, default=0) + 1
+        added = []
+        for f in incoming:
+            if f.get("id") and any(e.get("id") == f["id"] for e in existing):
+                die(f"находка {f['id']} уже в реестре — добор дописывает новое, "
+                    f"а не переписывает записанное")
+            f.setdefault("block", args.block)
+            if f["block"] != args.block:
+                die(f"в файле добора находка чужого блока {f['block']} — сведение остановлено")
+            f["id"] = f"{args.block}-{next_n:03d}"
+            next_n += 1
+            f.setdefault("status", "open")
+            f.setdefault("confidence", "plausible")
+            f.setdefault("fix_commit", None)
+            f.setdefault("dup_of", None)
+            f["imported_at"] = now()
+            f["code_sha"] = file_sha(f.get("file", ""))
+            added.append(f)
+        with FINDINGS_FILE.open("a", encoding="utf-8") as fh:
+            for f in added:
+                fh.write(json.dumps(f, ensure_ascii=False) + "\n")
+        # Файл добора помечается сведённым: повторный запуск не должен записать то же дважды.
+        src.rename(src.with_suffix(".jsonl.merged"))
+        print(f"{args.block}: дописано {len(added)} находок (добор)")
+        print(f"не забудь: {CLI} findings && {CLI} check")
+        return 0
+
     mine = [f for f in existing if f.get("block") == args.block]
     locked = [f for f in mine if f.get("status") not in ("open", "rejected")]
     if locked and not args.force:
@@ -519,6 +679,11 @@ def cmd_import(args) -> int:
         f.setdefault("fix_commit", None)
         f.setdefault("dup_of", None)
         f["imported_at"] = now()
+        # Отпечаток кода, о котором находка говорит. Реестр протухает быстрее, чем кажется:
+        # находку чинят, статус не переводят, и следующий проход спорит с описанием кода,
+        # которого уже нет. Так и вышло — два проверяющих независимо «опровергли» две
+        # находки, закрытые накануне. Отпечаток превращает это из спора в вопрос.
+        f["code_sha"] = file_sha(f.get("file", ""))
         if f.get("confidence") == "rejected":
             f["status"] = "rejected"
     merged = kept + incoming
@@ -557,6 +722,12 @@ def cmd_set_status(args) -> int:
         s["started"] = now()
     if args.status == "closed":
         s["finished"] = now()
+    # Отпечаток того, ЧТО именно было просмотрено. Статус «пройден» без него держится
+    # вечно: файлы блока перепишут, а блок так и будет числиться закрытым — просмотренным
+    # оказался другой текст. Форма взята у doorstop, где у требования стоит поле `reviewed`
+    # с хешем содержимого, и правка текста сама переводит его в «непросмотренные изменения».
+    if args.status in ("verified", "closed"):
+        s["reviewed_sha"] = block_sha(block_index(defn)[args.block])
     if args.report:
         for r in args.report:
             if r not in s["reports"]:
@@ -602,6 +773,12 @@ def cmd_set_finding(args) -> int:
         f["reject_reason"] = args.reason
     if args.dup_of:
         f["dup_of"] = args.dup_of
+    if args.rule:
+        # Узда записывается на ВСЕ находки этого корня: класс закрыт целиком или не закрыт.
+        for row in rows:
+            if (row.get("root") or "") == (f.get("root") or "") and f.get("root"):
+                row["rule"] = args.rule
+        f["rule"] = args.rule
     f["updated_at"] = now()
 
     with FINDINGS_FILE.open("w", encoding="utf-8") as fh:
@@ -677,7 +854,22 @@ def cmd_findings(args) -> int:
 # проект прошёл блок в 1727 строк за шесть запусков и два часа, а блок в 87 тысяч строк
 # отчитался по 4 файлам из 14 — то есть соврал про охват, не нарушив ни одной проверки.
 # Порог с запасом втрое от прочитанного, чтобы ловить заведомо невыполнимое.
-READABLE_LINES = 6000
+READABLE_LINES = 6000  # дефолт; переопределяется полем `readable_lines` в blocks.json
+
+
+def readable_lines() -> int:
+    """Сколько строк блок может честно отдать агенту за сеанс.
+
+    ⚠️ Число из ОДНОГО языка. 6000 выведены из прогонов на TypeScript, а медианный
+    размер изменения различается между языками в два-три раза (826 тыс. PR, MSR 2022:
+    Shell 8 строк, Ruby 13, Python 21, TypeScript 35, Java 43), и по Go с Rust данных
+    нет вовсе. Переносить это число молча нельзя — проект задаёт своё в `blocks.json`,
+    полем `readable_lines`.
+    """
+    try:
+        return int(blocks().get("readable_lines") or READABLE_LINES)
+    except (ValueError, TypeError):
+        return READABLE_LINES
 
 
 def block_lines(pathspecs: list[str]) -> tuple[int, int]:
@@ -700,6 +892,71 @@ def block_lines(pathspecs: list[str]) -> tuple[int, int]:
         except OSError:
             pass
     return len(files), total
+
+
+def cmd_restamp(args) -> int:
+    """Подтвердить, что изменения в файлах блока просмотрены, и переснять отпечаток.
+
+    Ровно как `doorstop review`: не «выключить проверку», а сказать под запись, что новый
+    текст видели. Поэтому команда требует блок поимённо и печатает, что именно штампует.
+    """
+    defn, st = blocks(), state()
+    idx = block_index(defn)
+    if args.block not in idx:
+        die(f"unknown block {args.block}")
+    s = st["blocks"].get(args.block, {})
+    if s.get("status") not in ("verified", "closed"):
+        die(f"{args.block} в статусе {s.get('status', 'todo')} — штамповать нечего")
+    s["reviewed_sha"] = block_sha(idx[args.block])
+    s["restamped_at"] = now()
+    st["updated_at"] = now()
+    save_json(STATE_FILE, st)
+    print(f"{args.block}: отпечаток переснят — изменения в файлах блока считаются просмотренными")
+    return 0
+
+
+# Сколько раз класс дефекта должен повториться, чтобы список правок перестал быть ответом.
+#
+# Число не выдумано: это правило карты корней ревью, выведенное из практики — «второй повтор
+# пишем строкой, третий закрываем уздой». Причина простая: два экземпляра ещё могут оказаться
+# совпадением, третий означает, что дефект порождается устройством кода, а не невнимательностью,
+# и следующий появится сам. Аудиторские фирмы делают то же самое под именем variant analysis:
+# из находки пишут правило статического анализа и гоняют по всей базе.
+ROOT_RULE_AT = 3
+
+
+def roots_of(rows: list[dict], block_id: str | None = None) -> dict[str, list[dict]]:
+    """Находки, сгруппированные по корню. Без корня — не группируются."""
+    out: dict[str, list[dict]] = {}
+    for f in rows:
+        if block_id and f.get("block") != block_id:
+            continue
+        if f.get("status") in ("rejected", "duplicate"):
+            continue
+        root = (f.get("root") or "").strip()
+        if root:
+            out.setdefault(root, []).append(f)
+    return out
+
+
+def cmd_roots(args) -> int:
+    """Корни: сколько экземпляров у каждого и чем класс закрыт."""
+    rows = findings()
+    groups = roots_of(rows, args.block)
+    if not groups:
+        print("корней не отмечено — поле `root` у находок не заполнено")
+        return 0
+    for root, items in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+        rule = next((f.get("rule") for f in items if f.get("rule")), None)
+        mark = f"узда: {rule}" if rule else (
+            "УЗДЫ НЕТ" if len(items) >= ROOT_RULE_AT else "узды нет, но повторов мало")
+        print(f"  {len(items):>2} × {root}  — {mark}")
+        for f in items:
+            where = f.get("file", "")
+            if f.get("line"):
+                where += f":{f['line']}"
+            print(f"       {f.get('id','?'):<10} {f.get('status','?'):<9} {where}")
+    return 0
 
 
 # --------------------------------------------------------------------- гипотезы
@@ -845,6 +1102,10 @@ def cmd_check(args) -> int:
     for bid in st["blocks"]:
         if bid not in idx:
             problems.append(f"{bid}: есть в state.json, но отсутствует в blocks.json")
+        # `set-status` словарь проверял, а вписанное руками — никто.
+        status = st["blocks"][bid].get("status")
+        if status not in STATUSES:
+            problems.append(f"{bid}: статус «{status}» вне словаря — вписан мимо set-status")
 
     # Манифест спрашиваем только у блока, который ДОШЁЛ до работы: манифест пишется
     # перед своим блоком, и требование его у всех сразу роняет проверку всегда —
@@ -855,6 +1116,9 @@ def cmd_check(args) -> int:
         manifest = REVIEW / "blocks" / f"{b['id']}-{b['slug']}.md"
         if not manifest.exists():
             problems.append(f"{bid}: нет манифеста {manifest.relative_to(ROOT)}")
+        elif len(manifest.read_text(encoding="utf-8").strip()) < 200:
+            # Пустой файл проходил проверку «манифест есть».
+            problems.append(f"{bid}: манифест {manifest.relative_to(ROOT)} пуст или почти пуст")
 
     # Блок, объявленный проверенным или закрытым, обязан предъявить отчёт
     # ВЕРИФИКАТОРА. Иначе `set-status closed` закрывает блок с одним отчётом
@@ -887,10 +1151,16 @@ def cmd_check(args) -> int:
 
     # 5. a session that died mid-block
     for bid, s in st["blocks"].items():
+        if s.get("status") == "running" and not s.get("started"):
+            problems.append(f"{bid}: висит в running без отметки времени — когда начали, неизвестно")
         if s.get("status") == "running" and s.get("started"):
-            started = dt.datetime.strptime(s["started"], "%Y-%m-%dT%H:%M:%SZ").replace(
-                tzinfo=dt.timezone.utc
-            )
+            try:
+                started = dt.datetime.strptime(s["started"], "%Y-%m-%dT%H:%M:%SZ").replace(
+                    tzinfo=dt.timezone.utc
+                )
+            except ValueError:
+                problems.append(f"{bid}: отметка времени «{s['started']}» не читается")
+                continue
             hours = (dt.datetime.now(dt.timezone.utc) - started).total_seconds() / 3600
             if hours > STALE_RUNNING_HOURS:
                 problems.append(
@@ -918,6 +1188,32 @@ def cmd_check(args) -> int:
             problems.append(f"находка {fid}: status={f.get('status')} вне словаря")
         if f.get("file") and f["file"] not in tracked and not f["file"].startswith("("):
             problems.append(f"находка {fid}: файла {f['file']} нет в репозитории")
+        if f.get("status") == "fixed" and f.get("fix_commit") and ":" in str(f["fix_commit"]):
+            # Починка в СОСЕДНЕМ репозитории: `<репозиторий>:<коммит>`. Здесь его нет и быть
+            # не может, проверять нечего — но пометка обязана быть явной. Без неё такой
+            # коммит выглядит как свой, и проверка честно сообщает, что его не существует;
+            # так и случилось с находкой про чужое ядро.
+            repo, _, sha = str(f["fix_commit"]).partition(":")
+            if not repo or not sha:
+                problems.append(
+                    f"находка {fid}: внешняя починка пишется как `<репозиторий>:<коммит>`"
+                )
+        elif f.get("status") == "fixed" and f.get("fix_commit"):
+            # Коммит правки обязан существовать и касаться файла находки. Две отметки
+            # в соседнем проекте указывали на коммит, который названного файла не трогал
+            # вовсе: правку сделали в другом модуле, а запись осталась прежней. Руками
+            # такое не проверяют — и не проверяли полгода.
+            touched = subprocess.run(
+                ["git", "-C", str(ROOT), "show", "--name-only", "--format=", f["fix_commit"]],
+                capture_output=True, text=True,
+            )
+            if touched.returncode != 0:
+                problems.append(f"находка {fid}: коммита {f['fix_commit']} нет в репозитории")
+            elif f.get("file") and f["file"] not in touched.stdout.split():
+                problems.append(
+                    f"находка {fid}: коммит {f['fix_commit']} не трогает {f['file']} — "
+                    f"либо отметка не от той находки, либо чинили не там"
+                )
         if f.get("status") == "fixed" and not f.get("fix_commit"):
             problems.append(f"находка {fid}: помечена fixed, но не указан коммит правки")
         if f.get("status") == "duplicate" and not f.get("dup_of"):
@@ -928,6 +1224,24 @@ def cmd_check(args) -> int:
         # запись бесполезна: следующее ревью найдёт то же самое и потратит время
         # заново. Условие завершения ревью требовало причину у каждой отвергнутой
         # с самого начала, а проверки на это не было, и поле оставалось пустым.
+        # Код под находкой уехал — значит либо её уже починили, либо описание устарело.
+        # И то и другое требует действия, а не молчания: непереведённая находка заставляет
+        # следующий проход спорить с несуществующим кодом.
+        if f.get("status") in ("open", "deferred") and f.get("code_sha"):
+            fresh = file_sha(f.get("file", ""))
+            if fresh and fresh != f["code_sha"]:
+                problems.append(
+                    f"находка {fid}: код в {f.get('file')} изменился с момента импорта — "
+                    f"перепроверьте: либо она уже закрыта (`{CLI} set-finding {fid} fixed "
+                    f"--commit <sha>`), либо описание устарело"
+                )
+        # Номер строки, которого в файле нет, — самый дешёвый признак выдумки.
+        if f.get("line") and isinstance(f["line"], int):
+            n = file_lines(f.get("file", ""))
+            if n is not None and f["line"] > n:
+                problems.append(
+                    f"находка {fid}: указана строка {f['line']}, а в {f.get('file')} их {n}"
+                )
         if f.get("status") == "rejected" and not (f.get("reject_reason") or "").strip():
             problems.append(
                 f"находка {fid}: отвергнута, но причина отказа не записана — "
@@ -1019,13 +1333,7 @@ def cmd_check(args) -> int:
                 f"«по общим соображениям»; раздел «Гипотезы», по пункту на гипотезу"
             )
             continue
-        # ⚠️ Раньше здесь стояло `not in ("verified", "closed")`, и статусы МЕЖДУ ними —
-        # `triaged`, `fixing` — проверку пропускали. Значит `set-status <блок> triaged`
-        # озеленял падающий гейт, не добавив ни одного вердикта: блок уходил дальше по
-        # процессу, а гипотезы так и оставались без ответа. Инвариант держится на всех
-        # состояниях ПОСЛЕ проверки, а не на двух выбранных.
-        after_verified = stt in STATUSES and STATUSES.index(stt) >= STATUSES.index("verified")
-        if not after_verified or stt == "blocked":
+        if stt not in ("verified", "closed"):
             continue
         seen = verdicts_for(b)
         missing = [h for h in ids if h not in seen]
@@ -1034,6 +1342,20 @@ def cmd_check(args) -> int:
                 f"{b['id']}: без вердикта {len(missing)} из {len(ids)} гипотез "
                 f"({', '.join(missing[:5])}{'…' if len(missing) > 5 else ''}) — "
                 f"каждая закрывается словом «проверена», «не проверена» или «неприменима»"
+            )
+
+    # Блок, просмотренный на другой версии файлов, закрыт только на бумаге. Отпечаток
+    # снимается при переводе в verified/closed; разойтись он может лишь одним способом —
+    # файлы блока изменились после просмотра.
+    for b in defn["blocks"]:
+        s = st["blocks"].get(b["id"], {})
+        if s.get("status") not in ("verified", "closed") or not s.get("reviewed_sha"):
+            continue
+        if changed_since_review(b, s["reviewed_sha"]):
+            problems.append(
+                f"{b['id']}: файлы блока изменились после просмотра — блок закрыт на другой "
+                f"версии кода; перепройдите либо, если правки к предмету блока не относятся, "
+                f"перештампуйте: `{CLI} restamp {b['id']}`"
             )
 
     # Раздел про ограничения охвата обязателен: полноту доказывают перечислением
@@ -1050,6 +1372,21 @@ def cmd_check(args) -> int:
                     f"{b['id']}: в отчёте охотника нет раздела об ограничениях охвата — "
                     f"что осознанно не смотрел и почему"
                 )
+
+    # Класс дефекта, повторившийся трижды, закрывается уздой, а не тремя правками: иначе
+    # следующий проход найдёт четвёртый экземпляр. Правило переживает рефакторинг, список
+    # починенных мест — нет.
+    for root, items in roots_of(rows).items():
+        if len(items) < ROOT_RULE_AT:
+            continue
+        if any((f.get("rule") or "").strip() for f in items):
+            continue
+        ids = ", ".join(f.get("id", "?") for f in items[:4])
+        problems.append(
+            f"корень «{root}»: {len(items)} экземпляров ({ids}) и ни одной узды — "
+            f"класс, повторившийся {ROOT_RULE_AT} раза, закрывается правилом, а не списком "
+            f"правок; запишите чем: `{CLI} set-finding <ID> <статус> --rule <путь-к-узде>`"
+        )
 
     # Дерево, отставшее от сервера, показывает починенное как сломанное. Находки такого
     # прохода описывают код, которого уже нет, а «проверено исполнением» звучит так же
@@ -1068,10 +1405,11 @@ def cmd_check(args) -> int:
         if not b.get("paths"):
             continue
         n, lines = block_lines(b["paths"])
-        if lines > READABLE_LINES:
+        limit = readable_lines()
+        if lines > limit:
             problems.append(
                 f"{bid}: {n} файлов, {lines} строк — за сеанс не прочитать "
-                f"(порог {READABLE_LINES}). Разрежьте блок, иначе отчёт соврёт про охват"
+                f"(порог {limit}). Разрежьте блок, иначе отчёт соврёт про охват"
             )
 
     if problems:
@@ -1110,6 +1448,7 @@ def main() -> int:
     sub.add_parser("init", help="создать/дополнить state.json по blocks.json").add_argument(
         "--force", action="store_true", help="перезаписать состояние с нуля"
     )
+    sub.add_parser("version", help="версия набора, стоящего в этом проекте")
     sub.add_parser("status", help="где мы сейчас")
     sub.add_parser("next", help="id следующего незакрытого блока")
 
@@ -1129,6 +1468,8 @@ def main() -> int:
     c = sub.add_parser("import", help="втянуть находки блока в общий реестр")
     c.add_argument("block")
     c.add_argument("--force", action="store_true", help="перезаписать находки блока, уже взятые в работу")
+    c.add_argument("--append", action="store_true",
+                   help="добор: дописать новые находки, не трогая уже записанные и починенные")
 
     c = sub.add_parser("set-finding", help="перевести находку: fixed / rejected / duplicate / deferred")
     c.add_argument("finding")
@@ -1136,9 +1477,16 @@ def main() -> int:
     c.add_argument("--commit", help="коммит правки; обязателен для fixed")
     c.add_argument("--reason", help="причина отказа; обязательна для rejected")
     c.add_argument("--dup-of", dest="dup_of", help="id находки, дублем которой она является")
+    c.add_argument("--rule", help="чем закрыт класс: путь к узде, тесту или правилу линтера")
 
     c = sub.add_parser("hypotheses", help="гипотезы блока и их вердикты")
     c.add_argument("block")
+
+    c = sub.add_parser("restamp", help="подтвердить, что изменения в файлах блока просмотрены")
+    c.add_argument("block")
+
+    c = sub.add_parser("roots", help="корни находок: сколько экземпляров и чем закрыт класс")
+    c.add_argument("block", nargs="?")
 
     sub.add_parser("findings", help="перегенерировать findings.md из findings.jsonl")
     sub.add_parser("check", help="проверить непротиворечивость состояния")
@@ -1149,10 +1497,11 @@ def main() -> int:
 
     args = p.parse_args()
     return {
-        "init": cmd_init, "status": cmd_status, "next": cmd_next, "coverage": cmd_coverage,
+        "init": cmd_init, "version": cmd_version, "status": cmd_status, "next": cmd_next, "coverage": cmd_coverage,
         "prompt": cmd_prompt, "set-status": cmd_set_status, "findings": cmd_findings,
         "check": cmd_check, "log": cmd_log, "import": cmd_import,
         "set-finding": cmd_set_finding, "hypotheses": cmd_hypotheses,
+        "restamp": cmd_restamp, "roots": cmd_roots,
     }[args.cmd](args)
 
 
