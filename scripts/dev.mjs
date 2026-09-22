@@ -20,7 +20,16 @@ import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const HEAP_MB = Number(process.env.SETFORK_DEV_HEAP_MB ?? 2048)
+// ⚠️ Проверяем значение, а не доверяем ему. `Number('')` даёт 0, а `--max-old-space-size=0`
+// для V8 означает «умолчание», то есть предел молча ВЫКЛЮЧАЕТСЯ — ровно то, ради чего
+// скрипт и заведён. Прочий мусор даёт NaN, с которым node не стартует вовсе.
+// (Находка авто-ревью 22.09.2026.)
+const raw = process.env.SETFORK_DEV_HEAP_MB
+const asked = raw === undefined || raw === '' ? 2048 : Number(raw)
+const HEAP_MB = Number.isInteger(asked) && asked > 0 ? asked : 2048
+if (asked !== HEAP_MB) {
+  process.stderr.write(`SETFORK_DEV_HEAP_MB=${JSON.stringify(raw)} — не целое положительное, беру 2048\n`)
+}
 
 // Дописываем к уже заданным настройкам, а не затираем их: снаружи может прийти свой
 // NODE_OPTIONS (отладчик, флаги профилирования), и молча его потерять — плохой сюрприз.
