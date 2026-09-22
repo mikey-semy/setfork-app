@@ -55,6 +55,27 @@ describe('toWireContent — домен → провод', () => {
     expect(wire.steps[0].refs).toEqual([{ label: 'без ссылки', url: '' }])
   })
 
+  it('пометка нового блока ветки уходит на провод: ядру переносить её неоткуда', () => {
+    // Блок заведён прямо в ветке, в текущей версии списка его нет. Ядро переносит
+    // пометки по blockId из текущей версии — для НЕГО переносить нечего, поэтому
+    // не отданное здесь пропадает при слиянии молча.
+    const [s] = toWireContent(
+      content({ steps: [block({ danger: true, needsHuman: true, needsHumanAsk: 'Какой том лишний?', imageKey: 'u/1/a.png' })] }),
+    ).steps
+    expect(s.danger).toBe(true)
+    expect(s.needsHuman).toBe(true)
+    expect(s.needsHumanAsk).toBe('Какой том лишний?')
+    expect(s.imageKey).toBe('u/1/a.png')
+  })
+
+  it('неотмеченный блок отдаёт пустое, а не «снять»: ядро пишет в канон только непустое', () => {
+    const [s] = toWireContent(content()).steps
+    expect(s.danger).toBe(false)
+    expect(s.needsHuman).toBe(false)
+    expect(s.needsHumanAsk).toBe('')
+    expect(s.imageKey).toBe('')
+  })
+
   it('blockId=null (из трёхстороннего merge) не превращается в "null"', () => {
     expect(toWireContent(content({ steps: [block({ blockId: null })] })).steps[0].blockId).toBe('')
   })

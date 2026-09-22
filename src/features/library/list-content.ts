@@ -38,9 +38,9 @@ export function toListContent(
       section: tr(it.section as LocaleText, lang),
       subtasks: (it.subtasks ?? []).map((s) => tr(s as LocaleText, lang)),
       refs: (it.refs ?? []).map((r) => ({ label: tr(r.label as LocaleText, lang), ...(r.url ? { url: r.url } : {}) })),
-      // Пометки канона: ядро всё равно возьмёт их из текущей версии по blockId
-      // (иначе клиент, который их не заполнил, снимал бы пометку с необратимой
-      // команды), но у ПОКАЗА канона текстом источник один — эта структура.
+      // Пометки канона. Перенос из текущей версии по blockId спасает только блок,
+      // который в ней есть, поэтому у блока, заведённого в ветке, источник один —
+      // эта структура. Она же источник для ПОКАЗА канона текстом.
       ...(it.imageKey ? { imageKey: it.imageKey } : {}),
       ...(it.needsHuman ? { needsHuman: true } : {}),
       ...(it.needsHumanAsk ? { needsHumanAsk: tr(it.needsHumanAsk, lang) } : {}),
