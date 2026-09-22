@@ -1277,6 +1277,7 @@ tests/architecture/verified-not-public.test.ts	H12
 tests/architecture/version-base-declared.marker.mutants.json	H12
 tests/architecture/version-base-declared.mutants.json	H12
 tests/architecture/version-base-declared.test.ts	H12
+tests/architecture/workflow-node-declared.test.ts	H12
 tests/core/domain/access.test.ts	V12d
 tests/core/domain/affiliate.test.ts	V12d
 tests/core/domain/destructive-command.mutants.json	V12d
@@ -1543,6 +1544,7 @@ tests/shared/ai/allowlist-pool.test.ts	V8g
 tests/shared/ai/assist.test.ts	V8g
 tests/shared/ai/council-anonymity.test.ts	V8g
 tests/shared/ai/craft-rules.itest.ts	V8g
+tests/shared/ai/credits-unknown-shape.test.ts	V8g
 tests/shared/ai/dehydrate.test.ts	V8g
 tests/shared/ai/embed-capability.test.ts	V8g
 tests/shared/ai/embed-space.test.ts	V8g
