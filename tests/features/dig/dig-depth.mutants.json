@@ -10,9 +10,19 @@
       "to": "  return 1"
     },
     {
-      "name": "считаются ВСЕ реплики: сорвавшийся вызов уводит глубже",
-      "from": "  const answered = history.filter((m) => m.role !== 'user').length",
-      "to": "  const answered = history.length"
+      "name": "считаются реплики мастеров: созыв коллеги перескакивает слой",
+      "from": "    else if (awaiting) {",
+      "to": "    else if (true) {"
+    },
+    {
+      "name": "считаются вопросы: сорвавшийся вызов уводит глубже",
+      "from": "    if (m.role === 'user') awaiting = true",
+      "to": "    if (m.role === 'user') answered++"
+    },
+    {
+      "name": "ответ не закрывает вопрос — счёт идёт по репликам",
+      "from": "      awaiting = false\n",
+      "to": "\n"
     },
     {
       "name": "предел снят — глубина растёт бесконечно",

@@ -30,6 +30,20 @@ describe('глубина раскопки', () => {
     expect(digDepth([{ role: 'user' }, { role: 'user' }])).toBe(1)
   })
 
+  // ⚠️ Мастер передал вопрос коллеге: на ОДИН вопрос две реплики мастеров. Счёт по
+  // репликам уводил следующий вопрос с первого слоя сразу на третий (авто-ревью #957).
+  it('созыв коллеги — один вопрос, один слой', () => {
+    const summoned = [{ role: 'user' }, { role: 'gnome' }, { role: 'gnome' }]
+    expect(digDepth(summoned), 'передача вопроса засчитана за пройденный слой').toBe(2)
+    expect(digDepth([...summoned, { role: 'user' }, { role: 'gnome' }])).toBe(3)
+  })
+
+  it('сбой посреди беседы не уводит глубже', () => {
+    // Второй вопрос остался без ответа, третий получил ответ: пройдено ДВА слоя, не три.
+    const h = [{ role: 'user' }, { role: 'gnome' }, { role: 'user' }, { role: 'user' }, { role: 'gnome' }]
+    expect(digDepth(h)).toBe(3)
+  })
+
   it('ниже последнего слоя не опускаемся', () => {
     const long = Array.from({ length: 20 }, (_, i) => ({ role: i % 2 ? 'gnome' : 'user' }))
     expect(digDepth(long), 'глубина растёт бесконечно — дальше растёт болтовня, а не смысл').toBe(DIG_MAX_LEVEL)

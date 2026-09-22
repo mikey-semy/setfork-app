@@ -14,8 +14,8 @@ import { tr, trLoose, type Lang, type LocaleText } from '@/shared/i18n'
 import { pickExpert } from './pick-expert'
 import { digDepth } from './depth'
 import { formatHistory } from './history'
+import { craftBasis } from './basis'
 import { findPrecedents } from '@/shared/ai/retrieval'
-import { pickPrecedentsDetailed } from '@/shared/ai/precedent-filter'
 
 /**
  * Мини-чат раскопки (HQ §8, редизайн по фидбеку владельца): вместо статичных
@@ -103,16 +103,16 @@ export async function digChatAsk(input: {
     input.lang,
     { userId: session.userId, limit: 3, stepLimit: 3 },
   )
-  const mine = pickPrecedentsDetailed(found.lists, expert.domains)
-  const precedents = mine.items.map((p) => `${p.title}${p.desc ? ' — ' + p.desc : ''}`)
+  // Списки И шаги, отобранные линзой его ремесла (см. `craftBasis`).
+  const { precedents, offCraft } = craftBasis(found, expert.domains)
 
   const replies = await gnomeConverse(expert, question, {
     lang: input.lang,
     context: stepCtx,
     history: hist,
     precedents,
-    precedentsOffCraft: precedents.length > 0 && !mine.matched,
-    // СЛОЙ РАСКОПКИ. Глубина = сколько раз гном уже отвечал по этому шагу: первый ответ
+    precedentsOffCraft: offCraft,
+    // СЛОЙ РАСКОПКИ. Глубина = на сколько вопросов по этому шагу уже ответили: первый ответ
     // про причины и источники, второй про механизм и исключения, третий про тонкости.
     // Без этого разговор топтался на одном уровне — человек спрашивал третий раз и
     // получал ту же глубину, что в первый, хотя в лоре «копать» это идти слой за слоем.
