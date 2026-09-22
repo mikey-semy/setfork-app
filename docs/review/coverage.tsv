@@ -1122,6 +1122,7 @@ src/shared/ui/EmojiPickerPopover.tsx	H7b
 src/shared/ui/EmptyState.tsx	H7
 src/shared/ui/Field.tsx	H7
 src/shared/ui/FilterMenu.tsx	H7b
+src/shared/ui/FloatingActions.tsx	H7
 src/shared/ui/FloatingBack.tsx	H7b
 src/shared/ui/FloatingInput.tsx	H7
 src/shared/ui/FormSaveBar.tsx	H7
@@ -1250,6 +1251,7 @@ tests/architecture/build-offline-fonts.test.ts	H12
 tests/architecture/button-class-merge.test.ts	H12
 tests/architecture/command-one-view.test.ts	H12
 tests/architecture/day-sensitive-list.test.ts	H12
+tests/architecture/editor-floating-actions.test.ts	H12
 tests/architecture/font-size-merge.test.ts	H12
 tests/architecture/gate-reason-codes.test.ts	H12
 tests/architecture/gnomes-coupling.test.ts	H12

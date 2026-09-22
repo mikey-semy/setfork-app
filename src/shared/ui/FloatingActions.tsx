@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useViewportBottom } from './use-viewport-bottom'
 
 /**
@@ -30,13 +30,41 @@ export function FloatingActions({ children }: { children: ReactNode }) {
   // висит посередине. Это уже было жалобой владельца 03.08.2026 про чат и «наверх»;
   // в странице создания поправку не применили, и там кнопка вела себя так же.
   const { gap } = useViewportBottom()
+  const [dockBusy, setDockBusy] = useState(false)
+
+  // ⚠️ Пока человек правит текст, полосу над клавиатурой занимает `KeyboardDock` с
+  // отменой и повтором — он садится на `bottom: gap`, а панель встала бы на 20px выше
+  // и накрыла его правый край. Тап по «отменить» отправлял бы форму, а на странице
+  // правки мог и ОПУБЛИКОВАТЬ версию: кнопка публикации ровно там и оказывается
+  // (находка авто-ревью 22.09.2026, P1).
+  //
+  // Прячем панель целиком, а не сдвигаем: правя текст, человек тянется к отмене, а не
+  // к «Сохранить», и две панели друг над другом на узком экране съедают треть высоты.
+  // Как только фокус уходит из поля, док исчезает и панель возвращается.
+  //
+  // Слежение — как у `ScrollToTop` за `[data-sticky-input]`: док появляется и исчезает
+  // по фокусу, и без наблюдения за DOM панель узнала бы об этом только на следующей
+  // перерисовке, то есть уже налезши.
+  useEffect(() => {
+    const find = () => setDockBusy(!!document.querySelector('[data-keyboard-dock]'))
+    find()
+    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(find) : null
+    mo?.observe(document.body, { childList: true, subtree: true })
+    return () => mo?.disconnect()
+  }, [])
+
+  if (dockBusy) return null
   return (
     <div
       // `data-sticky-input` — общий признак нижней плавающей панели: по нему кнопка
       // «наверх» садится ВЫШЕ неё, а не поверх (механика ScrollToTop).
       data-sticky-input
       style={gap ? { bottom: gap + 20 } : undefined}
-      className={`fixed right-5 z-40 flex items-center gap-2 print:hidden ${gap ? '' : 'bottom-5'}`}
+      // ⚠️ Ширина ограничена, и кнопки переносятся. На 320px две кнопки с русскими
+      // подписями («Сохранить черновик» + «Опубликовать v5») уезжали влево на плавающий
+      // «назад» и перекрывали его — обе панели на одном слое, а эта рисуется позже
+      // (находка авто-ревью, P2). 4.5rem слева — место под ту кнопку с её отступами.
+      className={`fixed right-5 z-40 flex max-w-[calc(100vw-4.5rem)] flex-wrap items-center justify-end gap-2 print:hidden ${gap ? '' : 'bottom-5'}`}
     >
       {children}
     </div>
