@@ -68,6 +68,11 @@ async function isAdminRequest(req: NextRequest): Promise<boolean> {
  */
 function pass(req: NextRequest): NextResponse {
   const headers = new Headers(req.headers)
+  // ⚠️ Язык адреса — только от нас. Здесь префикса нет, значит и языка адреса нет, а
+  // одноимённый заголовок мог прислать сам клиент: `x-setfork-lang: ru` на `/miki/list`
+  // менял бы язык страницы и объявлял каноном `/ru/miki/list` — адрес, которого не
+  // запрашивали (находка авто-ревью).
+  headers.delete(LANG_HEADER)
   // Путь ВМЕСТЕ с query: перенаправление обязано сохранить и то и другое.
   headers.set(REQUEST_PATH_HEADER, req.nextUrl.pathname + req.nextUrl.search)
   return NextResponse.next({ request: { headers } })

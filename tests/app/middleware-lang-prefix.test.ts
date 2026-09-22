@@ -84,3 +84,18 @@ describe('обычная страница с префиксом', () => {
     expect(rewrittenTo(res)).toBeNull()
   })
 })
+
+describe('язык адреса приходит только от middleware', () => {
+  it('подброшенный клиентом заголовок языка на адресе без префикса снимается', async () => {
+    // Иначе `x-setfork-lang: ru` на `/miki/list` менял бы язык страницы и объявлял
+    // каноном `/ru/miki/list` (находка авто-ревью).
+    const res = await call('/miki/list', { 'x-setfork-lang': 'ru' })
+    expect(res.headers.get('x-middleware-request-x-setfork-lang')).toBeNull()
+    expect(res.headers.get('x-middleware-override-headers') ?? '').not.toContain('x-setfork-lang')
+  })
+
+  it('на адресе с префиксом заголовок — из адреса, а не присланный', async () => {
+    const res = await call('/en/miki/list', { 'x-setfork-lang': 'ru' })
+    expect(res.headers.get('x-middleware-request-x-setfork-lang')).toBe('en')
+  })
+})
