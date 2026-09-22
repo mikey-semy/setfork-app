@@ -689,6 +689,7 @@ src/features/library/review-actions.ts	V1
 src/features/library/review-model.ts	V1
 src/features/library/review-queries.ts	V1
 src/features/library/sample-titles.ts	V1m
+src/features/library/save-outcome.ts	V1d
 src/features/library/saved-queries-actions.ts	V1m
 src/features/library/saved-queries.ts	V1m
 src/features/library/search-href.ts	V1g
@@ -1404,6 +1405,8 @@ tests/features/library/delete-promise.test.ts	V1k,V1d
 tests/features/library/diff.test.ts	V1,V1k
 tests/features/library/dismiss-review.itest.ts	V1
 tests/features/library/domain-read-parity.itest.ts	V1h
+tests/features/library/draft-moved.mutants.json	V1d
+tests/features/library/draft-overwrite-visible.itest.ts	V1d
 tests/features/library/draft-publish.itest.ts	V1d
 tests/features/library/draft-tags-registry.itest.ts	V8c
 tests/features/library/drag-geometry.test.ts	V1k
@@ -1441,11 +1444,14 @@ tests/features/library/ownership-breadth.itest.ts	V1d
 tests/features/library/page-stability.itest.ts	V1g
 tests/features/library/pr-settings.test.ts	V1,V1k
 tests/features/library/publication-state.itest.ts	V1d
+tests/features/library/publish-still-eligible.itest.ts	V1d
 tests/features/library/publish.itest.ts	V1d
 tests/features/library/raw-contract.itest.ts	V1g
 tests/features/library/reindex-staleness.itest.ts	V1h
 tests/features/library/required-checks.itest.ts	V1
 tests/features/library/review-visibility.itest.ts	V1
+tests/features/library/save-outcome-tells.test.ts	V1k
+tests/features/library/save-outcome.mutants.json	V1d
 tests/features/library/script-dialect.test.ts	V1k
 tests/features/library/script-injection.test.ts	V1k
 tests/features/library/search-href.test.ts	V1g,V1k

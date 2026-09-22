@@ -7,6 +7,7 @@ import { getItemPreviews, getTemplateDetail, getDraft } from '@/features/library
 import { canWriteList } from '@/features/collab/queries'
 import { canEditList } from '@/core'
 import { discardDraft, publishEdits, saveDraft } from '@/features/library/actions'
+import { draftRefField } from '@/features/library/save-outcome'
 import { BackLink } from '@/shared/ui/BackLink'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
 import { GatedToggle, ListTypeToggle } from '@/features/library/ListFormToggles'
@@ -33,7 +34,7 @@ export default async function EditPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ blocked?: string; step?: string; saved?: string; e?: string }>
+  searchParams: Promise<{ blocked?: string; step?: string; saved?: string; e?: string; over?: string; warn?: string; held?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   if (!session) redirect('/login')
@@ -85,6 +86,19 @@ export default async function EditPage({
       )}
 
       <form action={action}>
+        {/* Редакция черновика, от которой правит автор. Запись сверит её с текущей и
+            скажет, если черновик ушёл вперёд — например, его патчил агент по MCP в тот
+            же черновик (он действует от имени того же человека).
+            ⚠️ Несём ВЕРСИЮ СПИСКА и состояние черновика (`<v>@<id>:<rev>` либо
+            `<v>@none`). Версия — потому что событие бывает и со списком: автор открыл
+            редактор без черновика, агент завёл черновик и ОПУБЛИКОВАЛ его — строка
+            исчезла, автор снова видит «черновика нет», а правка агента уже в версии.
+            Строка и номер — потому что `rev` нового
+            черновика всегда начинается с 1, поэтому голый счётчик опознаёт возраст, а
+            не объект — черновик опубликовали, агент завёл новый, у обоих 1, и сверка
+            молчит. «Черновика не было» — явное `none`, а не пустая строка: пустая
+            доезжает как «сравнивать не с чем» и отключает сверку целиком. */}
+        <input type="hidden" name="draftRef" value={draftRefField(tpl.currentVersion, draft)} />
         {/* Заголовок НЕ обещает новую версию: правки копятся в черновике, а версия
             появляется только при публикации (жалоба владельца: «там всегда смена
             версий»). Куда приедет черновик — написано у самой кнопки публикации. */}
@@ -102,6 +116,32 @@ export default async function EditPage({
         {sp.saved && !sp.e && (
           <Alert variant="ok" className="mb-4">
             <span className="block">{t('draftSaved', lang)}</span>
+          </Alert>
+        )}
+        {/* Сохранение ЛЕГЛО ПОВЕРХ чужих правок в тот же черновик. Раньше об этом не
+            узнавал никто: ни автор, ни агент, получавший в ответ «успех». */}
+        {sp.saved && sp.over && (
+          <Alert variant="warn" className="mb-4">
+            <span className="block">{t('draftOverwroteAgent', lang)}</span>
+            {/* Публикация остановлена — сказать об этом отдельно: иначе человек решит,
+                что версия вышла, и уйдёт со страницы. */}
+            {sp.held ? <span className="block font-semibold">{t('publishHeldRepeat', lang)}</span> : null}
+          </Alert>
+        )}
+        {/* Запрещённая команда: сказать СРАЗУ и тому, кто её написал. Отказ приходил
+            при публикации — позже и, как правило, другому человеку. */}
+        {sp.saved && sp.warn === 'destructive' && (
+          <Alert variant="warn" className="mb-4">
+            <span className="block">
+              {t('draftDestructiveWarn', lang).replace('{step}', String(sp.step ?? ''))}
+            </span>
+          </Alert>
+        )}
+        {/* Черновик подменили между сохранением и публикацией: версия НЕ вышла, и
+            опубликовать вслепую нельзя — состав уже не тот, что человек видел. */}
+        {sp.e === 'moved' && (
+          <Alert variant="warn" className="mb-4">
+            <span className="block">{t('publishDraftMoved', lang)}</span>
           </Alert>
         )}
         {sp.e === 'stale' && (
@@ -208,6 +248,10 @@ export default async function EditPage({
 
       {draft && (
         <form action={discardDraft.bind(null, tpl.id)} className="mt-3">
+          {/* Тот же признак, что у сохранения: отказ от правок — такое же необратимое
+              действие над общим черновиком, и он обязан заметить, что туда успел
+              дописать агент. */}
+          <input type="hidden" name="draftRef" value={draftRefField(tpl.currentVersion, draft)} />
           <SubmitButton variant="danger" className="max-sm:w-full">
             {t('discardDraft', lang)}
           </SubmitButton>

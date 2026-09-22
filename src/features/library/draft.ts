@@ -27,23 +27,123 @@ type ListRow = { id: string; currentVersion: number; tags: string[]; ordered: bo
  * сделаны правки. Сдвинуть его — значит соврать, что правки свежие, и позволить
  * следующей публикации затереть чужую работу.
  */
+/**
+ * Какой именно черновик видел автор: СТРОКА и её номер, а не номер сам по себе.
+ *
+ * `'none'` — «черновика не было вовсе»: это состояние тоже надо уметь назвать, иначе
+ * «поля не прислали» и «черновика не было» сливаются, и сверка отключается целиком.
+ */
+export type DraftSnapshot = { id: string; rev: number } | 'none'
+
+/**
+ * Что автор видел, когда открывал редактор: ВЕРСИЮ СПИСКА и состояние его черновика.
+ *
+ * ⚠️ Версия списка здесь не для красоты. Признак «строка + номер» опознаёт строку
+ * черновика, а событие бывает и со СПИСКОМ: автор открыл редактор на версии N без
+ * черновика, агент завёл черновик и ОПУБЛИКОВАЛ его как N+1 — строка исчезла, и автор
+ * снова видит «черновика нет», своё исходное состояние. Совпадение полное, а правка
+ * агента уже в версии. «Черновика не было при N» и «черновика нет при N+1» — разные
+ * состояния (третий P1 авто-ревью по #945).
+ */
+export type DraftRef = { listVersion: number; draft: DraftSnapshot }
+
+/**
+ * Сменился ли черновик под автором.
+ *
+ * ⚠️ СРАВНИВАЕТСЯ ПАРА «строка + номер», и это не придирка. Номер каждого нового
+ * черновика начинается с 1 (`rev` имеет `default(1)`), поэтому голый счётчик опознаёт
+ * не объект, а его возраст: черновик опубликовали или отбросили, агент завёл НОВЫЙ —
+ * у обоих `rev = 1`, сравнение говорит «ничего не менялось», и свежие правки агента
+ * заменяются молча. Классическая ABA: значение вернулось к прежнему, а объект под ним
+ * другой (P1 авто-ревью по #945).
+ */
+export function draftMoved(
+  expected: DraftRef | undefined,
+  now: { listVersion: number; draft: { id: string; rev: number } | undefined },
+): boolean {
+  if (expected === undefined) return false // путь MCP: правит от свежего чтения под тем же замком
+  // Список ушёл вперёд, пока автор правил: между его «сейчас» и нашим что-то
+  // опубликовали — в том числе, возможно, черновик агента, следа которого уже нет.
+  if (expected.listVersion !== now.listVersion) return true
+  // Строки нет. Это расхождение, если автор её ВИДЕЛ: её удалили при нём — опубликовали
+  // или явно отбросили (`discard_draft`), — и сохранение из устаревшего редактора
+  // воссоздало бы то, от чего отказались. Если автор её тоже не видел, расхождения нет.
+  if (now.draft === undefined) return expected.draft !== 'none'
+  if (expected.draft === 'none') return true // её не было при авторе — значит завели при нём
+  return now.draft.id !== expected.draft.id || now.draft.rev !== expected.draft.rev
+}
+
 export async function upsertDraft(
   tpl: ListRow,
   authorId: string,
   data: { items: ProposedItem[]; meta: DraftMeta; note: string },
-): Promise<void> {
-  await db
-    .insert(listDrafts)
-    .values({ templateId: tpl.id, authorId, baseVersion: tpl.currentVersion, items: data.items, meta: data.meta, note: data.note })
-    .onConflictDoUpdate({
-      target: [listDrafts.templateId, listDrafts.authorId],
-      set: { items: data.items, meta: data.meta, note: data.note, rev: sql`${listDrafts.rev} + 1`, updatedAt: new Date() },
-    })
+  opts: { expected?: DraftRef } = {},
+): Promise<{ id: string; rev: number; listVersion: number; overwrote: boolean }> {
+  // ⚠️ ПОД ЗАМКОМ СПИСКА — тем же, что берут правки через MCP. Черновик у автора один
+  // на список, а входов в него два: редактор и агент, действующий ОТ ЕГО ЖЕ ИМЕНИ
+  // (`patch_list` с publish:false кладёт правки в эту же строку). Без замка две записи
+  // чередовались бы внутри одной операции; замок их выстраивает в очередь.
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${templates} where ${templates.id} = ${tpl.id} for update`)
+    const [before] = await tx
+      .select({ id: listDrafts.id, rev: listDrafts.rev })
+      .from(listDrafts)
+      .where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, authorId)))
+      .limit(1)
+    // Ушёл ли черновик вперёд с тех пор, как его показали автору. Сравниваем ТОЛЬКО
+    // когда вызывающий сказал, от какой редакции правил: MCP правит от свежего чтения
+    // под тем же замком, ему сверять не с чем.
+    const overwrote = draftMoved(opts.expected, { listVersion: tpl.currentVersion, draft: before })
+
+    const [row] = await tx
+      .insert(listDrafts)
+      .values({ templateId: tpl.id, authorId, baseVersion: tpl.currentVersion, items: data.items, meta: data.meta, note: data.note })
+      .onConflictDoUpdate({
+        target: [listDrafts.templateId, listDrafts.authorId],
+        set: { items: data.items, meta: data.meta, note: data.note, rev: sql`${listDrafts.rev} + 1`, updatedAt: new Date() },
+      })
+      .returning({ id: listDrafts.id, rev: listDrafts.rev })
+    return { id: row.id, rev: row.rev, listVersion: tpl.currentVersion, overwrote }
+  })
 }
 
 /** Убрать черновик автора (публикация его исчерпала либо от правок отказались). */
 export async function deleteDraft(templateId: string, authorId: string): Promise<void> {
   await db.delete(listDrafts).where(and(eq(listDrafts.templateId, templateId), eq(listDrafts.authorId, authorId)))
+}
+
+/**
+ * Убрать черновик, СНАЧАЛА сверив, тот ли он.
+ *
+ * ⚠️ Удаление — самое необратимое из трёх действий над рабочей копией, и именно оно
+ * дольше всех обходилось без сверки: ранняя ветка «состав опустел» звала `deleteDraft`
+ * раньше, чем признак вообще разбирался, а «отказаться от правок» не сверяла ничего и
+ * сейчас. Человек убирал последний пункт — и правки агента исчезали без следа и без
+ * предупреждения (P1 авто-ревью по #945).
+ *
+ * Сверка и удаление — под ОДНИМ замком списка: иначе между ними снова помещается
+ * чужая запись, и мы удалим уже не то, что сравнивали.
+ *
+ * @returns `overwrote` — удалили не то, что видел автор. Удаление при этом НЕ
+ * выполняется: необратимое действие поверх расхождения требует, чтобы человек
+ * посмотрел ещё раз.
+ */
+export async function deleteDraftIfUnchanged(
+  tpl: ListRow,
+  authorId: string,
+  expected: DraftRef | undefined,
+): Promise<{ overwrote: boolean }> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${templates} where ${templates.id} = ${tpl.id} for update`)
+    const [before] = await tx
+      .select({ id: listDrafts.id, rev: listDrafts.rev })
+      .from(listDrafts)
+      .where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, authorId)))
+      .limit(1)
+    if (draftMoved(expected, { listVersion: tpl.currentVersion, draft: before })) return { overwrote: true }
+    await tx.delete(listDrafts).where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, authorId)))
+    return { overwrote: false }
+  })
 }
 
 /**
@@ -60,7 +160,7 @@ export function registerTagsRegistrar(fn: TagsRegistrar): void {
 
 export type PublishResult =
   | { version: number; blocks: number }
-  | { error: 'no draft' | 'stale' | 'empty' | 'out-of-sync'; message: string; currentVersion?: number; baseVersion?: number }
+  | { error: 'no draft' | 'stale' | 'empty' | 'out-of-sync' | 'moved'; message: string; currentVersion?: number; baseVersion?: number }
 
 /**
  * Опубликовать черновик автора ОДНОЙ версией. Запись идёт обычным путём
@@ -71,9 +171,25 @@ export type PublishResult =
  * где строка списка уже взята for update. Сравнение чисел здесь — только ранний
  * отсев с понятным ответом.
  */
-export async function publishDraftFor(tpl: ListRow, authorId: string, note?: string): Promise<PublishResult> {
+export async function publishDraftFor(
+  tpl: ListRow,
+  authorId: string,
+  note?: string,
+  opts: { expect?: DraftRef } = {},
+): Promise<PublishResult> {
   const draft = await getDraft(tpl.id, authorId)
   if (!draft) return { error: 'no draft', message: 'there are no unpublished edits to publish' }
+  // ⚠️ ПУБЛИКУЕТСЯ ИМЕННО ТОТ СНИМОК, который сохранили и показали. Запись держит замок
+  // списка, но ОТПУСКАЕТ его, а сюда мы приходим отдельным чтением — в зазор успевает
+  // `patch_list(publish:false)`: он поднимает ревизию, и в версию уходит его текст,
+  // которого человек не видел. Удержание от затирания этого не ловит: оно смотрело
+  // раньше зазора (P1 авто-ревью по #945).
+  if (opts.expect && draftMoved(opts.expect, { listVersion: tpl.currentVersion, draft: { id: draft.id, rev: draft.rev } })) {
+    return {
+      error: 'moved',
+      message: 'the draft changed after you saved it — reload the editor and publish again',
+    }
+  }
   if (draft.items.length === 0) return { error: 'empty', message: 'the draft has no blocks left' }
   if (draft.baseVersion !== tpl.currentVersion) {
     return {
