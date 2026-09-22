@@ -912,6 +912,7 @@ export const en = {
   draftSaved: 'Draft saved.',
   draftOverwroteAgent: 'Saved over edits that reached this draft through an agent. If you needed them, ask it to repeat.',
   publishHeldRepeat: 'Publishing stopped — no version was created. Check the list and press Publish again if it is right.',
+  publishDraftMoved: 'The draft changed after you saved it — no version was created. Check the list and publish again.',
   draftDestructiveWarn: 'Step {step} has a command publishing will refuse. Fix it, or you will not be able to publish.',
   draftStaleRefused: 'The list moved on while your edits sat in the draft. Publishing was cancelled — nothing was overwritten.',
   draftOutOfSync:

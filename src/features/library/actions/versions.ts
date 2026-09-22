@@ -11,7 +11,7 @@ import { listQuota } from '@/shared/quota'
 import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, editBlockReason, ListWriteError } from '@/core'
 import { DestructiveCommandError, findDestructiveSteps } from '@/core/domain/destructive-command'
-import { publishHeldQuery, saveOutcomeQuery, shouldHoldPublish } from '../save-outcome'
+import { parseDraftRef, publishHeldQuery, saveOutcomeQuery, shouldHoldPublish } from '../save-outcome'
 import { isCollaborator } from '@/features/collab/queries'
 // eslint-disable-next-line boundaries/dependencies -- полки принадлежат каталогам; правило «положить на полку» держим ОДНОЙ точкой на все три входа (форма, MCP, пачка MCP), а не копией здесь
 import { assignCatalogByName } from '@/features/catalogs/assign'
@@ -21,7 +21,7 @@ import { parseEditorItems, toProposedItems } from '../editor'
 import { carryField } from '../translation-carry'
 import { getDraft, getVersionSteps } from '../queries'
 import { publishOwnedDraft } from '../publish-draft'
-import { deleteDraft, publishDraftFor, upsertDraft, type PublishResult } from '../draft'
+import { deleteDraft, publishDraftFor, upsertDraft, type DraftRef, type PublishResult } from '../draft'
 import { listStore } from '../list-store'
 import { VERSION_ERR } from '../version-error'
 import { parseTags, slugify } from '../slug'
@@ -190,8 +190,12 @@ export async function publishEdits(templateId: string, formData: FormData): Prom
   // намеренно: первая редакция возвращала `overwrote` вызывающему, и `publishEdits`
   // его выбрасывал — сторож срабатывал, а дверь открывалась. Пока решение принимает
   // вызывающий, его можно забыть принять; здесь забыть нечего.
-  await upsertDraftFromForm(templateId, formData, 'publish')
-  await publishDraft(templateId)
+  const { saved } = await upsertDraftFromForm(templateId, formData, 'publish')
+  // ⚠️ Публикуем ИМЕННО сохранённый снимок. Запись отпустила замок, а публикация
+  // читает черновик заново — в зазор успевает `patch_list(publish:false)`, и в версию
+  // уходит текст, которого человек не видел. Удержание от затирания это не ловит: оно
+  // смотрело до зазора (P1 авто-ревью по #945).
+  await publishDraft(templateId, { id: saved.id, rev: saved.rev })
 }
 
 /**
@@ -226,13 +230,11 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
   // сказать «правки сделаны от свежей версии», а они сделаны от старой — и следующая
   // публикация затёрла бы чужую работу молча. Признак устаревания снимает только
   // осознанный отказ от правок (discardDraft), а не автосохранение.
-  // Редакция черновика, от которой правил автор: форма несёт её скрытым полем, чтобы
-  // запись могла понять, ушёл ли черновик вперёд, пока редактор был открыт.
-  const revRaw = formData.get('rev')
-  const expectedRev = revRaw === null || revRaw === '' ? undefined : Number(revRaw)
-  const { overwrote } = await upsertDraft(tpl, session.userId, { items, meta, note }, {
-    expectedRev: Number.isFinite(expectedRev) ? expectedRev : undefined,
-  })
+  // Какой черновик видел автор: форма несёт строку и её номер, чтобы запись могла
+  // понять, не подменили ли черновик, пока редактор был открыт.
+  const expected = parseDraftRef(formData.get('draftRef'))
+  const saved = await upsertDraft(tpl, session.userId, { items, meta, note }, { expected })
+  const overwrote = saved.overwrote
   // ⚠️ Публикация поверх обнаруженного затирания НЕ ИДЁТ. Отказ здесь безопасен, в
   // отличие от «Сохранить»: черновик уже записан строкой выше, набранное не теряется.
   // Человек читает, что случилось, и жмёт «Опубликовать» второй раз — страница к тому
@@ -244,7 +246,7 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
   // Страж исполняемых команд — ТОТ ЖЕ, что на обеих ветках MCP. Здесь он не отказывает,
   // а предупреждает: см. комментарий в `saveDraft` про цену отказа в серверной форме.
   const [first] = findDestructiveSteps(items)
-  return { tpl, handle, overwrote, destructive: first ? { step: first.index + 1 } : null }
+  return { tpl, handle, overwrote, saved, destructive: first ? { step: first.index + 1 } : null }
 }
 
 /** Убрать черновик и вернуться к опубликованному состоянию. */
@@ -268,7 +270,7 @@ export async function discardDraft(templateId: string): Promise<void> {
  * черновике), публикацию не делаем: молча перезаписать чужую работу хуже, чем
  * попросить перечитать. Автор увидит это на странице редактора.
  */
-async function publishDraft(templateId: string): Promise<void> {
+async function publishDraft(templateId: string, expect?: DraftRef): Promise<void> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return
@@ -281,7 +283,7 @@ async function publishDraft(templateId: string): Promise<void> {
   // однажды уже разъехался — у MCP его просто не было.
   let res: PublishResult
   try {
-    res = await publishDraftFor(tpl, session.userId)
+    res = await publishDraftFor(tpl, session.userId, undefined, { expect })
   } catch (e) {
     // Запрещённая команда — показываем автору причину и номер шага, как при
     // обычном сохранении: молчаливый отказ читается как «кнопка не работает».
@@ -291,8 +293,19 @@ async function publishDraft(templateId: string): Promise<void> {
   // Причины РАЗНЫЕ: «нечего публиковать» и «черновик опустел» — разные сообщения,
   // иначе человек читает про удаление, которого не было.
   if ('error' in res) {
+    // `moved` — черновик подменили между сохранением и публикацией. Причина своя:
+    // «нечего публиковать» и «опубликовали бы не то, что вы видели» — разные вещи,
+    // и второе требует посмотреть состав, а не нажать ещё раз наугад.
     const reason =
-      res.error === 'stale' ? 'stale' : res.error === 'empty' ? 'empty' : res.error === 'out-of-sync' ? 'outofsync' : 'nodraft'
+      res.error === 'stale'
+        ? 'stale'
+        : res.error === 'empty'
+          ? 'empty'
+          : res.error === 'out-of-sync'
+            ? 'outofsync'
+            : res.error === 'moved'
+              ? 'moved'
+              : 'nodraft'
     redirect(`/${handle}/${tpl.slug}/edit?e=${reason}`)
   }
 

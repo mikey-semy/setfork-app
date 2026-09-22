@@ -4,8 +4,18 @@
   "mutants": [
     {
       "name": "P1-1 черновика нет — поле снова пустое (сверка отключается целиком)",
-      "from": "  return draft?.rev ?? 0",
-      "to": "  return (draft?.rev ?? '') as unknown as number"
+      "from": "  return draft ? `${draft.id}:${draft.rev}` : 'none'",
+      "to": "  return draft ? `${draft.id}:${draft.rev}` : ''"
+    },
+    {
+      "name": "P1-2 ABA: поле несёт один номер, без строки",
+      "from": "  return draft ? `${draft.id}:${draft.rev}` : 'none'",
+      "to": "  return draft ? `:${draft.rev}` : 'none'"
+    },
+    {
+      "name": "неразбираемое поле выдаётся за осмысленное",
+      "from": "  if (at <= 0) return undefined",
+      "to": "  if (at <= 0) return 'none'"
     },
     {
       "name": "P1-2 затирание обнаружено, а публикация всё равно идёт",
@@ -13,7 +23,7 @@
       "to": "  return false\n}"
     },
     {
-      "name": "P1-2 обратная сторона: публикация останавливается всегда",
+      "name": "обратная сторона: публикация останавливается всегда",
       "from": "  return o.overwrote\n}",
       "to": "  return true\n}"
     },

@@ -1608,6 +1608,7 @@
         "tests/features/library/create-wire.test.ts",
         "tests/features/library/danger-store.itest.ts",
         "tests/features/library/delete-promise.test.ts",
+        "tests/features/library/draft-moved.mutants.json",
         "tests/features/library/draft-overwrite-visible.itest.ts",
         "tests/features/library/draft-publish.itest.ts",
         "tests/features/library/fork-invariants.itest.ts",
@@ -1626,6 +1627,7 @@
         "tests/features/library/publication-state.itest.ts",
         "tests/features/library/publish-still-eligible.itest.ts",
         "tests/features/library/publish.itest.ts",
+        "tests/features/library/save-outcome.mutants.json",
         "tests/features/library/version-sha-wiring.test.ts",
         "tests/features/library/version-sha.test.ts",
         "tests/features/library/write-out-of-sync.itest.ts"

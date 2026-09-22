@@ -27,12 +27,37 @@ type ListRow = { id: string; currentVersion: number; tags: string[]; ordered: bo
  * сделаны правки. Сдвинуть его — значит соврать, что правки свежие, и позволить
  * следующей публикации затереть чужую работу.
  */
+/**
+ * Какой именно черновик видел автор: СТРОКА и её номер, а не номер сам по себе.
+ *
+ * `'none'` — «черновика не было вовсе»: это состояние тоже надо уметь назвать, иначе
+ * «поля не прислали» и «черновика не было» сливаются, и сверка отключается целиком.
+ */
+export type DraftRef = { id: string; rev: number } | 'none'
+
+/**
+ * Сменился ли черновик под автором.
+ *
+ * ⚠️ СРАВНИВАЕТСЯ ПАРА «строка + номер», и это не придирка. Номер каждого нового
+ * черновика начинается с 1 (`rev` имеет `default(1)`), поэтому голый счётчик опознаёт
+ * не объект, а его возраст: черновик опубликовали или отбросили, агент завёл НОВЫЙ —
+ * у обоих `rev = 1`, сравнение говорит «ничего не менялось», и свежие правки агента
+ * заменяются молча. Классическая ABA: значение вернулось к прежнему, а объект под ним
+ * другой (P1 авто-ревью по #945).
+ */
+export function draftMoved(expected: DraftRef | undefined, before: { id: string; rev: number } | undefined): boolean {
+  if (expected === undefined) return false // путь MCP: правит от свежего чтения под тем же замком
+  if (before === undefined) return false // строки нет вовсе — затирать нечего
+  if (expected === 'none') return true // её не было, когда автор смотрел, — значит появилась при нём
+  return before.id !== expected.id || before.rev !== expected.rev
+}
+
 export async function upsertDraft(
   tpl: ListRow,
   authorId: string,
   data: { items: ProposedItem[]; meta: DraftMeta; note: string },
-  opts: { expectedRev?: number } = {},
-): Promise<{ rev: number; overwrote: boolean }> {
+  opts: { expected?: DraftRef } = {},
+): Promise<{ id: string; rev: number; overwrote: boolean }> {
   // ⚠️ ПОД ЗАМКОМ СПИСКА — тем же, что берут правки через MCP. Черновик у автора один
   // на список, а входов в него два: редактор и агент, действующий ОТ ЕГО ЖЕ ИМЕНИ
   // (`patch_list` с publish:false кладёт правки в эту же строку). Без замка две записи
@@ -40,14 +65,14 @@ export async function upsertDraft(
   return db.transaction(async (tx) => {
     await tx.execute(sql`select id from ${templates} where ${templates.id} = ${tpl.id} for update`)
     const [before] = await tx
-      .select({ rev: listDrafts.rev })
+      .select({ id: listDrafts.id, rev: listDrafts.rev })
       .from(listDrafts)
       .where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, authorId)))
       .limit(1)
     // Ушёл ли черновик вперёд с тех пор, как его показали автору. Сравниваем ТОЛЬКО
     // когда вызывающий сказал, от какой редакции правил: MCP правит от свежего чтения
     // под тем же замком, ему сверять не с чем.
-    const overwrote = opts.expectedRev !== undefined && before !== undefined && before.rev !== opts.expectedRev
+    const overwrote = draftMoved(opts.expected, before)
 
     const [row] = await tx
       .insert(listDrafts)
@@ -56,8 +81,8 @@ export async function upsertDraft(
         target: [listDrafts.templateId, listDrafts.authorId],
         set: { items: data.items, meta: data.meta, note: data.note, rev: sql`${listDrafts.rev} + 1`, updatedAt: new Date() },
       })
-      .returning({ rev: listDrafts.rev })
-    return { rev: row.rev, overwrote }
+      .returning({ id: listDrafts.id, rev: listDrafts.rev })
+    return { id: row.id, rev: row.rev, overwrote }
   })
 }
 
@@ -80,7 +105,7 @@ export function registerTagsRegistrar(fn: TagsRegistrar): void {
 
 export type PublishResult =
   | { version: number; blocks: number }
-  | { error: 'no draft' | 'stale' | 'empty' | 'out-of-sync'; message: string; currentVersion?: number; baseVersion?: number }
+  | { error: 'no draft' | 'stale' | 'empty' | 'out-of-sync' | 'moved'; message: string; currentVersion?: number; baseVersion?: number }
 
 /**
  * Опубликовать черновик автора ОДНОЙ версией. Запись идёт обычным путём
@@ -91,9 +116,25 @@ export type PublishResult =
  * где строка списка уже взята for update. Сравнение чисел здесь — только ранний
  * отсев с понятным ответом.
  */
-export async function publishDraftFor(tpl: ListRow, authorId: string, note?: string): Promise<PublishResult> {
+export async function publishDraftFor(
+  tpl: ListRow,
+  authorId: string,
+  note?: string,
+  opts: { expect?: DraftRef } = {},
+): Promise<PublishResult> {
   const draft = await getDraft(tpl.id, authorId)
   if (!draft) return { error: 'no draft', message: 'there are no unpublished edits to publish' }
+  // ⚠️ ПУБЛИКУЕТСЯ ИМЕННО ТОТ СНИМОК, который сохранили и показали. Запись держит замок
+  // списка, но ОТПУСКАЕТ его, а сюда мы приходим отдельным чтением — в зазор успевает
+  // `patch_list(publish:false)`: он поднимает ревизию, и в версию уходит его текст,
+  // которого человек не видел. Удержание от затирания этого не ловит: оно смотрело
+  // раньше зазора (P1 авто-ревью по #945).
+  if (opts.expect && draftMoved(opts.expect, { id: draft.id, rev: draft.rev })) {
+    return {
+      error: 'moved',
+      message: 'the draft changed after you saved it — reload the editor and publish again',
+    }
+  }
   if (draft.items.length === 0) return { error: 'empty', message: 'the draft has no blocks left' }
   if (draft.baseVersion !== tpl.currentVersion) {
     return {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { draftRevField, publishHeldQuery, saveOutcomeQuery, shouldHoldPublish } from '@/features/library/save-outcome'
+import { draftRefField, parseDraftRef, publishHeldQuery, saveOutcomeQuery, shouldHoldPublish } from '@/features/library/save-outcome'
 
 /**
  * СОХРАНЕНИЕ ГОВОРИТ, ЧТО СЛУЧИЛОСЬ.
@@ -56,15 +56,31 @@ describe('после сохранения человеку сказано, чт�
  * открывалась.
  */
 describe('признак затирания доходит до решения', () => {
-  it('черновика нет — поле несёт НОЛЬ, а не пустоту', () => {
+  it('черновика нет — поле несёт явное «none», а не пустоту', () => {
     // Пустая строка доезжает до записи как `undefined` = «сравнивать не с чем», и
-    // сверка отключается вовсе. Ноль говорит «черновика не было» и сравнению не мешает.
-    expect(draftRevField(null), 'сверка отключится, и правки агента сотрутся молча').toBe(0)
-    expect(draftRevField(undefined)).toBe(0)
+    // сверка отключается вовсе. `none` говорит «черновика не было» и сравнению не мешает.
+    expect(draftRefField(null), 'сверка отключится, и правки агента сотрутся молча').toBe('none')
+    expect(draftRefField(undefined)).toBe('none')
   })
 
-  it('черновик есть — поле несёт его ревизию', () => {
-    expect(draftRevField({ rev: 7 })).toBe(7)
+  // ⚠️ ABA: номер нового черновика всегда 1, поэтому опознавать объект одним числом
+  // нельзя — строку могли заменить на другую с тем же номером.
+  it('черновик есть — поле несёт СТРОКУ и номер, а не один номер', () => {
+    const field = draftRefField({ id: 'd-1', rev: 7 })
+    expect(field, 'опознаётся возраст, а не объект').toContain('d-1')
+    expect(field).toContain('7')
+  })
+
+  it('разбор возвращает ту же пару', () => {
+    expect(parseDraftRef(draftRefField({ id: 'd-1', rev: 7 }))).toEqual({ id: 'd-1', rev: 7 })
+    expect(parseDraftRef('none')).toBe('none')
+  })
+
+  it('неразбираемое поле — как «поля не прислали», а не как совпадение', () => {
+    // Выдумать здесь опаснее, чем промолчать: ложное «совпало» отключает удержание.
+    expect(parseDraftRef(''), 'пустое поле прочиталось как осмысленное').toBeUndefined()
+    expect(parseDraftRef(null)).toBeUndefined()
+    expect(parseDraftRef('мусор')).toBeUndefined()
   })
 
   it('затирание обнаружено — публикация останавливается', () => {

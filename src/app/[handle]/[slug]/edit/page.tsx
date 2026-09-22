@@ -7,7 +7,7 @@ import { getStepPreviews, getTemplateDetail, getDraft } from '@/features/library
 import { canWriteList } from '@/features/collab/queries'
 import { canEditList } from '@/core'
 import { discardDraft, publishEdits, saveDraft } from '@/features/library/actions'
-import { draftRevField } from '@/features/library/save-outcome'
+import { draftRefField } from '@/features/library/save-outcome'
 import { BackLink } from '@/shared/ui/BackLink'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
 import { GatedToggle, ListTypeToggle } from '@/features/library/ListFormToggles'
@@ -90,12 +90,12 @@ export default async function EditPage({
         {/* Редакция черновика, от которой правит автор. Запись сверит её с текущей и
             скажет, если черновик ушёл вперёд — например, его патчил агент по MCP в тот
             же черновик (он действует от имени того же человека).
-            ⚠️ Черновика ещё нет — шлём 0, а НЕ пустую строку. Пустая превращалась в
-            `undefined`, а `undefined` значит «сравнивать не с чем» и отключал сверку
-            целиком: агент успевал создать черновик, пока страница открыта, и первое же
-            «Сохранить» стирало его правки молча — ровно тот случай, ради которого
-            сверка и заведена. Ноль отличает «черновика не было» от «поля не прислали». */}
-        <input type="hidden" name="rev" value={draftRevField(draft)} />
+            ⚠️ Несём СТРОКУ И НОМЕР (`<id>:<rev>`), а не номер сам по себе: `rev` нового
+            черновика всегда начинается с 1, поэтому голый счётчик опознаёт возраст, а
+            не объект — черновик опубликовали, агент завёл новый, у обоих 1, и сверка
+            молчит. «Черновика не было» — явное `none`, а не пустая строка: пустая
+            доезжает как «сравнивать не с чем» и отключает сверку целиком. */}
+        <input type="hidden" name="draftRef" value={draftRefField(draft)} />
         {/* Заголовок НЕ обещает новую версию: правки копятся в черновике, а версия
             появляется только при публикации (жалоба владельца: «там всегда смена
             версий»). Куда приедет черновик — написано у самой кнопки публикации. */}
@@ -132,6 +132,13 @@ export default async function EditPage({
             <span className="block">
               {t('draftDestructiveWarn', lang).replace('{step}', String(sp.step ?? ''))}
             </span>
+          </Alert>
+        )}
+        {/* Черновик подменили между сохранением и публикацией: версия НЕ вышла, и
+            опубликовать вслепую нельзя — состав уже не тот, что человек видел. */}
+        {sp.e === 'moved' && (
+          <Alert variant="warn" className="mb-4">
+            <span className="block">{t('publishDraftMoved', lang)}</span>
           </Alert>
         )}
         {sp.e === 'stale' && (

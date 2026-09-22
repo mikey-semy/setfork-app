@@ -1,0 +1,32 @@
+{
+  "target": "src/features/library/draft.ts",
+  "tests": ["tests/features/library/draft-overwrite-visible.itest.ts"],
+  "config": "vitest.integration.config.ts",
+  "mutants": [
+    {
+      "name": "P1-2 ABA: сравнивается голый номер, без строки",
+      "from": "  return before.id !== expected.id || before.rev !== expected.rev",
+      "to": "  return before.rev !== expected.rev"
+    },
+    {
+      "name": "P1-1 «черновика не было» перестаёт быть поводом",
+      "from": "  if (expected === 'none') return true",
+      "to": "  if (expected === 'none') return false"
+    },
+    {
+      "name": "обратная сторона: затирание объявляется всегда",
+      "from": "  return before.id !== expected.id || before.rev !== expected.rev",
+      "to": "  return true"
+    },
+    {
+      "name": "обратная сторона: путь MCP получает ложное затирание",
+      "from": "  if (expected === undefined) return false",
+      "to": "  if (expected === undefined) return true"
+    },
+    {
+      "name": "номер черновика перестаёт расти — сравнивать станет нечего",
+      "from": "rev: sql`${listDrafts.rev} + 1`",
+      "to": "rev: sql`${listDrafts.rev}`"
+    }
+  ]
+}

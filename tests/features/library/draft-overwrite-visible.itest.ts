@@ -21,7 +21,7 @@ import { resetTables } from '../../helpers/reset-db'
 
 const { db, users, templates, listDrafts } = await import('@/shared/db')
 type ProposedItem = import('@/shared/db').ProposedItem
-const { upsertDraft } = await import('@/features/library/draft')
+const { deleteDraft, upsertDraft } = await import('@/features/library/draft')
 
 let ownerId = ''
 let tpl = { id: '', currentVersion: 1, tags: [] as string[], ordered: true, gated: false }
@@ -40,8 +40,9 @@ beforeEach(async () => {
   tpl = { id: t.id, currentVersion: t.currentVersion, tags: [], ordered: true, gated: false }
 })
 
-const save = (author: string, title: string, expectedRev?: number) =>
-  upsertDraft(tpl, author, { items: items(title), meta: {}, note: '' }, { expectedRev })
+type DraftRef = { id: string; rev: number } | 'none'
+const save = (author: string, title: string, expected?: DraftRef) =>
+  upsertDraft(tpl, author, { items: items(title), meta: {}, note: '' }, { expected })
 
 const storedTitle = async (author: string) => {
   const [row] = await db
@@ -58,7 +59,7 @@ describe('рабочая копия сообщает о затирании', () 
     await save(ownerId, 'от агента')
 
     // Человек жмёт «Сохранить» с редакцией, которую ему показали при открытии.
-    const res = await save(ownerId, 'из редактора, позже', first.rev)
+    const res = await save(ownerId, 'из редактора, позже', { id: first.id, rev: first.rev })
 
     expect(res.overwrote, 'затирание чужих правок осталось незамеченным').toBe(true)
     expect(await storedTitle(ownerId), 'набранное человеком обязано сохраниться: отказ терял бы его').toBe(
@@ -70,14 +71,14 @@ describe('рабочая копия сообщает о затирании', () 
   it('ничего не менялось — предупреждения нет', async () => {
     const first = await save(ownerId, 'первый')
 
-    const res = await save(ownerId, 'второй', first.rev)
+    const res = await save(ownerId, 'второй', { id: first.id, rev: first.rev })
 
     expect(res.overwrote, 'предупреждение показано на ровном месте').toBe(false)
     expect(await storedTitle(ownerId)).toBe('второй')
   })
 
   it('первое сохранение (черновика ещё нет) — не затирание', async () => {
-    const res = await save(ownerId, 'первый', 0)
+    const res = await save(ownerId, 'первый', 'none')
     expect(res.overwrote).toBe(false)
   })
 
@@ -90,9 +91,28 @@ describe('рабочая копия сообщает о затирании', () 
     // Агент создаёт черновик — это первая запись, rev станет 1.
     await save(ownerId, 'от агента')
 
-    const res = await save(ownerId, 'из редактора', 0)
+    const res = await save(ownerId, 'из редактора', 'none')
 
     expect(res.overwrote, 'черновик, созданный агентом, стёрт молча').toBe(true)
+  })
+
+  // ⚠️ ABA. Второй P1 авто-ревью: номер каждого нового черновика начинается с 1, поэтому
+  // голый счётчик опознаёт не объект, а его возраст. Черновик, который видел автор,
+  // опубликовали или отбросили; агент завёл НОВЫЙ — у обоих rev = 1, и сравнение по
+  // числу сказало бы «ничего не менялось».
+  it('черновик ЗАМЕНИЛИ на другой с тем же номером — затирание замечено', async () => {
+    const seen = await save(ownerId, 'что видел автор')
+    expect(seen.rev, 'предпосылка: первый черновик имеет rev = 1').toBe(1)
+
+    // Его опубликовали или отбросили, а агент завёл свой — новая строка, снова rev = 1.
+    await deleteDraft(tpl.id, ownerId)
+    const agent = await save(ownerId, 'черновик агента')
+    expect(agent.rev, 'предпосылка: у новой строки тот же номер').toBe(1)
+    expect(agent.id, 'предпосылка: строка ДРУГАЯ').not.toBe(seen.id)
+
+    const res = await save(ownerId, 'из старого редактора', { id: seen.id, rev: seen.rev })
+
+    expect(res.overwrote, 'ABA: номер совпал, объект другой — правки агента заменены молча').toBe(true)
   })
 
   it('запись без ожидаемой редакции (путь MCP) ведёт себя как прежде', async () => {
@@ -107,5 +127,6 @@ describe('рабочая копия сообщает о затирании', () 
     const a = await save(ownerId, 'раз')
     const b = await save(ownerId, 'два')
     expect(b.rev, 'rev не инкрементируется: признак затирания станет бессмысленным').toBeGreaterThan(a.rev)
+    expect(b.id, 'строка та же — правки копятся, а не пересоздаются').toBe(a.id)
   })
 })
