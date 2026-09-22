@@ -146,6 +146,17 @@ function mismatches(): string[] {
   return out
 }
 
+/** Отказ, если окружение поднято не таким, как просят. Ничего не трогает. */
+function assertSame() {
+  const bad = mismatches()
+  if (bad.length) {
+    throw new Error(
+      `окружение на порту ${PG_PORT} поднято не таким, как просят, и НЕ тронуто:\n  · ${bad.join('\n  · ')}\n` +
+        'Пересоздать нарочно: `itest-env.ts up --recreate` (или `down`, затем `up`).',
+    )
+  }
+}
+
 /** Ждать окружение, которое поднимает кто-то другой, — не снося его. */
 function waitForOther() {
   out(`контейнер ${PG} существует, но окружение ещё не готово — жду, не снося`)
@@ -161,6 +172,11 @@ function waitForOther() {
     )
   }
   out('дождался: окружение поднялось')
+  // ⚠️ СВЕРКА ЕЩЁ РАЗ, уже по готовому. Пока мы ждали, победитель создавал ядро — со
+  // СВОИМ портом и образом; первая сверка его не видела, потому что ядра ещё не было.
+  // Без повтора мы объявили бы свои настройки поверх чужого окружения (находка
+  // авто-ревью).
+  assertSame()
   printEnv()
 }
 
@@ -177,13 +193,7 @@ function up() {
   // Пересоздать нарочно: `itest-env.ts down` и затем `up`, либо `up --recreate`.
   const forced = process.argv.includes('--recreate')
   if (!forced) {
-    const bad = mismatches()
-    if (bad.length) {
-      throw new Error(
-        `окружение на порту ${PG_PORT} поднято не таким, как просят, и НЕ тронуто:\n  · ${bad.join('\n  · ')}\n` +
-          'Пересоздать нарочно: `itest-env.ts up --recreate` (или `down`, затем `up`).',
-      )
-    }
+    assertSame()
     if (ready()) {
       out(`окружение на порту ${PG_PORT} уже поднято целиком (база, схема, ядро) — оставляю как есть`)
       out('пересоздать нарочно: npx tsx scripts/itest-env.ts down && npx tsx scripts/itest-env.ts up')
