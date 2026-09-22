@@ -54,8 +54,10 @@ docs/review/README.md	V12c
 docs/review/blocks.json	V12e
 docs/review/blocks/H1-access.md	V12c
 docs/review/blocks/H15-domain-core.md	V12c
+docs/review/blocks/H2-core-contract.md	V12c
 docs/review/blocks/V1d-list-write.md	V12c
 docs/review/findings.jsonl	V12e
+docs/review/findings.md	V12c
 docs/review/invariants.md	V12c
 docs/review/journal.md	V12c
 docs/review/prompts/fix.md	V12c
@@ -1249,6 +1251,7 @@ tests/app/sitemap-verification.itest.ts	V12d
 tests/app/sitemap.itest.ts	V12d
 tests/app/telegram-link-page.test.tsx	V12d
 tests/architecture/audit-gate-split.test.ts	H12
+tests/architecture/block-fields-reach-the-wire.test.ts	H12
 tests/architecture/build-offline-fonts.test.ts	H12
 tests/architecture/button-class-merge.test.ts	H12
 tests/architecture/command-one-view.test.ts	H12
