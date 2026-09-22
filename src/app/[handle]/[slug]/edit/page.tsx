@@ -242,6 +242,10 @@ export default async function EditPage({
 
       {draft && (
         <form action={discardDraft.bind(null, tpl.id)} className="mt-3">
+          {/* Тот же признак, что у сохранения: отказ от правок — такое же необратимое
+              действие над общим черновиком, и он обязан заметить, что туда успел
+              дописать агент. */}
+          <input type="hidden" name="draftRef" value={draftRefField(tpl.currentVersion, draft)} />
           <SubmitButton variant="danger" className="max-sm:w-full">
             {t('discardDraft', lang)}
           </SubmitButton>

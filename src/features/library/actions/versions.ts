@@ -21,7 +21,7 @@ import { parseEditorItems, toProposedItems } from '../editor'
 import { carryField } from '../translation-carry'
 import { getDraft, getVersionSteps } from '../queries'
 import { publishOwnedDraft } from '../publish-draft'
-import { deleteDraft, publishDraftFor, upsertDraft, type DraftRef, type PublishResult } from '../draft'
+import { deleteDraftIfUnchanged, publishDraftFor, upsertDraft, type DraftRef, type PublishResult } from '../draft'
 import { listStore } from '../list-store'
 import { VERSION_ERR } from '../version-error'
 import { parseTags, slugify } from '../slug'
@@ -223,11 +223,16 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
   }
   const note = String(formData.get('note') ?? '').trim()
   const handle = await ownerHandle(tpl.ownerId)
+  // Какой черновик видел автор: разбирается ЗДЕСЬ, до любых действий. Раньше разбор
+  // стоял ниже, и ранняя ветка «состав опустел» успевала удалить черновик, ни с чем
+  // его не сверив, — самое необратимое действие оказывалось единственным без проверки.
+  const expected = parseDraftRef(formData.get('draftRef'))
   // Пустой состав в черновике не храним: он подменил бы опубликованный список
   // пустотой в редакторе, а опубликовать его всё равно нельзя.
   if (items.length === 0) {
-    await deleteDraft(tpl.id, session.userId)
-    redirect(`/${handle}/${tpl.slug}/edit?e=empty`)
+    const { overwrote } = await deleteDraftIfUnchanged(tpl, session.userId, expected)
+    // Расхождение — не удаляем: человек убрал бы вместе со своим и чужое, не увидев.
+    redirect(`/${handle}/${tpl.slug}/edit?${overwrote ? 'saved=1&over=1&held=1' : 'e=empty'}`)
   }
   // base_version НЕ переписываем у уже устаревшего черновика: сдвинуть его значит
   // сказать «правки сделаны от свежей версии», а они сделаны от старой — и следующая
@@ -235,7 +240,6 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
   // осознанный отказ от правок (discardDraft), а не автосохранение.
   // Какой черновик видел автор: форма несёт строку и её номер, чтобы запись могла
   // понять, не подменили ли черновик, пока редактор был открыт.
-  const expected = parseDraftRef(formData.get('draftRef'))
   const saved = await upsertDraft(tpl, session.userId, { items, meta, note }, { expected })
   const overwrote = saved.overwrote
   // ⚠️ Публикация поверх обнаруженного затирания НЕ ИДЁТ. Отказ здесь безопасен, в
@@ -253,12 +257,21 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
 }
 
 /** Убрать черновик и вернуться к опубликованному состоянию. */
-export async function discardDraft(templateId: string): Promise<void> {
+export async function discardDraft(templateId: string, formData?: FormData): Promise<void> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-  await deleteDraft(tpl.id, session.userId)
+  // ⚠️ ТРЕТЬЯ ВЕТКА, которая удаляла черновик вовсе без сверки. «Отказаться от правок» —
+  // про СВОИ правки; если в тот же черновик успел дописать агент, человек отказывается
+  // и от чужого, о чём не знает. Останавливаемся один раз и показываем, что там есть.
+  const expected = parseDraftRef(formData?.get('draftRef'))
+  const { overwrote } = await deleteDraftIfUnchanged(tpl, session.userId, expected)
+  if (overwrote) {
+    const owner = await ownerHandle(tpl.ownerId)
+    revalidatePath(`/${owner}/${tpl.slug}`, 'layout')
+    redirect(`/${owner}/${tpl.slug}/edit?saved=1&over=1&held=1`)
+  }
   const handle = await ownerHandle(tpl.ownerId)
   revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
   redirect(`/${handle}/${tpl.slug}`)

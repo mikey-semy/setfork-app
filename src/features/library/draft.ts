@@ -65,7 +65,10 @@ export function draftMoved(
   // Список ушёл вперёд, пока автор правил: между его «сейчас» и нашим что-то
   // опубликовали — в том числе, возможно, черновик агента, следа которого уже нет.
   if (expected.listVersion !== now.listVersion) return true
-  if (now.draft === undefined) return false // строки нет и версия та же — затирать нечего
+  // Строки нет. Это расхождение, если автор её ВИДЕЛ: её удалили при нём — опубликовали
+  // или явно отбросили (`discard_draft`), — и сохранение из устаревшего редактора
+  // воссоздало бы то, от чего отказались. Если автор её тоже не видел, расхождения нет.
+  if (now.draft === undefined) return expected.draft !== 'none'
   if (expected.draft === 'none') return true // её не было при авторе — значит завели при нём
   return now.draft.id !== expected.draft.id || now.draft.rev !== expected.draft.rev
 }
@@ -107,6 +110,40 @@ export async function upsertDraft(
 /** Убрать черновик автора (публикация его исчерпала либо от правок отказались). */
 export async function deleteDraft(templateId: string, authorId: string): Promise<void> {
   await db.delete(listDrafts).where(and(eq(listDrafts.templateId, templateId), eq(listDrafts.authorId, authorId)))
+}
+
+/**
+ * Убрать черновик, СНАЧАЛА сверив, тот ли он.
+ *
+ * ⚠️ Удаление — самое необратимое из трёх действий над рабочей копией, и именно оно
+ * дольше всех обходилось без сверки: ранняя ветка «состав опустел» звала `deleteDraft`
+ * раньше, чем признак вообще разбирался, а «отказаться от правок» не сверяла ничего и
+ * сейчас. Человек убирал последний пункт — и правки агента исчезали без следа и без
+ * предупреждения (P1 авто-ревью по #945).
+ *
+ * Сверка и удаление — под ОДНИМ замком списка: иначе между ними снова помещается
+ * чужая запись, и мы удалим уже не то, что сравнивали.
+ *
+ * @returns `overwrote` — удалили не то, что видел автор. Удаление при этом НЕ
+ * выполняется: необратимое действие поверх расхождения требует, чтобы человек
+ * посмотрел ещё раз.
+ */
+export async function deleteDraftIfUnchanged(
+  tpl: ListRow,
+  authorId: string,
+  expected: DraftRef | undefined,
+): Promise<{ overwrote: boolean }> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${templates} where ${templates.id} = ${tpl.id} for update`)
+    const [before] = await tx
+      .select({ id: listDrafts.id, rev: listDrafts.rev })
+      .from(listDrafts)
+      .where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, authorId)))
+      .limit(1)
+    if (draftMoved(expected, { listVersion: tpl.currentVersion, draft: before })) return { overwrote: true }
+    await tx.delete(listDrafts).where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, authorId)))
+    return { overwrote: false }
+  })
 }
 
 /**

@@ -21,7 +21,7 @@ import { resetTables } from '../../helpers/reset-db'
 
 const { db, users, templates, listDrafts } = await import('@/shared/db')
 type ProposedItem = import('@/shared/db').ProposedItem
-const { deleteDraft, upsertDraft } = await import('@/features/library/draft')
+const { deleteDraft, deleteDraftIfUnchanged, upsertDraft } = await import('@/features/library/draft')
 
 let ownerId = ''
 let tpl = { id: '', currentVersion: 1, tags: [] as string[], ordered: true, gated: false }
@@ -54,7 +54,7 @@ const storedTitle = async (author: string) => {
     .select({ items: listDrafts.items })
     .from(listDrafts)
     .where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, author)))
-  return (row?.items as unknown as Array<{ title: { ru: string } }>)[0]?.title.ru
+  return (row?.items as unknown as Array<{ title: { ru: string } }> | undefined)?.[0]?.title.ru
 }
 
 describe('рабочая копия сообщает о затирании', () => {
@@ -150,6 +150,53 @@ describe('рабочая копия сообщает о затирании', () 
     const res = await save(ownerId, 'от агента')
     expect(res.overwrote, 'агент получил предупреждение, которого не заслужил').toBe(false)
     expect(await storedTitle(ownerId)).toBe('от агента')
+  })
+
+  // ⚠️ P2 авто-ревью: строка ИСЧЕЗЛА, хотя автор её видел. Её опубликовали или явно
+  // отбросили (`discard_draft`) — и сохранение из устаревшего редактора воссоздало бы
+  // то, от чего отказались. «Нет строки» само по себе не значит «ничего не менялось».
+  it('черновик, который автор ВИДЕЛ, исчез — это расхождение', async () => {
+    const seen = await save(ownerId, 'что видел автор')
+    await deleteDraft(tpl.id, ownerId)
+
+    const res = await save(ownerId, 'из устаревшего редактора', { id: seen.id, rev: seen.rev })
+
+    expect(res.overwrote, 'воссоздаём то, что явно отбросили, и молчим об этом').toBe(true)
+  })
+
+  // ⚠️ P1 авто-ревью: удаление — самое необратимое действие, и оно единственное шло
+  // МИМО сверки. Человек убрал последний пункт — правки агента исчезали без следа.
+  it('удаление опустевшего черновика сверяет ДО того, как удалить', async () => {
+    const seen = await save(ownerId, 'что видел автор')
+    await save(ownerId, 'дописал агент') // rev вырос
+
+    const res = await deleteDraftIfUnchanged(tpl, ownerId, {
+      listVersion: tpl.currentVersion,
+      draft: { id: seen.id, rev: seen.rev },
+    })
+
+    expect(res.overwrote, 'чужие правки удалены без предупреждения').toBe(true)
+    // И самого удаления не произошло: необратимое поверх расхождения не делаем.
+    expect(await storedTitle(ownerId), 'строка всё-таки удалена').toBe('дописал агент')
+  })
+
+  // ⚠️ Обратная сторона: если черновик тот самый, удаление обязано пройти — иначе
+  // «Отказаться от правок» и очистка состава перестают работать вовсе.
+  it('удаление того же черновика проходит', async () => {
+    const seen = await save(ownerId, 'мой черновик')
+
+    const res = await deleteDraftIfUnchanged(tpl, ownerId, {
+      listVersion: tpl.currentVersion,
+      draft: { id: seen.id, rev: seen.rev },
+    })
+
+    expect(res.overwrote).toBe(false)
+    expect(await storedTitle(ownerId), 'черновик не удалён').toBeUndefined()
+  })
+
+  it('удаление, когда черновика нет и автор его не видел, — не расхождение', async () => {
+    const res = await deleteDraftIfUnchanged(tpl, ownerId, { listVersion: tpl.currentVersion, draft: 'none' })
+    expect(res.overwrote, 'пустой отказ объявлен расхождением').toBe(false)
   })
 
   it('редакция растёт на каждой записи — иначе сравнивать нечего', async () => {
