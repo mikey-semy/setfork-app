@@ -9,7 +9,7 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
     'pending_suggestions',
     {
       title: 'Suggested edits waiting for you',
-      description: 'List the OPEN suggested edits on lists you own — what is waiting for your decision. Accepting one with apply_suggestion (or merge_suggestion) makes a new version of the list; rejecting leaves the list untouched.',
+      description: 'List the OPEN suggested edits on lists you own — what is waiting for your decision. Accepting one with apply_suggestion (or merge_suggestion) makes a new version of the list; rejecting leaves the list untouched. Each entry reports kind, basedOn and listVersion: for kind "items" an older basedOn means accepting drops what was added since; a branch is merged by git, so there it means nothing.',
       inputSchema: { limit: z.number().int().min(1).max(50).optional().describe('Max results (default 20)') },
     },
     async (userId, { limit }) => json(await mcpPendingSuggestions(userId, limit ?? 20)),
@@ -21,7 +21,7 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
       // ⚠️ Разрушающий: принятое предложение СТАНОВИТСЯ новым составом списка — блоки, которых в нём нет, из текущей версии уходят.
       annotations: { destructiveHint: true },
       title: 'Accept a suggested edit',
-      description: 'Accept an open suggested edit on a list you own: its items REPLACE the whole list content as a new version, so read them before accepting. Get ids from pending_suggestions. A suggestion blocked by a reviewer who requested changes cannot be accepted.',
+      description: 'Accept an open suggested edit on a list you own: its items REPLACE the whole list content as a new version, so read them before accepting. Get ids from pending_suggestions — it also reports basedOn, and for an items suggestion an older one means accepting drops what came after (a branch is merged by git instead). A suggestion blocked by a reviewer who requested changes cannot be accepted.',
       inputSchema: { suggestionId: z.string().describe('Suggestion id from pending_suggestions') },
     },
     async (userId, { suggestionId }) => {
@@ -37,7 +37,7 @@ export function registerSuggestions({ readTool, writeTool }: ToolKit) {
     {
       title: 'Suggest an edit to a list',
       description:
-        "Propose a change to someone else's list: it becomes a suggestion the owner can accept or reject. The items you pass REPLACE the list content when accepted, so send the full intended list, not just the new lines. Use get_list first to see what is there — its \"version\" tells you which bytes you are proposing against, and blocks keep their \"bid\" across versions, so per-block comments and diffs stay attached. For your own lists use update_list instead — it edits directly.",
+        "Propose a change to someone else's list: it becomes a suggestion the owner can accept or reject. The items you pass REPLACE the list content when accepted, so send the full intended list, not just the new lines. Use get_list first to see what is there — its \"version\" tells you which bytes you are proposing against, and blocks keep their \"bid\" across versions, so per-block comments and diffs stay attached. For your own lists use update_list instead — it edits directly. Layout rules are the same as in create_list — including that a single newline does NOT break a line.",
       inputSchema: {
         list: z.string().describe('List reference: "handle/slug" or just "slug"'),
         note: z.string().describe('What you changed and why — the owner reads this first'),

@@ -177,6 +177,16 @@ export async function toggleIssueAssignee(owner: string, slug: string, number: n
   const [u] = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
   if (!u) return
   const userId = u.id
+  // ⚠️ ЗАПРЕТА «назначать только имеющих доступ» ЗДЕСЬ НЕТ, и это решение, а не пропуск.
+  // Он напрашивается (у GitHub в исполнители попадают лишь имеющие доступ) и был
+  // написан — но отнимал у приватных списков помощь ГНОМОВ: гном не владелец и не
+  // соредактор, задача `gnome_task` видимость не проверяет и сегодня работает. Запрет
+  // выключил бы её молча, а это хуже той дыры, которую он закрывает.
+  //
+  // Сама дыра — не в записи назначения, а в ДОСТАВКЕ: письмо с приватным названием
+  // уходило постороннему. Она закрыта гейтом в `notify` (features/notifications/
+  // list-access), и запись назначения наружу ничего не сообщает: лента фильтрует по
+  // видимости, страница задачи — тоже.
   const [existing] = await db
     .select({ id: issueAssignees.id })
     .from(issueAssignees)

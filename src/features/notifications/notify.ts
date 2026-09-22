@@ -9,7 +9,9 @@ import { pushEnabled } from '@/shared/push/vapid'
 import { userHasPush } from '@/shared/push/send'
 import { captureError } from '@/shared/observability'
 import { extractHandles } from './mentions'
+import { notificationType } from '@/shared/db/schema'
 import type { NotificationType } from './queries'
+import { recipientSeesList } from './list-access'
 
 /** Тот же перечень, что в схеме и в колокольчике: один источник, см. `./queries`. */
 type NotifType = NotificationType
@@ -58,6 +60,24 @@ const TYPE_PREF: Record<NotifType, keyof NotifyPrefs | null> = {
   transfer_declined: null,
 }
 
+/**
+ * Уведомления о ПЕРЕДАЧЕ ВЛАДЕНИЯ: получатель законно НЕ видит список — приглашённый
+ * ещё не владелец, а прежний владелец уже не владелец. Гейт видимости к ним не
+ * применяется (см. `notify`), и отключить их нельзя (см. TYPE_PREF): без них передача
+ * зависает, и обе стороны об этом не узнают.
+ *
+ * ⚠️ НАБОР ВЫВОДИТСЯ ИЗ ПЕРЕЧНЯ СХЕМЫ, а не переписан списком: новый тип `transfer_*`
+ * попадёт сюда сам. Список рядом отстал бы молча — ровно тот корень, который мы ловим.
+ *
+ * ⚠️ И НЕ ПУТАТЬ С «НЕОТКЛЮЧАЕМЫМИ»: `mention`, `assigned`, `review_requested` тоже
+ * нельзя выключить ручкой, но гейт к ним применяется — именно через них приватное
+ * название уезжало постороннему. Право на письмо о передаче даёт участие В ПЕРЕДАЧЕ,
+ * а не неотключаемость типа.
+ */
+export const TRANSFER_TYPES: ReadonlySet<NotifType> = new Set(
+  notificationType.enumValues.filter((t): t is NotifType => t.startsWith('transfer_')),
+)
+
 /** Создаёт уведомление. Себе не шлём; уважаем предпочтения получателя. Ошибки глотаем. */
 export async function notify(params: {
   recipientId: string
@@ -97,15 +117,33 @@ export async function notify(params: {
       suggestionId: params.suggestionId ?? null,
     }
 
+    // ⚠️ ДОСТАВКА НАРУЖУ — ТОЛЬКО ТОМУ, КТО СПИСОК ВИДИТ. Лента этот вопрос задаёт на
+    // чтении (`keepVisible`), а почта и пуш собирают текст в момент отправки и читали
+    // название по id без гейта: приватный заголовок уезжал в ТЕМЕ ПИСЬМА тому, кому
+    // колокольчик его прячет. Спрашиваем один раз на оба канала — и только когда
+    // уведомление вообще про список (подписка на человека и передача аккаунта не про
+    // доступ, у них templateId нет).
+    // ⚠️ ПЕРЕДАЧА ВЛАДЕНИЯ — ИСКЛЮЧЕНИЕ, И ОНО НЕСУЩЕЕ. У этих писем получатель ПО
+    // ОПРЕДЕЛЕНИЮ не видит список: приглашённый ещё не владелец и не соредактор, а
+    // прежний владелец только что перестал им быть. Гейт по обычному предикату
+    // видимости убил бы ровно те уведомления, без которых передача зависает молча —
+    // человек не узнал бы, что ему предложили список, и что его предложение приняли.
+    // Утечки тут нет: название списка и есть содержание предложения, как имя
+    // репозитория в приглашении GitHub.
+    const deliverable =
+      !params.templateId || TRANSFER_TYPES.has(params.type)
+        ? true
+        : await recipientSeesList(params.templateId, params.recipientId)
+
     // Дублируем на почту через очередь (durable + ретраи), если получатель включил
     // email-уведомления и SMTP настроен. Отправка уходит из request-пути к воркеру.
-    if (prefs.email === true && u?.email && (await emailEnabled())) {
+    if (deliverable && prefs.email === true && u?.email && (await emailEnabled())) {
       // userId нужен письму для ссылки отписки (List-Unsubscribe).
       await enqueueJob('email', { to: u.email, userId: params.recipientId, ...refPayload })
     }
 
     // Фоновый web-push, если включён browser-pref, есть подписка и VAPID настроен.
-    if (prefs.browser === true && (await pushEnabled()) && (await userHasPush(params.recipientId))) {
+    if (deliverable && prefs.browser === true && (await pushEnabled()) && (await userHasPush(params.recipientId))) {
       await enqueueJob('push', { userId: params.recipientId, ...refPayload })
     }
   } catch (e) {

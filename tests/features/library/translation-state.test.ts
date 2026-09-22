@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hasLang, type TranslatableRow } from '@/features/library/translation-state'
+import { hasLang, translateErrorKey, type TranslatableRow } from '@/features/library/translation-state'
 
 /**
  * Кнопка перевода нажимается повторно — и второй раз ответ обязан прийти из
@@ -68,5 +68,30 @@ describe('hasLang', () => {
 
   it('заголовок самого списка тоже считается', () => {
     expect(hasLang({ title: { en: 'Guide' }, desc: {} }, [row()], 'ru')).toBe(false)
+  })
+})
+
+/**
+ * ПОЧЕМУ ПЕРЕВОД НЕ СЛУЧИЛСЯ — таблица одна на обе кнопки, которые его запускают.
+ *
+ * Кнопка языка причину расшифровывала, пункт меню показывал «не удалось перевести» на
+ * ЛЮБОЙ код — то есть человек, нажавший из меню, не узнавал ни про месячный лимит, ни
+ * про то, что список ушёл вперёд. Пока таблица жила внутри компонента, второй
+ * вызывающий неизбежно заводил свою.
+ */
+describe('причина неудачного перевода', () => {
+  it('сдвинувшийся список — свой текст, а не общее «не удалось»', () => {
+    expect(translateErrorKey('stale')).toBe('translateListMoved')
+    expect(translateErrorKey('stale')).not.toBe(translateErrorKey('aifail'))
+  })
+
+  it('лимиты называются поимённо', () => {
+    expect(translateErrorKey('ratelimited')).toBe('rateLimited')
+    expect(translateErrorKey('ai_quota')).toBe('library.monthlyLimitReachedTry')
+  })
+
+  it('незнакомый код — общий отказ, а не пустая строка', () => {
+    expect(translateErrorKey('aifail')).toBe('translateFailed')
+    expect(translateErrorKey('что-то новое')).toBe('translateFailed')
   })
 })

@@ -1,0 +1,11 @@
+{
+  "target": "src/features/library/suggestion-blocks.ts",
+  "tests": ["tests/features/library/merge-snapshot-unreadable.test.ts"],
+  "mutants": [
+    {
+      "name": "сбой чтения снова выдаётся за пустой список — та самая дыра",
+      "from": "    return { ok: false, reason: BLOCKS_UNREADABLE }",
+      "to": "    return { ok: true, blocks: [] }"
+    }
+  ]
+}

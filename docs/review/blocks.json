@@ -69,7 +69,8 @@
         "src/shared/auth/**",
         "src/shared/list-visibility.ts",
         "tests/features/auth",
-        "tests/security"
+        "tests/security",
+        "tests/shared/auth/oauth-single-use.itest.ts"
       ],
       "ref_paths": [
         "src/features/library/**",
@@ -119,28 +120,31 @@
         "docs/mcp-surface.md",
         "public/schema/list.v1.json",
         "src/app/api/[transport]",
+        "src/features/mcp/patch.ts",
+        "src/features/mcp/registry/block-schema.ts",
         "src/features/mcp/registry/index.ts",
         "src/features/mcp/registry/kit.ts",
-        "src/features/mcp/registry/server-info.ts",
-        "src/features/mcp/registry/block-schema.ts",
         "src/features/mcp/registry/lists.ts",
         "src/features/mcp/registry/reads.ts",
+        "src/features/mcp/registry/server-info.ts",
         "src/features/mcp/tools/index.ts",
         "src/features/mcp/tools/lists",
         "src/features/mcp/tools/reads.ts",
         "src/features/mcp/tools/shared.ts",
-        "src/features/mcp/patch.ts",
-        "tests/features/mcp/registry.test.ts",
-        "tests/features/mcp/tools.itest.ts",
+        "tests/features/mcp/bulk.itest.ts",
+        "tests/features/mcp/create-catalog.itest.ts",
+        "tests/features/mcp/get-script-steps.itest.ts",
+        "tests/features/mcp/moved-lookup.itest.ts",
         "tests/features/mcp/patch-block.test.ts",
         "tests/features/mcp/patch-ops.test.ts",
         "tests/features/mcp/publish-drafts.itest.ts",
         "tests/features/mcp/publish-refs.itest.ts",
-        "tests/features/mcp/create-catalog.itest.ts",
-        "tests/features/mcp/bulk.itest.ts",
-        "tests/features/mcp/moved-lookup.itest.ts",
+        "tests/features/mcp/registry.test.ts",
+        "tests/features/mcp/stale-refusal-texts.test.ts",
+        "tests/features/mcp/suggestion-base-visible.test.ts",
+        "tests/features/mcp/tools.itest.ts",
         "tests/features/mcp/update-hold.itest.ts",
-        "tests/features/mcp/get-script-steps.itest.ts"
+        "tests/features/mcp/write-proposed-base.test.ts"
       ],
       "ref_paths": [
         "tests/features/mcp/**"
@@ -522,6 +526,7 @@
       "role": "reviewer",
       "goal": "Проверить инструменты, которые СУДЯТ о коде: оснастка сплошного ревью, узда шкалы контролов, проверки покрытия — и то, что они не зеленеют на пустом месте.",
       "paths": [
+        "scripts/mutate.mjs",
         "scripts/review/**",
         "scripts/ui-parity.mjs"
       ],
@@ -1021,6 +1026,7 @@
         "src/features/notifications/email.ts",
         "src/features/notifications/href.ts",
         "src/features/notifications/jobs.ts",
+        "src/features/notifications/list-access.ts",
         "src/features/notifications/mentions.ts",
         "src/features/notifications/notify.ts",
         "src/features/notifications/push-client.ts",
@@ -1036,6 +1042,7 @@
         "src/shared/email/unsubscribe.ts",
         "src/shared/push/send.ts",
         "src/shared/push/vapid.ts",
+        "tests/features/notifications/delivery-visibility.itest.ts",
         "tests/features/notifications/href.test.ts",
         "tests/features/notifications/keyset.itest.ts",
         "tests/features/notifications/mentions.test.ts",
@@ -1592,6 +1599,7 @@
       "goal": "Прочитать все маршруты записи списка СРАЗУ и найти то, чего нет ни в одном: атомарность, сверку версии, общий гейт. Дефект такого рода не виден при чтении файла по отдельности.",
       "paths": [
         "src/features/library/actions",
+        "src/features/library/version-error.ts",
         "tests/features/library/actions-mutations.itest.ts",
         "tests/features/library/catover-write-parity.itest.ts",
         "tests/features/library/create-reason.test.ts",

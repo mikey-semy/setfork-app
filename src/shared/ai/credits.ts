@@ -19,6 +19,23 @@ export function clearCreditsCache(): void {
   cache = null
 }
 
+/**
+ * Число или `null`, если поля нет или оно не число.
+ *
+ * Строку принимаем сознательно: денежные значения приходят от провайдера и строкой
+ * тоже — так их отдают, чтобы не потерять точность на больших числах. А вот пустую
+ * строку, `null` и `true` отвергаем: `Number('')` и `Number(null)` дают 0, и «поля
+ * нет» стало бы «на счету ноль».
+ */
+function numberOrNull(v: unknown): number | null {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
 export async function getOpenRouterCredits(opts?: { fresh?: boolean }): Promise<OpenRouterCredits | null> {
   const key = await getOpenRouterApiKey() // /credits есть только у OpenRouter
   if (!key) return null
@@ -30,10 +47,23 @@ export async function getOpenRouterCredits(opts?: { fresh?: boolean }): Promise<
       console.warn(`[credits] HTTP ${res.status}`)
       return cache
     }
-    const json = (await res.json()) as { data?: { total_credits?: number; total_usage?: number } }
-    const d = json.data ?? {}
-    const total = Number(d.total_credits) || 0
-    const used = Number(d.total_usage) || 0
+    const json = (await res.json()) as { data?: { total_credits?: unknown; total_usage?: unknown } }
+    const total = numberOrNull(json.data?.total_credits)
+    const used = numberOrNull(json.data?.total_usage)
+    // ⚠️ «Поля нет» и «на счету ноль» — РАЗНЫЕ вещи, а `Number(undefined) || 0` делает их
+    // неразличимыми. Стоила эта неразличимость дорого: ответ 200 с изменившейся формой
+    // (поля переименовали, тело завернули в ещё один слой) давал remaining = 0, ноль
+    // ложился в кеш как достоверный остаток, и пол баланса глушил ИИ на ВСЁМ стенде —
+    // с продлением каждые 60 секунд, пока провайдер не вернёт прежнюю форму.
+    //
+    // Непонятый ответ — это сбой чтения, и обходиться с ним надо как со сбоем HTTP
+    // строкой выше: отдать прежний кеш. Вызывающий трактует отсутствие ответа как «не
+    // знаем» и не блокирует (`quota.ts`: «credits === null НЕ блокирует»), а вот ноль он
+    // обязан принять всерьёз — потому что ноль означает, что денег действительно нет.
+    if (total === null || used === null) {
+      console.warn('[credits] ответ 200, но total_credits/total_usage не числа — форма ответа изменилась')
+      return cache
+    }
     const value: OpenRouterCredits = { total, used, remaining: Math.max(0, total - used), fetchedAt: Date.now() }
     cache = value
     return value

@@ -82,7 +82,15 @@ export async function resolveNotificationDisplay(p: NotificationRef): Promise<No
             : p.suggestionId && tpl
               ? `${base}/suggestions/${p.suggestionId}`
               : base
-  const text = listTitle ? `${actorHandle} ${verb} ${listTitle}` : `${actorHandle} ${verb}`
+  // ⚠️ У ПЕРЕДАЧИ ВЛАДЕНИЯ НАЗВАНИЕ СПИСКА В ПИСЬМО НЕ ПОПАДАЕТ. Само письмо уходит
+  // мимо гейта видимости (получатель списка ещё/уже не видит — см. TRANSFER_TYPES), и
+  // без этой оговорки предложение стало бы способом сообщить заголовок приватного
+  // списка кому угодно: предложил — название уехало в тему письма — получатель
+  // отказался. Какой именно список, человек увидит в настройках, приняв решение;
+  // адрес письма туда и ведёт.
+  const hidesTitle = p.type.startsWith('transfer_')
+  const shown = hidesTitle ? '' : listTitle
+  const text = shown ? `${actorHandle} ${verb} ${shown}` : `${actorHandle} ${verb}`
 
-  return { actorHandle, verb, listTitle, url, text }
+  return { actorHandle, verb, listTitle: shown, url, text }
 }

@@ -192,6 +192,11 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
 
   let mergedVersion: number | null = null
   try {
+    // ⚠️ ВЕРСИЮ СОЗДАЁТ ЯДРО — как и на обычном пути слияния, мимо фасада записи. Базы
+    // правки (`expectedVersion`) у вызова нет намеренно: расхождение разрешил человек,
+    // видя обе стороны, и отказ по числу означал бы «разбери конфликты заново». Решение
+    // записано в узде `tests/architecture/version-base-declared`.
+    //
     // Способ слияния — тот же, что у обычного пути: список, настроенный на squash, не
     // должен получать историю ветки только потому, что случился конфликт.
     const head = sug.note.split(/\r?\n/)[0].trim().slice(0, 120)
