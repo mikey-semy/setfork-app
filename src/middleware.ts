@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
-import { isLang, DEFAULT_LANG, t, type Lang } from '@/shared/i18n'
+import { isLang, DEFAULT_LANG, LANG_COOKIE, t, type Lang } from '@/shared/i18n'
+import { negotiateLang } from '@/shared/i18n/negotiate'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { maintenanceEnabled } from '@/shared/settings/maintenance'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
@@ -83,9 +84,19 @@ function pass(req: NextRequest): NextResponse {
  * и физический перенос — это огромная правка ради одного сегмента адреса. Переписывание
  * даёт ровно то, что нужно поисковику (свой адрес у каждого языка), не трогая структуру.
  *
- * Язык едет рендеру ЗАГОЛОВКОМ запроса, а не кукой: кука — это выбор человека, она
- * переживает переходы, а здесь язык принадлежит конкретному адресу. Иначе робот,
- * зашедший на `/ru/`, поменял бы язык и всем следующим страницам без префикса.
+ * Язык едет рендеру ДВУМЯ путями, и оба нужны:
+ *  • заголовком запроса — для ЭТОГО ответа: кука, поставленная ответом, текущий рендер
+ *    уже не видит;
+ *  • кукой — для СЛЕДУЮЩИХ переходов. Внутренние ссылки идут без префикса
+ *    (`/explore`), а корневой layout при клиентском переходе не перерисовывается. Без
+ *    куки гость, пришедший по `/ru/…`, первым же кликом получал страницу на языке
+ *    своего `Accept-Language`, а шапка оставалась русской — две половины экрана на
+ *    разных языках (находка авто-ревью к SEO-1).
+ *
+ * Куку ставим, как next-intl: только когда язык адреса РАСХОДИТСЯ с тем, что и так
+ * выбралось бы (кука, иначе `Accept-Language`). Совпадает — писать нечего. Атрибуты те
+ * же, что у переключателя языка в шапке: это тот же выбор, сделанный переходом по ссылке.
+ * Роботу кука ничего не меняет — он её не хранит и каждый адрес получает по префиксу.
  */
 function stripLangPrefix(req: NextRequest): NextResponse | null {
   const { lang, rest } = splitLangPath(req.nextUrl.pathname)
@@ -102,7 +113,13 @@ function stripLangPrefix(req: NextRequest): NextResponse | null {
   // Язык при этом не теряется: он приезжает отдельным заголовком выше, и метаданные
   // собирают из этой пары и адрес своего языка, и `hreflang`.
   headers.set(REQUEST_PATH_HEADER, rest + req.nextUrl.search)
-  return NextResponse.rewrite(url, { request: { headers } })
+  const res = NextResponse.rewrite(url, { request: { headers } })
+  const cookie = req.cookies.get(LANG_COOKIE)?.value
+  const current = isLang(cookie) ? cookie : negotiateLang(req.headers.get('accept-language'))
+  if (current !== lang) {
+    res.cookies.set(LANG_COOKIE, lang, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' })
+  }
+  return res
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePagePath } from '@/shared/i18n/use-page-path'
 import { useMemo, useState, type ReactNode } from 'react'
 import { SideNav, type SideNavGroup } from '@/shared/ui/SideNav'
 import { t, type Lang } from '@/shared/i18n'
@@ -53,7 +53,7 @@ export function AdminNav({
   /** Поиск разделяемый: оболочка тем же запросом фильтрует контент страницы. */
   onQueryChange?: (q: string) => void
 }) {
-  const pathname = usePathname()
+  const pathname = usePagePath()
   const [q, setQ] = useState('')
   const query = q.trim().toLowerCase()
   // Запрос сообщаем сразу в обработчике, а не эффектом: эффект дал бы лишний каскад
@@ -132,7 +132,7 @@ export function AdminNav({
  * якорями секций. Проверка по пути — единственное, что тут нужно от клиента.
  */
 export function AdminNavSlot({ groups, lang }: { groups: AdminNavGroup[]; lang: Lang }) {
-  const pathname = usePathname()
+  const pathname = usePagePath()
   if (pathname === '/admin') return null
   return (
     // Полей и ширины здесь нет: рамку на меню и контент даёт layout админки.

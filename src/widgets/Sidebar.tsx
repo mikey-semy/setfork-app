@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePagePath } from '@/shared/i18n/use-page-path'
 import { inExploreSection } from '@/shared/nav/explore-section'
 import { ChevronLeft, Compass, Home, ListChecks, PlayCircle, X } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
@@ -20,7 +20,7 @@ type NavItem = { href: string; label: string; icon: typeof Home }
 
 export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolean; topLists: ListsPanelItem[] }) {
   const { collapsed, toggleCollapsed, mobileOpen, setMobileOpen } = useSidebar()
-  const pathname = usePathname()
+  const pathname = usePagePath()
   const isActive = (href: string) =>
     // «Explore» подсвечен на всех адресах своего раздела: вкладки живут по разным
     // путям (/tags, /trending, /collections), и сравнение с одним префиксом гасило бы

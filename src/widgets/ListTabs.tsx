@@ -1,6 +1,6 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePagePath } from '@/shared/i18n/use-page-path'
 import { BarChart3, CircleDot, GitPullRequest, ListChecks, MessagesSquare, Settings } from 'lucide-react'
 import { TabItem, TabNav } from '@/shared/ui/TabNav'
 
@@ -46,7 +46,7 @@ export function ListTabs({
   counts: { issues: number; suggestions: number; discussions: number }
   flags: { issues: boolean; discussions: boolean; owner: boolean }
 }) {
-  const pathname = usePathname()
+  const pathname = usePagePath()
   const active = activeFor(base, pathname)
   return (
     <TabNav scope="list" overflow={{ moreLabel: labels.more }}>

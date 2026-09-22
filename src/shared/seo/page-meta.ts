@@ -59,6 +59,11 @@ export function pageMeta(o: {
   // Картинка есть ВСЕГДА: своя или общесайтовая. Унаследовать её от макета нельзя —
   // см. предупреждение о поверхностном слиянии выше.
   const images = [{ url: image ?? SITE_OG_IMAGE }]
+  // ОДИН адрес страницы на канон и на карточку соцсетей. Когда они расходились, карточка
+  // `/ru/explore` называла себя `/explore`: соцсеть склеивала её с версией без языка, и
+  // получатель ссылки попадал на язык своего браузера, а не на тот, которым поделились
+  // (находка авто-ревью к SEO-1).
+  const canonical = path ? (lang ? langHref(path, lang) : path) : undefined
   return {
     title,
     ...(description ? { description } : {}),
@@ -69,7 +74,7 @@ export function pageMeta(o: {
     ...(path
       ? {
           alternates: {
-            canonical: lang ? langHref(path, lang) : path,
+            canonical,
             languages: { ...langAlternates(path).languages, 'x-default': path },
           },
         }
@@ -80,7 +85,7 @@ export function pageMeta(o: {
       siteName: 'SetFork',
       title,
       ...(description ? { description } : {}),
-      ...(path ? { url: path } : {}),
+      ...(canonical ? { url: canonical } : {}),
       images,
     },
     twitter: {

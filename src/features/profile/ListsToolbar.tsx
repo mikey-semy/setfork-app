@@ -45,6 +45,8 @@ export function ListsToolbar({
   actions?: React.ReactNode
 }) {
   const router = useRouter()
+  // Путь С префиксом языка намеренно: по нему ПЕРЕХОДИМ, а не разбираем его, и
+  // `/ru/…` должен остаться русским после смены фильтра (см. `usePagePath`).
   const pathname = usePathname()
   const params = useSearchParams()
   const [query, setQuery] = useState(q)
