@@ -3,7 +3,7 @@
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
 import type { Metadata } from 'next'
-import { withLang } from '@/shared/seo/with-lang'
+import { urlLangAt, withLang } from '@/shared/seo/with-lang'
 import { canonicalPageParam, pageHref } from '@/shared/lib/paging'
 import { breadcrumbList, JsonLd, profilePage } from '@/shared/seo/jsonld'
 import { BookOpen, FolderGit2, ListChecks, Star, Users } from 'lucide-react'
@@ -83,14 +83,16 @@ export default async function ProfilePage({
   const [{ handle }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const loaded = await loadProfilePage({ handle, sp, lang })
   const { tab, isPeopleTab, isOwner, counts, followCounts, catalogs, people, quotaHit, user } = loaded
+  // Адреса в разметке — на языке адреса страницы (см. `urlLangAt`).
+  const at = await urlLangAt()
 
   return (
     <div className="w-full">
       {/* Приватный профиль машине не объясняется — как и поисковику (см. generateMetadata). */}
       {user && !user.profilePrivate ? (
         <>
-          <JsonLd data={profilePage({ name: user.name || handle, handle, description: user.bio ?? undefined })} />
-          <JsonLd data={breadcrumbList([{ name: handle, path: `/${handle}` }])} />
+          <JsonLd data={profilePage({ name: user.name || handle, handle, description: user.bio ?? undefined, path: at(`/${handle}`) })} />
+          <JsonLd data={breadcrumbList([{ name: handle, path: at(`/${handle}`) }])} />
         </>
       ) : null}
       {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,

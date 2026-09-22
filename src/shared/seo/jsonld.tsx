@@ -91,7 +91,7 @@ export function creativeWork(o: {
 }
 
 /** Страница профиля: кто автор корпуса. */
-export function profilePage(o: { name: string; handle: string; description?: string }): Record<string, unknown> {
+export function profilePage(o: { name: string; handle: string; description?: string; path?: string }): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'ProfilePage',
@@ -99,7 +99,8 @@ export function profilePage(o: { name: string; handle: string; description?: str
       '@type': 'Person',
       name: o.name,
       alternateName: o.handle,
-      url: absolute(`/${o.handle}`),
+      // `path` — адрес на языке адреса страницы (`/ru/miki`); без него — адрес без языка.
+      url: absolute(o.path ?? `/${o.handle}`),
       ...(o.description ? { description: o.description } : {}),
     },
   }

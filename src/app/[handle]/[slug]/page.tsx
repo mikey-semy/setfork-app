@@ -10,6 +10,7 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { FeedList } from '@/features/library/FeedList'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { getLang } from '@/shared/i18n/server'
+import { urlLangAt } from '@/shared/seo/with-lang'
 import { t, tr } from '@/shared/i18n'
 import { breadcrumbList, creativeWork, howTo, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { PAGE, STACK } from '@/shared/ui/control'
@@ -99,7 +100,12 @@ export default async function ListPage({
   // Структурные данные — только у публично видимой страницы: у черновика их быть
   // не должно ровно потому же, почему его нет в карте сайта.
   const indexable = tpl.status === 'published' && tpl.visibility === 'public' && tpl.moderation === 'active'
-  const path = `/${owner}/${slug}`
+  // ⚠️ Адреса в разметке — НА ЯЗЫКЕ АДРЕСА. Страница, открытая по `/ru/…`, описывает
+  // русский текст; назвать его адресом без языка значит приписать его версии, которую
+  // поисковик считает другой страницей (находка авто-ревью к SEO-2). Касается всех
+  // адресов разметки сразу — самого списка, автора и крошек.
+  const at = await urlLangAt()
+  const path = at(`/${owner}/${slug}`)
 
   return (
     <>
@@ -111,7 +117,7 @@ export default async function ListPage({
               description: tr(tpl.desc, lang) || undefined,
               path,
               authorName: tpl.owner.name || owner,
-              authorPath: `/${owner}`,
+              authorPath: at(`/${owner}`),
               datePublished: tpl.createdAt,
               dateModified: tpl.updatedAt,
               tags: tpl.tags,
@@ -120,7 +126,7 @@ export default async function ListPage({
               version: currentVersion?.version ?? tpl.currentVersion,
             })}
           />
-          <JsonLd data={breadcrumbList([{ name: owner, path: `/${owner}` }, { name: tr(tpl.title, lang) || slug, path }])} />
+          <JsonLd data={breadcrumbList([{ name: owner, path: at(`/${owner}`) }, { name: tr(tpl.title, lang) || slug, path }])} />
           {/* Шаги отдаём списком: это то, ЧТО здесь исполняется, и единственная
               часть страницы, ради которой машина сюда приходит. Потолок в 25 —
               чтобы разметка не раздувалась на курсах в сотню уроков. */}

@@ -447,7 +447,8 @@
         "src/shared/site.ts",
         "tests/shared/seo/page-meta-image.test.ts",
         "tests/shared/seo/site-jsonld.test.ts",
-        "tests/shared/seo/page-meta-lang.test.ts"
+        "tests/shared/seo/page-meta-lang.test.ts",
+        "tests/shared/seo/localize-metadata.test.ts"
       ],
       "ref_paths": []
     },
