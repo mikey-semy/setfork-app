@@ -29,6 +29,7 @@ import { Footer } from '@/widgets/Footer'
 import { ScrollToTop } from '@/shared/ui/ScrollToTop'
 import './globals.css'
 import { SITE_ORIGIN } from '@/shared/site'
+import { JsonLd, organization, softwareApplication, webSite } from '@/shared/seo/jsonld'
 
 /**
  * ШРИФТЫ ЛЕЖАТ В РЕПОЗИТОРИИ, а не качаются на сборке.
@@ -209,6 +210,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <body>
+        {/* РАЗМЕТКА САЙТА — на каждой странице, потому что описывает не страницу, а сайт:
+            кто за ним стоит (Organization), как по нему искать (WebSite + SearchAction),
+            что это за продукт и сколько стоит (SoftwareApplication).
+            До 22.09.2026 на главной не было ни одного `ld+json`: разметка существовала
+            только у списков и профилей. Важна она не ради вида в выдаче, а потому что
+            сайт без неё не разбирается нейросетями, которые всё чаще и есть выдача. */}
+        <JsonLd data={organization()} />
+        <JsonLd data={webSite()} />
+        <JsonLd data={softwareApplication()} />
         {/* ПЕРЕХОД К СОДЕРЖИМОМУ — первая цель Tab на любой странице.
             Без него человек с клавиатуры и диктором обязан на КАЖДОЙ странице пройти
             шапку и весь боковой список, прежде чем добраться до текста (WCAG 2.4.1

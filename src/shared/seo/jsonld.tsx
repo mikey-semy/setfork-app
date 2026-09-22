@@ -104,3 +104,93 @@ export function profilePage(o: { name: string; handle: string; description?: str
     },
   }
 }
+
+/**
+ * САЙТ КАК ТАКОВОЙ: кто за ним стоит, как по нему искать, что это за продукт.
+ *
+ * Разметка в проекте была только у списков и профилей — у самого сайта ноль
+ * (`application/ld+json` на главной не встречался ни разу). Аудит 22.09.2026, работа 2:
+ * сниппет беднее конкурентского, строки поиска в выдаче нет, а главное — **разметка
+ * нужна для попадания в ответы нейросетей**, где сайт без неё просто не разбирается.
+ *
+ * Три схемы дают три разных ответа: `Organization` — кто, `WebSite` — как искать,
+ * `SoftwareApplication` — что за вещь и сколько стоит.
+ */
+export function organization(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'SetFork',
+    url: SITE_ORIGIN,
+    logo: absolute('/icon-512.png'),
+    description: 'Canonical, runnable, versioned reference lists.',
+  }
+}
+
+/**
+ * `WebSite` с `SearchAction` — строка поиска по сайту прямо в выдаче.
+ *
+ * ⚠️ Адрес поиска берётся из ЖИВОГО маршрута (`/search?q=`), а не выдуман: шаблон,
+ * указывающий в несуществующее место, хуже отсутствующего — поисковик покажет строку,
+ * а она приведёт в 404.
+ */
+export function webSite(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'SetFork',
+    url: SITE_ORIGIN,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: { '@type': 'EntryPoint', urlTemplate: `${SITE_ORIGIN}/search?q={search_term_string}` },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+}
+
+/** Продукт: что это, для кого и сколько стоит. Бесплатность объявляется явно — её не угадывают. */
+export function softwareApplication(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'SetFork',
+    url: SITE_ORIGIN,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Web',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  }
+}
+
+/**
+ * `HowTo` — САМОЕ ЦЕННОЕ для SetFork, и вот почему.
+ *
+ * Содержимое списка структурно совпадает с этой схемой один в один: шаги по порядку,
+ * у каждого название и пояснение. Аудит называет это «редким совпадением, которое стоит
+ * занять первым»: большинству сайтов `HowTo` приходится натягивать на текст, а здесь
+ * она описывает ровно то, что есть.
+ *
+ * ⚠️ Схема применима ТОЛЬКО к упорядоченному списку с шагами. У неупорядоченного
+ * («подборка ссылок») порядка нет, и объявлять его инструкцией — враньё разметки:
+ * поисковик покажет «шаг 1 из 12» там, где никакого первого шага не существует.
+ */
+export function howTo(o: {
+  name: string
+  description?: string
+  path: string
+  steps: { name: string; text?: string }[]
+}): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: o.name,
+    ...(o.description ? { description: o.description } : {}),
+    url: absolute(o.path),
+    step: o.steps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.name,
+      ...(s.text ? { text: s.text } : {}),
+      url: `${absolute(o.path)}#${i + 1}`,
+    })),
+  }
+}

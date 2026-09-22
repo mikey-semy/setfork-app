@@ -10,7 +10,7 @@ import { FeedList } from '@/features/library/FeedList'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
-import { breadcrumbList, creativeWork, itemList, JsonLd } from '@/shared/seo/jsonld'
+import { breadcrumbList, creativeWork, howTo, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { PAGE, STACK } from '@/shared/ui/control'
 import { ListAbout } from './ListAbout'
 import { ListAdNotices } from './ListAdNotices'
@@ -122,6 +122,26 @@ export default async function ListPage({
               steps.slice(0, 25).map((s) => ({ name: tr(s.title, lang) || `${s.n}` })),
             )}
           />
+          {/* ⚠️ `HowTo` — ТОЛЬКО для упорядоченного списка. Содержимое SetFork совпадает
+              с этой схемой один в один: шаги по порядку, у каждого название и пояснение;
+              большинству сайтов её приходится натягивать на сплошной текст, а здесь она
+              описывает ровно то, что есть (аудит 22.09.2026 называет это редким
+              совпадением, которое стоит занять первым).
+              У НЕупорядоченного списка порядка нет вовсе, и «шаг 1 из 12» там был бы
+              враньём разметки — поисковик показал бы первый шаг, которого не существует. */}
+          {tpl.ordered && steps.length > 0 ? (
+            <JsonLd
+              data={howTo({
+                name: tr(tpl.title, lang) || slug,
+                description: tr(tpl.desc, lang) || undefined,
+                path,
+                steps: steps.slice(0, 25).map((s) => ({
+                  name: tr(s.title, lang) || `${s.n}`,
+                  text: tr(s.desc, lang) || undefined,
+                })),
+              })}
+            />
+          ) : null}
         </>
       ) : null}
 
