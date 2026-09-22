@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { withLang } from '@/shared/seo/with-lang'
 import { notFound } from 'next/navigation'
 import { FolderGit2 } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
@@ -14,7 +15,7 @@ import { PAGE } from '@/shared/ui/control'
 import { cardClass } from '@/shared/ui/card-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+async function baseMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const [{ slug }, lang] = await Promise.all([params, getLang()])
   const c = await getCollectionDetail(slug)
   if (!c) return {}
@@ -39,6 +40,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     },
   }
 }
+
+// Канон и `og:url` — на языке адреса, плюс `hreflang` (см. `withLang`): страница собирает
+// метаданные сама, мимо `pageMeta`, и без обёртки назвала бы каноном версию без языка.
+export async function generateMetadata(props: Parameters<typeof baseMetadata>[0]): Promise<Metadata> {
+  return withLang(await baseMetadata(props))
+}
+
 
 export default async function CollectionPage({ params }: { params: Promise<{ slug: string }> }) {
   const [{ slug }, lang, session] = await Promise.all([params, getLang(), getSession()])

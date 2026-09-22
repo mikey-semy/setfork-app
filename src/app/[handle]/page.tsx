@@ -3,6 +3,7 @@
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
 import type { Metadata } from 'next'
+import { withLang } from '@/shared/seo/with-lang'
 import { canonicalPageParam, pageHref } from '@/shared/lib/paging'
 import { breadcrumbList, JsonLd, profilePage } from '@/shared/seo/jsonld'
 import { BookOpen, FolderGit2, ListChecks, Star, Users } from 'lucide-react'
@@ -21,7 +22,7 @@ import { ProfileOverview } from './ProfileOverview'
 import { ProfileCatalogCard } from '@/features/catalogs/ProfileCatalogCard'
 
 // Заголовок вкладки: «Имя (handle)» как в GitHub (layout добавит « · SetFork»).
-export async function generateMetadata({
+async function baseMetadata({
   params,
   searchParams,
 }: {
@@ -59,6 +60,13 @@ export async function generateMetadata({
     openGraph: { type: 'profile', siteName: 'SetFork', url: canonical, title, description },
   }
 }
+
+// Канон и `og:url` — на языке адреса, плюс `hreflang` (см. `withLang`): страница собирает
+// метаданные сама, мимо `pageMeta`, и без обёртки назвала бы каноном версию без языка.
+export async function generateMetadata(props: Parameters<typeof baseMetadata>[0]): Promise<Metadata> {
+  return withLang(await baseMetadata(props))
+}
+
 
 /**
  * Страница профиля. Здесь только состав: какие вкладки есть и что стоит в колонках.

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { withLang } from '@/shared/seo/with-lang'
 import { notFound } from 'next/navigation'
 import { breadcrumbList, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { Tag } from 'lucide-react'
@@ -15,7 +16,7 @@ import { Badge } from '@/shared/ui/badge'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE } from '@/shared/ui/control'
 
-export async function generateMetadata({
+async function baseMetadata({
   params,
   searchParams,
 }: {
@@ -41,6 +42,13 @@ export async function generateMetadata({
     openGraph: { type: 'website', siteName: 'SetFork', title: `#${slug}`, description },
   }
 }
+
+// Канон и `og:url` — на языке адреса, плюс `hreflang` (см. `withLang`): страница собирает
+// метаданные сама, мимо `pageMeta`, и без обёртки назвала бы каноном версию без языка.
+export async function generateMetadata(props: Parameters<typeof baseMetadata>[0]): Promise<Metadata> {
+  return withLang(await baseMetadata(props))
+}
+
 
 // Страница тега: списки с этим тегом (переиспользуем getFeed({tag}) + FeedList).
 export default async function TagPage({
