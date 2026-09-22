@@ -114,7 +114,10 @@ function pass(req: NextRequest): NextResponse {
 function proceed(req: NextRequest, lang: Lang | null, rest: string, target?: string): NextResponse {
   if (!lang && !target) return pass(req)
   const headers = new Headers(req.headers)
+  // Язык адреса — только из адреса: без префикса одноимённый заголовок, присланный
+  // клиентом, снимается и здесь, а не только в `pass` (переписывание `.md` идёт мимо него).
   if (lang) headers.set(LANG_HEADER, lang)
+  else headers.delete(LANG_HEADER)
   // ⚠️ Путь БЕЗ префикса. Его читает сверка переехавших адресов (`moved-list.ts`), а она
   // сравнивает с адресом, записанным при переезде, — там префикса нет и быть не может.
   // С префиксом сравнение не совпадало НИКОГДА, и старая ссылка вида `/ru/old/list`

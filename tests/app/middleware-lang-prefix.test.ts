@@ -94,6 +94,14 @@ describe('язык адреса приходит только от middleware', 
     expect(res.headers.get('x-middleware-override-headers') ?? '').not.toContain('x-setfork-lang')
   })
 
+  it('и на переписывании `.md` без префикса — тоже снимается', async () => {
+    // Переписывание идёт мимо `pass`: снятие там одно этот путь не закрывало.
+    const res = await call('/miki/list.md', { 'x-setfork-lang': 'ru' })
+    expect(rewrittenTo(res)).toBe('/miki/list/export?format=md')
+    expect(res.headers.get('x-middleware-request-x-setfork-lang')).toBeNull()
+    expect(res.headers.get('x-middleware-override-headers') ?? '').not.toContain('x-setfork-lang')
+  })
+
   it('на адресе с префиксом заголовок — из адреса, а не присланный', async () => {
     const res = await call('/en/miki/list', { 'x-setfork-lang': 'ru' })
     expect(res.headers.get('x-middleware-request-x-setfork-lang')).toBe('en')
