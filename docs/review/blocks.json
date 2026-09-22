@@ -549,6 +549,7 @@
         "scripts/council-bench.ts",
         "scripts/council-eval.ts",
         "scripts/coverage-merge.mjs",
+        "scripts/dev.mjs",
         "scripts/eval-retrieval.ts",
         "scripts/facet-eval.ts",
         "scripts/fix-degenerate-slugs.ts",

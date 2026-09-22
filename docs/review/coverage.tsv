@@ -45,6 +45,7 @@ docs/backups.md	V12c
 docs/boundaries-todo.md	V12c
 docs/branches-design.md	V12c
 docs/deploy.md	V12c
+docs/dev-server-unit.md	V12c
 docs/github-parity.md	V12c
 docs/kz_pay.md	V12c
 docs/mcp-surface.md	H4,V12c
@@ -104,6 +105,7 @@ scripts/council-eval.ts	H13f
 scripts/coverage-merge.mjs	H13f
 scripts/day-sensitive-tests.mjs	H13c
 scripts/db-bootstrap.ts	H13c
+scripts/dev.mjs	H13f
 scripts/eval-retrieval.ts	H13f
 scripts/facet-eval.ts	H13f
 scripts/fix-degenerate-slugs.ts	H13f
