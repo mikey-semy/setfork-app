@@ -1247,6 +1247,7 @@ tests/app/sitemap-verification.itest.ts	V12d
 tests/app/sitemap.itest.ts	V12d
 tests/app/telegram-link-page.test.tsx	V12d
 tests/architecture/audit-gate-split.test.ts	H12
+tests/architecture/block-fields-reach-the-wire.test.ts	H12
 tests/architecture/build-offline-fonts.test.ts	H12
 tests/architecture/button-class-merge.test.ts	H12
 tests/architecture/command-one-view.test.ts	H12
@@ -1668,6 +1669,7 @@ tests/shared/ui/code-wrap.test.ts	H7c
 tests/shared/ui/command-text.test.tsx	H7c
 tests/shared/ui/copy-row.test.tsx	H7c
 tests/shared/ui/field-alert.test.tsx	H7c
+tests/shared/ui/floating-actions-dock.test.tsx	H7c
 tests/shared/ui/highlight-code.test.ts	H7c
 tests/shared/ui/markdown-editor.test.tsx	H7c
 tests/shared/ui/overlay-focus-stays.test.tsx	H7c
