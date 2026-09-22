@@ -1,0 +1,11 @@
+{
+  "target": "src/features/library/suggestion-core/merge.ts",
+  "tests": ["tests/architecture/version-base-declared.test.ts"],
+  "mutants": [
+    {
+      "name": "маркер «версию создаёт ядро» снят у вызова — решение видно только в тесте",
+      "from": "    // ⚠️ ВЕРСИЮ СОЗДАЁТ ЯДРО — фасад `listStore.addVersion` здесь не при чём, и базы",
+      "to": "    // Фасад `listStore.addVersion` здесь не при чём, и базы"
+    }
+  ]
+}

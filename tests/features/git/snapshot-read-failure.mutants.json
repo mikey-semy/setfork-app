@@ -1,0 +1,11 @@
+{
+  "target": "src/features/git/core.remote.ts",
+  "tests": ["tests/features/git/snapshot-read-failure.test.ts"],
+  "mutants": [
+    {
+      "name": "глушилка отказа вернулась в адаптер: обрыв связи снова = «ветки нет»",
+      "from": "    const res = await proto('branch snapshot', () => client.getBranchSnapshot({ repo: toRepoRef(repo), branch }))\n    if (!res.found) return null",
+      "to": "    const res = await client.getBranchSnapshot({ repo: toRepoRef(repo), branch }).catch(() => null)\n    if (!res || !res.found) return null"
+    }
+  ]
+}

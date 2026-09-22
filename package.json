@@ -37,7 +37,8 @@
     "review": "python3 scripts/review/review.py",
     "review:status": "python3 scripts/review/review.py status",
     "review:coverage": "python3 scripts/review/review.py coverage",
-    "review:check": "python3 scripts/review/review.py check"
+    "review:check": "python3 scripts/review/review.py check",
+    "mutate": "node scripts/mutate.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1078.0",

@@ -53,6 +53,7 @@ description('update_list с publish:false', () => {
     const before = await listRow(slug)
 
     const res = (await mcpUpdateList(ownerId, HANDLE, slug, {
+      baseVersion: before.version,
       items: [{ title: 'заменённый' }],
       publish: false,
     })) as { status?: string; error?: string }
@@ -69,6 +70,7 @@ description('update_list с publish:false', () => {
   it('теги и порядок доезжают до версии при публикации накопленного', async () => {
     const slug = await published('Hold meta')
     const res = (await mcpUpdateList(ownerId, HANDLE, slug, {
+      baseVersion: (await listRow(slug)).version,
       items: [{ title: 'с мета' }],
       tags: ['докер', 'бэкап'],
       ordered: false,

@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm'
 import { db, suggestions, users } from '@/shared/db'
 import { captureError } from '@/shared/observability'
 import { findDestructiveSteps } from '@/core/domain/destructive-command'
-import { suggestionBlocks } from '../suggestion-blocks'
+import { readSuggestionBlocks } from '../suggestion-blocks'
 import { enqueueReindex } from '../jobs'
 import { withPrDefaults } from '../pr-settings'
 import { closeLinkedIssues, notifyWatchersNewVersion } from '../suggestion-side-effects'
@@ -35,7 +35,21 @@ import { gitPort } from './git-port'
 export async function mergeSuggestion(
   suggestionId: string,
   actorUserId: string,
-): Promise<{ ok: true; owner: string; slug: string; kind: 'branch' | 'items'; version?: number } | { ok: false; reason: string }> {
+): Promise<
+  | {
+      ok: true
+      owner: string
+      slug: string
+      kind: 'branch' | 'items'
+      version?: number
+      /** От какой версии правка собрана и какую заменила. Только у предложения ИЗ
+       *  ПУНКТОВ: оно перезаписывает состав целиком, и «база отстала» — то, что
+       *  принимающий обязан видеть. У веточного расхождение разрешает git. */
+      baseVersion?: number
+      replacedVersion?: number
+    }
+  | { ok: false; reason: string }
+> {
   const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
   if (!sug) return { ok: false, reason: 'not found' }
   if (sug.status !== 'open') return { ok: false, reason: `already ${sug.status}` }
@@ -47,7 +61,15 @@ export async function mergeSuggestion(
     // Какой версией стала правка — иначе откат гадал бы по времени и тексту заметки.
     await db.update(suggestions).set({ mergedVersion: res.version }).where(eq(suggestions.id, suggestionId))
     const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, sug.template.ownerId))
-    return { ok: true, owner: u?.handle ?? '', slug: res.slug, kind: 'items', version: res.version }
+    return {
+      ok: true,
+      owner: u?.handle ?? '',
+      slug: res.slug,
+      kind: 'items',
+      version: res.version,
+      baseVersion: res.baseVersion,
+      replacedVersion: res.replacedVersion,
+    }
   }
 
   const tpl = sug.template
@@ -69,8 +91,18 @@ export async function mergeSuggestion(
   // мог положить исполняемую команду в ветку, а владелец влить её одной кнопкой — и
   // она уезжает в исполняемый /raw. Содержимое берём тем же способом, что и просмотр
   // предложения, чтобы проверять ровно то, что вольётся.
-  const incoming = await suggestionBlocks(sug, owner, tpl.slug)
-  const destructive = findDestructiveSteps(incoming)
+  const incoming = await readSuggestionBlocks(sug, owner, tpl.slug)
+  // ⚠️ «ПРОЧИТАТЬ НЕ УДАЛОСЬ» — НЕ «КОМАНД НЕТ». Раньше сбой чтения снапшота приходил
+  // сюда пустым списком, и страж пропускал слияние: дверь открывалась ровно на обрыве
+  // связи с ядром, то есть проверка была fail-open в единственный момент, когда она
+  // нужна. Второго исполнителя у неё нет: merge-пути ядра спрашивают только право на
+  // запись (`gate::ensure_writable`), про содержимое — лишь на пуше. Отказываем и
+  // называем причину: обрыв преходящий, повтор осмыслен. Ровно так решило ядро в
+  // зеркальном случае — «фронт не ответил, ответил ошибкой или не уложился в таймаут —
+  // запись отклоняется. Дверь, открытая по умолчанию, обесценивает всю конструкцию»
+  // (setfork-core, `gate.rs`).
+  if (!incoming.ok) return { ok: false, reason: incoming.reason }
+  const destructive = findDestructiveSteps(incoming.blocks)
   if (destructive.length) {
     const { index, match } = destructive[0]
     return { ok: false, reason: `destructive command in step ${index + 1} (${match.reason})` }
@@ -84,6 +116,11 @@ export async function mergeSuggestion(
   }
 
   try {
+    // ⚠️ ВЕРСИЮ СОЗДАЁТ ЯДРО — фасад `listStore.addVersion` здесь не при чём, и базы
+    // правки (`expectedVersion`) у этого вызова нет намеренно: расхождение с main
+    // разрешает сам git, отставшая ветка даёт конфликт и отказ. Решение записано в узде
+    // `tests/architecture/version-base-declared` — не «чини» его, добавив базу.
+    //
     // Заголовок squash-коммита — «<название предложения> (#N)»: по нему в истории
     // main видно, откуда изменение, когда самой ветки уже нет.
     const head = sug.note.split(/\r?\n/)[0].trim().slice(0, 120)

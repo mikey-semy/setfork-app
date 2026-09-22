@@ -12,7 +12,7 @@ import { globalBudgetOk } from '@/shared/quota'
 import { tr, type Lang } from '@/shared/i18n'
 // eslint-disable-next-line boundaries/dependencies -- уведомление автора о вердикте
 import { notify } from '@/features/notifications/notify'
-import { suggestionBlocks } from './suggestion-blocks'
+import { readSuggestionBlocks } from './suggestion-blocks'
 
 const CALL_TIMEOUT_MS = 60_000
 
@@ -48,7 +48,12 @@ export async function runGnomeSuggestionReview(
   // Именно ЗАГРУЖАЮЩИЙ вариант: без снапшота у ветки пунктов не будет вовсе, и
   // гном получил бы пустое предложение (та же ловушка, что с комментариями).
   const owner = await ownerHandleOf(sug.template.ownerId)
-  const items = await suggestionBlocks(sug, owner, sug.template.slug)
+  const read = await readSuggestionBlocks(sug, owner, sug.template.slug)
+  // Не прочиталось — так и говорим. Молча уехать в «nothing to review» нельзя: гном
+  // отозвался бы «смотреть нечего» о правке, которой он не видел, и вердикт лёг бы
+  // автору как настоящий.
+  if (!read.ok) return { ok: false, reason: 'branch snapshot is unavailable' }
+  const items = read.blocks
   const change = {
     title: sug.note,
     baseVersion: sug.baseVersion,

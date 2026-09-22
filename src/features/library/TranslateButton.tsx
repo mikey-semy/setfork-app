@@ -7,6 +7,7 @@ import { LANG_META, t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { toast } from '@/shared/ui/toast'
 import { translateList } from './actions/ai'
+import { translateErrorKey } from './translation-state'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
 
@@ -19,16 +20,11 @@ export function TranslateButton({ templateId, targetLang, lang, iconOnly }: { te
   const label = t('translateInto', lang).replace('{lang}', LANG_META[targetLang].endonym)
 
   // Конкретная причина в тост (а не только «не удалось»): что именно случилось.
-  const reason = (code: string): string => {
-    if (code === 'ratelimited') return t('rateLimited', lang)
-    if (code === 'ai_quota') return t('library.monthlyLimitReachedTry', lang)
-    return t('translateFailed', lang) // aifail / mismatch / прочее
-  }
-
+  // Таблица общая с меню действий — второй вызывающий той же кнопки (translation-state).
   function run() {
     start(async () => {
       const res = await translateList(templateId, targetLang)
-      if ('error' in res) toast.error(reason(res.error))
+      if ('error' in res) toast.error(t(translateErrorKey(res.error), lang))
       else router.refresh()
     })
   }

@@ -110,8 +110,17 @@ export const gitCoreRemote: GitCore = {
   },
 
   async branchSnapshot(repo, branch) {
-    const res = await client.getBranchSnapshot({ repo: toRepoRef(repo), branch }).catch(() => null)
-    if (!res || !res.found) return null
+    // СБОЙ ЧТЕНИЯ — НЕ ОТВЕТ ПО СУЩЕСТВУ. Здесь стоял `.catch(() => null)`, и обрыв
+    // связи с ядром приходил вызывающему ТЕМ ЖЕ значением, что честное «ветки нет».
+    // Дороже всего это стоило на слиянии: страж исполняемых команд берёт содержимое
+    // ветки через снапшот, пустой список блоков читал как «команд нет» и пропускал
+    // слияние — то есть проверка безопасности открывалась ровно в тот момент, когда
+    // ядро недоступно. Отказ теперь типизирован (`GitTransportError` из `proto`), а
+    // `null` означает ровно то, что обещает порт. Так же решает само ядро: «фронт не
+    // ответил, ответил ошибкой или не уложился в таймаут — запись отклоняется»
+    // (setfork-core, `gate.rs`).
+    const res = await proto('branch snapshot', () => client.getBranchSnapshot({ repo: toRepoRef(repo), branch }))
+    if (!res.found) return null
     return toSnapshot(res)
   },
 

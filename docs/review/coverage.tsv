@@ -1,4 +1,4 @@
-# коммит c39f0ed6
+# коммит defdda04
 file	blocks
 .claude/hooks/ui-guard.mjs	V12c
 .claude/launch.json	V12c
@@ -95,6 +95,7 @@ scripts/mcp-import-ops.ts	H13f
 scripts/migrate-drops.ts	H13c
 scripts/migrate-push-run.ts	H13c
 scripts/migrate-push.ts	H13c
+scripts/mutate.mjs	H13d
 scripts/probe/touch-sweep.mjs	H13f
 scripts/purge-lists.ts	H13f
 scripts/restore.sh	H13f
@@ -721,6 +722,7 @@ src/features/mcp/registry/sources.ts	H4b
 src/features/mcp/registry/suggestions.ts	H4b
 src/features/mcp/tools/index.ts	H4
 src/features/mcp/tools/issues.ts	H4b
+src/features/mcp/tools/lists/base-version.ts	H4
 src/features/mcp/tools/lists/catalogs.ts	H4
 src/features/mcp/tools/lists/create.ts	H4
 src/features/mcp/tools/lists/delete.ts	H4
@@ -1224,6 +1226,7 @@ tests/app/sitemap-verification.itest.ts	V12d
 tests/app/sitemap.itest.ts	V12d
 tests/app/telegram-link-page.test.tsx	V12d
 tests/architecture/audit-gate-split.test.ts	H12
+tests/architecture/block-fields-reach-the-wire.test.ts	H12
 tests/architecture/build-offline-fonts.test.ts	H12
 tests/architecture/button-class-merge.test.ts	H12
 tests/architecture/command-one-view.test.ts	H12
@@ -1252,8 +1255,13 @@ tests/architecture/step-converter-one-path.test.ts	H12
 tests/architecture/touch-zone-vs-position.test.ts	H12
 tests/architecture/ui-parity.test.ts	H12
 tests/architecture/verified-not-public.test.ts	H12
+tests/architecture/version-base-declared.marker.mutants.json	H12
+tests/architecture/version-base-declared.mutants.json	H12
+tests/architecture/version-base-declared.test.ts	H12
+tests/architecture/workflow-node-declared.test.ts	H12
 tests/core/domain/access.test.ts	V12d
 tests/core/domain/affiliate.test.ts	V12d
+tests/core/domain/destructive-command.mutants.json	V12d
 tests/core/domain/destructive-command.test.ts	V12d
 tests/core/domain/links.test.ts	V12d
 tests/core/domain/list-state.test.ts	V12d
@@ -1299,10 +1307,12 @@ tests/features/feeds/pull.itest.ts	V6
 tests/features/gardener/budget-midbatch.itest.ts	V8d
 tests/features/gardener/candidates.itest.ts	V8d
 tests/features/gardener/journal.itest.ts	V8d
+tests/features/gardener/living-stale.test.ts	V8d
 tests/features/gardener/living.itest.ts	V8d
 tests/features/gardener/publish-order.test.ts	V8d
 tests/features/gardener/readiness-gate.itest.ts	V8d
 tests/features/gardener/snapshot-fields.itest.ts	V8d
+tests/features/gardener/stale-automerge-notifies.test.ts	V8d
 tests/features/gardener/stop-rule.itest.ts	V8d
 tests/features/generation/abandon.itest.ts	V8c
 tests/features/generation/candidate-card-focus.test.tsx	V8c
@@ -1318,6 +1328,8 @@ tests/features/git/list-content.test.ts	H2
 tests/features/git/push-effects.itest.ts	H2
 tests/features/git/push-resilience.itest.ts	H2
 tests/features/git/push-role.test.ts	H2
+tests/features/git/snapshot-read-failure.mutants.json	H2
+tests/features/git/snapshot-read-failure.test.ts	H2
 tests/features/git/three-way.test.ts	H2
 tests/features/git/transport-access.itest.ts	H2
 tests/features/git/transport-error.test.ts	H2
@@ -1338,6 +1350,7 @@ tests/features/landing/stats.test.ts	V12
 tests/features/library/accept-suggestion.itest.ts	V1
 tests/features/library/actions-mutations.itest.ts	V1d
 tests/features/library/agent-draft-detail.itest.ts	V8c
+tests/features/library/apply-replaced-version.test.ts	V1k
 tests/features/library/blame.itest.ts	V1h
 tests/features/library/block-identity.test.ts	V1k
 tests/features/library/block-inserter-gap.test.ts	V1k
@@ -1382,6 +1395,7 @@ tests/features/library/localized-content.test.ts	V1k
 tests/features/library/maintainer-parity.itest.ts	V1
 tests/features/library/merge-not-projected.test.ts	V1k,V1d
 tests/features/library/merge-paths-parity.test.ts	V1k,V1d
+tests/features/library/merge-snapshot-unreadable.test.ts	V1k
 tests/features/library/mirror-error.test.ts	V1k,V1d
 tests/features/library/mirror-retry.test.ts	V1k,V1d
 tests/features/library/mirror-sweep.itest.ts	V1d
@@ -1411,6 +1425,7 @@ tests/features/library/set-verification-level.itest.ts	V1h
 tests/features/library/slug.test.ts	V1k
 tests/features/library/suggest-refusal-keeps-edit.test.ts	V1k
 tests/features/library/suggestion-apply.test.ts	V1,V1k
+tests/features/library/suggestion-blocks.mutants.json	V1
 tests/features/library/suggestion-checks.test.ts	V1,V1k
 tests/features/library/suggestion-close-reopen.itest.ts	V1
 tests/features/library/suggestion-locked.itest.ts	V1
@@ -1418,6 +1433,7 @@ tests/features/library/suggestion-result-blocks.test.tsx	V1,V1k
 tests/features/library/suggestion-result.test.tsx	V1,V1k
 tests/features/library/suggestion-revert.itest.ts	V1
 tests/features/library/suggestion-revert.test.ts	V1,V1k
+tests/features/library/translate-merge.test.ts	V1k
 tests/features/library/translation-carry.test.ts	V1h,V1k
 tests/features/library/translation-state.test.ts	V1h,V1k
 tests/features/library/verification-levels.itest.ts	V1h
@@ -1448,9 +1464,12 @@ tests/features/mcp/report-check.itest.ts	H4b
 tests/features/mcp/report-run.itest.ts	H4b
 tests/features/mcp/runs.itest.ts	H4b
 tests/features/mcp/sources.itest.ts	H4b
+tests/features/mcp/stale-refusal-texts.test.ts	H4
+tests/features/mcp/suggestion-base-visible.test.ts	H4
 tests/features/mcp/suggestion-flow.itest.ts	H4b
 tests/features/mcp/tools.itest.ts	H4
 tests/features/mcp/update-hold.itest.ts	H4
+tests/features/mcp/write-proposed-base.test.ts	H4
 tests/features/moderation-reason.test.ts	V9b
 tests/features/moderation/approve-many.itest.ts	V9b
 tests/features/moderation/automation.test.ts	V9b
@@ -1506,6 +1525,7 @@ tests/shared/ai/allowlist-pool.test.ts	V8g
 tests/shared/ai/assist.test.ts	V8g
 tests/shared/ai/council-anonymity.test.ts	V8g
 tests/shared/ai/craft-rules.itest.ts	V8g
+tests/shared/ai/credits-unknown-shape.test.ts	V8g
 tests/shared/ai/dehydrate.test.ts	V8g
 tests/shared/ai/embed-capability.test.ts	V8g
 tests/shared/ai/embed-space.test.ts	V8g
@@ -1555,7 +1575,7 @@ tests/shared/auth/api-token-scope.itest.ts	V12f
 tests/shared/auth/api-token.test.ts	V12f
 tests/shared/auth/handle.test.ts	V12f
 tests/shared/auth/oauth-server.itest.ts	V12f
-tests/shared/auth/oauth-single-use.itest.ts	V11
+tests/shared/auth/oauth-single-use.itest.ts	H1,V11
 tests/shared/auth/oauth.test.ts	V12f
 tests/shared/auth/totp.test.ts	V12f
 tests/shared/block-identity-on-write.test.ts	V12f

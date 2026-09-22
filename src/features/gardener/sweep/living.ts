@@ -47,8 +47,15 @@ export async function growLiving(
   current: { title: string; desc: string; tags: string[]; items: GeneratedItem[] },
   lang: Lang,
   kind: ListKind,
-  ctx: { tenderId: string; agentId: string; policyVersion: number; domains?: string[]; mode?: 'version' | 'suggestion'; ownerId?: string; baseVersion?: number },
-): Promise<{ result: 'grown' | 'nothing-new' | 'failed'; snapshot?: ReadinessInput }> {
+  // `baseVersion` — версия, ИЗ КОТОРОЙ прочитан `current`, и она обязательна. Прежнее
+  // `baseVersion ?? 1` записывало предложению базу «1» всякий раз, когда вызывающий про
+  // неё забывал, — то есть врало о том, от чего правка сделана; а версии, которую пишет
+  // ветка ниже, сверять было бы не с чем.
+  ctx: { tenderId: string; agentId: string; policyVersion: number; domains?: string[]; mode?: 'version' | 'suggestion'; ownerId?: string; baseVersion: number },
+  // `stale` — ОТДЕЛЬНЫЙ исход, а не разновидность `failed`. Гонка с владельцем и отказ
+  // модели требуют от смотрящего в журнал разного: первое — норма и повторится само,
+  // второе — повод чинить. Под одним значением их не различить.
+): Promise<{ result: 'grown' | 'nothing-new' | 'failed' | 'stale'; snapshot?: ReadinessInput }> {
   // Ищем материал по тегам списка И по доменам мастера, который за него отвечает. Только по
   // тегам списка искать нельзя: теги списку придумала МОДЕЛЬ при создании («kubernetes», «ci»),
   // а тему подписки задавал ЧЕЛОВЕК («devops») — они законно не совпадают, и лента, которая
@@ -100,14 +107,28 @@ Keep the existing items below in their current order and wording. If the list th
         templateId: tpl.id,
         authorId: ctx.tenderId,
         note: noteFor(kind, lang),
-        baseVersion: ctx.baseVersion ?? 1,
+        baseVersion: ctx.baseVersion,
         items,
         number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${tpl.id})`,
       })
       .returning({ id: suggestions.id })
     await notify({ recipientId: ctx.ownerId ?? '', actorId: ctx.tenderId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
   } else {
-    await publishGardenerVersion(tpl.id, items, { note: noteFor(kind, lang), authorId: ctx.tenderId })
+    const wrote = await publishGardenerVersion(tpl.id, items, {
+      note: noteFor(kind, lang),
+      authorId: ctx.tenderId,
+      expectedVersion: ctx.baseVersion,
+    })
+    // Список ушёл вперёд, пока модель растила ленту: писать нельзя — версия владельца
+    // исчезла бы из текущей. Выходим ДО `markUsed` по той же причине, по которой он и
+    // стоит после записи: несписанный материал доедет следующим проходом, а списанный
+    // без версии пропал бы навсегда. Журналирует ПРОХОД — там же, где две другие его
+    // ветки, и тем же помощником: три отказа одного прохода, записанные тремя способами,
+    // невозможно сравнить между собой.
+    if (wrote === 'stale') {
+      log.info('gardener: living list moved on, growth dropped', { slug: tpl.slug, base: ctx.baseVersion })
+      return { result: 'stale' }
+    }
   }
   // Материал списываем ПОСЛЕ версии: упади запись — новости остались бы «использованными»
   // без списка, и повод пропал бы навсегда.

@@ -12,7 +12,8 @@ import { canSpeakWhenLocked } from '@/features/library/lock-policy'
 // eslint-disable-next-line boundaries/dependencies -- гейт видимости списка из library
 import { requireViewableMeta } from '@/features/library/guard'
 // eslint-disable-next-line boundaries/dependencies -- предлагаемые блоки (ветка или items) — один источник
-import { suggestionBlocks } from '@/features/library/suggestion-blocks'
+import { readSuggestionBlocks } from '@/features/library/suggestion-blocks'
+import { captureError } from '@/shared/observability'
 import { makeAnchor } from './anchor'
 import { locateQuote } from './quote'
 import { fieldText, isCommentField, type AnchorableBlock } from './fields'
@@ -57,7 +58,20 @@ export async function createBlockThread(
 
   // Якорь снимаем по ПРЕДЛОЖЕННОМУ блоку: обсуждают то, что предлагают. У branch-PR
   // это tip ветки, а не items — иначе на ветке блок не находился и тред не создавался.
-  const blocks = (await suggestionBlocks(sug, owner, slug)) as unknown as AnchorableBlock[]
+  const read = await readSuggestionBlocks(sug, owner, slug)
+  // Не прочиталось — это не «пункта нет». Своего канала для отказа у формы пока нет
+  // (экшен ничего не возвращает), но выдавать обрыв связи за исчезнувший пункт нельзя
+  // тем более: оставляем след в наблюдаемости, иначе про несозданный тред не узнал бы
+  // никто — ни человек, ни мы.
+  if (!read.ok) {
+    captureError(new Error('branch snapshot unavailable while creating a block thread'), {
+      where: 'createBlockThread',
+      suggestionId,
+      blockId,
+    })
+    return
+  }
+  const blocks = read.blocks as unknown as AnchorableBlock[]
   const block = blocks.find((b) => b.blockId === blockId)
   if (!block) return
 
