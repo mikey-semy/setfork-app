@@ -1314,6 +1314,7 @@
         "docs/review/findings.jsonl",
         "docs/review/reports/H1-findings.jsonl",
         "docs/review/reports/H15-findings.jsonl",
+        "docs/review/reports/H2-findings.jsonl",
         "docs/review/reports/V1d-findings.jsonl",
         "docs/review/state.json"
       ],

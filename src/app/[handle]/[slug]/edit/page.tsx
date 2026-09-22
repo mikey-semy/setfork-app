@@ -3,7 +3,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- write-доступ (canWriteList) строже просмотра; редиректит не-редакторов
-import { getStepPreviews, getTemplateDetail, getDraft } from '@/features/library/queries'
+import { getItemPreviews, getTemplateDetail, getDraft } from '@/features/library/queries'
 import { canWriteList } from '@/features/collab/queries'
 import { canEditList } from '@/core'
 import { discardDraft, publishEdits, saveDraft } from '@/features/library/actions'
@@ -51,13 +51,11 @@ export default async function EditPage({
   const draft = await getDraft(tpl.id, session.userId)
   // Превью картинок нужны и черновику: без них редактор показывает пустые слоты
   // вместо загруженных скриншотов, и человек решает, что картинки пропали
-  // (находка self-review). Ключи берём из самого черновика.
-  const draftImageKeys = (draft?.items ?? []).map((it) => ({
-    imageKey: (it.imageKey ?? (typeof it.content?.ref === 'string' ? it.content.ref : null)) as string | null,
-  }))
+  // (находка self-review). Вывод ключей — общий (`getItemPreviews`), потому что
+  // раньше он был здесь инлайном и соседние страницы его не повторили.
   const initial = draft
-    ? toEditorItems(draft.items, lang, await getStepPreviews(draftImageKeys))
-    : toEditorItems(steps, lang, await getStepPreviews(steps))
+    ? toEditorItems(draft.items, lang, await getItemPreviews(draft.items))
+    : toEditorItems(steps, lang, await getItemPreviews(steps))
   // Мета правится вместе с блоками, поэтому и восстанавливается из черновика:
   // иначе теги, тип списка и «курс» откатывались бы к опубликованным при перезагрузке.
   const draftTags = draft?.meta.tags ?? tpl.tags

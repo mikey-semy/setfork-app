@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
-import { getStepPreviews } from '@/features/library/queries'
+import { getItemPreviews } from '@/features/library/queries'
 import { requireViewableDetail } from '@/features/library/guard'
 import { SuggestForm } from '@/features/library/SuggestForm'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
@@ -38,7 +38,7 @@ export default async function SuggestPage({
   // Предложения запрещены в архиве и заморозке (список только-чтение).
   if (!canEditList(tpl)) redirect(`/${owner}/${slug}`)
 
-  const initial = toEditorItems(steps, lang, await getStepPreviews(steps))
+  const initial = toEditorItems(steps, lang, await getItemPreviews(steps))
   // Отказ приходит ЗНАЧЕНИЕМ и показывается над формой: переход уносил всю правку.
   const refusalTexts = {
     unavailable: t('suggestUnavailableRefusal', lang),

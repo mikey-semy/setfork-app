@@ -1,6 +1,6 @@
 {
   "review_id": "setfork-frontend-2026-09",
-  "updated_at": "2026-09-21T08:28:18Z",
+  "updated_at": "2026-09-22T03:29:17Z",
   "blocks": {
     "H1": {
       "status": "verified",
@@ -10,11 +10,14 @@
       "note": ""
     },
     "H2": {
-      "status": "todo",
+      "status": "verified",
       "started": null,
       "finished": null,
-      "reports": [],
-      "note": ""
+      "reports": [
+        "docs/review/reports/H2-core-contract.hunter.md",
+        "docs/review/reports/H2-core-contract.verify.md"
+      ],
+      "note": "13 находок, отклонённых нет; корень K42 (сбой чтения выдан за ответ) — 6 из 13. ⚠️ МАНИФЕСТ НАПИСАН ПОСЛЕ ПРОХОДА: охотник шёл по заданию из переписки, гипотезы совпадают, но против манифеста проход не сверялся. Второй проход по манифесту ОБЯЗАТЕЛЕН — статус verified означает «работа сделана и проверена», а не «блок закрыт навсегда»."
     },
     "H3": {
       "status": "todo",
