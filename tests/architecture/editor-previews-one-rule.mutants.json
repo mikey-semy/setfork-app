@@ -1,0 +1,11 @@
+{
+  "target": "src/app/[handle]/[slug]/suggestions/[id]/edit/page.tsx",
+  "tests": ["tests/architecture/editor-previews-one-rule.test.ts"],
+  "mutants": [
+    {
+      "name": "точка входа снова берёт превью сама (прежнее поведение: пустая карта — пустые слоты вместо картинок)",
+      "from": "toEditorItems(items as never, lang, await getItemPreviews(items))",
+      "to": "toEditorItems(items as never, lang, {})"
+    }
+  ]
+}
