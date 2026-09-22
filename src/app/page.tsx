@@ -58,8 +58,20 @@ export default async function HomePage() {
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="flex w-full max-w-prose flex-col items-center gap-6 text-center">
         {/* Логотип И ЕСТЬ заголовок страницы: отдельного h1 у лендинга не было, а
-            диктору нужен один. Кегль и начертание не меняются — меняется только тег. */}
-        <h1 className="font-logo text-logo-lg leading-none tracking-tight text-ink sm:text-logo-xl">SetFork</h1>
+            диктору нужен один. Кегль и начертание не меняются — меняется только тег.
+
+            ⚠️ В заголовке не только бренд. `h1` — самый весомый текстовый сигнал
+            страницы, и «SetFork» сообщает поисковику ровно ничего о том, чем продукт
+            занимается: навигационный запрос по имени он закрывает, все остальные нет
+            (аудит 22.09.2026, работа 4).
+
+            Продолжение скрыто визуально, а не удалено: наряд просит оставить логотип
+            как есть на вид. Текст при этом настоящий — тот же, что в `title` страницы,
+            и на том же языке, — так что ни поисковику, ни диктору он не врёт. */}
+        <h1 className="font-logo text-logo-lg leading-none tracking-tight text-ink sm:text-logo-xl">
+          SetFork
+          <span className="sr-only"> — {t('homeTagline', lang)}</span>
+        </h1>
 
         <HeroSearch placeholder={placeholder} clearLabel={t('clear', lang)} />
 

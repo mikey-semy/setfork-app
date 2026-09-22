@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 
+/** Общесайтовая карточка ссылки: 1200×630, лежит в `public/`. */
+export const SITE_OG_IMAGE = '/og-image.png'
+
 /**
  * МЕТАДАННЫЕ СТРАНИЦЫ, ВКЛЮЧАЯ КАРТОЧКУ ССЫЛКИ.
  *
@@ -27,13 +30,26 @@ export function pageMeta(o: {
   description?: string
   /** Путь для canonical и `og:url`. Без него ссылки не переписываем. */
   path?: string
-  /** Своя картинка карточки; по умолчанию — общесайтовая из корневого layout. */
+  /**
+   * Своя картинка карточки. По умолчанию — общесайтовая `/og-image.png`.
+   *
+   * ⚠️ Раньше здесь стояло «по умолчанию — общесайтовая из корневого layout», и это было
+   * НЕВЕРНО ровно по той причине, которую объясняет докблок выше: Next сливает метаданные
+   * поверхностно, и `openGraph`, объявленный здесь, замещает родительский ЦЕЛИКОМ —
+   * вместе с картинкой. Замер прода 22.09.2026: `og:image` и `twitter:image` на главной
+   * отсутствовали вовсе, при том что в корневом макете они заданы.
+   *
+   * Цена — не косметика: каждая ссылка на SetFork в мессенджере разворачивалась серым
+   * прямоугольником, а продукт распространяется именно ссылками между разработчиками.
+   */
   image?: string
   /** Страница не для индекса (личные разделы, служебные экраны). */
   noindex?: boolean
 }): Metadata {
   const { title, description, path, image, noindex } = o
-  const images = image ? [{ url: image }] : undefined
+  // Картинка есть ВСЕГДА: своя или общесайтовая. Унаследовать её от макета нельзя —
+  // см. предупреждение о поверхностном слиянии выше.
+  const images = [{ url: image ?? SITE_OG_IMAGE }]
   return {
     title,
     ...(description ? { description } : {}),
@@ -45,13 +61,13 @@ export function pageMeta(o: {
       title,
       ...(description ? { description } : {}),
       ...(path ? { url: path } : {}),
-      ...(images ? { images } : {}),
+      images,
     },
     twitter: {
       card: 'summary_large_image',
       title,
       ...(description ? { description } : {}),
-      ...(images ? { images } : {}),
+      images,
     },
   }
 }
