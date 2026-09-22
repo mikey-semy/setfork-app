@@ -1,6 +1,6 @@
 {
   "review_id": "setfork-frontend-2026-09",
-  "updated_at": "2026-09-22T21:17:23Z",
+  "updated_at": "2026-09-22T21:48:12Z",
   "blocks": {
     "H1": {
       "status": "verified",
@@ -9,8 +9,8 @@
       "reports": [],
       "note": "",
       "reviewed_sha": "11c22f2719a08e7b",
-      "restamped_at": "2026-09-22T21:17:22Z",
-      "hypotheses_sha": "cb2b65bbbd5a6b1d",
+      "restamped_at": "2026-09-22T21:48:10Z",
+      "hypotheses_sha": "388df01904c44ab1",
       "refs_sha": "11372dff77100706"
     },
     "H2": {
@@ -23,8 +23,8 @@
       ],
       "note": "13 находок, отклонённых нет; корень K42 (сбой чтения выдан за ответ) — 6 из 13. ⚠️ МАНИФЕСТ НАПИСАН ПОСЛЕ ПРОХОДА: охотник шёл по заданию из переписки, гипотезы совпадают, но против манифеста проход не сверялся. Второй проход по манифесту ОБЯЗАТЕЛЕН — статус verified означает «работа сделана и проверена», а не «блок закрыт навсегда».",
       "reviewed_sha": "f0cd6237bd820990",
-      "restamped_at": "2026-09-22T21:17:22Z",
-      "hypotheses_sha": "be46436d8a673da2",
+      "restamped_at": "2026-09-22T21:48:10Z",
+      "hypotheses_sha": "59ff5de966cfc5e6",
       "refs_sha": "175428b7cc11d686"
     },
     "H3": {
@@ -48,8 +48,8 @@
       "reports": [],
       "note": "",
       "reviewed_sha": "6411f4c228a97c58",
-      "restamped_at": "2026-09-22T21:17:23Z",
-      "hypotheses_sha": "92f4cc4cded3ed18",
+      "restamped_at": "2026-09-22T21:48:11Z",
+      "hypotheses_sha": "340e0b67db25265c",
       "refs_sha": "0ac1bbecaf59cbf9"
     },
     "H6": {
@@ -255,8 +255,8 @@
       "reports": [],
       "note": "",
       "reviewed_sha": "fbb7bfb18d9677fa",
-      "restamped_at": "2026-09-22T21:17:23Z",
-      "hypotheses_sha": "9d1ffc22dacf723c",
+      "restamped_at": "2026-09-22T21:48:12Z",
+      "hypotheses_sha": "34cf639bf0efeb35",
       "refs_sha": "175428b7cc11d686"
     },
     "V1d": {
@@ -266,8 +266,8 @@
       "reports": [],
       "note": "",
       "reviewed_sha": "6a8cfa6dd5f798af",
-      "restamped_at": "2026-09-22T21:17:23Z",
-      "hypotheses_sha": "757aeb8621f24d7d",
+      "restamped_at": "2026-09-22T21:48:12Z",
+      "hypotheses_sha": "7ab8821d0ea69d5e",
       "refs_sha": "e3b0c44298fc1c14"
     },
     "V1e": {
