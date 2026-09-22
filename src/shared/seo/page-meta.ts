@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import type { Lang } from '@/shared/i18n'
+import { langAlternates, langHref } from '@/shared/i18n/url'
 
 /**
  * МЕТАДАННЫЕ СТРАНИЦЫ, ВКЛЮЧАЯ КАРТОЧКУ ССЫЛКИ.
@@ -31,13 +33,31 @@ export function pageMeta(o: {
   image?: string
   /** Страница не для индекса (личные разделы, служебные экраны). */
   noindex?: boolean
+  /**
+   * Язык страницы. Без него `canonical` указывает на адрес БЕЗ префикса, и русская
+   * страница объявляет себя копией общей — для поисковика это «не индексировать».
+   * Языки разведены по адресам 22.09.2026, потому что YandexBot не шлёт
+   * `Accept-Language` и русской версии в индексе не существовало вовсе.
+   */
+  lang?: Lang
 }): Metadata {
-  const { title, description, path, image, noindex } = o
+  const { title, description, path, image, noindex, lang } = o
   const images = image ? [{ url: image }] : undefined
   return {
     title,
     ...(description ? { description } : {}),
-    ...(path ? { alternates: { canonical: path } } : {}),
+    // ⚠️ Ссылки на языковые версии — ЗДЕСЬ, а не в корневом макете: метаданные страницы
+    // замещают одноимённое поле целиком, и `alternates` из макета до готовой страницы не
+    // доезжают. Проверено живым запросом: `hreflang` не было ни одного, пока помощник
+    // молчал о языках.
+    ...(path
+      ? {
+          alternates: {
+            canonical: lang ? langHref(path, lang) : path,
+            languages: { ...langAlternates(path).languages, 'x-default': path },
+          },
+        }
+      : {}),
     ...(noindex ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       type: 'website',

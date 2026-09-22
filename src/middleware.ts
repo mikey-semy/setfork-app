@@ -4,6 +4,7 @@ import { isLang, DEFAULT_LANG, t, type Lang } from '@/shared/i18n'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { maintenanceEnabled } from '@/shared/settings/maintenance'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
+import { LANG_HEADER, splitLangPath } from '@/shared/i18n/url'
 import { dialectMime, errorScript, normalizeDialect } from '@/core/domain/script-dialect'
 
 // Режим «сайт на ремонте»: включается админом из /admin (флаг в БД, кэш 5с)
@@ -69,6 +70,32 @@ function pass(req: NextRequest): NextResponse {
   // Путь ВМЕСТЕ с query: перенаправление обязано сохранить и то и другое.
   headers.set(REQUEST_PATH_HEADER, req.nextUrl.pathname + req.nextUrl.search)
   return NextResponse.next({ request: { headers } })
+}
+
+/**
+ * ЯЗЫК ИЗ АДРЕСА: `/ru/explore` рисуется тем же маршрутом, что `/explore`, но по-русски.
+ *
+ * Зачем: до сентября 2026 языки жили по ОДНОМУ адресу, а выбирал `Accept-Language`.
+ * YandexBot его не шлёт и всегда получал английскую страницу — русского SetFork в
+ * индексе не существовало вовсе (аудит 22.09.2026, работа 1).
+ *
+ * Почему переписыванием, а не каталогом `app/[lang]/`: маршрутов и страниц под сотню,
+ * и физический перенос — это огромная правка ради одного сегмента адреса. Переписывание
+ * даёт ровно то, что нужно поисковику (свой адрес у каждого языка), не трогая структуру.
+ *
+ * Язык едет рендеру ЗАГОЛОВКОМ запроса, а не кукой: кука — это выбор человека, она
+ * переживает переходы, а здесь язык принадлежит конкретному адресу. Иначе робот,
+ * зашедший на `/ru/`, поменял бы язык и всем следующим страницам без префикса.
+ */
+function stripLangPrefix(req: NextRequest): NextResponse | null {
+  const { lang, rest } = splitLangPath(req.nextUrl.pathname)
+  if (!lang) return null
+  const url = req.nextUrl.clone()
+  url.pathname = rest
+  const headers = new Headers(req.headers)
+  headers.set(LANG_HEADER, lang)
+  headers.set(REQUEST_PATH_HEADER, req.nextUrl.pathname + req.nextUrl.search)
+  return NextResponse.rewrite(url, { request: { headers } })
 }
 
 /**
@@ -144,6 +171,11 @@ export async function middleware(req: NextRequest) {
   // получил бы перезапуск. Ровно перевёрнутый сигнал, ради починки которого адрес и
   // заведён.
   if (PROBE_PATHS.has(pathname)) return pass(req)
+
+  // ⚠️ Префикс снимаем ДО режима ремонта и до всего прочего: иначе `/ru/...` не совпадёт
+  // ни с одним известным маршрутом и уйдёт в 404, а на ремонте — мимо заглушки.
+  const langed = stripLangPrefix(req)
+  if (langed) return langed
 
   if (!(await maintenanceEnabled())) {
     // ⚠️ `.md` ПОСЛЕ проверки режима, а не до неё. Стоя выше, переписывание отдавало
