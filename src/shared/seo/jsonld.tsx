@@ -122,7 +122,10 @@ export function organization(): Record<string, unknown> {
     '@type': 'Organization',
     name: 'SetFork',
     url: SITE_ORIGIN,
-    logo: absolute('/icon-512.png'),
+    // ⚠️ Файл из ЖИВОГО набора иконок, а не выдуманный. Здесь стоял `/icon-512.png`,
+    // которого в репозитории нет вовсе: обходчик получил бы 404 на логотип организации,
+    // то есть разметка обещала бы картинку и не давала её. Проверено `ls public/`.
+    logo: absolute('/android-chrome-512x512.png'),
     description: 'Canonical, runnable, versioned reference lists.',
   }
 }
@@ -190,7 +193,9 @@ export function howTo(o: {
       position: i + 1,
       name: s.name,
       ...(s.text ? { text: s.text } : {}),
-      url: `${absolute(o.path)}#${i + 1}`,
+      // ⚠️ `url` у шага НЕ указываем. Здесь стояло `…#1`, но страница числовых якорей не
+      // рисует вовсе (единственные якоря — секции курса), и такая ссылка вела бы в никуда:
+      // разметка обещала бы переход к шагу, а он не сработал бы ни у человека, ни у робота.
     })),
   }
 }

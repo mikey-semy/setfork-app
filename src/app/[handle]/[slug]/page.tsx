@@ -86,7 +86,7 @@ export default async function ListPage({
 }) {
   const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const loaded = await loadListPage({ owner, slug, sp, lang })
-  const { tpl, currentVersion, steps, related, viewer, isOwner, readOnlyView, mon, digGnomes, quizBids, quizPassed, completion, base } = loaded
+  const { tpl, currentVersion, steps, related, viewer, isOwner, readOnlyView, mon, digGnomes, quizBids, quizPassed, completion, base, isStepBlock } = loaded
 
   // Структурные данные — только у публично видимой страницы: у черновика их быть
   // не должно ровно потому же, почему его нет в карте сайта.
@@ -135,10 +135,17 @@ export default async function ListPage({
                 name: tr(tpl.title, lang) || slug,
                 description: tr(tpl.desc, lang) || undefined,
                 path,
-                steps: steps.slice(0, 25).map((s) => ({
-                  name: tr(s.title, lang) || `${s.n}`,
-                  text: tr(s.desc, lang) || undefined,
-                })),
+                // ⚠️ ТОЛЬКО блоки-шаги. В списке бывают текст, картинка, опрос и тест —
+                // страница их шагами не считает (`isStepBlock`, и `ListBlocks` их
+                // нумерацию пропускает). Объявить их шагами инструкции значит соврать
+                // поисковику о составе: человек увидел бы «шаг 3: картинка».
+                steps: steps
+                  .filter((s) => isStepBlock(s))
+                  .slice(0, 25)
+                  .map((s) => ({
+                    name: tr(s.title, lang) || `${s.n}`,
+                    text: tr(s.desc, lang) || undefined,
+                  })),
               })}
             />
           ) : null}

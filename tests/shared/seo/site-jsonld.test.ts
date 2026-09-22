@@ -54,13 +54,13 @@ describe('инструкция из списка', () => {
     expect(h.step[0].name).toBe('Поставить зависимости')
   })
 
-  it('у каждого шага свой якорь на странице', () => {
-    const h = howTo({ name: 'Выкатка', path: '/demo/deploy', steps }) as { step: { url: string }[] }
-    expect(h.step.map((s) => s.url)).toEqual([
-      `${SITE}/demo/deploy#1`,
-      `${SITE}/demo/deploy#2`,
-      `${SITE}/demo/deploy#3`,
-    ])
+  it('у шага НЕТ выдуманного якоря', () => {
+    // ⚠️ Здесь стояло `url: …#1` у каждого шага — и это было враньём разметки: страница
+    // числовых якорей не рисует вовсе (единственные якоря — секции курса). Ссылка вела бы
+    // в никуда и у человека, и у робота. Найдено авто-ревью; лучше не обещать перехода,
+    // чем обещать несуществующий.
+    const h = howTo({ name: 'Выкатка', path: '/demo/deploy', steps }) as { step: Record<string, unknown>[] }
+    for (const st of h.step) expect(st).not.toHaveProperty('url')
   })
 
   it('шаг без пояснения не получает пустое поле text', () => {
