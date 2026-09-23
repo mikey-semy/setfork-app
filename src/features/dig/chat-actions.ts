@@ -99,6 +99,10 @@ export async function digChatAsk(input: {
       )
   const expert = chosen ?? guide?.expert ?? pickExpert(roster, tpl.tags, 'auto')
   if (!expert) return { error: 'ai_off' }
+  // Предохранитель — ЕЩЁ РАЗ, перед дорогим вызовом: вопрос проводнику сам стоит денег и мог
+  // перевалить дневной кап, а ответ гнома на порядки дороже. Проверка на входе этого не
+  // видела (AGENTS.md §9: перед КАЖДЫМ дорогим вызовом; авто-ревью к #964).
+  if (!(await globalBudgetOk())) return { error: 'budget' }
   const stepCtx = [
     `List: ${tr(tpl.title as LocaleText, input.lang)}`,
     tpl.tags.length ? `Tags: ${tpl.tags.join(', ')}` : '',

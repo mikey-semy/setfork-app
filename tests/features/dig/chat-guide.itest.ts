@@ -17,7 +17,15 @@ vi.mock('@/shared/settings/ai', async (orig) => ({
   isAiAvailable: async () => true,
   getAiSettings: async () => ({ enabled: true }),
 }))
-vi.mock('@/shared/quota', async (orig) => ({ ...(await orig()), globalBudgetOk: async () => true, aiQuota: async () => ({ ok: true }) }))
+// Предохранитель расхода. Его спрашивают несколько мест (вход, каждый вызов Decisions, в
+// том числе теневой в фоне), и порядок вызовов не задан — поэтому состояние, а не очередь
+// ответов: бюджет «кончается» в момент, который задаёт тест.
+const budget = vi.hoisted(() => ({ exhausted: false }))
+vi.mock('@/shared/quota', async (orig) => ({
+  ...(await orig()),
+  globalBudgetOk: async () => !budget.exhausted,
+  aiQuota: async () => ({ ok: true }),
+}))
 vi.mock('@/shared/rate-limit', () => ({ rateLimit: async () => ({ ok: true }) }))
 vi.mock('@/shared/ai/retrieval', () => ({ findPrecedents: async () => ({ lists: [], steps: [] }) }))
 
@@ -54,6 +62,7 @@ let tplId = ''
 const ask = (gnome: string) => digChatAsk({ templateId: tplId, stepN: 1, gnome, history: [], question: 'почему так?', lang: 'ru' })
 
 beforeEach(async () => {
+  budget.exhausted = false
   vi.restoreAllMocks()
   spoke.mockClear()
   await resetTables([digChatMessages, digGuides, steps, templateVersions, templates, users])
@@ -98,6 +107,20 @@ describe('кто отвечает в кирке', () => {
     const res = await ask('auto')
     expect('replies' in res).toBe(true)
     release()
+  })
+
+  it('вопрос проводнику исчерпал бюджет — дорогой ответ гнома не зовётся', async () => {
+    // Бюджет кончается ровно на ответе Jev о проводнике: вход его ещё видел, а ответ гнома
+    // — уже нет.
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_u, init) => {
+      const body = JSON.parse((init as RequestInit).body as string)
+      if (body.questions.fits) return fits()
+      budget.exhausted = true
+      return decision('dba')
+    })
+    const res = await ask('auto')
+    expect(res).toEqual({ error: 'budget' })
+    expect(spoke).not.toHaveBeenCalled()
   })
 
   it('Jev не ответил — прежнее правило по тегам, кирка не падает', async () => {

@@ -188,6 +188,52 @@ describe('гонка двух первых вопросов по одному п
   })
 })
 
+describe('вопрос сменился посреди работы', () => {
+  it('теневой ответ на прежний вопрос не ложится к новому, даже при том же мастере', async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((r) => (release = r))
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_u, init) => {
+      const body = JSON.parse((init as RequestInit).body as string)
+      if (body.questions.fits) {
+        await gate
+        return json(noul(0.9))
+      }
+      return json(choice('dba'))
+    })
+    const r = await guideForItem(item(), ROSTER)
+    // Пока тень в пути, строку пересчитали под новый вопрос — мастер тот же.
+    await db.update(digGuides).set({ fingerprint: 'другой-вопрос', fits: null }).where(eq(digGuides.templateId, tplId))
+    release()
+    await r?.shadow
+    const [row] = await db.select().from(digGuides).where(eq(digGuides.templateId, tplId))
+    expect(row).toMatchObject({ gnomeId: 'dba', fits: null })
+  })
+
+  it('победитель гонки отвечал на старый вопрос — его решение заменяется нашим', async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((r) => (release = r))
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_u, init) => {
+      const body = JSON.parse((init as RequestInit).body as string)
+      if (body.questions.fits) return json(noul(0.8))
+      await gate
+      return json(choice('dba'))
+    })
+    const pending = guideForItem(item(), ROSTER)
+    // Пока модель думает, соседний запрос записал решение по СТАРОМУ вопросу.
+    await new Promise((r) => setTimeout(r, 50))
+    await db
+      .insert(digGuides)
+      .values({ templateId: tplId, version: 1, stepN: 3, lang: 'ru', gnomeId: 'devops', confidence: 0.5, model: 'm', fingerprint: 'старый-вопрос' })
+    release()
+    const r = await pending
+    await r?.shadow
+    expect(r?.expert.id).toBe('dba')
+    const [row] = await db.select().from(digGuides).where(eq(digGuides.templateId, tplId))
+    expect(row.gnomeId).toBe('dba')
+    expect(row.fingerprint).not.toBe('старый-вопрос')
+  })
+})
+
 describe('сбой — null, и в выборку калибровки ничего не попадает', () => {
   it('модель не ответила — null, строки нет', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ error: { message: 'down' } }, 503))

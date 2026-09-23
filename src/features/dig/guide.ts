@@ -89,7 +89,9 @@ export async function guideForItem(it: GuideItem, roster: Expert[]): Promise<Ite
         await db
           .update(digGuides)
           .set({ fits: n.noul })
-          .where(and(where, eq(digGuides.gnomeId, expert.id), isNull(digGuides.fits)))
+          // И тот же ВОПРОС: мастер мог остаться прежним, а состояние или персона — смениться,
+          // и тогда ответ, посчитанный для старого вопроса, лёг бы к новому (авто-ревью к #964).
+          .where(and(where, eq(digGuides.gnomeId, expert.id), eq(digGuides.fingerprint, fingerprint), isNull(digGuides.fits)))
       }
     })().catch((e) => console.warn('[dig-guide] теневой вопрос о ремесле не записан', e instanceof Error ? e.message : e))
 
@@ -129,9 +131,28 @@ export async function guideForItem(it: GuideItem, roster: Expert[]): Promise<Ite
         .onConflictDoNothing()
         .returning({ gnomeId: digGuides.gnomeId })
   if (!written.length) {
-    const [winner] = await db.select({ gnomeId: digGuides.gnomeId }).from(digGuides).where(where).limit(1)
-    const won = winner && roster.find((e) => e.id === winner.gnomeId)
-    return won ? { expert: won, shadow: done } : null
+    const [winner] = await db
+      .select({ gnomeId: digGuides.gnomeId, fingerprint: digGuides.fingerprint })
+      .from(digGuides)
+      .where(where)
+      .limit(1)
+    // Победитель отвечал на ТОТ ЖЕ вопрос — берём его. На другой (состояние или ростер
+    // сменились между чтениями) — его решение для нашего вопроса устарело: пробуем один раз
+    // заменить его своим, сравнением с тем, что прочли (авто-ревью к #964). Не вышло и тут —
+    // отдаём своё решение без записи: кэш поправит следующий визит, а спрашивать модель
+    // по кругу ради записи незачем.
+    if (winner && winner.fingerprint === fingerprint) {
+      const won = roster.find((e) => e.id === winner.gnomeId)
+      return won ? { expert: won, shadow: done } : null
+    }
+    const replaced = winner
+      ? await db
+          .update(digGuides)
+          .set(row)
+          .where(and(where, eq(digGuides.gnomeId, winner.gnomeId), eq(digGuides.fingerprint, winner.fingerprint)))
+          .returning({ gnomeId: digGuides.gnomeId })
+      : []
+    return { expert, shadow: replaced.length ? askFits(expert) : done }
   }
 
   return { expert, shadow: askFits(expert) }
