@@ -74,7 +74,9 @@ export function decideBody(model: string, state: string, questions: Record<strin
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 const isNumMap = (v: unknown): v is Record<string, number> =>
-  !!v && typeof v === 'object' && Object.values(v as object).every(isNum)
+  !!v && typeof v === 'object' && !Array.isArray(v) && Object.values(v as object).every(isNum)
+const isStrMap = (v: unknown): v is Record<string, string> =>
+  !!v && typeof v === 'object' && !Array.isArray(v) && Object.values(v as object).every((x) => typeof x === 'string')
 
 /** Ответ на один вопрос — или `null`, если форма не та, что обещает тип. */
 export function parseAnswer(q: DecideQuestion, raw: unknown): DecideAnswer | null {
@@ -89,9 +91,10 @@ export function parseAnswer(q: DecideQuestion, raw: unknown): DecideAnswer | nul
     if (!isNum(a.noul)) return null
     return { type: 'noul', noul: a.noul, ...(isNum(a.confidence) ? { confidence: a.confidence } : {}) }
   }
-  if (!isNum(a.score) || !isNum(a.confidence) || !isNumMap(a.probabilities)) return null
-  const legend = a.legend && typeof a.legend === 'object' ? (a.legend as Record<string, string>) : {}
-  return { type: 'score', score: a.score, legend, probabilities: a.probabilities, confidence: a.confidence }
+  // Легенда — часть обещанного типа: без неё (или массивом, или не строками) ответ не той
+  // формы, и выдавать его за `ok` нельзя (находка авто-ревью к #961).
+  if (!isNum(a.score) || !isNum(a.confidence) || !isNumMap(a.probabilities) || !isStrMap(a.legend)) return null
+  return { type: 'score', score: a.score, legend: a.legend, probabilities: a.probabilities, confidence: a.confidence }
 }
 
 /**
@@ -124,6 +127,10 @@ export async function decide<K extends string>(input: {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: 'no-store',
     })
+    // Тело читается ДО проверки статуса намеренно: у отказа OpenRouter в теле и причина
+    // (`error.message` — «Model … does not exist», «No endpoints found»), и `usage` —
+    // её надо записать в журнал, а не потерять. Ошибку за успех это не выдаёт: `!res.ok`
+    // проверяется сразу ниже, до разбора ответов; тело не JSON — `null`.
     const json = (await res.json().catch(() => null)) as {
       model?: unknown
       answers?: Record<string, unknown>

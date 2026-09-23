@@ -118,7 +118,10 @@ function score(name: string, preds: Pred[]): string {
     lines.push('Уверенность как сигнал «отдать универсалу или человеку»:', '', '| Порог | Покрытие | Допустимо среди уверенных |', '|---|---|---|')
     for (const t of [0.5, 0.7, 0.9]) {
       const s = withConf.filter((r) => r.p.confidence! >= t)
-      lines.push(`| ≥ ${t} | ${s.length}/${withConf.length} | ${pct(s.filter((r) => r.ok).length, s.length)} |`)
+      // Знаменатель — ВСЕ пункты, а не только ответившие: сбой (таймаут, неразобранный
+      // ответ) уверенности не имеет, и без него покрытие выглядело бы полным там, где
+      // пункт на деле ушёл бы запасному правилу (находка авто-ревью к #961).
+      lines.push(`| ≥ ${t} | ${s.length}/${rows.length} | ${pct(s.filter((r) => r.ok).length, s.length)} |`)
     }
     lines.push('')
   }

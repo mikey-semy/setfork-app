@@ -98,6 +98,15 @@ describe('ответ', () => {
     ).toEqual({ type: 'score', score: 1.21, legend: { '0': 'low', '1': 'high' }, probabilities: { '0': 0.2, '1': 0.8 }, confidence: 0.68 })
     expect(parseAnswer({ type: 'score', instructions: '?', criteria: ['a'] }, { score: 'high' })).toBeNull()
   })
+
+  it('score без легенды, с легендой-массивом или не строками — не ответ', () => {
+    const q = { type: 'score' as const, instructions: '?', criteria: ['low', 'high'] }
+    const base = { type: 'score', score: 1, probabilities: { '0': 0.5, '1': 0.5 }, confidence: 0.5 }
+    expect(parseAnswer(q, base)).toBeNull()
+    expect(parseAnswer(q, { ...base, legend: ['low', 'high'] })).toBeNull()
+    expect(parseAnswer(q, { ...base, legend: { '0': 'low', '1': 2 } })).toBeNull()
+    expect(parseAnswer(q, { ...base, legend: { '0': 'low', '1': 'high' } })).not.toBeNull()
+  })
 })
 
 describe('сбой — null, а не исключение, и строка в журнале', () => {
