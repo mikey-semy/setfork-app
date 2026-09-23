@@ -19,6 +19,7 @@ vi.mock('@/shared/i18n/server', async (orig) => ({ ...(await orig()), getLang: a
 const { db, steps, templateVersions, templates, users } = await import('@/shared/db')
 const { registerSurface, serverOptions } = await import('@/features/mcp/registry')
 const { GET: exportRoute } = await import('@/app/[handle]/[slug]/export/route')
+const { SITE_URL } = await import('@/features/mcp/tools/shared')
 
 const ids = { owner: '', other: '' }
 
@@ -98,6 +99,15 @@ describe('сценарии (prompts)', () => {
     expect(r.messages).toHaveLength(1)
   })
 
+  it('run-list: адрес НАШЕГО сайта прикладывается, такой же путь на чужом хосте — нет', async () => {
+    const c = await connectAs(ids.other)
+    const ours = await c.getPrompt({ name: 'run-list', arguments: { list: `${SITE_URL}/en/owner-1/public-ops` } })
+    expect(ours.messages[1]?.content).toMatchObject({ type: 'resource', resource: { uri: 'setfork://lists/owner-1/public-ops' } })
+    // Ссылка на репозиторий с тем же «ником/именем» — не наш список, прикладывать его нельзя.
+    const foreign = await c.getPrompt({ name: 'run-list', arguments: { list: 'https://github.com/owner-1/public-ops' } })
+    expect(foreign.messages).toHaveLength(1)
+  })
+
   it('review-list и commitics — из готовых инструментов, commitics кончается черновиком', async () => {
     const c = await connectAs(ids.owner)
     const review = await c.getPrompt({ name: 'review-list', arguments: { list: 'owner-1/public-ops', gnome: 'devops' } })
@@ -148,6 +158,13 @@ describe('ресурсы', () => {
     const c = await connectAs(ids.owner)
     await expect(c.readResource({ uri: 'setfork://lists/owner-1' })).rejects.toThrow()
     await expect(c.readResource({ uri: 'setfork://nothing/here/at-all' })).rejects.toThrow()
+    // Битое процент-кодирование — ошибка параметров, а не внутренний сбой сервера.
+    await expect(c.readResource({ uri: 'setfork://lists/owner-1/%E0' })).rejects.toMatchObject({ code: -32602 })
+  })
+
+  it('resources/list с неразобранным курсором — ошибка -32602, а не первая страница заново', async () => {
+    const c = await connectAs(ids.owner)
+    await expect(c.listResources({ cursor: 'garbage' })).rejects.toMatchObject({ code: -32602 })
   })
 
   it('resources/list — только свои списки владельца токена, порциями по курсору', async () => {

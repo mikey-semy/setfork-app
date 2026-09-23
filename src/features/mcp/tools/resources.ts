@@ -6,7 +6,7 @@ import { cursorKey, keysetPage, keysetStep } from '@/shared/db/keyset'
 import { decodeCursor, LISTS_PER_PAGE } from '@/shared/lib/paging'
 import { toExportList, toMarkdown } from '@/features/library/export'
 import { versionShaMap } from '@/features/library/version-sha'
-import { detailByRefOrMoved, mcpCanView } from './shared'
+import { SITE_URL, detailByRefOrMoved, mcpCanView } from './shared'
 import { headVersion } from './lists/base-version'
 
 /**
@@ -42,12 +42,17 @@ export async function mcpListMarkdown(userId: string, handle: string, slug: stri
  * Не весь корпус: публичных списков тысячи, а клиент показывает этот перечень человеку как
  * «что можно подключить». Чужой публичный список подключается по адресу напрямую — перечень
  * для этого не нужен. Порядок — свежие правки сверху, листание — общим keyset проекта.
+ *
+ * `null` — курсор прислан, но не разобран. Молча начать с первой страницы нельзя: клиент
+ * склеил бы её с уже полученными и показал бы списки дважды. Протокол велит ответить
+ * ошибкой -32602 — это делает регистратор.
  */
 export async function mcpOwnListResources(
   userId: string,
   rawCursor?: string,
-): Promise<{ resources: { uri: string; name: string; title: string; mimeType: string }[]; nextCursor?: string }> {
+): Promise<{ resources: { uri: string; name: string; title: string; mimeType: string }[]; nextCursor?: string } | null> {
   const cursor = decodeCursor(rawCursor)
+  if (rawCursor !== undefined && !cursor) return null
   const step = keysetStep(templates.updatedAt, templates.id, cursor)
   const rows = await db
     .select({ id: templates.id, slug: templates.slug, title: templates.title, cursorKey: cursorKey(templates.updatedAt) })
@@ -71,14 +76,23 @@ export async function mcpOwnListResources(
 
 /**
  * Адрес списка из того, что человек или агент передал в сценарий: `handle/slug`, адрес
- * сайта (с языковым префиксом или без) или `setfork://lists/…`. Не разобрали — `null`, и
- * сценарий обходится без приложенного ресурса: агент найдёт список сам.
+ * НАШЕГО сайта (с языковым префиксом или без) или `setfork://lists/…`. Не разобрали — `null`,
+ * и сценарий обходится без приложенного ресурса: агент найдёт список сам.
+ *
+ * Хост сверяется: `https://github.com/a/b` — не наш список `a/b`, даже если такой есть.
+ * Иначе сценарий разбора чужой ошибки приложил бы агенту посторонний список под видом нужного.
  */
 export function parseListRef(raw: string): { handle: string; slug: string } | null {
   const s = raw.trim()
-  const m =
-    /^setfork:\/\/lists\/([^/\s]+)\/([^/\s?#]+)$/.exec(s) ??
-    /^https?:\/\/[^/]+\/(?:(?:ru|en)\/)?([^/\s]+)\/([^/\s?#]+)\/?(?:[?#].*)?$/.exec(s) ??
-    /^\/?([a-z0-9-]{3,30})\/([^/\s?#]+)$/.exec(s)
-  return m ? { handle: m[1], slug: m[2] } : null
+  const m = /^setfork:\/\/lists\/([^/\s]+)\/([^/\s?#]+)$/.exec(s) ?? /^\/?([a-z0-9-]{3,30})\/([^/\s?#]+)$/.exec(s)
+  if (m) return { handle: m[1], slug: m[2] }
+  let url: URL
+  try {
+    url = new URL(s)
+  } catch {
+    return null
+  }
+  if (url.host !== new URL(SITE_URL).host) return null
+  const path = /^\/(?:(?:ru|en)\/)?([^/]+)\/([^/]+)\/?$/.exec(url.pathname)
+  return path ? { handle: path[1], slug: path[2] } : null
 }

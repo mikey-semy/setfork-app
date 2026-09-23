@@ -12,7 +12,14 @@ import { userIdOf, type Extra, type McpServer } from './kit'
  * который уже заменён, незачем.
  */
 
-const one = (v: string | string[]) => decodeURIComponent(Array.isArray(v) ? (v[0] ?? '') : v)
+/** Переменная шаблона; битое процент-кодирование (`%E0`) — ошибка параметров, а не сбой сервера. */
+function one(v: string | string[]): string {
+  try {
+    return decodeURIComponent(Array.isArray(v) ? (v[0] ?? '') : v)
+  } catch {
+    throw new McpError(ErrorCode.InvalidParams, 'Malformed list address')
+  }
+}
 
 export function registerResources(server: McpServer) {
   server.registerResource(
@@ -46,6 +53,9 @@ export function registerResources(server: McpServer) {
   server.server.setRequestHandler(ListResourcesRequestSchema, async (req, extra) => {
     const userId = userIdOf(extra as Extra)
     if (!userId) throw new McpError(ErrorCode.InvalidRequest, 'Unauthorized')
-    return mcpOwnListResources(userId, req.params?.cursor)
+    const page = await mcpOwnListResources(userId, req.params?.cursor)
+    // Протокол: неразобранный курсор — ошибка -32602, а не первая страница заново.
+    if (!page) throw new McpError(ErrorCode.InvalidParams, 'Invalid cursor')
+    return page
   })
 }
