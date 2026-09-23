@@ -128,6 +128,9 @@ export function serializeSteps(steps: CmpStep[], ordered: boolean): SLine[] {
       const mark = BLOCK_MARK[s.type ?? ''] ?? '¶'
       lines.push({ text: `${mark} ${blockLabel(s)}`.trimEnd(), step, head: true })
       blockBody(s).forEach((l) => lines.push({ text: `    ${l}`, step, head: false }))
+      // Ссылки текста — тем же видом, что у шага (#962, находка Codex на #963): без
+      // них смена одних ссылок была невидима в Code-диффе ревью версии и правки.
+      refLines(s).forEach((l) => lines.push({ text: l, step, head: false }))
       return
     }
     stepNum++
@@ -139,14 +142,20 @@ export function serializeSteps(steps: CmpStep[], ordered: boolean): SLine[] {
     if (s.command) s.command.split('\n').forEach((l) => lines.push({ text: `    $ ${l}`, step, head: false }))
     if (s.why) lines.push({ text: `    why: ${s.why}`, step, head: false })
     s.subtasks.forEach((st) => lines.push({ text: `    - [ ] ${st}`, step, head: false }))
-    ;(s.refs ?? []).forEach((r) => {
-      const label = r.label.trim()
-      const url = r.url.trim()
-      const text = url ? (label ? `${label} — ${url}` : url) : label
-      if (text) lines.push({ text: `    → ${text}`, step, head: false })
-    })
+    refLines(s).forEach((l) => lines.push({ text: l, step, head: false }))
   })
   return lines
+}
+
+/** Ссылки блока строками Code-диффа. Одни на шаг и текст: у текста своя копия
+ *  разошлась бы с шаговой, и одна из сторон снова не показывала бы правку. */
+function refLines(s: CmpStep): string[] {
+  return (s.refs ?? []).flatMap((r) => {
+    const label = r.label.trim()
+    const url = r.url.trim()
+    const text = url ? (label ? `${label} — ${url}` : url) : label
+    return text ? [`    → ${text}`] : []
+  })
 }
 
 export interface Seg {

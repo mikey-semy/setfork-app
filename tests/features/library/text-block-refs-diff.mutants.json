@@ -1,0 +1,14 @@
+{
+  "target": "src/features/library/diff.ts",
+  "tests": [
+    "tests/features/library/text-block-refs-export.test.ts",
+    "tests/features/library/diff.test.ts"
+  ],
+  "mutants": [
+    {
+      "name": "Code-дифф снова молчит о смене ссылок текста",
+      "from": "      refLines(s).forEach((l) => lines.push({ text: l, step, head: false }))\n      return",
+      "to": "      return"
+    }
+  ]
+}

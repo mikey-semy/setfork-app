@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { toHtml, toMarkdown, type ExportList, type ExportStep } from '@/features/library/export'
+import { lineDiff, serializeSteps, type CmpStep } from '@/features/library/diff'
 
 // Ссылки-источники в ЭКСПОРТЕ (#962, находка Codex на #963).
 //
@@ -76,5 +77,28 @@ describe('HTML-экспорт', () => {
     expect(toHtml(list([step([{ label: {}, url: 'https://example.org/only' }])]), 'ru')).toContain(
       '<a href="https://example.org/only">https://example.org/only</a>',
     )
+  })
+})
+
+describe('Code-дифф ревью версии и правки', () => {
+  const txt = (refs: CmpStep['refs']): CmpStep => ({
+    type: 'text',
+    content: { md: 'Первый документ.' },
+    title: '',
+    desc: '',
+    command: '',
+    level: 'required',
+    why: '',
+    subtasks: [],
+    refs,
+  })
+
+  it('смена одних ссылок текста видна ревьюеру', () => {
+    // Было: сериализация выходила из ветки текста раньше ссылок, обе версии давали
+    // одинаковый текст, и дифф сообщал «изменений нет».
+    const before = serializeSteps([txt([{ label: 'Декрет', url: 'https://ru.wikisource.org/wiki/a' }])], true)
+    const after = serializeSteps([txt([{ label: 'Декрет', url: 'https://ru.wikisource.org/wiki/b' }])], true)
+    const d = lineDiff(before, after)
+    expect(d.added + d.removed).toBeGreaterThan(0)
   })
 })
