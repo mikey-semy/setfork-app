@@ -37,6 +37,8 @@ export interface GuideItem {
   section?: string | null
   /** Текст пункта на языке читателя: заголовок, пояснение, markdown текст-блока. */
   item: string
+  /** Язык читателя — часть ключа решения: вопрос строится на нём. */
+  lang: string
   userId: string
 }
 
@@ -52,20 +54,25 @@ export interface ItemGuide {
 const done: Promise<void> = Promise.resolve()
 
 /**
- * Отпечаток ВОПРОСА: модель и то, что она знает о кандидатах. Решение годно, пока он тот
- * же. Поправил админ персону или домены, включил нового мастера, сменилась модель — пункты
- * переспрашиваются, иначе старый проводник держался бы до смены версии списка, и правка
- * ростера ни на что не влияла бы (авто-ревью к #964).
+ * Отпечаток ВОПРОСА — всё, от чего зависит решение: модель, кандидаты и само состояние
+ * пункта. Решение годно, пока он тот же. Поправил админ персону или домены, включил нового
+ * мастера, сменилась модель — переспрашиваем; переименовал владелец список или сменил теги
+ * (`updateListMeta` делает это без новой версии) — тоже (два замечания авто-ревью к #964).
  */
-function questionFingerprint(model: string, q: ReturnType<typeof guideQuestion>): string {
-  return createHash('sha256').update(JSON.stringify({ model, instructions: q.instructions, criteria: q.criteria })).digest('hex').slice(0, 16)
+function questionFingerprint(model: string, q: ReturnType<typeof guideQuestion>, state: string): string {
+  return createHash('sha256').update(JSON.stringify({ model, instructions: q.instructions, criteria: q.criteria, state })).digest('hex').slice(0, 16)
 }
 
 export async function guideForItem(it: GuideItem, roster: Expert[]): Promise<ItemGuide | null> {
-  const where = and(eq(digGuides.templateId, it.templateId), eq(digGuides.version, it.version), eq(digGuides.stepN, it.stepN))
+  const where = and(
+    eq(digGuides.templateId, it.templateId),
+    eq(digGuides.version, it.version),
+    eq(digGuides.stepN, it.stepN),
+    eq(digGuides.lang, it.lang),
+  )
   const question = guideQuestion(roster.map(candidateOf))
-  const fingerprint = questionFingerprint(await decideModel(), question)
   const state = guideState({ listTitle: it.listTitle, tags: it.tags, section: it.section, item: it.item })
+  const fingerprint = questionFingerprint(await decideModel(), question, state)
   const ref = { refType: 'template', refId: it.templateId, userId: it.userId }
 
   /**
@@ -118,7 +125,7 @@ export async function guideForItem(it: GuideItem, roster: Expert[]): Promise<Ite
         .returning({ gnomeId: digGuides.gnomeId })
     : await db
         .insert(digGuides)
-        .values({ templateId: it.templateId, version: it.version, stepN: it.stepN, ...row })
+        .values({ templateId: it.templateId, version: it.version, stepN: it.stepN, lang: it.lang, ...row })
         .onConflictDoNothing()
         .returning({ gnomeId: digGuides.gnomeId })
   if (!written.length) {

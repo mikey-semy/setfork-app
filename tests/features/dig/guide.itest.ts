@@ -36,7 +36,7 @@ const asked = (spy: ReturnType<typeof vi.spyOn>) => spy.mock.calls.map((c: unkno
 
 let tplId = ''
 let userId = ''
-const item = () => ({ templateId: tplId, version: 1, stepN: 3, listTitle: 'Медленное API', tags: ['devops', 'redis'], item: 'Найти медленные запросы: pg_stat_statements', userId })
+const item = () => ({ templateId: tplId, version: 1, stepN: 3, listTitle: 'Медленное API', tags: ['devops', 'redis'], item: 'Найти медленные запросы: pg_stat_statements', userId, lang: 'ru' })
 
 beforeEach(async () => {
   await resetTables([digGuides, templates, users])
@@ -100,6 +100,31 @@ describe('кэш знает, о чём спрашивал', () => {
     expect(r?.expert.id).toBe('devops')
     const rows = await db.select().from(digGuides).where(eq(digGuides.templateId, tplId))
     expect(rows.map((x) => x.gnomeId)).toEqual(['devops'])
+  })
+
+  it('владелец сменил теги списка без новой версии — пункт переспрашивается', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(choice('devops'))).mockResolvedValueOnce(json(noul(0.9)))
+    await (await guideForItem(item(), ROSTER))?.shadow
+    vi.restoreAllMocks()
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(choice('dba'))).mockResolvedValueOnce(json(noul(0.9)))
+    const r = await guideForItem({ ...item(), tags: ['postgresql', 'sql'] }, ROSTER)
+    await r?.shadow
+    expect(spy).toHaveBeenCalled()
+    expect(r?.expert.id).toBe('dba')
+  })
+
+  it('у каждого языка своё решение — читатели разных языков не сбрасывают кэш друг друга', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(choice('dba'))).mockResolvedValueOnce(json(noul(0.9)))
+    await (await guideForItem(item(), ROSTER))?.shadow
+    vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(choice('dba'))).mockResolvedValueOnce(json(noul(0.9)))
+    await (await guideForItem({ ...item(), lang: 'en', listTitle: 'Slow API', item: 'Find slow queries: pg_stat_statements' }, ROSTER))?.shadow
+    vi.restoreAllMocks()
+    // Русский читатель снова — из кэша, модель не зовётся.
+    const spy = vi.spyOn(globalThis, 'fetch')
+    await guideForItem(item(), ROSTER)
+    expect(spy).not.toHaveBeenCalled()
+    expect(await db.select().from(digGuides)).toHaveLength(2)
   })
 
   it('теневой ответ однажды не пришёл — при следующем визите спрашивается снова', async () => {

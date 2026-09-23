@@ -93,6 +93,7 @@ export async function digChatAsk(input: {
           section: row.section ? tr(row.section as LocaleText, input.lang) : null,
           item: [tr(row.title as LocaleText, input.lang), tr(row.desc as LocaleText, input.lang), blockMd].filter(Boolean).join('\n'),
           userId: session.userId,
+          lang: input.lang,
         },
         roster,
       )

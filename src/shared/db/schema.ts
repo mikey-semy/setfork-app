@@ -2169,6 +2169,9 @@ export const digGuides = pgTable(
       .references(() => templates.id, { onDelete: 'cascade' }),
     version: integer('version').notNull(),
     stepN: integer('step_n').notNull(),
+    /** Язык читателя: вопрос строится на нём, поэтому и решение у каждого языка своё —
+     *  иначе русский и английский читатели сбрасывали бы кэш друг друга (как у dig_layers). */
+    lang: text('lang').notNull(),
     /** id гнома из ростера (text, неприкосновенен — AGENTS.md §4). */
     gnomeId: text('gnome_id').notNull(),
     confidence: real('confidence').notNull(),
@@ -2177,11 +2180,11 @@ export const digGuides = pgTable(
     fits: real('fits'),
     /** Какая модель ответила на самом деле (с датой сборки). */
     model: text('model').notNull(),
-    /** Отпечаток вопроса (модель + критерии кандидатов): сменился — решение переспрашивается. */
+    /** Отпечаток вопроса (модель + критерии кандидатов + состояние пункта): сменился — решение переспрашивается. */
     fingerprint: text('fingerprint').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('dig_guides_step_idx').on(t.templateId, t.version, t.stepN)],
+  (t) => [uniqueIndex('dig_guides_step_idx').on(t.templateId, t.version, t.stepN, t.lang)],
 )
 
 /**
