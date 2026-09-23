@@ -28,3 +28,7 @@ coverage/
 test-results/
 playwright-report/
 itest-run.log
+
+# байткод Python (scripts/review) — не исходник
+__pycache__/
+*.pyc

@@ -43,15 +43,11 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
           )}
         </IconButton>
       </DropdownMenuTrigger>
-      {/* ВЫСОТА ОГРАНИЧЕНА ДОСТУПНОЙ, а список тянется внутри. Раньше панель считала
-          свою высоту сама: шапка + до 360px списка + строка «все уведомления». На
-          невысоком окне это не помещалось, а у выпадашки `overflow-hidden` — и хвост
-          просто ОБРЕЗАЛСЯ: строка «все уведомления» оказывалась за краем, нажать её было
-          нельзя. Тот же приём уже применён у CloneDropdown — значит грабли не новые. */}
-      <DropdownMenuContent
-        align="end"
-        className="flex max-h-(--radix-dropdown-menu-content-available-height) w-panel-xl flex-col p-0"
-      >
+      {/* Высоту по доступной держит сам примитив меню (там же и прокрутка) — раньше
+          подпорка стояла здесь, и каждое длинное меню лечило себя само. Тут остаётся
+          только своя раскладка: шапка сверху, список тянется, хвост со «всеми
+          уведомлениями» прижат снизу и не уезжает за край. */}
+      <DropdownMenuContent align="end" className="flex w-panel-xl flex-col p-0">
         <PanelHead title={t('notifications', lang)} />
 
         {items.length === 0 ? (

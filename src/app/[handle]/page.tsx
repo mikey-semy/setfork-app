@@ -3,6 +3,7 @@
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
 import type { Metadata } from 'next'
+import { urlLangAt, withLang } from '@/shared/seo/with-lang'
 import { canonicalPageParam, pageHref } from '@/shared/lib/paging'
 import { breadcrumbList, JsonLd, profilePage } from '@/shared/seo/jsonld'
 import { BookOpen, FolderGit2, ListChecks, Star, Users } from 'lucide-react'
@@ -21,7 +22,7 @@ import { ProfileOverview } from './ProfileOverview'
 import { ProfileCatalogCard } from '@/features/catalogs/ProfileCatalogCard'
 
 // Заголовок вкладки: «Имя (handle)» как в GitHub (layout добавит « · SetFork»).
-export async function generateMetadata({
+async function baseMetadata({
   params,
   searchParams,
 }: {
@@ -60,6 +61,13 @@ export async function generateMetadata({
   }
 }
 
+// Канон и `og:url` — на языке адреса, плюс `hreflang` (см. `withLang`): страница собирает
+// метаданные сама, мимо `pageMeta`, и без обёртки назвала бы каноном версию без языка.
+export async function generateMetadata(props: Parameters<typeof baseMetadata>[0]): Promise<Metadata> {
+  return withLang(await baseMetadata(props))
+}
+
+
 /**
  * Страница профиля. Здесь только состав: какие вкладки есть и что стоит в колонках.
  * Правила («кому сюда можно», «что попадает в выдачу», «какая страница») живут в
@@ -72,7 +80,8 @@ export default async function ProfilePage({
   params: Promise<{ handle: string }>
   searchParams: Promise<ProfileSearchParams>
 }) {
-  const [{ handle }, sp, lang] = await Promise.all([params, searchParams, getLang()])
+  // `at` — адреса в разметке на языке адреса страницы (см. `urlLangAt`).
+  const [{ handle }, sp, lang, at] = await Promise.all([params, searchParams, getLang(), urlLangAt()])
   const loaded = await loadProfilePage({ handle, sp, lang })
   const { tab, isPeopleTab, isOwner, counts, followCounts, catalogs, people, quotaHit, user } = loaded
 
@@ -81,8 +90,8 @@ export default async function ProfilePage({
       {/* Приватный профиль машине не объясняется — как и поисковику (см. generateMetadata). */}
       {user && !user.profilePrivate ? (
         <>
-          <JsonLd data={profilePage({ name: user.name || handle, handle, description: user.bio ?? undefined })} />
-          <JsonLd data={breadcrumbList([{ name: handle, path: `/${handle}` }])} />
+          <JsonLd data={profilePage({ name: user.name || handle, handle, description: user.bio ?? undefined, path: at(`/${handle}`) })} />
+          <JsonLd data={breadcrumbList([{ name: handle, path: at(`/${handle}`) }])} />
         </>
       ) : null}
       {/* Заголовок страницы для диктора: видимого у этой страницы нет по замыслу,

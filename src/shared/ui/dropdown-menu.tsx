@@ -9,13 +9,25 @@ const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
 const DropdownMenuGroup = DropdownMenuPrimitive.Group
 
 // React 19: ref — обычный проп (ComponentProps его включает), forwardRef не нужен.
+/**
+ * ⚠️ ВЫСОТА ОГРАНИЧЕНА ДОСТУПНОЙ, А СПИСОК ПРОКРУЧИВАЕТСЯ. Меню не знало высоты экрана и
+ * при этом резало себя `overflow-hidden`: длинный список (мастера раскопки — под два
+ * десятка пунктов) уходил за нижний край, и нижние строки нельзя было ни увидеть, ни
+ * нажать — прокрутки у меню не было вовсе.
+ *
+ * Лечили это уже дважды поштучно — у колокольчика уведомлений и у меню клонирования, —
+ * каждый раз дописывая max-h в СВОЙ вызов. Третий случай означает, что место правки
+ * не там: ограничение живёт здесь, и его получают все меню разом. Переменную
+ * `--radix-…-available-height` Radix считает сам (место от триггера до края окна) —
+ * так же это сделано в каноне shadcn.
+ */
 function DropdownMenuContent({ className, sideOffset = 6, ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
   <DropdownMenuPrimitive.Portal>
     <DropdownMenuPrimitive.Content
       sideOffset={sideOffset}
       className={cn(
-        'animate-sf-pop z-50 min-w-menu overflow-hidden rounded-lg border border-border bg-surface p-1 text-ink shadow-card',
+        'animate-sf-pop z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-menu overflow-x-hidden overflow-y-auto overscroll-contain rounded-lg border border-border bg-surface p-1 text-ink shadow-card',
         className,
       )}
       {...props}

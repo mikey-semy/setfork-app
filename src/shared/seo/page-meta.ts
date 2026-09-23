@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import type { Lang } from '@/shared/i18n'
+import { langAlternates, langHref } from '@/shared/i18n/url'
 
 /** Общесайтовая карточка ссылки: 1200×630, лежит в `public/`. */
 export const SITE_OG_IMAGE = '/og-image.png'
@@ -45,22 +47,45 @@ export function pageMeta(o: {
   image?: string
   /** Страница не для индекса (личные разделы, служебные экраны). */
   noindex?: boolean
+  /**
+   * Язык страницы. Без него `canonical` указывает на адрес БЕЗ префикса, и русская
+   * страница объявляет себя копией общей — для поисковика это «не индексировать».
+   * Языки разведены по адресам 22.09.2026, потому что YandexBot не шлёт
+   * `Accept-Language` и русской версии в индексе не существовало вовсе.
+   */
+  lang?: Lang
 }): Metadata {
-  const { title, description, path, image, noindex } = o
+  const { title, description, path, image, noindex, lang } = o
   // Картинка есть ВСЕГДА: своя или общесайтовая. Унаследовать её от макета нельзя —
   // см. предупреждение о поверхностном слиянии выше.
   const images = [{ url: image ?? SITE_OG_IMAGE }]
+  // ОДИН адрес страницы на канон и на карточку соцсетей. Когда они расходились, карточка
+  // `/ru/explore` называла себя `/explore`: соцсеть склеивала её с версией без языка, и
+  // получатель ссылки попадал на язык своего браузера, а не на тот, которым поделились
+  // (находка авто-ревью к SEO-1).
+  const canonical = path ? (lang ? langHref(path, lang) : path) : undefined
   return {
     title,
     ...(description ? { description } : {}),
-    ...(path ? { alternates: { canonical: path } } : {}),
+    // ⚠️ Ссылки на языковые версии — ЗДЕСЬ, а не в корневом макете: метаданные страницы
+    // замещают одноимённое поле целиком, и `alternates` из макета до готовой страницы не
+    // доезжают. Проверено живым запросом: `hreflang` не было ни одного, пока помощник
+    // молчал о языках.
+    ...(path
+      ? {
+          alternates: {
+            canonical,
+            languages: { ...langAlternates(path).languages, 'x-default': path },
+          },
+        }
+      : {}),
     ...(noindex ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       type: 'website',
       siteName: 'SetFork',
       title,
       ...(description ? { description } : {}),
-      ...(path ? { url: path } : {}),
+      ...(canonical ? { url: canonical } : {}),
       images,
     },
     twitter: {

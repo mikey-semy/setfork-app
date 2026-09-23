@@ -27,8 +27,8 @@
       "reason": "сгенерированный SQL, 40 тыс. строк: не читается, а сверяется — блок H14 на чистой БД"
     },
     {
-      "pattern": "docs/review/**",
-      "reason": "аппарат ревью, а не его предмет: манифесты, отчёты, реестр и промпты — леса вокруг стройки, они умрут вместе с каталогом. Код инструмента (scripts/review) ревьюится блоком V12e"
+      "pattern": "docs/review/coverage.tsv",
+      "reason": "карта покрытия пересобирается инструментом, не код"
     },
     {
       "pattern": "public/*.png",
@@ -51,16 +51,16 @@
       "reason": "графика"
     },
     {
+      "pattern": "docs/img/*.webp",
+      "reason": "графика (иллюстрации README)"
+    },
+    {
       "pattern": "public/fonts/**",
       "reason": "шрифты"
     },
     {
       "pattern": "src/shared/gen/**",
       "reason": "сгенерирован protoc-gen-es из .proto; не читается, а сверяется — джоба «proto ↔ кодоген не разъехались» в CI пересобирает и сравнивает"
-    },
-    {
-      "pattern": "docs/img/**",
-      "reason": "иллюстрации README — бинарные ассеты, читать нечего (как public/*.webp)"
     }
   ],
   "blocks": [
@@ -227,7 +227,8 @@
       "role": "reviewer",
       "goal": "Найти текст мимо словаря, расхождения ru/en, нарушения словаря продукта: «PR» вместо «Предложение», slug на виду, слово «гном» в тексте.",
       "paths": [
-        "src/shared/i18n/**"
+        "src/shared/i18n/**",
+        "tests/shared/i18n/lang-url.test.ts"
       ],
       "ref_paths": [
         "src/features/**"
@@ -451,7 +452,11 @@
         "src/shared/docs.ts",
         "src/shared/seo/**",
         "src/shared/site.ts",
-        "tests/shared/seo/page-meta-image.test.ts"
+        "tests/shared/seo/page-meta-image.test.ts",
+        "tests/shared/seo/site-jsonld.test.ts",
+        "tests/shared/seo/page-meta-lang.test.ts",
+        "tests/shared/seo/localize-metadata.test.ts",
+        "tests/shared/seo/howto-eligible.test.ts"
       ],
       "ref_paths": []
     },
@@ -1309,9 +1314,14 @@
       "role": "reviewer",
       "goal": "Прочитать документацию как обещание: README, CONTRIBUTING, docs/*.md, инструкции агентам — и найти, где текст описывает то, чего в коде уже нет.",
       "paths": [
-        ":(glob)*.md",
+        "AGENTS.md",
+        "CODE_OF_CONDUCT.md",
+        "CONTRIBUTING.md",
+        "LICENSE-NOTICE.md",
+        "README.md",
+        "SECURITY.md",
         ".claude/**",
-        "docs/*.md"
+        ":(glob)docs/*.md"
       ],
       "ref_paths": []
     },
@@ -1323,11 +1333,15 @@
       "role": "reviewer",
       "goal": "Прочитать саму оснастку ревью: манифесты блоков, инварианты, отчёты — и проверить, что отчёт не шире того, что было прочитано.",
       "paths": [
+        ":(glob)docs/review/*.md",
+        ":(glob)docs/review/blocks/*.md",
+        ":(glob)docs/review/prompts/*.md",
         "docs/review/blocks.json",
         "docs/review/findings.jsonl",
         "docs/review/reports/H1-findings.jsonl",
         "docs/review/reports/H15-findings.jsonl",
         "docs/review/reports/H2-findings.jsonl",
+        "docs/review/reports/H5-findings.jsonl",
         "docs/review/reports/V1d-findings.jsonl",
         "docs/review/state.json"
       ],
@@ -1725,6 +1739,31 @@
       "ref_paths": [
         "src/features/library/actions"
       ]
+    },
+    {
+      "id": "V12g",
+      "slug": "seo-docs",
+      "phase": 2,
+      "title": "Документы продвижения",
+      "role": "reviewer",
+      "goal": "Прочитать документы продвижения как обещание: аудит, план работ и инструкции по SEO — и найти, где текст утверждает про сайт то, чего код не делает (адреса, разметку, карту сайта, заголовки).",
+      "paths": [
+        "docs/seo/**",
+        "docs/seo-audit-2026-09.md"
+      ],
+      "ref_paths": []
+    },
+    {
+      "id": "V12h",
+      "slug": "review-reports",
+      "phase": 2,
+      "title": "Отчёты пройденных блоков ревью",
+      "role": "reviewer",
+      "goal": "Прочитать отчёты пройденных блоков как свидетельство: сходятся ли выводы с реестром находок и с кодом на момент проверки, и не объявлено ли проверенным то, чего отчёт не показывает.",
+      "paths": [
+        ":(glob)docs/review/reports/*.md"
+      ],
+      "ref_paths": []
     }
   ]
 }

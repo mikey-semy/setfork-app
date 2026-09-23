@@ -11,6 +11,11 @@ import { aiQuota, globalBudgetOk } from '@/shared/quota'
 import { rateLimit } from '@/shared/rate-limit'
 import { getAiSettings } from '@/shared/settings/ai'
 import { tr, trLoose, type Lang, type LocaleText } from '@/shared/i18n'
+import { pickExpert } from './pick-expert'
+import { digDepth } from './depth'
+import { formatHistory } from './history'
+import { craftBasis } from './basis'
+import { findPrecedents } from '@/shared/ai/retrieval'
 
 /**
  * Мини-чат раскопки (HQ §8, редизайн по фидбеку владельца): вместо статичных
@@ -26,9 +31,9 @@ export interface DigChatMsg {
 }
 
 const DIG_RATE_PER_MIN = 6
-const HISTORY_TAIL = 8
 
-const fits = (tag: string, domain: string) => tag === domain || (domain.length >= 3 && tag.includes(domain)) || (tag.length >= 3 && domain.includes(tag))
+
+
 
 export async function digChatAsk(input: {
   templateId: string
@@ -53,14 +58,9 @@ export async function digChatAsk(input: {
   if (!rl.ok) return { error: 'ratelimited' }
 
   const roster = await getRoster()
-  let expert = input.gnome !== 'auto' ? roster.find((e) => e.id === input.gnome) : undefined
-  if (!expert) {
-    const tags = tpl.tags.map((t) => t.toLowerCase())
-    expert =
-      roster.find((e) => !e.domains.includes('*') && e.domains.some((d) => tags.some((t) => fits(t, d.toLowerCase())))) ??
-      roster.find((e) => e.id === 'generalist') ??
-      roster[0]
-  }
+  // Кто спустится в шахту — решает отдельное правило (см. `pick-expert`): выбор человека,
+  // иначе мастер по ремеслу, иначе универсал. Линза там каноническая.
+  const expert = pickExpert(roster, tpl.tags, input.gnome)
   if (!expert) return { error: 'ai_off' }
 
   const [ver] = await db
@@ -89,15 +89,34 @@ export async function digChatAsk(input: {
   ]
     .filter(Boolean)
     .join('\n')
-  const hist = input.history
-    .slice(-HISTORY_TAIL)
-    .map((m) => `${m.role === 'user' ? 'USER' : 'GNOME'}: ${String(m.text).slice(0, 400)}`)
-    .join('\n')
+  // Хвост беседы — с ИМЕНАМИ говоривших (см. `formatHistory`): без них сменившийся
+  // мастер принимает реплики предшественника за свои.
+  const hist = formatHistory(input.history, roster, input.lang)
+
+  // БАЗА ЗНАНИЙ ГНОМА. Раскопка шла вовсе без прецедентов: гном отвечал из общих знаний
+  // модели, а наша библиотека — то, чем он отличается от чат-бота, — не участвовала.
+  // Берём прецеденты по шагу и режем ЕГО доменной линзой: повар видит рецепты, а не
+  // деплой. Если по его ремеслу ничего не нашлось, он об этом скажет прямо (иначе
+  // «основано на нашей библиотеке» звучит одинаково и когда основано, и когда нет).
+  const found = await findPrecedents(
+    `${tr(tpl.title as LocaleText, input.lang)}: ${tr(row.title as LocaleText, input.lang)}`,
+    input.lang,
+    { userId: session.userId, limit: 3, stepLimit: 3 },
+  )
+  // Списки И шаги, отобранные линзой его ремесла (см. `craftBasis`).
+  const { precedents, offCraft } = craftBasis(found, expert.domains)
 
   const replies = await gnomeConverse(expert, question, {
     lang: input.lang,
     context: stepCtx,
     history: hist,
+    precedents,
+    precedentsOffCraft: offCraft,
+    // СЛОЙ РАСКОПКИ. Глубина = на сколько вопросов по этому шагу уже ответили: первый ответ
+    // про причины и источники, второй про механизм и исключения, третий про тонкости.
+    // Без этого разговор топтался на одном уровне — человек спрашивал третий раз и
+    // получал ту же глубину, что в первый, хотя в лоре «копать» это идти слой за слоем.
+    depth: digDepth(input.history),
     followups: true,
     summonRoster: roster,
     feature: 'dig',

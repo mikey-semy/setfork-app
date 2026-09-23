@@ -1,0 +1,31 @@
+{
+  "target": "src/features/dig/pick-expert.ts",
+  "tests": ["tests/features/dig/pick-expert.test.ts"],
+  "mutants": [
+    {
+      "name": "вернуть свою копию линзы (сопоставление по подстроке)",
+      "from": "    roster.find((e) => !e.domains.includes('*') && e.domains.some((d) => lower.some((t) => tagMatches(t, d.toLowerCase())))) ??",
+      "to": "    roster.find((e) => !e.domains.includes('*') && e.domains.some((d) => lower.some((t) => t.includes(d.toLowerCase()) || d.toLowerCase().includes(t)))) ??"
+    },
+    {
+      "name": "мастер по ремеслу больше не ищется — всем универсал",
+      "from": "    roster.find((e) => !e.domains.includes('*') && e.domains.some((d) => lower.some((t) => tagMatches(t, d.toLowerCase())))) ??",
+      "to": ""
+    },
+    {
+      "name": "выбор человека перестаёт быть сильнее автоподбора",
+      "from": "  if (chosenId && chosenId !== 'auto') {",
+      "to": "  if (false) {"
+    },
+    {
+      "name": "«auto» принимается за id гнома",
+      "from": "  if (chosenId && chosenId !== 'auto') {",
+      "to": "  if (chosenId) {"
+    },
+    {
+      "name": "универсал перестаёт быть запасным — вопрос остаётся без ответа",
+      "from": "    roster.find((e) => e.id === 'generalist') ??",
+      "to": ""
+    }
+  ]
+}

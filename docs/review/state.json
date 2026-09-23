@@ -1,6 +1,6 @@
 {
   "review_id": "setfork-frontend-2026-09",
-  "updated_at": "2026-09-22T21:48:12Z",
+  "updated_at": "2026-09-23T03:37:33Z",
   "blocks": {
     "H1": {
       "status": "verified",
@@ -8,8 +8,8 @@
       "finished": "2026-09-19T09:05:03Z",
       "reports": [],
       "note": "",
-      "reviewed_sha": "11c22f2719a08e7b",
-      "restamped_at": "2026-09-22T21:48:10Z",
+      "reviewed_sha": "e852eaffe4d6b075",
+      "restamped_at": "2026-09-23T03:37:32Z",
       "hypotheses_sha": "388df01904c44ab1",
       "refs_sha": "11372dff77100706"
     },
@@ -48,9 +48,9 @@
       "reports": [],
       "note": "",
       "reviewed_sha": "6411f4c228a97c58",
-      "restamped_at": "2026-09-22T21:48:11Z",
+      "restamped_at": "2026-09-23T03:37:33Z",
       "hypotheses_sha": "340e0b67db25265c",
-      "refs_sha": "0ac1bbecaf59cbf9"
+      "refs_sha": "896e04e31d97d03b"
     },
     "H6": {
       "status": "todo",
@@ -488,6 +488,20 @@
       "note": ""
     },
     "V1cb": {
+      "status": "todo",
+      "started": null,
+      "finished": null,
+      "reports": [],
+      "note": ""
+    },
+    "V12g": {
+      "status": "todo",
+      "started": null,
+      "finished": null,
+      "reports": [],
+      "note": ""
+    },
+    "V12h": {
       "status": "todo",
       "started": null,
       "finished": null,
