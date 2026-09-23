@@ -1,0 +1,22 @@
+{
+  "source": "setfork MCP list_gnomes, снято 2026-09-22",
+  "note": "hoarder исключён из кандидатов Jev: это роль разведчика (Belbin), а не ремесло, и в роутинге по доменам он тоже не участвует (домен '*').",
+  "gnomes": [
+    {"id": "devops", "ru": "Броккр", "about": "a pragmatic DevOps/SRE expert", "domains": ["cache","devops","deploy","docker","postmortem","incident","performance","ufw","infra","servers","orchestration","deployment","swarm","linux","monitoring","kubernetes","ci","redis","disk"]},
+    {"id": "coder", "ru": "Двалин", "about": "a meticulous software engineer", "domains": ["software","pull-request","kiss","tailwind","rebase","dry","project-structure","python","frontend","programming","программирование","api","coding","merge","css","architecture","git","layers","framework","branches","uv","library","commits","solid","scripts","ruff","ddd","vscode","workflow","fastapi","debugging","качество-кода"]},
+    {"id": "chef", "ru": "Фьялар", "about": "a professional chef", "domains": ["baking","сладости","рецепт","cooking","маршмеллоу","френч-пресс","food","kitchen","кофе","recipe","десерт","кухня","готовка"]},
+    {"id": "traveler", "ru": "Хаугспори", "about": "a seasoned travel planner", "domains": ["travel","trip","city","tourism","itinerary"]},
+    {"id": "coach", "ru": "Регин", "about": "a certified fitness coach", "domains": ["fitness","health","workout","sport","nutrition"]},
+    {"id": "scholar", "ru": "Торин", "about": "a thoughtful scholar", "domains": ["мандарин","research","learning","китайский","exam","чтение","hsk","иероглифы","study","языки","course"]},
+    {"id": "hoarder", "ru": "Андвари", "about": "a resource investigator: the team's scout for tools, links and options", "domains": ["*"], "candidate": false},
+    {"id": "generalist", "ru": "Радсвид", "about": "a well-rounded generalist", "domains": ["*"]},
+    {"id": "book-expert", "ru": "Бивур", "about": "a literature expert", "domains": ["narrative","фантазия","фэнтези","recommendations","analysis","books","поджанры","литература","reading","мифология","literature","фантастика","книги","themes","чтение"]},
+    {"id": "equipment-expert", "ru": "Мотсогнир", "about": "an equipment expert", "domains": ["equipment","maintenance","engineering","riskmanagement","iso","assetmanagement","manufacturer"]},
+    {"id": "gnome-specialist", "ru": "Витр", "about": "a gnome craft expert: traditional crafts, handmade, tools, decor", "domains": ["craft","gnome-culture","handmade","tools","weapons","decor","traditional-techniques"]},
+    {"id": "backender", "ru": "Даин", "about": "a backend engineer", "domains": ["fastapi","database","backend","api","postgresql","server","redis","sql","python"]},
+    {"id": "tester", "ru": "Глоин", "about": "a test engineer", "domains": ["qa","тестирование","testing","debugging","качество-кода","quality"]},
+    {"id": "security", "ru": "Эйкинскьяльди", "about": "a security engineer", "domains": ["secrets","forensics","incident","appsec","ufw","auth","security"]},
+    {"id": "dba", "ru": "Фьёльсвид", "about": "a database engineer", "domains": ["backup","postgresql","postgres","redis","sql","performance","index","database"]},
+    {"id": "analysis-expert", "ru": "Listviðr", "about": "a data analyst", "domains": ["data","analysis","statistics","business","insights"]}
+  ]
+}

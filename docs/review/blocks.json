@@ -582,7 +582,8 @@
         "scripts/seed-ops.ts",
         "scripts/ui-drift.mjs",
         "scripts/ui-sizes.mjs",
-        "scripts/verify-council-chat.ts"
+        "scripts/verify-council-chat.ts",
+        "scripts/gnome-routing-eval.ts"
       ],
       "ref_paths": []
     },
@@ -1162,7 +1163,8 @@
         "src/shared/ai/source-license.ts",
         "src/shared/ai/triples.ts",
         "src/shared/ai/usage.ts",
-        "src/shared/ai/web-search.ts"
+        "src/shared/ai/web-search.ts",
+        "src/shared/ai/decide.ts"
       ],
       "ref_paths": []
     },

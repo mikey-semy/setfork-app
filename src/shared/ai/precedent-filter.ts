@@ -63,6 +63,22 @@ export function domainAffinity(tags: string[], domains: string[]): number {
 }
 
 /**
+ * Специалисты по убыванию «своего» для тегов — только те, у кого совпал хотя бы один.
+ *
+ * Чистое ядро выбора `tenderForTags` (gnome-account): там поверх него ещё заводится
+ * аккаунт, то есть запись в БД. Вынесено, чтобы офлайн-замер
+ * (`scripts/gnome-routing-eval.ts`) сравнивал с НАСТОЯЩИМ правилом, а не с пересказом:
+ * пересказ разъехался бы с оригиналом на первой же правке сортировки.
+ */
+export function rankByAffinity<T extends { domains: string[] }>(tags: string[], roster: T[]): T[] {
+  return roster
+    .map((e) => ({ e, score: domainAffinity(tags, e.domains) }))
+    .filter((r) => r.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((r) => r.e)
+}
+
+/**
  * Выбрать прецеденты под эксперта. '*' в доменах (универсал, барахольщик) → просто топ
  * по близости. Ни один тег не совпал → фолбэк на топ: пустой контекст хуже общего
  * (прецеденты уже прошли порог смысловой близости к ЗАПРОСУ).

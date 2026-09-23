@@ -3,7 +3,7 @@ import { and, arrayOverlaps, desc, eq, inArray, sql } from 'drizzle-orm'
 import { councilExperts, db, templates, users } from '@/shared/db'
 import type { Expert } from './roster'
 import { HOME_REALM, mythicName, needsOwnName } from './gnome-names'
-import { domainAffinity } from './precedent-filter'
+import { domainAffinity, rankByAffinity } from './precedent-filter'
 import { handleTaken } from '@/shared/auth/handle'
 import type { Lang } from '@/shared/i18n'
 
@@ -114,11 +114,7 @@ export async function ensureGnomeUsers(roster: Expert[]): Promise<Record<string,
  */
 export async function tenderForTags(tags: string[], roster: Expert[]): Promise<{ expert: Expert; userId: string } | null> {
   if (!tags.length) return null
-  const ranked = roster
-    .map((e) => ({ e, score: domainAffinity(tags, e.domains) }))
-    .filter((r) => r.score > 0)
-    .sort((a, b) => b.score - a.score)
-  for (const { e } of ranked) {
+  for (const e of rankByAffinity(tags, roster)) {
     const userId = await ensureGnomeUser(e)
     if (userId) return { expert: e, userId }
   }

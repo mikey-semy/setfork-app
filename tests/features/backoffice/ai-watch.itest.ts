@@ -261,6 +261,24 @@ describe('сторож канала к модели', () => {
     expect(state.failStreak).toBe(ERROR_STREAK_TRIP)
     expect(channelDown(state)).toBe(true)
   })
+
+  it('решения Jev в счёт не идут: успехи Decisions не стирают поломку чата', async () => {
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 20 - i })
+    // Прогон замера — десятки удачных вызовов Decisions разом.
+    for (let i = 0; i < 5; i++) await call('ok', { minutesAgo: 1, feature: 'decide', model: 'typesafe/jev-1.13-20260917' })
+
+    const state = await channelState()
+
+    expect(state.failStreak).toBe(ERROR_STREAK_TRIP)
+    expect(channelDown(state)).toBe(true)
+  })
+
+  it('и сбои Jev не поднимают ложную тревогу о чате', async () => {
+    await call('ok', { minutesAgo: 30 })
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await call('error', { minutesAgo: 10 - i, feature: 'decide', model: 'typesafe/jev-1.13' })
+
+    expect(channelDown(await channelState())).toBe(false)
+  })
 })
 
 /**
