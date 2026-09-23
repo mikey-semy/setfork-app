@@ -54,7 +54,7 @@ export function ListEditor({
   headerRight?: ReactNode
 }) {
   const list = useBlockList(initialItems)
-  const uploads = useBlockUploads(list.patchByUid)
+  const uploads = useBlockUploads(list.patchByUid, lang)
   const listRef = useFlipReorder(list.uids)
   // ПРЕДПРОСМОТР рядом с правкой: до него единственным способом увидеть результат
   // было сохранить версию (жалоба владельца 04.08.2026). Показываем тем же

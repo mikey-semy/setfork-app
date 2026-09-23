@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from '@/shared/ui/toast'
+import { t, type Lang } from '@/shared/i18n'
 import { uploadStepFile, uploadStepImage, uploadStepVideo } from '../actions/uploads'
 import type { EditorItem } from '../editor'
 import type { DropKind } from './FileDrop'
@@ -39,20 +40,36 @@ export const serverUploaders: Uploaders = {
   },
 }
 
-export function useBlockUploads(patchByUid: (uid: string, p: Partial<EditorItem>) => void, uploaders: Uploaders = serverUploaders) {
+export function useBlockUploads(
+  patchByUid: (uid: string, p: Partial<EditorItem>) => void,
+  lang: Lang,
+  uploaders: Uploaders = serverUploaders,
+) {
   const [running, setRunning] = useState<string[]>([])
 
-  return {
-    isBusy: (uid: string, kind: DropKind) => running.includes(`${uid}:${kind}`),
-    upload: async (uid: string, kind: DropKind, file: File) => {
-      const key = `${uid}:${kind}`
-      setRunning((keys) => [...keys, key])
+  async function upload(uid: string, kind: DropKind, file: File): Promise<void> {
+    const key = `${uid}:${kind}`
+    setRunning((keys) => [...keys, key])
+    try {
       const form = new FormData()
       form.append('file', file)
       const res = await uploaders[kind](form)
       if ('error' in res) toast.error(res.error)
       else patchByUid(uid, res)
+    } catch {
+      // Отклонённый экшен — обычный исход, а не исключительный: тело больше предела
+      // server action, обрыв связи, 500 из рендера. Без catch полоса «Загрузка…»
+      // висела вечно, а человек не узнавал ничего (ревью по линзам #974).
+      toast.error(t('editor.uploadRejected', lang), {
+        action: { label: t('tryAgain', lang), onClick: () => void upload(uid, kind, file) },
+      })
+    } finally {
       setRunning((keys) => keys.filter((k) => k !== key))
-    },
+    }
+  }
+
+  return {
+    isBusy: (uid: string, kind: DropKind) => running.includes(`${uid}:${kind}`),
+    upload,
   }
 }
