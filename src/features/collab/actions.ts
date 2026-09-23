@@ -2,7 +2,7 @@
 
 import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { collaborators, db, templates, users } from '@/shared/db'
+import { collaborators, db, notifications, templates, users } from '@/shared/db'
 import { normalizeHandle } from '@/shared/auth/handle-input'
 import { requireSession } from '@/shared/auth/session'
 import { notify } from '@/features/notifications/notify'
@@ -23,10 +23,7 @@ async function ownerGuard(templateId: string, userId: string) {
  *  как «ничего не произошло» (правило проекта: без тихой деградации). */
 export type AddCollaboratorResult = {
   ok?: true
-  error?: 'empty' | 'notFound' | 'owner' | 'forbidden'
-  /** Набранный ник при отказе: React 19 сбрасывает форму после экшена и при ошибке,
-   *  и без эха человек терял бы то, что набрал, вместе с причиной отказа. */
-  handle?: string
+  error?: 'empty' | 'notFound' | 'owner' | 'already' | 'forbidden'
 }
 
 /** Добавить коллаборатора по handle (только владелец). */
@@ -47,24 +44,45 @@ export async function addCollaborator(
     .from(users)
     .where(and(sql`lower(${users.handle}) = ${handle}`, eq(users.deleted, false)))
     .limit(1)
-  if (!u) return { error: 'notFound', handle }
-  if (u.id === tpl.ownerId) return { error: 'owner', handle }
+  if (!u) return { error: 'notFound' }
+  if (u.id === tpl.ownerId) return { error: 'owner' }
   const added = await db
     .insert(collaborators)
     .values({ templateId, userId: u.id, role: 'write' })
     .onConflictDoNothing()
     .returning({ userId: collaborators.userId })
-  // Письмо и колокольчик — только за НОВОГО соавтора: повторное «Добавить» того же
-  // человека не должно слать ему второе письмо. Соавтору — кто его добавил; владельцу —
-  // копия с соавтором в роли действующего лица, чтобы помнить, кому выдан доступ
-  // (от своего имени notify себе не шлёт). После вставки: соавтор уже видит список,
-  // и гейт видимости уведомления его пропускает.
-  if (added.length > 0) {
+  // Уже соавтор — так и говорим, а не «добавлен»: иначе повтор выглядит как новая выдача.
+  if (added.length === 0) return { error: 'already' }
+  // Письмо и колокольчик — ОДИН раз на человека и список. Иначе «Добавить → Убрать →
+  // Добавить» по кругу слало бы человеку неотключаемые письма с названием, которое
+  // выбирает владелец списка, — рассылка чужими руками от нашего домена (ревью по
+  // линзе безопасности #973). Помним по самим уведомлениям: их не удаляют, только
+  // каскадом вместе со списком или человеком.
+  // Соавтору — кто его добавил; владельцу — копия с соавтором в роли действующего
+  // лица, чтобы помнить, кому выдан доступ (от своего имени notify себе не шлёт). После
+  // вставки: соавтор уже видит список, и гейт видимости уведомления его пропускает.
+  if (!(await wasAnnounced(templateId, u.id))) {
     await notify({ recipientId: u.id, actorId: session.userId, type: 'collaborator_added', templateId })
     await notify({ recipientId: tpl.ownerId, actorId: u.id, type: 'collaborator_joined', templateId })
   }
   revalidatePath(`/${tpl.ownerHandle}/${tpl.slug}/settings`)
   return { ok: true }
+}
+
+/** Сообщали ли уже этому человеку, что он соавтор этого списка. */
+async function wasAnnounced(templateId: string, userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.recipientId, userId),
+        eq(notifications.templateId, templateId),
+        eq(notifications.type, 'collaborator_added'),
+      ),
+    )
+    .limit(1)
+  return !!row
 }
 
 /** Убрать коллаборатора (только владелец). */

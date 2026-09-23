@@ -18,4 +18,9 @@ import 'server-only'
  * `?q=_b` находил «ab». Правило, обязательное для всех, обязано лежать там, где его
  * находят не глядя, — и подпёрто сторожем (`tests/architecture/like-escaping`).
  */
-export const likeContains = (q: string): string => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+const escapeLike = (q: string): string => q.replace(/[\\%_]/g, (c) => `\\${c}`)
+
+export const likeContains = (q: string): string => `%${escapeLike(q)}%`
+
+/** НАЧАЛО СТРОКИ для ILIKE — то же экранирование: подсказка ника ищет по префиксу. */
+export const likePrefix = (q: string): string => `${escapeLike(q)}%`

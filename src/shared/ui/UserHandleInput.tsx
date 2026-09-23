@@ -1,11 +1,11 @@
 'use client'
 
-import { useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { stripHandleInput } from '@/shared/auth/handle-input'
 import { cn } from '@/shared/lib/cn'
 import { Input, type InputSize } from './input'
 import { MentionList } from './MentionList'
-import { searchUsers, type FoundUser } from './user-search'
+import { searchPeople, TYPEAHEAD_DEBOUNCE_MS, type FoundUser } from './user-search'
 
 /**
  * Поле ника с подсказкой людей — как «Add people» у GitHub и поиск соавтора у Gitea:
@@ -22,7 +22,7 @@ import { searchUsers, type FoundUser } from './user-search'
 export function UserHandleInput({
   name,
   placeholder,
-  defaultValue,
+  limitedText,
   size = 'md',
   className,
   'aria-label': ariaLabel,
@@ -30,8 +30,8 @@ export function UserHandleInput({
 }: {
   name: string
   placeholder?: string
-  /** Начальное значение неуправляемого поля (например, ник, вернувшийся с отказом). */
-  defaultValue?: string
+  /** Что сказать, когда сервер отказал по частоте поиска: подсказка не пропадает молча. */
+  limitedText?: string
   size?: InputSize
   className?: string
   'aria-label'?: string
@@ -48,25 +48,52 @@ export function UserHandleInput({
   // ответ на последний ввод, иначе список подменяется устаревшим (как в useMention).
   const seq = useRef(0)
   const listId = useId()
+  const [limited, setLimited] = useState(false)
+  // Запрос уходит после паузы в наборе, а висящий прежний — отменяется: поиск людей
+  // ограничен по частоте, и запрос на каждую букву выбирал лимит за пару ников.
+  const pending = useRef<{ timer: ReturnType<typeof setTimeout>; ctrl: AbortController } | null>(null)
+  const cancelPending = () => {
+    if (!pending.current) return
+    clearTimeout(pending.current.timer)
+    pending.current.ctrl.abort()
+    pending.current = null
+  }
+  useEffect(() => cancelPending, [])
 
-  async function search(q: string) {
+  function search(q: string) {
+    cancelPending()
     const my = ++seq.current
-    const found = q ? await searchUsers(q) : []
-    if (my !== seq.current) return
-    setUsers(found)
-    setIndex(0)
-    setOpen(found.length > 0)
+    if (!q) {
+      setUsers([])
+      setOpen(false)
+      setLimited(false)
+      return
+    }
+    const ctrl = new AbortController()
+    const timer = setTimeout(async () => {
+      const found = await searchPeople(q, ctrl.signal)
+      if (my !== seq.current) return
+      setUsers(found.users)
+      setIndex(0)
+      setOpen(found.users.length > 0)
+      setLimited(found.limited)
+    }, TYPEAHEAD_DEBOUNCE_MS)
+    pending.current = { timer, ctrl }
   }
 
   function onChange(el: HTMLInputElement) {
     const next = stripHandleInput(el.value)
     if (next !== el.value) el.value = next
-    void search(next)
+    search(next)
   }
 
   function pick(u: FoundUser) {
+    cancelPending()
     seq.current++ // запоздавший ответ на прежний ввод не должен снова раскрыть список
     if (ref.current) ref.current.value = u.handle
+    // Подсказки выбранного больше не нужны: иначе после сброса формы касание пустого
+    // поля снова раскрывало прежний список.
+    setUsers([])
     setOpen(false)
   }
 
@@ -96,7 +123,6 @@ export function UserHandleInput({
         size={size}
         ref={ref}
         name={name}
-        defaultValue={defaultValue}
         onChange={(e) => onChange(e.currentTarget)}
         onKeyDown={onKeyDown}
         onBlur={() => setOpen(false)}
@@ -115,6 +141,11 @@ export function UserHandleInput({
         spellCheck={false}
       />
       {expanded && <MentionList id={listId} users={users} index={index} onHover={setIndex} onPick={pick} />}
+      {limited && limitedText && (
+        <p role="status" className="mt-1 text-body-sm text-muted">
+          {limitedText}
+        </p>
+      )}
     </div>
   )
 }

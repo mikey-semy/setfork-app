@@ -1,6 +1,6 @@
 'use client'
 
-import { TEXT } from './control'
+import { TEXT, TOUCH_MIN_H } from './control'
 import type { MentionUser } from './use-mention'
 
 /**
@@ -44,14 +44,16 @@ export function MentionList({
           type="button"
           role="option"
           aria-selected={i === index}
+          // Фокус остаётся в поле (combobox по APG): строки не должны ловить Tab.
+          tabIndex={-1}
           // mousedown, а не click: поле не должно потерять фокус до вставки.
           onMouseDown={(e) => {
             e.preventDefault()
             onPick(u)
           }}
           onMouseEnter={() => onHover(i)}
-          // pointer-coarse:min-h-11 — тач-цель 44px, как у PickerRow; на десктопе список плотный.
-          className={`flex w-full min-w-0 items-center gap-2 px-2.5 py-1.5 pointer-coarse:min-h-11 text-left ${TEXT.body} ${i === index ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
+          // Тач-цель 44px на пальце, как у PickerRow; на десктопе список плотный.
+          className={`flex w-full min-w-0 items-center gap-2 px-2.5 py-1.5 ${TOUCH_MIN_H} text-left ${TEXT.body} ${i === index ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="h-5 w-5 shrink-0 rounded-full" /> : <span className="h-5 w-5 shrink-0 rounded-full bg-surface-2" />}

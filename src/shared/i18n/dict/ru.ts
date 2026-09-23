@@ -668,6 +668,8 @@ export const ru: Record<DictKey, string> = {
   addCollaboratorEmpty: 'Укажите ник.',
   addCollaboratorNotFound: 'Пользователь с таким ником не найден.',
   addCollaboratorOwner: 'Это владелец списка — он уже может править.',
+  addCollaboratorAlready: 'Этот человек уже соавтор списка.',
+  userSearchLimited: 'Слишком много поисковых запросов — подсказки вернутся через минуту. Ник можно набрать целиком.',
   addCollaboratorForbidden: 'Добавлять соавторов может только владелец списка.',
   addCollaboratorAdded: 'Соавтор добавлен.',
   noCollaborators: 'Пока нет соавторов.',

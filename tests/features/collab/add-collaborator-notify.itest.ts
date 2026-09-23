@@ -8,7 +8,7 @@ import { resetTables } from '../../helpers/reset-db'
  * как успех.
  *
  * Подменено только внешнее: очередь писем (её разбирает воркер), сессия (кто нажал),
- * кэш страниц Next.
+ * кэш страниц Next, и две настройки инстанса — включены ли почта и пуш.
  */
 const h = vi.hoisted(() => ({ jobs: [] as { kind: string; payload: Record<string, unknown> }[], userId: '' }))
 vi.mock('@/shared/jobs/queue', () => ({
@@ -20,7 +20,7 @@ vi.mock('@/shared/auth/session', () => ({ requireSession: async () => ({ userId:
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 
 const { db, collaborators, notifications, templates, users } = await import('@/shared/db')
-const { addCollaborator } = await import('@/features/collab/actions')
+const { addCollaborator, removeCollaborator } = await import('@/features/collab/actions')
 
 const uid: Record<string, string> = {}
 let tplId = ''
@@ -33,6 +33,9 @@ beforeEach(async () => {
     .values([
       { handle: 'ac-owner', email: 'owner@example.com', notifyPrefs: { email: true } },
       { handle: 'ac-mate', email: 'mate@example.com', notifyPrefs: { email: true } },
+      // Ник с заглавными: колонка регистрозависима, такие строки в базе бывали (handleBlock).
+      { handle: 'AC-Legacy', email: 'legacy@example.com', notifyPrefs: { email: true } },
+      { handle: 'ac-gone', email: 'gone@example.com', notifyPrefs: { email: true }, deleted: true },
     ])
     .returning({ id: users.id, handle: users.handle })
   for (const r of rows) uid[r.handle] = r.id
@@ -62,19 +65,45 @@ describe('добавление соавтора', () => {
     ])
   })
 
-  it('повторное «Добавить» того же человека второго письма не шлёт', async () => {
+  it('повторное «Добавить» того же человека — «уже соавтор», второго письма нет', async () => {
     await add('ac-mate')
     h.jobs = []
-    expect(await add('ac-mate')).toEqual({ ok: true })
+    expect(await add('ac-mate')).toEqual({ error: 'already' })
     expect(mails()).toEqual([])
   })
 
-  it('нет такого ника — называется причина и возвращается набранное, писем нет', async () => {
-    expect(await add('@nobody-here')).toEqual({ error: 'notFound', handle: 'nobody-here' })
+  it('⚠️ «Добавить → Убрать → Добавить» по кругу не шлёт письма заново', async () => {
+    // Иначе владелец любого списка слал бы человеку неотключаемые письма со своим
+    // названием списка сколько угодно раз (ревью по линзе безопасности).
+    await add('ac-mate')
+    for (let i = 0; i < 3; i++) {
+      await removeCollaborator(tplId, uid['ac-mate'])
+      h.jobs = []
+      expect(await add('ac-mate')).toEqual({ ok: true })
+      expect(mails(), `виток ${i + 1}`).toEqual([])
+    }
+  })
+
+  it('ник сверяется без учёта регистра', async () => {
+    expect(await add('ac-legacy')).toEqual({ ok: true })
+  })
+
+  it('удалённый аккаунт не находится', async () => {
+    expect(await add('ac-gone')).toEqual({ error: 'notFound' })
+  })
+
+  it('чужой список — отказ ДО поиска ника: по ответу не узнать, есть ли такой человек', async () => {
+    h.userId = uid['ac-mate']
+    expect(await add('ac-owner')).toEqual({ error: 'forbidden' })
+    expect(await add('nobody-here')).toEqual({ error: 'forbidden' })
+  })
+
+  it('нет такого ника — называется называется причина, писем нет', async () => {
+    expect(await add('@nobody-here')).toEqual({ error: 'notFound' })
     expect(mails()).toEqual([])
   })
 
   it('свой ник — отдельная причина, а не молчание', async () => {
-    expect(await add('ac-owner')).toEqual({ error: 'owner', handle: 'ac-owner' })
+    expect(await add('ac-owner')).toEqual({ error: 'owner' })
   })
 })

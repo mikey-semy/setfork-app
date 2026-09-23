@@ -4,12 +4,14 @@ import { useActionState } from 'react'
 import { t, type Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { UserHandleInput } from '@/shared/ui/UserHandleInput'
+import { useKeepFormValues } from '@/shared/ui/keep-form-values'
 import { addCollaborator, type AddCollaboratorResult } from './actions'
 
 const ERROR_KEY = {
   empty: 'addCollaboratorEmpty',
   notFound: 'addCollaboratorNotFound',
   owner: 'addCollaboratorOwner',
+  already: 'addCollaboratorAlready',
   forbidden: 'addCollaboratorForbidden',
 } as const
 
@@ -20,20 +22,21 @@ export function AddCollaboratorForm({ templateId, lang }: { templateId: string; 
     addCollaborator.bind(null, templateId),
     null,
   )
+  // Отказ не должен стирать набранный ник: форма React 19 сбрасывается после действия
+  // и при ошибке. Общий приём проекта (keep-form-values) возвращает значение в то же
+  // поле — без перемонтирования, поэтому фокус и клавиатура на телефоне остаются.
+  const { formRef, onSubmit } = useKeepFormValues(!!state?.error, pending)
   return (
-    <form action={action} className="mb-3 flex flex-col gap-1.5">
+    <form ref={formRef} onSubmit={onSubmit} action={action} className="mb-3 flex flex-col gap-1.5">
       {/* Поле и кнопка в одном ряду без переноса: на телефоне поле ужимается (flex-1 +
           min-w-0 внутри), на широком экране — ширина меню, чтобы не тянуться на всю секцию. */}
       <div className="flex items-center gap-2">
         <UserHandleInput
-          // Новый отказ — новое поле с вернувшимся ником: у неуправляемого поля
-          // defaultValue читается только при монтировании.
-          key={state?.error ? `${state.error}:${state.handle ?? ''}` : 'fresh'}
           name="handle"
-          defaultValue={state?.handle}
           placeholder={t('addCollaboratorPh', lang)}
           aria-label={t('addCollaboratorPh', lang)}
           aria-invalid={!!state?.error}
+          limitedText={t('userSearchLimited', lang)}
           className="flex-1 sm:w-menu sm:flex-none"
         />
         <Button type="submit" variant="primary" size="md" className="shrink-0" disabled={pending}>

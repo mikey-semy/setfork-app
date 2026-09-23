@@ -23,9 +23,15 @@ const listsCountExpr = sql<number>`(
 )`
 const followersCountExpr = sql<number>`(select count(*)::int from ${follows} where ${follows.followingId} = ${users.id})`
 
+/** Кого вообще показывать в поиске людей: живые аккаунты с открытым профилем. Приватные
+ *  профили не всплывают (скрыты от всех кроме владельца). Одно правило на поиск людей и
+ *  подсказку ника (`/api/users/search`), чтобы они не разъехались. */
+export function listedPeople(): SQL {
+  return and(eq(users.deleted, false), eq(users.profilePrivate, false))!
+}
+
 function peopleWhere(q?: string): SQL {
-  // Приватные профили не всплывают в поиске людей (скрыты от всех кроме владельца).
-  const base = and(eq(users.deleted, false), eq(users.profilePrivate, false))!
+  const base = listedPeople()
   if (!q) return base
   const like = likeContains(q)
   return and(base, or(ilike(users.handle, like), ilike(users.name, like)))!

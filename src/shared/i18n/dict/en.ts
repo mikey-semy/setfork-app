@@ -676,6 +676,8 @@ export const en = {
   addCollaboratorEmpty: 'Enter a handle.',
   addCollaboratorNotFound: 'No user with this handle.',
   addCollaboratorOwner: 'That is the list owner — they can already edit.',
+  addCollaboratorAlready: 'This person is already a collaborator.',
+  userSearchLimited: 'Too many searches — suggestions will be back in a minute. You can still type the full handle.',
   addCollaboratorForbidden: 'Only the list owner can add collaborators.',
   addCollaboratorAdded: 'Collaborator added.',
   noCollaborators: 'No collaborators yet.',
