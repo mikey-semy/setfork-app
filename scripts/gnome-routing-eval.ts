@@ -190,13 +190,22 @@ async function main() {
     const secs = (Date.now() - t0) / 1000
     const answered = [...new Set(jev.map((p) => p.model).filter(Boolean))].join(', ') || model
     const tokens = jev.reduce((s, p) => s + (p.inputTokens ?? 0), 0)
-    // Стоимость — ТОЛЬКО из ответов (`usage.cost`), без оценки по прайсу: так требует
-    // задание, и так видно, если провайдер перестал её присылать (сумма станет нулём).
-    const billed = jev.reduce((s, p) => s + (p.cost ?? 0), 0)
+    // Стоимость — ТОЛЬКО из ответов (`usage.cost`), без оценки по прайсу. Итог берётся из
+    // ЖУРНАЛА по uuid прогона, а не суммой удачных ответов: неразобранный ответ, за который
+    // провайдер взял деньги, `decide()` отдаёт как null, и сумма по предсказаниям делала
+    // бы сбойный прогон дешевле, чем он был (находка авто-ревью к #961). В журнал `decide()`
+    // пишет `usage.cost` как есть.
+    const { db, aiUsage } = await import('../src/shared/db')
+    const { and, eq, sql } = await import('drizzle-orm')
+    const [spent] = await db
+      .select({ usd: sql<number>`coalesce(sum(${aiUsage.costUsd}), 0)::float8`, calls: sql<number>`count(*)::int` })
+      .from(aiUsage)
+      .where(and(eq(aiUsage.refType, 'gnome-routing-eval'), eq(aiUsage.refId, runId)))
+    const billed = spent?.usd ?? 0
     const errors = jev.filter((p) => p.error)
     report.push(score(`Jev (${answered}, через OpenRouter Decisions)`, jev))
     report.push(
-      `Прогон: ${jev.length} запросов за ${secs.toFixed(1)} с, ${tokens} входных токенов, $${billed.toFixed(5)} по \`usage.cost\` из ответов, ошибок: ${errors.length}.`,
+      `Прогон: ${jev.length} запросов за ${secs.toFixed(1)} с, ${tokens} входных токенов, $${billed.toFixed(5)} — сумма \`usage.cost\` по журналу \`ai_usage\` (${spent?.calls ?? 0} строк прогона), ошибок: ${errors.length}.`,
       '',
     )
     // Сырые ответы — рядом с отчётом, а не в репозитории: иначе каждый прогон пачкал бы дерево.
