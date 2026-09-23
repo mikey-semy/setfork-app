@@ -7,6 +7,8 @@ import { registerChecks } from './checks'
 import { registerSources } from './sources'
 import { registerRuns } from './runs'
 import { registerIssues } from './issues'
+import { registerPrompts } from './prompts'
+import { registerResources } from './resources'
 
 export { serverOptions } from './server-info'
 
@@ -32,4 +34,16 @@ export function registerTools(server: Parameters<typeof toolKit>[0]) {
   registerSources(kit)
   registerRuns(kit)
   registerIssues(kit)
+}
+
+/**
+ * ВСЯ ПОВЕРХНОСТЬ СЕРВЕРА: инструменты, сценарии (prompts) и ресурсы — одним вызовом.
+ *
+ * Маршрут зовёт ЭТУ функцию, а `registry.test.ts` — её же: по той же причине, что и выше,
+ * сценарий или ресурс, забытый при сборке, падает в CI, а не пропадает у агента молча.
+ */
+export function registerSurface(server: Parameters<typeof toolKit>[0]) {
+  registerTools(server)
+  registerPrompts(server)
+  registerResources(server)
 }

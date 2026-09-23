@@ -9,7 +9,7 @@
 // поверхности.
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { registerTools } from '@/features/mcp/registry'
+import { registerSurface } from '@/features/mcp/registry'
 
 type Captured = {
   name: string
@@ -17,12 +17,22 @@ type Captured = {
   cb: (args: unknown, extra: unknown) => Promise<{ content: { text: string }[]; isError?: boolean }>
 }
 
+/** Всё, что сборка поверхности регистрирует: инструменты, сценарии, шаблоны ресурсов. */
+const surface = { tools: [] as Captured[], prompts: [] as string[], templates: [] as string[] }
+
 function collect(): Captured[] {
   const tools: Captured[] = []
+  const prompts: string[] = []
+  const templates: string[] = []
   const server = {
     registerTool: (name: string, config: Captured['config'], cb: Captured['cb']) => tools.push({ name, config, cb }),
+    registerPrompt: (name: string) => prompts.push(name),
+    registerResource: (_name: string, template: { uriTemplate: { toString(): string } }) => templates.push(template.uriTemplate.toString()),
+    server: { registerCapabilities: () => {}, setRequestHandler: () => {} },
   }
-  registerTools(server as unknown as Parameters<typeof registerTools>[0])
+  // Та же функция, что зовёт маршрут: пропажа сценария или ресурса видна здесь, а не у агента.
+  registerSurface(server as unknown as Parameters<typeof registerSurface>[0])
+  Object.assign(surface, { tools, prompts, templates })
   return tools
 }
 
@@ -46,6 +56,16 @@ const EXPECTED = [
   // задачи: заметил и сказал, не берясь чинить
   'search_issues', 'get_issue', 'create_issue', 'add_issue_comment', 'close_issue', 'reopen_issue',
 ]
+
+describe('реестр MCP: сценарии и ресурсы', () => {
+  collect()
+  it('сценарии — поимённо: пропажа одного — красный CI', () => {
+    expect([...surface.prompts].sort()).toEqual(['commitics', 'review-list', 'run-list'])
+  })
+  it('шаблоны ресурсов — поимённо', () => {
+    expect(surface.templates).toEqual(['setfork://lists/{handle}/{slug}'])
+  })
+})
 
 describe('реестр MCP: состав', () => {
   const tools = collect()

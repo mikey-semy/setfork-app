@@ -15,7 +15,7 @@ export const json = (data: unknown) => ({ content: [{ type: 'text' as const, tex
 export const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
 
 export type Extra = { authInfo?: AuthInfo }
-const userIdOf = (extra: Extra) => extra.authInfo?.extra?.userId as string | undefined
+export const userIdOf = (extra: Extra) => extra.authInfo?.extra?.userId as string | undefined
 const canWrite = (extra: Extra) => (extra.authInfo?.scopes ?? []).includes('write')
 const READONLY = 'This token is read-only. Use an API token with write scope for this action.'
 
@@ -24,7 +24,7 @@ export type ToolFn = (userId: string, args: any, extra: Extra) => Promise<Return
 type Register = (name: string, config: unknown, fn: ToolFn) => void
 
 /** Сервер MCP, каким его отдаёт `createMcpHandler` своему колбэку. */
-type McpServer = Parameters<Parameters<typeof createMcpHandler>[0]>[0]
+export type McpServer = Parameters<Parameters<typeof createMcpHandler>[0]>[0]
 
 /** Пара регистраторов, которую получает каждый модуль домена. */
 export interface ToolKit {

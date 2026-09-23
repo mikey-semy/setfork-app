@@ -3,7 +3,7 @@ import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js'
 import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
-import { registerTools, serverOptions } from '@/features/mcp/registry'
+import { registerSurface, serverOptions } from '@/features/mcp/registry'
 
 /**
  * ТРАНСПОРТ MCP: /api/mcp (Streamable HTTP) и /api/sse (legacy).
@@ -14,7 +14,7 @@ import { registerTools, serverOptions } from '@/features/mcp/registry'
  * меняться, и раньше они делили один файл на семьсот строк.
  */
 
-const handler = createMcpHandler((server) => registerTools(server), serverOptions, {
+const handler = createMcpHandler((server) => registerSurface(server), serverOptions, {
   basePath: '/api', // → эндпоинт /api/mcp (Streamable HTTP), /api/sse (legacy)
 })
 

@@ -15,7 +15,10 @@ export const serverOptions = {
     // должен знать, что список стоит перечитывать, а не держать вечно. Версия сервера
     // берётся из сборки, а не из строки в коде: по ней видно, свежую ли схему держит
     // клиент (жалоба владельца 04.08.2026: клиент отдавал схему без refs).
-    capabilities: { tools: { listChanged: true } },
+    // Сценарии меняются с выкаткой, как инструменты, — `listChanged` заявлен так же честно.
+    // Ресурсы — без него и без подписок (см. `registry/resources`: SDK знает протокол
+    // 2025-11-25, подписки в 2026-07-28 переделаны).
+    capabilities: { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: false } },
     // instructions агент получает при подключении — это его карта сервера. Без неё он
     // угадывает порядок работы и, например, шлёт список целиком там, где хватило бы
     // точечной правки.
@@ -34,5 +37,7 @@ export const serverOptions = {
       '- Step links are just {"url": "..."}; a label is optional and the interface falls back to the domain.',
       '- delete_list is irreversible and needs confirm:true; without it the call only reports what would go.',
       '- Write tools need a token with write scope; read tools work with any token.',
+      '- Ready-made scenarios (prompts): run-list runs a list and records a report, review-list asks a gnome expert to review one, commitics breaks down a bug story into a draft list.',
+      '- A list can be attached as context by its address, without a tool call: setfork://lists/{handle}/{slug} returns it as markdown.',
     ].join('\n'),
 }
