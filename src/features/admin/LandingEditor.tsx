@@ -18,6 +18,7 @@ import { SmartImage } from '@/shared/ui/SmartImage'
 import { TextButton } from '@/shared/ui/TextButton'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
+import { IMAGE_ACCEPT } from '@/shared/media/limits'
 
 type FieldKey = keyof Omit<LandingCopy, 'stats'>
 type Field = { key: FieldKey; label: string; max: number; area?: boolean; ai?: boolean }
@@ -239,7 +240,7 @@ function HeroImage({ initial, onRef, lang }: { initial?: string; onRef: (ref: st
           {err && <p className="mt-1 text-body-sm text-danger">{err}</p>}
         </div>
       </div>
-      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f) }} className="hidden" />
+      <input ref={inputRef} type="file" accept={IMAGE_ACCEPT} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f) }} className="hidden" />
     </div>
   )
 }

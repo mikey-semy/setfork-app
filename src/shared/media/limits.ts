@@ -22,6 +22,9 @@ export const IMAGE_MAX_BYTES = 4 * 1024 * 1024
  *  HEIC в JPEG, а `image/*` пропускает HEIC как есть, и сервер его отвергает. */
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const
 
+/** Значение `accept` для поля выбора картинки — из того же списка, а не копией строки. */
+export const IMAGE_ACCEPT = IMAGE_TYPES.join(',')
+
 export type ImageRejection = 'too_big' | 'bad_type'
 
 /**

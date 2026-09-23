@@ -5,7 +5,7 @@ import { ImageUp, Paperclip, Video as VideoIcon } from 'lucide-react'
 import { TEXT, TOUCH_MIN_H } from '@/shared/ui/control'
 import { Spinner } from '@/shared/ui/Spinner'
 import { t, type Lang, type TKey } from '@/shared/i18n'
-import { ATTACH_MAX_BYTES, megabytes, VIDEO_MAX_BYTES } from '@/shared/media/limits'
+import { ATTACH_MAX_BYTES, IMAGE_ACCEPT, megabytes, VIDEO_MAX_BYTES } from '@/shared/media/limits'
 
 export type DropKind = 'image' | 'video' | 'file'
 
@@ -16,7 +16,7 @@ export type DropKind = 'image' | 'video' | 'file'
  * с проверкой. У вложения фильтра нет намеренно: расширения режет сервер белым списком.
  */
 const KINDS: Record<DropKind, { accept?: string; Icon: typeof ImageUp; label: TKey; mb?: number }> = {
-  image: { accept: 'image/png,image/jpeg,image/webp,image/gif', Icon: ImageUp, label: 'editor.dropImage' },
+  image: { accept: IMAGE_ACCEPT, Icon: ImageUp, label: 'editor.dropImage' },
   video: { accept: 'video/mp4,video/webm,video/ogg', Icon: VideoIcon, label: 'editor.dropVideo', mb: megabytes(VIDEO_MAX_BYTES) },
   file: { Icon: Paperclip, label: 'editor.dropFile', mb: megabytes(ATTACH_MAX_BYTES) },
 }

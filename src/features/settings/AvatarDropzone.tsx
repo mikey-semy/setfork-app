@@ -9,8 +9,8 @@ import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { TextButton } from '@/shared/ui/TextButton'
+import { IMAGE_ACCEPT, IMAGE_TYPES } from '@/shared/media/limits'
 
-const ACCEPT = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 const MAX_BYTES = 2 * 1024 * 1024
 
 /** Аватар с drag-and-drop: перетащить или кликнуть. Выбранный файл кладётся в
@@ -39,7 +39,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
   )
 
   const accept = (file: File): boolean => {
-    if (!ACCEPT.includes(file.type)) {
+    if (!(IMAGE_TYPES as readonly string[]).includes(file.type)) {
       setError(t('avatarTypeErr', lang))
       return false
     }
@@ -186,7 +186,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
         id="avatar-file"
         type="file"
         name="avatar"
-        accept="image/png,image/jpeg,image/webp,image/gif"
+        accept={IMAGE_ACCEPT}
         onChange={(e) => {
           const f = e.target.files?.[0]
           if (f) applyFile(f)

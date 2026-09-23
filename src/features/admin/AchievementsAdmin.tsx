@@ -15,6 +15,7 @@ import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { IconButton } from '@/shared/ui/IconButton'
 import { SmartImage } from '@/shared/ui/SmartImage'
+import { IMAGE_ACCEPT } from '@/shared/media/limits'
 
 /** Админ-панель достижений: вкл/выкл + своя картинка (drag-and-drop) на каждое. */
 export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; lang: Lang }) {
@@ -120,7 +121,7 @@ function AchRow({
           </span>
         </button>
       </Tooltip>
-      <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => onUpload(k, e.target.files?.[0])} />
+      <input ref={inputRef} type="file" accept={IMAGE_ACCEPT} hidden onChange={(e) => onUpload(k, e.target.files?.[0])} />
 
       <div className="min-w-0 flex-1">
         <div className="truncate text-body font-medium text-ink">{t(meta.label, lang)}</div>
