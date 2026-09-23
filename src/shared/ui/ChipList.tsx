@@ -55,9 +55,14 @@ export function ChipList<T>({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    // Корень тоже min-w-0 + max-w-full: в ряду рядом с «+ подпункт» он флекс-элемент,
+    // а флекс-элемент по умолчанию не уже своего самого широкого чипа. Замер #963 на
+    // 320px: ряд 244px, корень 328px — чип ниже ограничивался уже раздутым родителем.
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
       {items.map((item, i) => (
-        <Badge key={itemKey(item)} variant="soft" className="gap-1 bg-surface-2 pr-1 font-medium text-ink-2">
+        // min-w-0 + max-w-full: чип не шире ряда — иначе обёртка растёт по содержимому
+        // (подпись до field + хост до field-sm + крестик), и `truncate` внутри не срабатывает.
+        <Badge key={itemKey(item)} variant="soft" className="min-w-0 max-w-full gap-1 bg-surface-2 pr-1 font-medium text-ink-2">
           <Tooltip label={chipTitle?.(item) ?? ''}>
             <button
               type="button"
