@@ -2425,7 +2425,7 @@ export const ru: Record<DictKey, string> = {
   'canon.issueSyntax': 'файл не разобрался как JSON',
   'canon.issueSchema': 'значение не отвечает схеме манифеста',
   'canon.issueStepTitle': 'у шага обязателен заголовок — иначе пункт потеряется',
-  'canon.issueRefLabel': 'у ссылки обязательна подпись — иначе ссылка потеряется',
+  'canon.issueRefEmpty': 'у ссылки нужен адрес или подпись — пустая ссылка пропадёт',
   'canon.atLine': 'строка {n}',
   'canon.unavailableTitle': 'Текст сейчас не показать',
   'canon.unavailableHint': 'Канон собирает ядро, и оно не ответило. Блоки при этом работают как обычно.',

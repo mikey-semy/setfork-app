@@ -25,7 +25,9 @@ function issueText(i: CanonIssue, lang: Lang): string {
     syntax: t('canon.issueSyntax', lang),
     schema: t('canon.issueSchema', lang),
     step_title_required: t('canon.issueStepTitle', lang),
-    ref_label_required: t('canon.issueRefLabel', lang),
+    // Ссылка одним адресом законна (setfork-core#148): придирка только к ссылке без
+    // адреса И подписи. Прежний код ref_label_required ядро больше не шлёт.
+    ref_empty: t('canon.issueRefEmpty', lang),
   }
   return `${where} — ${known[i.code] ?? i.message}`
 }
