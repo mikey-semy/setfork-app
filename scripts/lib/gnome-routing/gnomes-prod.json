@@ -1,0 +1,252 @@
+{
+ "source": "setfork MCP list_gnomes (прод), снято 2026-09-23; about = первое предложение персоны, как у gnomeCard",
+ "gnomes": [
+  {
+   "id": "devops",
+   "domains": [
+    "cache",
+    "devops",
+    "deploy",
+    "docker",
+    "postmortem",
+    "incident",
+    "performance",
+    "ufw",
+    "infra",
+    "servers",
+    "orchestration",
+    "deployment",
+    "swarm",
+    "linux",
+    "monitoring",
+    "kubernetes",
+    "ci",
+    "redis",
+    "disk"
+   ],
+   "about": "a pragmatic DevOps/SRE expert."
+  },
+  {
+   "id": "coder",
+   "domains": [
+    "software",
+    "pull-request",
+    "kiss",
+    "tailwind",
+    "rebase",
+    "dry",
+    "project-structure",
+    "python",
+    "frontend",
+    "programming",
+    "программирование",
+    "api",
+    "coding",
+    "merge",
+    "css",
+    "architecture",
+    "git",
+    "layers",
+    "framework",
+    "branches",
+    "uv",
+    "library",
+    "commits",
+    "solid",
+    "scripts",
+    "ruff",
+    "ddd",
+    "vscode",
+    "workflow",
+    "fastapi",
+    "debugging",
+    "качество-кода"
+   ],
+   "about": "a meticulous software engineer."
+  },
+  {
+   "id": "chef",
+   "domains": [
+    "baking",
+    "сладости",
+    "рецепт",
+    "cooking",
+    "маршмеллоу",
+    "френч-пресс",
+    "food",
+    "kitchen",
+    "кофе",
+    "recipe",
+    "десерт",
+    "кухня",
+    "готовка"
+   ],
+   "about": "a professional chef."
+  },
+  {
+   "id": "traveler",
+   "domains": [
+    "travel",
+    "trip",
+    "city",
+    "tourism",
+    "itinerary"
+   ],
+   "about": "a seasoned travel planner."
+  },
+  {
+   "id": "coach",
+   "domains": [
+    "fitness",
+    "health",
+    "workout",
+    "sport",
+    "nutrition"
+   ],
+   "about": "a certified fitness coach."
+  },
+  {
+   "id": "scholar",
+   "domains": [
+    "мандарин",
+    "research",
+    "learning",
+    "китайский",
+    "exam",
+    "чтение",
+    "hsk",
+    "иероглифы",
+    "study",
+    "языки",
+    "course"
+   ],
+   "about": "a thoughtful scholar."
+  },
+  {
+   "id": "hoarder",
+   "domains": [
+    "*"
+   ],
+   "about": "a resource investigator (Belbin): the team’s scout, working outward for tools, links and options others miss."
+  },
+  {
+   "id": "generalist",
+   "domains": [
+    "*"
+   ],
+   "about": "a well-rounded generalist."
+  },
+  {
+   "id": "book-expert",
+   "domains": [
+    "narrative",
+    "фантазия",
+    "фэнтези",
+    "recommendations",
+    "analysis",
+    "books",
+    "поджанры",
+    "литература",
+    "reading",
+    "мифология",
+    "literature",
+    "фантастика",
+    "книги",
+    "themes",
+    "чтение"
+   ],
+   "about": "a literature expert."
+  },
+  {
+   "id": "equipment-expert",
+   "domains": [
+    "equipment",
+    "maintenance",
+    "engineering",
+    "riskmanagement",
+    "iso",
+    "assetmanagement",
+    "manufacturer"
+   ],
+   "about": "An equipment expert."
+  },
+  {
+   "id": "gnome-specialist",
+   "domains": [
+    "craft",
+    "gnome-culture",
+    "handmade",
+    "tools",
+    "weapons",
+    "decor",
+    "traditional-techniques"
+   ],
+   "about": "A gnome craft expert, deeply knowledgeable in traditional gnome craft techniques."
+  },
+  {
+   "id": "backender",
+   "domains": [
+    "fastapi",
+    "database",
+    "backend",
+    "api",
+    "postgresql",
+    "server",
+    "redis",
+    "sql",
+    "python"
+   ],
+   "about": "a backend engineer."
+  },
+  {
+   "id": "tester",
+   "domains": [
+    "qa",
+    "тестирование",
+    "testing",
+    "debugging",
+    "качество-кода",
+    "quality"
+   ],
+   "about": "a test engineer."
+  },
+  {
+   "id": "security",
+   "domains": [
+    "secrets",
+    "forensics",
+    "incident",
+    "appsec",
+    "ufw",
+    "auth",
+    "security"
+   ],
+   "about": "a security engineer."
+  },
+  {
+   "id": "dba",
+   "domains": [
+    "backup",
+    "postgresql",
+    "postgres",
+    "redis",
+    "sql",
+    "performance",
+    "index",
+    "database"
+   ],
+   "about": "a database engineer."
+  },
+  {
+   "id": "analysis-expert",
+   "domains": [
+    "data",
+    "analysis",
+    "statistics",
+    "business",
+    "insights"
+   ],
+   "about": "A data analyst."
+  }
+ ]
+}

@@ -126,6 +126,7 @@ scripts/golden-domain-read.ts	H13f
 scripts/itest-env.ts	H13c
 scripts/lib/audit-report.mjs	H13c
 scripts/lib/gnome-routing/dataset.json	H13c
+scripts/lib/gnome-routing/gnomes-prod.json	H13c
 scripts/lib/gnome-routing/gnomes.json	H13c
 scripts/lib/row-touch.mjs	H13c
 scripts/lib/stacked-hit.mjs	H13c
@@ -436,6 +437,7 @@ src/features/dig/basis.ts	V6
 src/features/dig/chat-actions.ts	V6
 src/features/dig/depth.ts	V6
 src/features/dig/followups.ts	V6
+src/features/dig/guide.ts	V6
 src/features/dig/history.ts	V6
 src/features/dig/pick-expert.ts	V6
 src/features/dig/queries.ts	V6
@@ -950,6 +952,7 @@ src/shared/ai/gnome-names.ts	V8e
 src/shared/ai/gnome-reputation.ts	V8e
 src/shared/ai/gnome.ts	V8e
 src/shared/ai/gnomes.ts	V8e
+src/shared/ai/guide-question.ts	V8f
 src/shared/ai/health.ts	V8f
 src/shared/ai/hire-signals.ts	V8f
 src/shared/ai/index-run.ts	V8f
@@ -1355,6 +1358,7 @@ tests/features/comments/quote.test.ts	V3
 tests/features/comments/state.test.ts	V3
 tests/features/comments/threads-bounded.itest.ts	V3
 tests/features/dig-followups.test.ts	V12f
+tests/features/dig/chat-guide.itest.ts	V6
 tests/features/dig/craft-basis.test.ts	V6
 tests/features/dig/dig-basis.mutants.json	V6
 tests/features/dig/dig-basis.test.ts	V6
@@ -1365,6 +1369,7 @@ tests/features/dig/dig-history.mutants.json	V6
 tests/features/dig/dig-history.test.ts	V6
 tests/features/dig/dig-speaker.mutants.json	V6
 tests/features/dig/dig-speaker.test.tsx	V6
+tests/features/dig/guide.itest.ts	V6
 tests/features/dig/pick-expert.mutants.json	V6
 tests/features/dig/pick-expert.test.ts	V6
 tests/features/discussions/feature-flag-write.itest.ts	V3b
@@ -1621,6 +1626,7 @@ tests/shared/ai/gnome-names.test.ts	V8g
 tests/shared/ai/gnome-rename-guard.itest.ts	V8g
 tests/shared/ai/gnome-reputation-db.itest.ts	V8g
 tests/shared/ai/gnome-reputation.test.ts	V8g
+tests/shared/ai/guide-question.test.ts	V8g
 tests/shared/ai/health.test.ts	V8g
 tests/shared/ai/list-grade.test.ts	V8g
 tests/shared/ai/list-kind.test.ts	V8g

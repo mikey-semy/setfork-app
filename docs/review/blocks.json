@@ -1164,7 +1164,8 @@
         "src/shared/ai/triples.ts",
         "src/shared/ai/usage.ts",
         "src/shared/ai/web-search.ts",
-        "src/shared/ai/decide.ts"
+        "src/shared/ai/decide.ts",
+        "src/shared/ai/guide-question.ts"
       ],
       "ref_paths": []
     },
