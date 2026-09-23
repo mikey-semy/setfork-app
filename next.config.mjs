@@ -40,7 +40,14 @@ const nextConfig = {
   // кто угодно, то есть файл на «доверенном» домене выбирает атакующий. Ровно этим
   // путём достигался критический CVE в Image Optimization API (AVIF) до 16.3.3.
   experimental: {
-    serverActions: { allowedOrigins: serverActionOrigins },
+    // ⚠️ bodySizeLimit: по умолчанию Next пускает в экшен тело до 1 МБ, а картинки
+    // (обложка, скриншот шага, аватарка эксперта) уходят экшеном и режутся сервером
+    // на 4 МБ (`IMAGE_MAX_BYTES` в shared/media/limits.ts). Файл в 1–4 МБ — обычное
+    // фото с телефона — отклонялся ДО нашего кода, и клиент получал голый reject.
+    // Запас в 1 МБ — на обёртку multipart и соседние поля формы. Число не выведено из
+    // limits.ts, потому что конфиг — .mjs и TS не импортирует; расхождение ловит
+    // tests/architecture/image-limit-vs-action-body.test.ts.
+    serverActions: { allowedOrigins: serverActionOrigins, bodySizeLimit: '5mb' },
   },
   // Базовые security-заголовки на все ответы. nosniff — критично для отдачи
   // пользовательских вложений (браузер не MIME-sniff-ит файл в html/script).

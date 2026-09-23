@@ -6,7 +6,7 @@ import { db, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isCollaborator } from '@/features/collab/queries'
 import { imageUrl } from '@/shared/media'
-import { removeImageFile, uploadImageFile } from '@/shared/media/upload'
+import { ImageRejectedError, removeImageFile, uploadImageFile } from '@/shared/media/upload'
 import { isHexColor } from '@/shared/lib/color'
 
 // Обложка списка (list-level, не версионируется — вне git-проекции). Владелец
@@ -23,7 +23,11 @@ async function canManage(templateId: string, userId: string): Promise<{ owner: s
   return { owner: t.handle, slug: t.slug }
 }
 
-export async function setListCover(formData: FormData): Promise<{ ok: true; url: string } | { error: string }> {
+/** Почему обложка не встала — КОДОМ: текст на языке человека собирает клиент
+ *  (`use-cover-upload.ts`), и там же решается, есть ли смысл в «Повторить». */
+export type CoverUploadError = 'forbidden' | 'nofile' | 'too_big' | 'bad_type' | 'storage'
+
+export async function setListCover(formData: FormData): Promise<{ ok: true; url: string } | { error: CoverUploadError }> {
   const session = await requireSession()
   const templateId = String(formData.get('templateId') ?? '')
   const file = formData.get('file')
@@ -36,9 +40,13 @@ export async function setListCover(formData: FormData): Promise<{ ok: true; url:
     await db.update(templates).set({ coverImage: ref }).where(eq(templates.id, templateId))
     if (prev?.cover) await removeImageFile(prev.cover)
     revalidatePath(`/${can.owner}/${can.slug}`)
+    // Пустой url законен: imgproxy выключен — тогда клиент покажет свой выбранный файл.
     return { ok: true, url: (await imageUrl(ref, 'rs:fill:640:200')) ?? '' }
   } catch (e) {
-    return { error: e instanceof Error ? e.message : 'fail' }
+    if (e instanceof ImageRejectedError) return { error: e.reason }
+    // Сбой хранилища/БД: причину пишем в лог сервера, человеку — код «не сохранилось».
+    console.error('[cover] upload failed', e)
+    return { error: 'storage' }
   }
 }
 
