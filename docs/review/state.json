@@ -1,13 +1,17 @@
 {
   "review_id": "setfork-frontend-2026-09",
-  "updated_at": "2026-09-22T16:50:43Z",
+  "updated_at": "2026-09-23T03:37:33Z",
   "blocks": {
     "H1": {
       "status": "verified",
       "started": null,
       "finished": "2026-09-19T09:05:03Z",
       "reports": [],
-      "note": ""
+      "note": "",
+      "reviewed_sha": "e852eaffe4d6b075",
+      "restamped_at": "2026-09-23T03:37:32Z",
+      "hypotheses_sha": "388df01904c44ab1",
+      "refs_sha": "11372dff77100706"
     },
     "H2": {
       "status": "verified",
@@ -17,7 +21,11 @@
         "docs/review/reports/H2-core-contract.hunter.md",
         "docs/review/reports/H2-core-contract.verify.md"
       ],
-      "note": "13 находок, отклонённых нет; корень K42 (сбой чтения выдан за ответ) — 6 из 13. ⚠️ МАНИФЕСТ НАПИСАН ПОСЛЕ ПРОХОДА: охотник шёл по заданию из переписки, гипотезы совпадают, но против манифеста проход не сверялся. Второй проход по манифесту ОБЯЗАТЕЛЕН — статус verified означает «работа сделана и проверена», а не «блок закрыт навсегда»."
+      "note": "13 находок, отклонённых нет; корень K42 (сбой чтения выдан за ответ) — 6 из 13. ⚠️ МАНИФЕСТ НАПИСАН ПОСЛЕ ПРОХОДА: охотник шёл по заданию из переписки, гипотезы совпадают, но против манифеста проход не сверялся. Второй проход по манифесту ОБЯЗАТЕЛЕН — статус verified означает «работа сделана и проверена», а не «блок закрыт навсегда».",
+      "reviewed_sha": "f0cd6237bd820990",
+      "restamped_at": "2026-09-22T21:48:10Z",
+      "hypotheses_sha": "59ff5de966cfc5e6",
+      "refs_sha": "175428b7cc11d686"
     },
     "H3": {
       "status": "todo",
@@ -34,11 +42,15 @@
       "note": ""
     },
     "H5": {
-      "status": "todo",
-      "started": null,
+      "status": "verified",
+      "started": "2026-09-21T14:44:30Z",
       "finished": null,
       "reports": [],
-      "note": ""
+      "note": "",
+      "reviewed_sha": "6411f4c228a97c58",
+      "restamped_at": "2026-09-23T03:37:33Z",
+      "hypotheses_sha": "340e0b67db25265c",
+      "refs_sha": "896e04e31d97d03b"
     },
     "H6": {
       "status": "todo",
@@ -241,14 +253,22 @@
       "started": null,
       "finished": null,
       "reports": [],
-      "note": ""
+      "note": "",
+      "reviewed_sha": "fbb7bfb18d9677fa",
+      "restamped_at": "2026-09-22T21:48:12Z",
+      "hypotheses_sha": "34cf639bf0efeb35",
+      "refs_sha": "175428b7cc11d686"
     },
     "V1d": {
       "status": "verified",
       "started": null,
       "finished": null,
       "reports": [],
-      "note": ""
+      "note": "",
+      "reviewed_sha": "6a8cfa6dd5f798af",
+      "restamped_at": "2026-09-22T21:48:12Z",
+      "hypotheses_sha": "7ab8821d0ea69d5e",
+      "refs_sha": "e3b0c44298fc1c14"
     },
     "V1e": {
       "status": "todo",

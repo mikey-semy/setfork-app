@@ -56,6 +56,7 @@ docs/review/blocks.json	V12e
 docs/review/blocks/H1-access.md	V12e
 docs/review/blocks/H15-domain-core.md	V12e
 docs/review/blocks/H2-core-contract.md	V12e
+docs/review/blocks/H5-money.md	V12e
 docs/review/blocks/V1d-list-write.md	V12e
 docs/review/findings.jsonl	V12e
 docs/review/findings.md	V12e
@@ -70,9 +71,15 @@ docs/review/reports/H1-findings.jsonl	V12e
 docs/review/reports/H15-domain-core.hunter.md	V12h
 docs/review/reports/H15-domain-core.verify.md	V12h
 docs/review/reports/H15-findings.jsonl	V12e
+docs/review/reports/H15-verifier-calibration.md	V12h
 docs/review/reports/H2-core-contract.hunter.md	V12h
 docs/review/reports/H2-core-contract.verify.md	V12h
 docs/review/reports/H2-findings.jsonl	V12e
+docs/review/reports/H5-findings.jsonl	V12e
+docs/review/reports/H5-money.hunter-parallel.md	V12h
+docs/review/reports/H5-money.hunter.md	V12h
+docs/review/reports/H5-money.verify.md	V12h
+docs/review/reports/H5-parallel-hunters-calibration.md	V12h
 docs/review/reports/V1d-findings.jsonl	V12e
 docs/review/reports/V1d-list-write.hunter.md	V12h
 docs/review/reports/V1d-list-write.verify.md	V12h
@@ -128,7 +135,6 @@ scripts/mutate.mjs	H13d
 scripts/probe/touch-sweep.mjs	H13f
 scripts/purge-lists.ts	H13f
 scripts/restore.sh	H13f
-scripts/review/__pycache__/review.cpython-314.pyc	H13d
 scripts/review/review.py	H13d
 scripts/seed-demo.ts	H13c
 scripts/seed-ops.ts	H13f

@@ -1,5 +1,12 @@
 {
   "review_id": "setfork-frontend-2026-09",
+  "project": "SetFork",
+  "readable_lines": 6000,
+  "gates": [
+    "npm run lint",
+    "npm test",
+    "npm run typecheck"
+  ],
   "created": "2026-09-19",
   "note": "Нарезка на три фазы: сквозные задают язык, доменные читают свой срез целиком, стендовые работают на запущенной системе и файлами не владеют.",
   "exclusions": [
@@ -1334,6 +1341,7 @@
         "docs/review/reports/H1-findings.jsonl",
         "docs/review/reports/H15-findings.jsonl",
         "docs/review/reports/H2-findings.jsonl",
+        "docs/review/reports/H5-findings.jsonl",
         "docs/review/reports/V1d-findings.jsonl",
         "docs/review/state.json"
       ],
