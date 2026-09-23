@@ -7,6 +7,7 @@ import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { QuizBlock } from '@/features/quizzes/QuizBlock'
 import { DigChatOpen } from '@/features/dig/DigChat'
 import { Markdown } from '@/shared/ui/Markdown'
+import { BlockRefs } from './BlockRefs'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { SmartImage } from '@/shared/ui/SmartImage'
@@ -35,9 +36,12 @@ type BlockProps = Pick<
  * тогда блок не занимает места.
  */
 const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
-  text: ({ step, section, tpl, viewer, readOnlyView, digSteps, lang }) => {
+  text: ({ step, section, tpl, viewer, readOnlyView, digSteps, mon, lang }) => {
     const md = blockText(step.content?.md, lang)
-    if (!md) return null
+    // Текст без слов, но со ссылками — законный блок-«источники» (#962): редактор и
+    // MCP его сохраняют, и прятать его при пустом тексте значило бы терять ссылки на
+    // глазах у читателя (находка Codex на #963).
+    if (!md && !(step.refs ?? []).length) return null
     // Текст-блок — такая же карточка с киркой, как шаг: это часть материала,
     // по которой так же копают (в прохождении он уже такой — RunView). Раньше
     // здесь был голый абзац: ни рамки, ни входа в чат (фидбек владельца).
@@ -53,7 +57,11 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
             />
           </span>
         )}
-        <Markdown className={`text-body-lg leading-relaxed text-ink-2${canDig ? ' pr-10' : ''}`}>{renderWikiLinks(md)}</Markdown>
+        {md && <Markdown className={`text-body-lg leading-relaxed text-ink-2${canDig ? ' pr-10' : ''}`}>{renderWikiLinks(md)}</Markdown>}
+        {/* Источники текста — тем же рядом чипов, что у шага (#962). У текста без слов
+            ряд первый в карточке и сам резервирует угол кирки, как в RunTextBlock, —
+            иначе длинная ссылка уходит под кнопку (находка Codex на #963). */}
+        <BlockRefs step={step} readOnlyView={readOnlyView} mon={mon} lang={lang} className={md ? 'mt-3' : canDig ? 'pr-10' : ''} />
       </div>
     )
   },

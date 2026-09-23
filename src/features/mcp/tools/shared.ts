@@ -9,7 +9,7 @@ import { resolveUserByHandle } from '@/shared/db/resolve-list'
 import { tr, trKey, type LocaleText } from '@/shared/i18n'
 import { detectTextLang } from '@/shared/lib/translit'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
-import { isBlockType, newOptionId } from '@/features/library/blocks'
+import { carriesRefs, isBlockType, newOptionId } from '@/features/library/blocks'
 import { isCollaborator } from '@/features/collab/queries'
 import { appOrigin } from '@/shared/auth/app-origin'
 
@@ -35,8 +35,22 @@ export interface McpBlockOption {
   correct?: boolean // только для quiz — верный вариант
 }
 
+// Ссылки блока в обе стороны. Одни на шаг и текстовый блок (#962): у текста
+// своя копия правила разошлась бы с шаговой, и одна из сторон снова теряла бы
+// то, что другая отдаёт.
+//
+// Запись: пустые метки отсеивает сериализатор (toProposedItems).
+function refsFromMcp(refs: McpItemInput['refs']): { label: string; url: string }[] {
+  return (refs ?? []).map((r) => ({ label: String(r?.label ?? '').trim(), url: String(r?.url ?? '').trim() }))
+}
+// Чтение: ссылка без подписи — нормальная ссылка (её показывают доменом), поэтому
+// фильтруем по «есть хоть что-то», иначе чтение теряло бы то, что записано.
+function refsForMcp(refs: { label: LocaleText; url?: string }[]): { label: string; url?: string }[] {
+  return refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label || r.url)
+}
+
 // Один блок списка через MCP. type по умолчанию 'step'. Поля по типу:
-//  step  — title(+desc/command/level/why/section/subtasks/refs); text — text(markdown);
+//  step  — title(+desc/command/level/why/section/subtasks/refs); text — text(markdown)+refs;
 //  file  — url + fileName (ссылка на документ/вложение);
 //  image — caption(+imageRef); video — url(+caption); poll — question/options/multi/deadline;
 //  quiz  — question/explain + по quizKind: choice=options(correct)/multi;
@@ -53,7 +67,7 @@ export interface McpItemInput {
   why?: string
   section?: string
   subtasks?: string[]
-  refs?: { label: string; url?: string }[] // step — ссылки под шагом (док, источник)
+  refs?: { label: string; url?: string }[] // step и text — ссылки под блоком (док, источник)
   text?: string
   caption?: string
   imageRef?: string
@@ -90,6 +104,13 @@ export interface McpItemInput {
 export function toProposed(items: McpItemInput[]): ProposedItem[] {
   const editor: EditorItem[] = (items ?? []).map((it): EditorItem => {
     const type = isBlockType(it.type ?? '') ? (it.type as EditorItem['type']) : 'step'
+    // Ссылки блоку, который их не держит, — ОТКАЗ, а не молчание. Раньше ветки не-шага
+    // просто не читали `refs`, и агент, положивший источники к тексту, терял их без
+    // единого сигнала (#962). Бросаем: SDK превращает исключение обработчика в ответ
+    // isError с этим текстом, и все пять путей записи получают отказ из одного места.
+    if (!carriesRefs(type) && refsFromMcp(it.refs).some((r) => r.label || r.url)) {
+      throw new Error(`a "${type}" block cannot carry refs — links attach to a step or a text block. Put them on a neighbouring text block, or make this block a step`)
+    }
     // Пришедший bid СОХРАНЯЕМ: блок остаётся тем же сквозь версии (комментарии,
     // голоса, попытки, merge по идентичности). Нет bid — блок новый, id выдаст emptyBlock.
     const fresh = emptyBlock(type)
@@ -99,7 +120,7 @@ export function toProposed(items: McpItemInput[]): ProposedItem[] {
     const b: EditorItem = { ...fresh, bid: (it.bid ?? '').trim() || fresh.bid, section: (it.section ?? '').trim() }
     // id варианта — якорь голоса/попытки: свой, если прислан, иначе новый.
     const optId = (o: McpBlockOption) => (o?.id ?? '').trim() || newOptionId()
-    if (type === 'text') return { ...b, text: (it.text ?? '').trim() }
+    if (type === 'text') return { ...b, text: (it.text ?? '').trim(), refs: refsFromMcp(it.refs) }
     if (type === 'image') return { ...b, imageKey: (it.imageRef ?? it.ref ?? '').trim(), caption: (it.caption ?? '').trim() }
     if (type === 'video') return { ...b, videoUrl: (it.url ?? '').trim(), caption: (it.caption ?? '').trim() }
     if (type === 'file') return { ...b, fileUrl: (it.url ?? '').trim(), fileName: (it.fileName ?? it.name ?? '').trim() }
@@ -146,8 +167,8 @@ export function toProposed(items: McpItemInput[]): ProposedItem[] {
       danger: it.danger,
       subtasks: (it.subtasks ?? []).filter((s) => s.trim()),
       // Ссылки шага: get_list их отдаёт, а положить было нечем — асимметрия чтения
-      // и записи. Пустые метки отсеивает сериализатор (toProposedItems).
-      refs: (it.refs ?? []).map((r) => ({ label: String(r?.label ?? '').trim(), url: String(r?.url ?? '').trim() })),
+      // и записи.
+      refs: refsFromMcp(it.refs),
     }
   })
   return toProposedItems(editor, 'en')
@@ -166,7 +187,10 @@ export function blockForMcp(s: DetailStep) {
   // тот же, что у редактора (toEditorItems): канон первичен, content.bid — фолбэк.
   // Отдай мы content.bid, круг чтения-записи затирал бы канон и рвал комментарии.
   const bid = s.blockId || str(c.bid) || undefined
-  if (type === 'text') return { n: s.n, bid, type, text: str(c.md) }
+  if (type === 'text') {
+    const refs = refsForMcp(s.refs)
+    return { n: s.n, bid, type, text: str(c.md), ...(refs.length ? { refs } : {}) }
+  }
   if (type === 'image') return { n: s.n, bid, type, ref: str(c.ref) || undefined, caption: str(c.caption) || undefined }
   if (type === 'video') return { n: s.n, bid, type, url: str(c.url), caption: str(c.caption) || undefined }
   if (type === 'file') return { n: s.n, bid, type, url: str(c.url), name: str(c.name) }
@@ -218,9 +242,7 @@ export function blockForMcp(s: DetailStep) {
     level: s.level,
     why: tr(s.why, 'en') || undefined,
     subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
-    // Ссылка без подписи — нормальная ссылка (её показывают доменом), поэтому
-    // фильтруем по «есть хоть что-то», иначе чтение теряло бы то, что записано.
-    refs: s.refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label || r.url),
+    refs: refsForMcp(s.refs),
   }
 }
 

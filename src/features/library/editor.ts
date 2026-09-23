@@ -98,6 +98,25 @@ export type EditorItem = {
 const emptyPoll = (): EditorPoll => ({ question: '', options: [], multi: false, deadline: '' })
 const emptyQuiz = (): EditorQuiz => ({ kind: 'choice', question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], items: [], explain: '' })
 
+/** Ссылки блока из формы → хранение. Одна запись на шаг и текстовый блок (#962):
+ *  у текста своя копия этого правила разошлась бы с шаговой на первой же правке.
+ *
+ *  url санитизируем на записи, как у video/file/product (второй рубеж к SafeLink):
+ *  ссылки принимает и MCP, а не только редактор. Ссылка живёт, если есть ХОТЬ
+ *  ЧТО-ТО: раньше выживала только та, у которой написана подпись, и «просто
+ *  ссылка» молча пропадала при сохранении (жалоба владельца 04.08.2026 про
+ *  обязательный label в API). Подпись не обязательна — интерфейс покажет домен. */
+function refsToStored(refs: EditorRef[], lang: Lang): { label: LocaleText; url?: string }[] {
+  return refs
+    .filter((r) => r.label.trim() || r.url.trim())
+    .map((r) => ({ label: r.label.trim() ? { [lang]: r.label.trim() } : {}, url: safeHref(r.url) || undefined }))
+}
+
+/** Ссылки блока из хранения → форма. Пара к `refsToStored`. */
+function refsToEditor(refs: { label: LocaleText; url?: string }[] | undefined, lang: Lang): EditorRef[] {
+  return (refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' }))
+}
+
 export function emptyItem(): EditorItem {
   return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', fileUrl: '', fileName: '', poll: emptyPoll(), quiz: emptyQuiz(), products: [], title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', needsHuman: false, needsHumanAsk: '', section: '', subtasks: [], refs: [] }
 }
@@ -138,7 +157,7 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
         // языку интерфейса значило бы записать догадку как факт.
         // Перевод при этом не теряется: языки возвращает translation-carry на
         // единой точке записи версии, одинаково для всех полей.
-        return { ...base, section: sec, type: 'text', content: { md: it.text.trim(), bid: it.bid || newBlockId() } }
+        return { ...base, section: sec, type: 'text', content: { md: it.text.trim(), bid: it.bid || newBlockId() }, refs: refsToStored(it.refs, lang) }
       }
       if (it.type === 'image') {
         return { ...base, section: sec, type: 'image', hasImage: !!it.imageKey, content: { ref: it.imageKey || '', ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
@@ -260,15 +279,7 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
         danger: it.danger,
         section: it.section.trim() ? { [lang]: it.section.trim() } : {},
         subtasks: it.subtasks.filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
-        // url санитизируем на записи, как у video/file/product (второй рубеж к
-        // SafeLink): ссылки шага теперь принимает и MCP, а не только редактор.
-        // Ссылка живёт, если есть ХОТЬ ЧТО-ТО: раньше выживала только та, у которой
-        // написана подпись, и «просто ссылка» молча пропадала при сохранении
-        // (жалоба владельца 04.08.2026 про обязательный label в API). Подпись теперь
-        // не обязательна — интерфейс покажет домен (shared/lib/link-label).
-        refs: it.refs
-          .filter((r) => r.label.trim() || r.url.trim())
-          .map((r) => ({ label: r.label.trim() ? { [lang]: r.label.trim() } : {}, url: safeHref(r.url) || undefined })),
+        refs: refsToStored(it.refs, lang),
       }
     })
     // В колонку block_id (тип uuid) кладём ТОЛЬКО uuid: идентичность приходит и
@@ -325,7 +336,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     const blockId = it.blockId || ''
     const section = it.section ? tr(it.section, lang) : '' // секция/урок — у любого блока
     if (type === 'text') {
-      return { ...emptyItem(), type: 'text', bid, blockId, section, text: blockText(it.content?.md, lang) }
+      return { ...emptyItem(), type: 'text', bid, blockId, section, text: blockText(it.content?.md, lang), refs: refsToEditor(it.refs, lang) }
     }
     if (type === 'image') {
       const ref = typeof it.content?.ref === 'string' ? it.content.ref : ''
@@ -448,7 +459,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
       danger: it.danger === true,
       section: it.section ? tr(it.section, lang) : '',
       subtasks: (it.subtasks ?? []).map((s) => tr(s, lang)),
-      refs: (it.refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' })),
+      refs: refsToEditor(it.refs, lang),
     }
   })
 }

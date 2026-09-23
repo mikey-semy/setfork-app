@@ -1,0 +1,24 @@
+{
+  "target": "src/features/mcp/tools/shared.ts",
+  "tests": [
+    "tests/features/library/text-block-refs.test.ts",
+    "tests/architecture/refs-follow-carries-refs.test.ts"
+  ],
+  "mutants": [
+    {
+      "name": "запись через MCP снова выбрасывает ссылки текста",
+      "from": "text: (it.text ?? '').trim(), refs: refsFromMcp(it.refs) }",
+      "to": "text: (it.text ?? '').trim() }"
+    },
+    {
+      "name": "get_list снова отдаёт текст без ссылок",
+      "from": "return { n: s.n, bid, type, text: str(c.md), ...(refs.length ? { refs } : {}) }",
+      "to": "return { n: s.n, bid, type, text: str(c.md) }"
+    },
+    {
+      "name": "ссылки блоку без их поддержки снова пропадают молча вместо отказа",
+      "from": "    if (!carriesRefs(type) && refsFromMcp(it.refs).some((r) => r.label || r.url)) {",
+      "to": "    if (false) {"
+    }
+  ]
+}

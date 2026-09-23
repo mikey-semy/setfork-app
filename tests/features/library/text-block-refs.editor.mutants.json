@@ -1,0 +1,19 @@
+{
+  "target": "src/features/library/editor.ts",
+  "tests": [
+    "tests/features/library/text-block-refs.test.ts",
+    "tests/architecture/refs-follow-carries-refs.test.ts"
+  ],
+  "mutants": [
+    {
+      "name": "запись текста из редактора снова кладёт пустые ссылки (сохранение стирает источники)",
+      "from": ", refs: refsToStored(it.refs, lang) }",
+      "to": " }"
+    },
+    {
+      "name": "форма редактора снова не получает ссылки текста",
+      "from": "text: blockText(it.content?.md, lang), refs: refsToEditor(it.refs, lang) }",
+      "to": "text: blockText(it.content?.md, lang) }"
+    }
+  ]
+}

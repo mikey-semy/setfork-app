@@ -84,7 +84,7 @@ function BlockBody({
     case 'step':
       return <StepBlockBody item={item} index={index} onPatch={onPatch} lang={lang} uploading={media.uploading} onFile={media.onFile} />
     case 'text':
-      return <TextBlockBody value={item.text} onChange={(text) => onPatch({ text })} onRetype={onRetype} lang={lang} />
+      return <TextBlockBody value={item.text} onChange={(text) => onPatch({ text })} refs={item.refs} onRefsChange={(refs) => onPatch({ refs })} onRetype={onRetype} lang={lang} />
     case 'image':
       return <ImageBlockBody {...media} />
     case 'video':

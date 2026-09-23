@@ -33,6 +33,28 @@ const isStepBlk = (s: ExportStep): boolean => !s.type || s.type === 'step'
 // Скрипт языка зрителя не знает (его собирают и по curl) — там остаётся
 // оригинал: blockText без языка отдаёт первый доступный, а не пустоту.
 const blockMd = (s: ExportStep, lang?: Lang): string => blockText(s.content?.md, lang)
+
+/** Ссылка → markdown. Одна запись на шаг и текстовый блок (#962): у текста своя
+ *  копия разошлась бы с шаговой. Без подписи — автоссылка `<url>`: пропуск по
+ *  пустой подписи терял ссылку одним адресом, которую интерфейс показывает доменом. */
+function mdRef(r: ExportStep['refs'][number], lang: Lang): string {
+  const label = tr(r.label, lang)
+  if (label) return r.url ? `[${label}](${r.url})` : label
+  return r.url ? `<${r.url}>` : ''
+}
+
+/** Ссылки → пункты HTML-списка. Пара к `mdRef`: без подписи текстом ссылки идёт адрес. */
+function htmlRefs(refs: ExportStep['refs'], lang: Lang): string {
+  return refs
+    .map((r) => {
+      const label = esc(tr(r.label, lang))
+      const href = safeHref(r.url)
+      const text = label || esc(href)
+      if (!text) return ''
+      return href ? `<li><a href="${esc(href)}">${text}</a></li>` : `<li>${text}</li>`
+    })
+    .join('')
+}
 const blockVideo = (s: ExportStep): { url: string; caption: string } => ({
   url: typeof s.content?.url === 'string' ? s.content.url : '',
   caption: typeof s.content?.caption === 'string' ? s.content.caption : '',
@@ -129,7 +151,12 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
   list.steps.forEach((s) => {
     if (!isStepBlk(s)) {
       // Картинки в экспорт не идут (ключ хранилища не подписан) — оставляем подпись.
-      if (s.type === 'text') { const md = blockMd(s, lang); if (md) out.push(md, '') }
+      if (s.type === 'text') {
+        const md = blockMd(s, lang)
+        const refs = s.refs.map((r) => mdRef(r, lang)).filter(Boolean)
+        if (md) out.push(md, '')
+        if (refs.length) out.push(...refs.map((x) => `- ${x}`), '')
+      }
       else if (s.type === 'image') { const { caption } = blockImg(s); if (caption) out.push(`_🖼 ${caption}_`, '') }
       else if (s.type === 'poll') { const p = blockPoll(s); if (p.question || p.options.length) out.push(`**📊 ${p.question}**`, ...p.options.map((o) => `- ${o}`), '') }
       else if (s.type === 'video') { const v = blockVideo(s); if (v.url) out.push(`🎬 [${v.caption || v.url}](${v.url})`, '') }
@@ -159,8 +186,8 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
       if (t) out.push(`${indent}- [ ] ${t}`)
     })
     s.refs.forEach((r) => {
-      const label = tr(r.label, lang)
-      if (label) out.push(r.url ? `${indent}- [${label}](${r.url})` : `${indent}- ${label}`)
+      const item = mdRef(r, lang)
+      if (item) out.push(`${indent}- ${item}`)
     })
     out.push('')
   })
@@ -244,7 +271,12 @@ export function toHtml(list: ExportList, lang: Lang): string {
   const steps = list.steps
     .map((s) => {
       if (!isStepBlk(s)) {
-        if (s.type === 'text') { const md = esc(blockMd(s, lang)); return md ? `<div class="block-text"><p>${md}</p></div>` : '' }
+        if (s.type === 'text') {
+          const md = esc(blockMd(s, lang))
+          const refs = htmlRefs(s.refs, lang)
+          if (!md && !refs) return ''
+          return `<div class="block-text">${md ? `<p>${md}</p>` : ''}${refs ? `<ul class="refs">${refs}</ul>` : ''}</div>`
+        }
         const { caption } = blockImg(s)
         return caption ? `<div class="block-text"><p>🖼 ${esc(caption)}</p></div>` : ''
       }
@@ -259,14 +291,7 @@ export function toHtml(list: ExportList, lang: Lang): string {
         .filter(Boolean)
         .map((t) => `<li>☐ ${t}</li>`)
         .join('')
-      const refs = s.refs
-        .map((r) => {
-          const label = esc(tr(r.label, lang))
-          if (!label) return ''
-          const href = safeHref(r.url)
-          return href ? `<li><a href="${esc(href)}">${label}</a></li>` : `<li>${label}</li>`
-        })
-        .join('')
+      const refs = htmlRefs(s.refs, lang)
       return `<div class="step">
   <div class="step-head"><span class="n">${marker}</span><h2>${esc(tr(s.title, lang))}</h2>${badge}</div>
   ${d ? `<p class="d">${d}</p>` : ''}

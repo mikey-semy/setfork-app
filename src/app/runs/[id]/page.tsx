@@ -58,11 +58,14 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
     level: s.level,
     why: tr(s.why, lang),
     subtasks: (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean),
-    // Индекс для /api/go фиксируем ДО фильтра пустых меток — иначе резолв уедет.
+    // Индекс для /api/go фиксируем ДО фильтра пустых ссылок — иначе резолв уедет.
     // Трекинг кликов выключен в админке → прямые url.
+    // Ссылка без подписи — нормальная ссылка: её показывают доменом (linkLabel), как
+    // в списке. Фильтр по одной подписи прятал её в прохождении, хотя редактор такие
+    // хранит с 04.08.2026 и список их показывает (#962).
     refs: (s.refs as { label: LocaleText; url?: string }[])
       .map((r, ri) => ({ label: tr(r.label, lang), url: r.url, href: r.url && mon.linkTracking ? `/api/go/${s.id}/${ri}` : undefined }))
-      .filter((r) => r.label),
+      .filter((r) => r.label || r.url),
     done: s.state?.status === 'done',
     blocked: s.state?.status === 'blocked',
     reason: s.state?.note ?? '',

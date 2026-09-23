@@ -1,0 +1,14 @@
+{
+  "target": "src/features/library/blocks.ts",
+  "tests": [
+    "tests/features/library/text-block-refs.test.ts",
+    "tests/architecture/refs-follow-carries-refs.test.ts"
+  ],
+  "mutants": [
+    {
+      "name": "ссылки снова считаются принадлежностью только шага",
+      "from": "export const carriesRefs = (t: string): boolean => t === 'step' || t === 'text'",
+      "to": "export const carriesRefs = (t: string): boolean => t === 'step'"
+    }
+  ]
+}

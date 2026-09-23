@@ -6,10 +6,11 @@ import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { TEXT } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import { parseVideoEmbed, type BlockType } from '../blocks'
-import type { EditorItem } from '../editor'
+import type { EditorItem, EditorRef } from '../editor'
 import { LineField } from './block-fields'
 import { FileDrop } from './FileDrop'
 import { SlashMenu, useSlashMenu } from './SlashMenu'
+import { LinkChips } from './LinkChips'
 import { buttonClass } from '@/shared/ui/button-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { IconButton } from '@/shared/ui/IconButton'
@@ -107,23 +108,46 @@ export function FileBlockBody({ item, onPatch, uploading, onFile, lang }: BodyPr
 
 /** Text-блок: Markdown со всплывающей панелью форматирования (выдели текст →
  *  мини-тулбар). Картинки и файлы — отдельными блоками, не в тулбаре.
- *  «/» в начале пустого блока открывает выбор типа — блок станет тем, что выберут. */
-export function TextBlockBody({ value, onChange, onRetype, lang }: { value: string; onChange: (v: string) => void; onRetype: (type: BlockType) => void; lang: Lang }) {
-  const menu = useSlashMenu({ value, lang, onPick: onRetype })
+ *  «/» в начале пустого блока открывает выбор типа — блок станет тем, что выберут.
+ *  Под текстом — ссылки-источники тем же рядом чипов, что у шага (#962): у
+ *  справочного пункта источники нужны так же, как у инструкции. */
+export function TextBlockBody({
+  value,
+  onChange,
+  refs,
+  onRefsChange,
+  onRetype,
+  lang,
+}: {
+  value: string
+  onChange: (v: string) => void
+  refs: EditorRef[]
+  onRefsChange: (refs: EditorRef[]) => void
+  onRetype: (type: BlockType) => void
+  lang: Lang
+}) {
+  // Текст со ссылками не пуст: «/» в нём — просто символ, а не смена типа блока.
+  const menu = useSlashMenu({ value, lang, onPick: onRetype, enabled: refs.length === 0 })
   return (
-    // Обёртка ловит клавиши для slash-меню, всплывшие от поля ввода внутри; своей роли
-    // у неё нет.
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- обёртка slash-меню
-    <div className="relative" onKeyDown={menu.onKeyDown}>
-      <BubbleTextEditor
-        value={value}
-        onChange={onChange}
-        rows={4}
-        lang={lang}
-        ariaLabel={t('editor.textBlockAria', lang)}
-        placeholder={t('editor.textBlockPh', lang)}
-      />
-      <SlashMenu menu={menu} lang={lang} />
+    <div>
+      {/* Обёртка ловит клавиши для slash-меню, всплывшие от поля ввода внутри; своей
+          роли у неё нет. Ряд ссылок стоит ВНЕ её: события React всплывают и из
+          порталов, и ввод адреса в окне ссылки иначе доходил бы до slash-меню. */}
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- обёртка slash-меню */}
+      <div className="relative" onKeyDown={menu.onKeyDown}>
+        <BubbleTextEditor
+          value={value}
+          onChange={onChange}
+          rows={4}
+          lang={lang}
+          ariaLabel={t('editor.textBlockAria', lang)}
+          placeholder={t('editor.textBlockPh', lang)}
+        />
+        <SlashMenu menu={menu} lang={lang} />
+      </div>
+      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 pt-2 ${TEXT.bodySm}`}>
+        <LinkChips refs={refs} onChange={onRefsChange} lang={lang} />
+      </div>
     </div>
   )
 }

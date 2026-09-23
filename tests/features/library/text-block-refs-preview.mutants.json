@@ -1,0 +1,18 @@
+{
+  "target": "src/features/library/SuggestionResult.tsx",
+  "tests": [
+    "tests/features/library/text-block-refs-surfaces.test.tsx"
+  ],
+  "mutants": [
+    {
+      "name": "предпросмотр снова прячет ссылки текста",
+      "from": "                <PreviewRefs refs={refs} className={md ? 'mt-2' : ''} />",
+      "to": ""
+    },
+    {
+      "name": "текст только со ссылками снова пустая карточка",
+      "from": "            {!isStep && (md || (it.type === 'text' && refs.length > 0)) ? (",
+      "to": "            {!isStep && md ? ("
+    }
+  ]
+}
