@@ -11,6 +11,10 @@ export interface MediaSettings {
   s3AccessKey: string
   s3SecretKey: string
   s3Prefix: string
+  /** Бакет прямых загрузок (вложения, клипы). Пусто → основной `s3Bucket`. */
+  s3UploadsBucket: string
+  /** Бакет загрузок адресуется виртуальным хостом (`бакет.s3…`), а не путём. */
+  s3UploadsVhost: boolean
   imgproxyUrl: string
   imgproxyKey: string
   imgproxySalt: string
@@ -25,6 +29,8 @@ export const MEDIA_KEYS = {
   s3AccessKey: 'media.s3_access_key',
   s3SecretKey: 'media.s3_secret_key',
   s3Prefix: 'media.s3_prefix',
+  s3UploadsBucket: 'media.s3_uploads_bucket',
+  s3UploadsVhost: 'media.s3_uploads_vhost',
   imgproxyUrl: 'media.imgproxy_url',
   imgproxyKey: 'media.imgproxy_key',
   imgproxySalt: 'media.imgproxy_salt',
@@ -77,6 +83,9 @@ async function loadMediaSettings(): Promise<MediaSettings> {
     s3AccessKey: val(MEDIA_KEYS.s3AccessKey, 'S3_ACCESS_KEY'),
     s3SecretKey: val(MEDIA_KEYS.s3SecretKey, 'S3_SECRET_KEY'),
     s3Prefix: val(MEDIA_KEYS.s3Prefix, 'S3_PATH_PREFIX').replace(/^\/+|\/+$/g, ''),
+    s3UploadsBucket: val(MEDIA_KEYS.s3UploadsBucket, 'S3_UPLOADS_BUCKET'),
+    // Как useImgproxy: сохранённое в админке 'true'/'false' перекрывает env.
+    s3UploadsVhost: (m[MEDIA_KEYS.s3UploadsVhost] ?? (process.env.S3_UPLOADS_VHOST === 'true' ? 'true' : 'false')) === 'true',
     imgproxyUrl: strip(val(MEDIA_KEYS.imgproxyUrl, 'IMGPROXY_URL')),
     imgproxyKey: val(MEDIA_KEYS.imgproxyKey, 'IMGPROXY_KEY'),
     imgproxySalt: val(MEDIA_KEYS.imgproxySalt, 'IMGPROXY_SALT'),

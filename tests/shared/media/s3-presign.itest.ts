@@ -28,6 +28,20 @@ afterAll(() => {
 })
 
 describe('presignPost', () => {
+  it('свой бакет загрузок + vHosted — адрес виртуального хоста, основной бакет не при чём', async () => {
+    Object.assign(process.env, { S3_UPLOADS_BUCKET: 'setfork-uploads', S3_UPLOADS_VHOST: 'true' })
+    clearMediaCache()
+    try {
+      const post = await presignPost('files/u/k.pdf', 'application/octet-stream', 1000, 600)
+      expect(post.url).toBe('https://setfork-uploads.s3.test/')
+      expect(post.fields.bucket).toBe('setfork-uploads')
+    } finally {
+      delete process.env.S3_UPLOADS_BUCKET
+      delete process.env.S3_UPLOADS_VHOST
+      clearMediaCache()
+    }
+  })
+
   it('политика держит ключ (с префиксом окружения), размер 1..max и тип', async () => {
     const post = await presignPost('files/u/k.pdf', 'application/octet-stream', 1000, 600)
     expect(post.url).toBe('https://s3.test/bkt')

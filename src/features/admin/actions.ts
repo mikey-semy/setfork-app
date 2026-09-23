@@ -15,6 +15,8 @@ import { clearMonetizationCache, DEFAULT_AD_MARKING, DEFAULT_DISCLOSURE, MONETIZ
 import { parseAffiliateRules } from '@/core'
 import { clearVapidCache, VAPID_KEYS } from '@/shared/push/vapid'
 import { removeImageFile, uploadImageFile } from '@/shared/media'
+import { checkUploadsCors, setupUploadsCors, type CorsCheckResult, type CorsSetupResult } from '@/shared/media/uploads-cors'
+import { appOrigin } from '@/shared/auth/app-origin'
 import { sendMail } from '@/shared/email/mailer'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -154,6 +156,8 @@ export async function setMediaSettings(formData: FormData): Promise<void> {
     [MEDIA_KEYS.s3Bucket]: str('s3Bucket'),
     [MEDIA_KEYS.s3Prefix]: str('s3Prefix'),
     [MEDIA_KEYS.s3AccessKey]: str('s3AccessKey'),
+    [MEDIA_KEYS.s3UploadsBucket]: str('s3UploadsBucket'),
+    [MEDIA_KEYS.s3UploadsVhost]: formData.get('s3UploadsVhost') === 'on' ? 'true' : 'false',
     [MEDIA_KEYS.imgproxyUrl]: str('imgproxyUrl'),
     [MEDIA_KEYS.cdnUrl]: str('cdnUrl'),
     [MEDIA_KEYS.useImgproxy]: formData.get('useImgproxy') === 'on' ? 'true' : 'false',
@@ -169,6 +173,24 @@ export async function setMediaSettings(formData: FormData): Promise<void> {
   await saveSettings(settings)
   clearMediaCache()
   revalidatePath('/admin')
+}
+
+/**
+ * CORS бакета прямых загрузок — кнопками в форме медиа. Работают с СОХРАНЁННЫМИ
+ * настройками (кеш сбрасываем: их могли сохранить секунду назад). Origin — тот же,
+ * что у ссылок в письмах (`appOrigin`): с него браузер и будет слать файлы.
+ */
+export async function setupUploadsCorsAction(): Promise<CorsSetupResult> {
+  await requireAdmin()
+  clearMediaCache()
+  return setupUploadsCors(new URL(appOrigin()).origin)
+}
+
+export async function checkUploadsCorsAction(): Promise<CorsCheckResult & { origin: string }> {
+  await requireAdmin()
+  clearMediaCache()
+  const origin = new URL(appOrigin()).origin
+  return { ...(await checkUploadsCors(origin)), origin }
 }
 
 // ── Почта (SMTP: свой сервер, без сторонних сервисов) ────────────────

@@ -132,7 +132,7 @@ export async function completeUpload(userId: string, id: unknown): Promise<Compl
   if (rejected) {
     // Сначала объект, потом строка: упади удаление объекта — строка останется
     // `pending`, и его доберёт подметальщик. Наоборот объект осиротел бы навсегда.
-    await deleteObject(row.key)
+    await deleteObject(row.key, 'uploads')
     await db.delete(uploads).where(eq(uploads.id, row.id))
     return { error: rejected }
   }
@@ -169,7 +169,7 @@ export async function sweepPendingUploads(now: Date = new Date(), batch = 100): 
   let removed = 0
   for (const row of stale) {
     try {
-      await deleteObject(row.key) // удаление отсутствующего объекта в S3 — не ошибка
+      await deleteObject(row.key, 'uploads') // удаление отсутствующего объекта в S3 — не ошибка
       await db.delete(uploads).where(and(eq(uploads.id, row.id), eq(uploads.status, 'pending')))
       removed++
     } catch (e) {

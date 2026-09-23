@@ -131,6 +131,8 @@ export default async function AdminPage() {
     s3Bucket: media.s3Bucket,
     s3Prefix: media.s3Prefix,
     s3AccessKey: media.s3AccessKey,
+    s3UploadsBucket: media.s3UploadsBucket,
+    s3UploadsVhost: media.s3UploadsVhost,
     imgproxyUrl: media.imgproxyUrl,
     cdnUrl: media.cdnUrl,
     useImgproxy: media.useImgproxy,

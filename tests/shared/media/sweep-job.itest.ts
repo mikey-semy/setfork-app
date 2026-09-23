@@ -60,7 +60,7 @@ describe('runUploadsSweepJob', () => {
       contentType: 'application/octet-stream', createdAt: new Date(Date.now() - PENDING_TTL_MS - 60_000),
     })
     await runUploadsSweepJob()
-    expect(s3.deleteObject).toHaveBeenCalledWith('files/x/old.pdf')
+    expect(s3.deleteObject).toHaveBeenCalledWith('files/x/old.pdf', 'uploads')
     expect(await db.select().from(uploads)).toHaveLength(0)
     expect(await pendingSweeps()).toHaveLength(1)
   })

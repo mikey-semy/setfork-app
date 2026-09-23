@@ -56,5 +56,5 @@ export async function removeImageFile(ref: string | null | undefined): Promise<v
     await unlink(join(process.cwd(), 'public', ref)).catch(() => {})
     return
   }
-  if (await isS3Configured()) await deleteObject(ref).catch(() => {})
+  if (await isS3Configured()) await deleteObject(ref, 'main').catch(() => {})
 }
