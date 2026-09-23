@@ -306,6 +306,13 @@ export interface GitCore {
   updateBranch(repo: GitRepoRef, name: string): Promise<{ tipSha: string; fastForward: boolean }>
   /** Все git-теги репо (vN + релизные), по имени. */
   listTags(repo: GitRepoRef): Promise<GitTag[]>
+  /** Авторские файлы версии `version` (0 — вершина main) из git-дерева (ADR-0028).
+   *
+   *  `null` — спросить не о чем: ядро этого метода не знает (старое, окно выкатки —
+   *  UNIMPLEMENTED) или такой версии нет. Экспорт скилла тогда собирается из блоков,
+   *  как до появления авторских файлов. Прочие отказы — исключением: вызывающий решает,
+   *  ронять ли из-за них ответ. */
+  authoredFiles(repo: GitRepoRef, version: number): Promise<AuthoredFile[] | null>
   /** Коммиты рефа, свежие первыми. `notIn` (обычно 'main') скрывает достижимое
    *  из базы — остаётся ровно вклад ветки. null — рефа нет (ветку удалили). */
   listCommits(repo: GitRepoRef, rev: string, opts?: { notIn?: string; limit?: number }): Promise<GitCommit[] | null>
@@ -358,6 +365,16 @@ export interface GitCommit {
 export interface GitTag {
   name: string
   targetSha: string
+}
+
+/** Авторский файл скилла из git-дерева версии (ADR-0028): `scripts/`, `references/`, `assets/`. */
+export interface AuthoredFile {
+  /** «scripts/run.sh» — от корня дерева. */
+  path: string
+  /** Байты как в git; ядро пускает туда только текст. */
+  content: Uint8Array
+  /** Режим 100755 — в архиве скилла файл остаётся исполняемым. */
+  executable: boolean
 }
 
 /**

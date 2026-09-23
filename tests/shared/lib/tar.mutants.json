@@ -33,6 +33,16 @@
       "name": "время зависит от часов — байты разные",
       "from": "export function tarGz(entries: TarEntry[], mtime = 0): Buffer {",
       "to": "export function tarGz(entries: TarEntry[], mtime = Date.now() + Math.floor(Math.random() * 1e6)): Buffer {"
+    },
+    {
+      "name": "поле prefix не пишется — длинный путь ложится обрезанным",
+      "from": "  if (prefix) h.write(prefix, 345, 155, 'utf8')",
+      "to": ""
+    },
+    {
+      "name": "длинный путь не режется — архив падает",
+      "from": "  if (Buffer.byteLength(path) <= 100) return { prefix: '', name: path }",
+      "to": "  if (Buffer.byteLength(path) <= 100) return { prefix: '', name: path }\n  return null"
     }
   ]
 }

@@ -103,7 +103,7 @@ describe('имя скилла', () => {
   // ⚠️ Имя из одних цифр — законный слаг («1984»), но голым значением YAML читает его
   // числом, и имя перестаёт совпадать с папкой у того, кто ставит скилл.
   it('имя в шапке — строка в кавычках, даже из одних цифр', () => {
-    const md = toSkill(list({ slug: '1984' }), 'ru', ctx).files[0].content
+    const md = toSkill(list({ slug: '1984' }), 'ru', ctx).markdown
     expect(md, 'имя «1984» прочтётся числом').toContain('\nname: "1984"\n')
   })
 
@@ -143,11 +143,11 @@ describe('описание', () => {
 describe('SKILL.md по стандарту', () => {
   it('имя в шапке совпадает с именем папки', () => {
     const skill = toSkill(list({ slug: 'skripty-obsluzhivaniya-servera-chto-est-chto-delaet-i-kogda-' }), 'ru', ctx)
-    expect(frontmatter(skill.files[0].content).name, 'стандарт требует имя = папка').toBe(skill.name)
+    expect(frontmatter(skill.markdown).name, 'стандарт требует имя = папка').toBe(skill.name)
   })
 
   it('в шапке только поля стандарта; лицензии и «когда применять» нет', () => {
-    const fm = frontmatter(toSkill(list(), 'ru', ctx).files[0].content)
+    const fm = frontmatter(toSkill(list(), 'ru', ctx).markdown)
     expect(fm.keys).toEqual(['name', 'description', 'metadata'])
   })
 
@@ -155,7 +155,7 @@ describe('SKILL.md по стандарту', () => {
     const at = new Date('2026-09-20T10:00:00Z')
     const fm = frontmatter(
       toSkill(list(), 'ru', { origin: ORIGIN, commitSha: 'abc123', verification: 'machine_run', lastRun: { verdict: 'works', passed: 11, total: 12, at } })
-        .files[0].content,
+        .markdown,
     )
     expect(fm.metadata).toEqual({
       'setfork-ref': 'miki/otkaz-veb-servisa',
@@ -170,12 +170,12 @@ describe('SKILL.md по стандарту', () => {
   // Подписи нет у списков до git-слоя; «нет» пишется отсутствием строки, а не пустым
   // значением: машина прочла бы пустое как подпись со значением «».
   it('нет подписи и прогона — нет и строк', () => {
-    const fm = frontmatter(toSkill(list(), 'ru', ctx).files[0].content)
+    const fm = frontmatter(toSkill(list(), 'ru', ctx).markdown)
     expect(Object.keys(fm.metadata)).toEqual(['setfork-ref', 'setfork-url', 'setfork-version'])
   })
 
   it('кавычки и двоеточия в описании не ломают шапку', () => {
-    const fm = frontmatter(toSkill(list({ desc: { ru: 'Шаг: «проверить» "всё"' } }), 'ru', ctx).files[0].content)
+    const fm = frontmatter(toSkill(list({ desc: { ru: 'Шаг: «проверить» "всё"' } }), 'ru', ctx).markdown)
     expect(fm.description).toBe('Шаг: «проверить» "всё"')
   })
 
@@ -194,7 +194,7 @@ describe('SKILL.md по стандарту', () => {
       }),
       'ru',
       ctx,
-    ).files[0].content
+    ).markdown
     expect(md).toContain('1. **Проверить сеть**')
     expect(md).toContain('Why: чтобы отсечь класс причин')
     expect(md).toContain('ping -c1 host')
@@ -205,14 +205,14 @@ describe('SKILL.md по стандарту', () => {
   // ⚠️ SKILL.md агент исполняет как инструкцию. Разрушительный пункт в скрипте рядом
   // закомментирован — здесь он обязан быть так же явно помечен, а не лежать обычным `sh`.
   it('разрушительный шаг помечен и не подан как исполняемый блок sh', () => {
-    const md = toSkill(list({ steps: [step({ title: { ru: 'Почистить' }, command: 'rm -rf /var/lib/app' })] }), 'ru', ctx).files[0].content
+    const md = toSkill(list({ steps: [step({ title: { ru: 'Почистить' }, command: 'rm -rf /var/lib/app' })] }), 'ru', ctx).markdown
     expect(md, 'агент получил rm -rf обычным шагом').toMatch(/DESTRUCTIVE \(\w+\) — do not run this without explicit confirmation/)
     expect(md, 'опасная команда подана блоком sh').not.toMatch(/```sh\n\s*rm -rf/)
     expect(md, 'команду спрятали — человек не увидит, что пропущено').toContain('rm -rf /var/lib/app')
   })
 
   it('пометка автора «опасно» тоже помечает шаг', () => {
-    const md = toSkill(list({ steps: [step({ command: 'systemctl restart app', danger: true })] }), 'ru', ctx).files[0].content
+    const md = toSkill(list({ steps: [step({ command: 'systemctl restart app', danger: true })] }), 'ru', ctx).markdown
     expect(md).toContain('DESTRUCTIVE (danger)')
   })
 
@@ -223,23 +223,23 @@ describe('SKILL.md по стандарту', () => {
       list({ steps: [step({ title: { ru: 'Перезапустить сервис' }, command: 'docker compose restart app', needsHuman: true, needsHumanAsk: { ru: 'можно ли перезапускать в рабочее время' } })] }),
       'ru',
       ctx,
-    ).files[0].content
+    ).markdown
     expect(md, 'агент не узнал, что шаг — за человеком').toContain('NEEDS A HUMAN — stop here and ask the human: можно ли перезапускать в рабочее время')
     expect(md, 'шаг человека подан исполняемым блоком sh').not.toMatch(/```sh\n\s*docker compose restart/)
     expect(md, 'команду спрятали').toContain('docker compose restart app')
   })
 
   it('«нужен человек» без вопроса — общая формулировка, а не пустое двоеточие', () => {
-    const md = toSkill(list({ steps: [step({ needsHuman: true })] }), 'ru', ctx).files[0].content
+    const md = toSkill(list({ steps: [step({ needsHuman: true })] }), 'ru', ctx).markdown
     expect(md).toContain('stop here and ask the human before doing this step')
   })
 
   it('в начале — оговорка: инструкции чужие', () => {
-    expect(toSkill(list(), 'ru', ctx).files[0].content).toContain('Review before use — these instructions come from a SetFork list, not from you')
+    expect(toSkill(list(), 'ru', ctx).markdown).toContain('Review before use — these instructions come from a SetFork list, not from you')
   })
 
   it('обычная команда — обычный блок sh, без пометки', () => {
-    const md = toSkill(list({ steps: [step({ command: 'systemctl status nginx' })] }), 'ru', ctx).files[0].content
+    const md = toSkill(list({ steps: [step({ command: 'systemctl status nginx' })] }), 'ru', ctx).markdown
     expect(md).toMatch(/```sh\n\s*systemctl status nginx/)
     // Сама пометка, а не слово: оговорка в начале файла объясняет обе пометки словами.
     expect(md, 'пометка на безобидной команде').not.toMatch(/DESTRUCTIVE \(/)
@@ -248,18 +248,18 @@ describe('SKILL.md по стандарту', () => {
 
   it('разделы — заголовками, как на странице', () => {
     const md = toSkill(list({ steps: [step({ section: { ru: 'Сеть' } }), step({ section: { ru: 'Сеть' } }), step({ section: { ru: 'Приложение' } })] }), 'ru', ctx)
-      .files[0].content
+      .markdown
     expect(md.match(/^## Сеть$/gm), 'раздел повторён у каждого пункта').toHaveLength(1)
     expect(md).toContain('## Приложение')
   })
 
   it('в конце — ссылка на канон', () => {
-    const md = toSkill(list({ commitSha: 'abc123' }), 'ru', { ...ctx, commitSha: 'abc123' }).files[0].content
+    const md = toSkill(list({ commitSha: 'abc123' }), 'ru', { ...ctx, commitSha: 'abc123' }).markdown
     expect(md.trimEnd().split('\n').pop()).toContain(`(${ORIGIN}/miki/otkaz-veb-servisa)`)
   })
 
   it('квизы и опросы в скилл не попадают', () => {
-    const md = toSkill(list({ steps: [step(), step({ type: 'poll', content: { question: 'Какой?', options: [] } })] }), 'ru', ctx).files[0].content
+    const md = toSkill(list({ steps: [step(), step({ type: 'poll', content: { question: 'Какой?', options: [] } })] }), 'ru', ctx).markdown
     expect(md).not.toContain('Какой?')
   })
 
@@ -276,8 +276,8 @@ describe('SKILL.md по стандарту', () => {
       ctx,
     )
     expect(skill.files.map((f) => f.path)).toEqual(['SKILL.md'])
-    expect(skill.files[0].content).toContain('[Регламент.pdf](https://files.example/runbook.pdf)')
-    expect(skill.files[0].content).toContain('[Разбор](https://video.example/v)')
+    expect(skill.markdown).toContain('[Регламент.pdf](https://files.example/runbook.pdf)')
+    expect(skill.markdown).toContain('[Разбор](https://video.example/v)')
   })
 
   // Адрес из блока идёт в чужого агента — опасная схема не должна доехать ссылкой.
@@ -291,7 +291,7 @@ describe('SKILL.md по стандарту', () => {
       }),
       'ru',
       ctx,
-    ).files[0].content
+    ).markdown
     expect(md).not.toContain('javascript:')
     expect(md, 'подпись ссылки пропала вместе с адресом').toContain('- ловушка')
   })
@@ -299,7 +299,7 @@ describe('SKILL.md по стандарту', () => {
   it('картинка — подписью, а не вложением', () => {
     const skill = toSkill(list({ steps: [step(), step({ type: 'image', content: { ref: 'uploads/x.png', caption: 'Схема' } })] }), 'ru', ctx)
     expect(skill.files.map((f) => f.path)).toEqual(['SKILL.md'])
-    expect(skill.files[0].content).toContain('Схема')
+    expect(skill.markdown).toContain('Схема')
   })
 })
 
@@ -313,17 +313,17 @@ describe('раскрытие по уровням: история — отдел�
     const context = skill.files.find((f) => f.path === 'references/context.md')
     expect(context?.content, 'история потерялась').toContain('Фелипе не может запустить тест')
     expect(context?.content).toContain('Том показывает дверь')
-    expect(skill.files[0].content, 'история легла в SKILL.md целиком').not.toContain('Фелипе')
+    expect(skill.markdown, 'история легла в SKILL.md целиком').not.toContain('Фелипе')
   })
 
   it('SKILL.md ссылается на context.md — иначе агент о нём не узнает', () => {
-    expect(toSkill(commitics, 'ru', ctx).files[0].content).toContain('](references/context.md)')
+    expect(toSkill(commitics, 'ru', ctx).markdown).toContain('](references/context.md)')
   })
 
   it('нет текстовых блоков — нет ни файла, ни ссылки на него', () => {
     const skill = toSkill(list(), 'ru', ctx)
     expect(skill.files.map((f) => f.path)).not.toContain('references/context.md')
-    expect(skill.files[0].content).not.toContain('references/')
+    expect(skill.markdown).not.toContain('references/')
   })
 
   // Однофайловая отдача без соседей: ссылка на references/ вела бы в пустоту.
@@ -352,7 +352,7 @@ describe('scripts/run.sh', () => {
   it('список без команд — scripts/ нет вовсе', () => {
     const skill = toSkill(list(), 'ru', ctx)
     expect(skill.files.some((f) => f.path.startsWith('scripts/'))).toBe(false)
-    expect(skill.files[0].content).not.toContain('scripts/')
+    expect(skill.markdown).not.toContain('scripts/')
   })
 })
 
@@ -413,5 +413,114 @@ describe('длина тела', () => {
   it('сверх 500 строк — число лишних, до — ноль', () => {
     expect(skillBodyOverflow('a\n'.repeat(10))).toBe(0)
     expect(skillBodyOverflow('a\n'.repeat(600))).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * АВТОРСКИЕ ФАЙЛЫ ИЗ GIT-ДЕРЕВА (ADR-0028). Их не генерирует никто: `scripts/`, `references/`,
+ * `assets/` приходят пушем, и архив обязан отдать их ровно теми байтами, что покрыты SHA
+ * версии, — иначе скилл со своими скриптами ставился бы без них.
+ */
+describe('авторские файлы версии', () => {
+  const enc = (s: string) => new TextEncoder().encode(s)
+  const authored = (files: Array<[string, string, boolean?]>) =>
+    files.map(([path, text, executable]) => ({ path, content: enc(text), executable: executable ?? false }))
+
+  it('ложатся в архив байтами из дерева, исполняемые — исполняемыми', () => {
+    const skill = toSkill(list(), 'ru', { ...ctx, authored: authored([['scripts/deploy.sh', '#!/bin/sh\necho deploy\n', true], ['assets/template.md', '# шаблон\n']]) })
+    const deploy = skill.files.find((f) => f.path === 'scripts/deploy.sh')
+    expect(deploy, 'авторский скрипт не доехал до архива').toBeTruthy()
+    expect(new TextDecoder().decode(deploy!.content as Uint8Array)).toBe('#!/bin/sh\necho deploy\n')
+    expect(deploy!.executable, 'скрипт потерял право на запуск').toBe(true)
+    expect(skill.files.map((f) => f.path)).toContain('assets/template.md')
+  })
+
+  it('SKILL.md перечисляет их ссылками — иначе агент о них не узнает', () => {
+    const md = toSkill(list(), 'ru', { ...ctx, authored: authored([['scripts/deploy.sh', 'x'], ['references/why.md', 'y']]) }).markdown
+    expect(md).toContain('- [scripts/deploy.sh](scripts/deploy.sh)')
+    expect(md).toContain('- [references/why.md](references/why.md)')
+  })
+
+  // ⚠️ Решение автора главнее: его `scripts/run.sh` заменяет сгенерированный, и строки
+  // «все команды одним скриптом» быть не должно — про авторский файл это неправда.
+  it('авторский scripts/run.sh заменяет сгенерированный, и SKILL.md не врёт про него', () => {
+    const skill = toSkill(list({ steps: [step({ command: 'make build' })] }), 'ru', { ...ctx, authored: authored([['scripts/run.sh', 'echo mine\n', true]]) })
+    const runs = skill.files.filter((f) => f.path === 'scripts/run.sh')
+    expect(runs, 'в архиве два файла с одним путём').toHaveLength(1)
+    expect(new TextDecoder().decode(runs[0].content as Uint8Array), 'сгенерированный затёр авторский').toBe('echo mine\n')
+    expect(skill.markdown, 'авторский скрипт выдан за «все команды»').not.toContain('All commands as one script')
+  })
+
+  it('авторский references/context.md заменяет собранный из текстовых блоков', () => {
+    const skill = toSkill(list({ steps: [text('фон из блоков'), step()] }), 'ru', { ...ctx, authored: authored([['references/context.md', 'мой фон\n']]) })
+    const ctxFiles = skill.files.filter((f) => f.path === 'references/context.md')
+    expect(ctxFiles).toHaveLength(1)
+    expect(new TextDecoder().decode(ctxFiles[0].content as Uint8Array)).toBe('мой фон\n')
+    expect(skill.markdown).not.toContain('Background and the reasoning')
+  })
+
+  it.each([['../evil'], ['scripts/a/b.sh'], ['other/x.sh'], ['scripts'], ['/etc/passwd']])(
+    'путь %j в архив не попадает — одно кривое имя не роняет маршрут',
+    (path) => {
+      const skill = toSkill(list(), 'ru', { ...ctx, authored: authored([[path, 'x'], ['scripts/ok.sh', 'ok']]) })
+      expect(skill.files.map((f) => f.path)).not.toContain(path)
+      expect(skill.files.map((f) => f.path), 'вместе с кривым выброшен и законный').toContain('scripts/ok.sh')
+      expect(() => tarGz(skill.files.map((f) => ({ path: `n/${f.path}`, content: f.content })).concat({ path: 'n/', content: '' }))).not.toThrow()
+    },
+  )
+
+  it('однофайловый SKILL.md называет архив, если у версии есть авторские файлы', () => {
+    const md = toSkillMarkdown(list(), 'ru', { ...ctx, authored: authored([['assets/t.md', 'x']]) })
+    expect(md).toContain('skill.tar.gz')
+    expect(md).not.toContain('](assets/')
+  })
+
+  it('ядро не ответило (null) — скилл тот же, что без авторских файлов', () => {
+    expect(toSkill(list(), 'ru', { ...ctx, authored: null }).markdown).toBe(toSkill(list(), 'ru', ctx).markdown)
+  })
+})
+
+/**
+ * ДЛИННЫЕ ПУТИ В АРХИВЕ. Имя в заголовке ustar — до 100 байт, а путь в архиве —
+ * `<имя скилла до 64>/<каталог>/<файл>`. Ядро длину имени файла не ограничивает, и
+ * кириллица набирает 100 байт быстро. Раньше такой файл ронял маршрут в 500 (находка
+ * ревью диффа): каталоги теперь уходят в родное поле ustar `prefix`, а файл, чьё
+ * ИМЯ само длиннее 100 байт, в архив не кладётся и называется в `skipped`.
+ */
+describe('длинные пути авторских файлов', () => {
+  const enc = (s: string) => new TextEncoder().encode(s)
+  const longSlug = 'a'.repeat(60)
+
+  function extract(buf: Buffer): string[] {
+    const dir = mkdtempSync(join(tmpdir(), 'skill-long-'))
+    writeFileSync(join(dir, 'a.tgz'), buf)
+    execFileSync('tar', ['-xzf', join(dir, 'a.tgz'), '-C', dir])
+    const walk = (d: string): string[] =>
+      readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : [relative(dir, join(d, f))]))
+    return walk(dir).filter((p) => p !== 'a.tgz')
+  }
+
+  it('путь длиннее 100 байт распаковывается туда, куда должен', () => {
+    const file = `references/${'почему-так-сделано-'.repeat(2)}.md`
+    const skill = toSkill(list({ slug: longSlug }), 'ru', { ...ctx, authored: [{ path: file, content: enc('x'), executable: false }] })
+    const full = `${skill.name}/${file}`
+    expect(Buffer.byteLength(full), 'проба не проверяет длинный путь').toBeGreaterThan(100)
+    const paths = extract(
+      tarGz([{ path: `${skill.name}/` }, { path: `${skill.name}/references/` }, ...skill.files.map((f) => ({ path: `${skill.name}/${f.path}`, content: f.content }))]),
+    )
+    expect(paths, 'файл с длинным путём потерялся или лёг не туда').toContain(full)
+  })
+
+  it('имя файла длиннее 100 байт в архив не кладётся — и называется, а не теряется молча', () => {
+    const tooLong = `scripts/${'очень-длинное-имя-'.repeat(4)}.sh`
+    const skill = toSkill(list(), 'ru', { ...ctx, authored: [{ path: tooLong, content: enc('x'), executable: true }, { path: 'scripts/ok.sh', content: enc('ok'), executable: true }] })
+    expect(skill.files.map((f) => f.path)).not.toContain(tooLong)
+    expect(skill.files.map((f) => f.path), 'вместе с длинным выброшен и законный').toContain('scripts/ok.sh')
+    expect(skill.skipped, 'пропуск молчаливый').toEqual([tooLong])
+    expect(() => tarGz(skill.files.map((f) => ({ path: `n/${f.path}`, content: f.content })).concat({ path: 'n/', content: '' }))).not.toThrow()
+  })
+
+  it('без пропусков skipped пуст', () => {
+    expect(toSkill(list(), 'ru', { ...ctx, authored: [{ path: 'scripts/a.sh', content: enc('a'), executable: false }] }).skipped).toEqual([])
   })
 })

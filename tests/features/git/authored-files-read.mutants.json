@@ -1,0 +1,10 @@
+{
+  "target": "src/features/git/core.remote.ts",
+  "tests": ["tests/features/git/authored-files-read.test.ts"],
+  "mutants": [
+    { "name": "старое ядро роняет экспорт", "from": "      if (e instanceof ConnectError && e.code === Code.Unimplemented) return null\n      // Прочее", "to": "      // Прочее" },
+    { "name": "обрыв связи выдан за «файлов нет»", "from": "      throw toTransportError(e, 'getAuthoredFiles')", "to": "      return null" },
+    { "name": "found=false выдан за пустой набор", "from": "      if (!res.found) return null\n      return res.files.map", "to": "      return res.files.map" },
+    { "name": "исполняемость потеряна", "from": "content: f.content, executable: f.executable }))", "to": "content: f.content, executable: false }))" }
+  ]
+}

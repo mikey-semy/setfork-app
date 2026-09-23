@@ -1,0 +1,11 @@
+{
+  "target": "src/features/library/skill-load.ts",
+  "tests": ["tests/features/library/skill-load.test.ts"],
+  "mutants": [
+    { "name": "сбой ядра роняет экспорт", "from": "  } catch (e) {\n    captureError(e, { where: 'skill.authoredFiles', handle, slug, version })\n    return null\n  }", "to": "  } finally {\n  }" },
+    { "name": "сбой ядра проглочен молча", "from": "    captureError(e, { where: 'skill.authoredFiles', handle, slug, version })\n", "to": "    void e\n" },
+    { "name": "спрошена не текущая версия", "from": "  const authored = await authoredFilesOf(git, handle, slug, version)", "to": "  const authored = await authoredFilesOf(git, handle, slug, 0)" },
+    { "name": "ядро спрашивают без настройки", "from": "  if (!process.env.SETFORK_CORE_URL) return null\n  try {\n    return await git", "to": "  try {\n    return await git" },
+    { "name": "файлы не доезжают до сборщика", "from": "    authored,\n  }", "to": "    authored: null,\n  }" }
+  ]
+}

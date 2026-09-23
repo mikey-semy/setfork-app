@@ -271,6 +271,20 @@ export const gitCoreRemote: GitCore = {
     }
   },
 
+  async authoredFiles(repo, version) {
+    try {
+      const res = await client.getAuthoredFiles({ repo: toRepoRef(repo), version })
+      if (!res.found) return null
+      return res.files.map((f) => ({ path: f.path, content: f.content, executable: f.executable }))
+    } catch (e) {
+      // Старое ядро метода не знает — это ответ по существу («не умею»), а не сбой связи:
+      // экспорт соберётся из блоков, как раньше. Та же форма, что у `capabilities`.
+      if (e instanceof ConnectError && e.code === Code.Unimplemented) return null
+      // Прочее — отказ, а не «файлов нет»: вызывающий решает, ронять ли из-за него ответ.
+      throw toTransportError(e, 'getAuthoredFiles')
+    }
+  },
+
   async listTags(repo) {
     const res = await client.listTags(toRepoRef(repo)).catch(() => null)
     return res ? res.tags.map((t) => ({ name: t.name, targetSha: t.targetSha })) : []
