@@ -305,7 +305,24 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export type CursorKeyType = 'time' | 'int'
 
 /** Текстовая форма `timestamptz` из Postgres: `2026-08-18 19:02:03.092835+00`. */
-const TS_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?$/
+const TS_RE = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(\.\d{1,6})?[+-](\d{2})(?::(\d{2}))?$/
+/**
+ * Форма — половина дела, как и у целого ниже: `2026-99-99 99:99:99+00` форму проходит,
+ * а `::timestamptz` на нём падает — «date/time field value out of range», то есть 500
+ * вместо «покажем сначала» (а в MCP текст ошибки с SQL уезжал клиенту). Поэтому дата
+ * сверяется календарём: день существует, время в сутках, сдвиг пояса в пределах,
+ * которые принимает Postgres (±15:59).
+ */
+function isRealTimestamp(key: string): boolean {
+  const m = TS_RE.exec(key)
+  if (!m) return false
+  const [y, mo, d, h, mi, se, , oh, om] = [m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9] ?? '0'].map(Number)
+  // Date.UTC сам переносит лишнее (31 февраля → 3 марта) и годы 0–99 — в 1900-е; обратная
+  // сверка полей ловит и то и другое.
+  const at = new Date(Date.UTC(y, mo - 1, d))
+  const sameDay = at.getUTCFullYear() === y && at.getUTCMonth() === mo - 1 && at.getUTCDate() === d
+  return sameDay && h < 24 && mi < 60 && se < 60 && oh <= 15 && om < 60
+}
 /**
  * Целое без плюса, ведущих нулей и хвостов: номер версии, счётчик.
  *
@@ -371,7 +388,7 @@ export function decodeCursor(raw: string | undefined | null, keyType: CursorKeyT
   const id = decoded.slice(at + CURSOR_SEP.length)
   // Разделитель ровно один: две пары в одном курсоре — признак подделки, а не опечатки.
   if (id.includes(CURSOR_SEP)) return null
-  if (!(keyType === 'int' ? INT_RE : TS_RE).test(key) || !UUID_RE.test(id)) return null
+  if (!(keyType === 'int' ? INT_RE.test(key) : isRealTimestamp(key)) || !UUID_RE.test(id)) return null
   if (keyType === 'int' && Math.abs(Number(key)) > INT_MAX) return null
   return { key, id }
 }

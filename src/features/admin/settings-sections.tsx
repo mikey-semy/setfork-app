@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Award, Bell, Bot, Coins, Database, Mail, RefreshCw, ScrollText, Search, Users, Wrench } from 'lucide-react'
+import { Award, Bell, Bot, Coins, Database, Mail, Plug, RefreshCw, ScrollText, Search, Users, Wrench } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 
 /**
@@ -24,6 +24,7 @@ export const ADMIN_SECTION_IDS = [
   'email',
   'push',
   'search',
+  'mcp',
   'changelog',
   'monetization',
   'achievements',
@@ -83,6 +84,12 @@ export function adminSettingsSections(lang: Lang): AdminSectionMeta[] {
       title: t('admin.sect.search', lang),
       icon: <Search size={14} />,
       keywords: ['search', 'поиск', 'semantic', 'вектор', 'rag'],
+    },
+    {
+      id: 'mcp',
+      title: t('admin.sect.mcp', lang),
+      icon: <Plug size={14} />,
+      keywords: ['mcp', 'агент', 'agent', 'prompts', 'сценарии', 'commitics', 'коммитикс'],
     },
     {
       id: 'changelog',

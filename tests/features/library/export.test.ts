@@ -100,3 +100,22 @@ describe('Markdown-экспорт: пункты от десятого', () => {
     expect(body[0].startsWith('    ')).toBe(true)
   })
 })
+
+describe('export — опасность шага видна в markdown', () => {
+  // Этот текст отдаёт и ресурс MCP: агент исполняет шаги по нему, и `rm -rf` без пометки
+  // выглядел бы обычным шагом — хотя `get_list` про ту же команду предупреждает.
+  it('пометка автора', () => {
+    const md = toMarkdown(list([step({ command: 'make clean', danger: true })]), 'en')
+    expect(md).toContain('⚠ Destructive step')
+  })
+
+  it('находка детектора — и без пометки автора', () => {
+    const md = toMarkdown(list([step({ command: 'rm -rf /' })]), 'en')
+    expect(md).toContain('⚠ Destructive step')
+  })
+
+  it('безопасная команда и шаг без команды — без пометки', () => {
+    expect(toMarkdown(list([step({ command: 'ls -la' })]), 'en')).not.toContain('Destructive')
+    expect(toMarkdown(list([step({ danger: true })]), 'en')).not.toContain('Destructive')
+  })
+})
