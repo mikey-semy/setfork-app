@@ -86,8 +86,11 @@ export function decideBody(model: string, state: string, questions: Record<strin
 }
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+/** Вероятность или уверенность: число в [0, 1]. Конечное, но вне отрезка — не ответ, а мусор,
+ *  которому поверили бы пороги (авто-ревью к #961). */
+const isProb = (v: unknown): v is number => isNum(v) && v >= 0 && v <= 1
 const isNumMap = (v: unknown): v is Record<string, number> =>
-  !!v && typeof v === 'object' && !Array.isArray(v) && Object.values(v as object).every(isNum)
+  !!v && typeof v === 'object' && !Array.isArray(v) && Object.values(v as object).every(isProb)
 const isStrMap = (v: unknown): v is Record<string, string> =>
   !!v && typeof v === 'object' && !Array.isArray(v) && Object.values(v as object).every((x) => typeof x === 'string')
 
@@ -97,16 +100,18 @@ export function parseAnswer(q: DecideQuestion, raw: unknown): DecideAnswer | nul
   const a = raw as Record<string, unknown>
   if (q.type === 'choice') {
     if (typeof a.choice !== 'string' || !Object.hasOwn(q.criteria, a.choice)) return null
-    if (!isNum(a.confidence) || !isNumMap(a.probabilities)) return null
+    if (!isProb(a.confidence) || !isNumMap(a.probabilities)) return null
     return { type: 'choice', choice: a.choice, probabilities: a.probabilities, confidence: a.confidence }
   }
   if (q.type === 'noul') {
-    if (!isNum(a.noul)) return null
-    return { type: 'noul', noul: a.noul, ...(isNum(a.confidence) ? { confidence: a.confidence } : {}) }
+    if (!isProb(a.noul)) return null
+    return { type: 'noul', noul: a.noul, ...(isProb(a.confidence) ? { confidence: a.confidence } : {}) }
   }
   // Легенда — часть обещанного типа: без неё (или массивом, или не строками) ответ не той
   // формы, и выдавать его за `ok` нельзя (находка авто-ревью к #961).
-  if (!isNum(a.score) || !isNum(a.confidence) || !isNumMap(a.probabilities) || !isStrMap(a.legend)) return null
+  // Уровень — внутри шкалы, которую задали: от 0 до числа уровней минус один.
+  if (!isNum(a.score) || a.score < 0 || a.score > q.criteria.length - 1) return null
+  if (!isProb(a.confidence) || !isNumMap(a.probabilities) || !isStrMap(a.legend)) return null
   return { type: 'score', score: a.score, legend: a.legend, probabilities: a.probabilities, confidence: a.confidence }
 }
 
@@ -181,6 +186,16 @@ export async function decide<K extends string>(input: {
     if (typeof json?.model === 'string') answeredModel = json.model
     if (!res.ok || !json) {
       console.warn(`[decide] HTTP ${res.status}: ${String(json?.error?.message ?? '').slice(0, 200)}`)
+      return null
+    }
+    // ⚠️ Удачный ответ БЕЗ стоимости не принимаем. Вызов оплачен, а в журнал и в дневной
+    // кап лёг бы нулём: предохранитель расхода ослеп бы (AGENTS.md §9). Оценки по прайсу
+    // для OpenRouter у нас нет (`pricing.ts`: стоимость «всегда приходит из API»), поэтому
+    // честнее отказаться от решения, чем принять его бесплатным. Серия `invalid` видна
+    // сторожу ИИ — пропажа учёта у провайдера станет заметной, а не тихой (авто-ревью к #961).
+    if (!isNum(json.usage?.cost) || !isNum(json.usage?.input_tokens)) {
+      outcome = 'invalid'
+      console.warn('[decide] ответ без usage.cost — не принят: оплаченный вызов не может быть бесплатным')
       return null
     }
     const answers = {} as Record<K, DecideAnswer>

@@ -114,10 +114,11 @@ describe('ответ', () => {
     expect(parseAnswer({ type: 'noul', instructions: '?' }, { type: 'noul', noul: 0.98 })).toEqual({ type: 'noul', noul: 0.98 })
     expect(
       parseAnswer(
-        { type: 'score', instructions: '?', criteria: ['low', 'high'] },
-        { type: 'score', score: 1.21, legend: { '0': 'low', '1': 'high' }, probabilities: { '0': 0.2, '1': 0.8 }, confidence: 0.68 },
+        // Живой ответ Jev 23.09.2026 на шкале из трёх уровней: 1.21 — между 1 и 2.
+        { type: 'score', instructions: '?', criteria: ['low', 'mid', 'high'] },
+        { type: 'score', score: 1.21, legend: { '0': 'low', '1': 'mid', '2': 'high' }, probabilities: { '0': 0, '1': 0.79, '2': 0.21 }, confidence: 0.68 },
       ),
-    ).toEqual({ type: 'score', score: 1.21, legend: { '0': 'low', '1': 'high' }, probabilities: { '0': 0.2, '1': 0.8 }, confidence: 0.68 })
+    ).toEqual({ type: 'score', score: 1.21, legend: { '0': 'low', '1': 'mid', '2': 'high' }, probabilities: { '0': 0, '1': 0.79, '2': 0.21 }, confidence: 0.68 })
     expect(parseAnswer({ type: 'score', instructions: '?', criteria: ['a'] }, { score: 'high' })).toBeNull()
   })
 
@@ -196,6 +197,23 @@ describe('сбой — null, а не исключение, и строка в ж
     const onAttempt = vi.fn()
     await decide({ state: 'пункт', questions: Q, onAttempt })
     expect(onAttempt).not.toHaveBeenCalled()
+  })
+
+  it('уверенность и вероятности вне [0, 1] — не ответ', () => {
+    expect(parseAnswer(Q.guide, { choice: 'dba', confidence: 2, probabilities: { dba: 0.9 } })).toBeNull()
+    expect(parseAnswer(Q.guide, { choice: 'dba', confidence: 0.5, probabilities: { dba: -0.1 } })).toBeNull()
+    expect(parseAnswer({ type: 'noul', instructions: '?' }, { noul: 1.2 })).toBeNull()
+    const sq = { type: 'score' as const, instructions: '?', criteria: ['low', 'high'] }
+    const ok = { score: 1, legend: { '0': 'low', '1': 'high' }, probabilities: { '0': 0, '1': 1 }, confidence: 0.9 }
+    expect(parseAnswer(sq, ok)).not.toBeNull()
+    expect(parseAnswer(sq, { ...ok, score: 2.5 })).toBeNull()
+  })
+
+  it('удачный ответ без usage.cost — не принят: оплаченный вызов не бывает бесплатным', async () => {
+    const { usage: _u, ...noUsage } = okBody
+    reply(noUsage)
+    await expect(decide({ state: 'пункт', questions: Q })).resolves.toBeNull()
+    expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'invalid' }))
   })
 
   it('тело не JSON', async () => {
