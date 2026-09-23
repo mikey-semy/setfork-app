@@ -35,6 +35,19 @@ describe('меню «Получить»: доступность и содерж�
     expect(screen.getByRole('tablist')).toBeTruthy()
   })
 
+  it('прокручивается тело вкладки, а ряд вкладок остаётся на месте', () => {
+    // Фидбек владельца: на телефоне поповер скроллился целиком, и вкладки уезжали
+    // вверх вместе с содержимым. jsdom не считает раскладку, поэтому проверяем
+    // устройство: прокрутка есть ровно у панели, и ряд вкладок в неё не входит.
+    open()
+    const list = screen.getByRole('tablist')
+    const panel = screen.getByRole('tabpanel')
+    const scroller = panel.closest('.overflow-y-auto')
+    expect(scroller).not.toBeNull()
+    expect(scroller!.contains(list)).toBe(false)
+    expect(list.className).toContain('shrink-0')
+  })
+
   it('вкладки объявлены вкладками и переключаются стрелками', () => {
     open()
     const tabs = screen.getAllByRole('tab')

@@ -77,13 +77,16 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
         </button>
       </PopoverTrigger>
       {/* Ширина не шире экрана (на масштабе 110% фикс-330px уезжал за край), высота —
-          не выше доступной, иначе низ вкладки «Запуск» обрезался без прокрутки. */}
+          не выше доступной, иначе низ вкладки «Запуск» обрезался без прокрутки.
+          Прокручивается только тело вкладки: раньше скроллился весь поповер, и ряд
+          вкладок уезжал вверх вместе с содержимым — на телефоне переключиться было
+          нельзя, не отмотав назад (фидбек владельца). */}
       <PopoverContent
         align="end"
-        className="w-panel-xl cap-viewport max-h-(--radix-popover-content-available-height) overflow-y-auto p-0"
+        className="flex w-panel-xl cap-viewport max-h-(--radix-popover-content-available-height) flex-col overflow-hidden p-0"
       >
         {/* ui-parity-ok: вкладки ВНУТРИ панели с aria-controls и стрелками — TabNav это ряд ссылок-разделов, другая роль */}
-        <div className="flex gap-2 border-b border-border p-1.5" role="tablist" aria-label={t('cloneMenuLabel', lang)}>
+        <div className="flex shrink-0 gap-2 border-b border-border p-1.5" role="tablist" aria-label={t('cloneMenuLabel', lang)}>
           {TABS.map((tt) => (
             <button
               key={tt.key}
@@ -107,7 +110,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
           ))}
         </div>
 
-        <div className="p-3">
+        <div className="min-h-0 overflow-y-auto overscroll-contain p-3">
           {tab === 'clone' && (
             <div role="tabpanel" id="use-panel-clone" aria-labelledby="use-tab-clone">
               {heading(<Terminal size={12} />, t('cloneGitHeading', lang))}
