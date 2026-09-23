@@ -11,7 +11,7 @@ import { countUnfiledLists, getPinnedTemplates, getProfileListIds, getProfileLis
 import {
   getActivityTopics,
   getContributions,
-  getOwnListsLight,
+  pinnableFor,
   getProfileCounts,
   getReceivedStats,
   getUserByHandle,
@@ -113,14 +113,14 @@ export async function loadProfilePage({ handle, sp: raw, lang }: { handle: strin
     avatarSrc(user.avatarUrl, 180),
     getContributions(user.id, graphYear, viewer?.userId),
     getReceivedStats(user.id),
-    getPinnedTemplates(user.id, viewer?.userId),
+    getPinnedTemplates(user.id),
     getOwnerCatalogs(user.id, viewer?.userId),
     getAchievementDisplay(),
   ])
   const people = tab === 'followers' ? await getFollowers(user.id) : tab === 'following' ? await getFollowing(user.id) : []
 
   // Пикер пинов («Customize your pins») — только владельцу на Overview.
-  const ownLight = tab === 'overview' && isOwner ? await getOwnListsLight(user.id) : []
+  const ownLight = tab === 'overview' && isOwner ? await pinnableFor(user.id, lang) : null
   // Пройденные курсы (публично видимые) — на Overview.
   const completions = tab === 'overview' ? await getUserCompletions(user.id) : []
   // Служебный участник (ADR-0004): его зона ответственности по доменам. Для людей — null,

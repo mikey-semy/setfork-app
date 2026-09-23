@@ -436,9 +436,6 @@
   "src/features/profile/PinsPicker.tsx": {
     "boundaries/dependencies": {
       "count": 1
-    },
-    "no-restricted-syntax": {
-      "count": 4
     }
   },
   "src/features/profile/activity/ActivityGraph.tsx": {

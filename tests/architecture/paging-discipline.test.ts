@@ -55,7 +55,6 @@ const BOUNDED_BY_NATURE: Record<string, string> = {
   'issues/queries.ts::getListLabels': 'метки списка',
   'issues/queries.ts::getIssueAssignees': 'исполнители одной задачи',
   'issues/queries.ts::getIssueAssigneesFor': 'исполнители показанной страницы задач',
-  'library/queries/feed.ts::getPinnedTemplates': 'закреплённые владельцем на профиле',
   'library/queries/list.ts::getVersions': 'выпадающий список версий и сборка changelog — агрегат, не выдача',
   'library/queries/suggestions.ts::getSuggestionsAssignees': 'исполнители показанной страницы правок',
   'library/saved-queries.ts::listSavedQueries': 'сохранённые запросы человека',

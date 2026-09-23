@@ -69,13 +69,13 @@ export function ProfileOverview({
         </div>
       )}
 
-      {(pinned.length > 0 || (isOwner && ownLight.length > 0)) && (
+      {(pinned.length > 0 || (isOwner && (ownLight?.items.length ?? 0) > 0)) && (
         <div className="mb-6">
           <div className="mb-2 flex items-center justify-between gap-2 text-body-sm font-semibold text-ink-2">
             <span className="inline-flex items-center gap-1.5">
               <Pin size={13} className="text-muted" /> {t('pinnedLabel', lang)}
             </span>
-            {isOwner && <PinsPicker lists={ownLight} lang={lang} />}
+            {isOwner && ownLight && <PinsPicker lists={ownLight.items} hasMore={ownLight.hasMore} lang={lang} />}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {pinned.map((it) => {

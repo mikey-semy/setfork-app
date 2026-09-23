@@ -5,6 +5,9 @@ import { Pin, PinOff } from 'lucide-react'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { buttonClass } from '@/shared/ui/button-style'
 import { setListPinned } from './actions/list-settings'
+import { MAX_PINS } from '@/core/domain/pins'
+import { t, type Lang } from '@/shared/i18n'
+import { toast } from '@/shared/ui/toast'
 
 /** Pin/Unpin списка на профиль владельца (как Pin у GitHub-репозитория). Показывается
  *  только своим ПУБЛИЧНЫМ спискам — приватные к публичному профилю не прикрепляем. */
@@ -13,11 +16,13 @@ export function PinButton({
   pinned,
   pinLabel,
   unpinLabel,
+  lang,
 }: {
   templateId: string
   pinned: boolean
   pinLabel: string
   unpinLabel: string
+  lang: Lang
 }) {
   const [pending, start] = useTransition()
   const [opt, setOpt] = useOptimistic(pinned, (_, next: boolean) => next)
@@ -30,7 +35,12 @@ export function PinButton({
       onClick={() =>
         start(async () => {
           setOpt(!opt)
-          await setListPinned(templateId, !opt)
+          const res = await setListPinned(templateId, !opt)
+          // Отказ — словами, а не молчаливым возвратом кнопки: раньше седьмой пин просто
+          // ложился на профиль, а теперь не ляжет, и человек должен узнать почему.
+          if ('error' in res) {
+            toast.error(res.error === 'full' ? t('pinsFull', lang).replace('{n}', String(MAX_PINS)) : t('pinsNotPublic', lang))
+          }
         })
       }
       disabled={pending}
