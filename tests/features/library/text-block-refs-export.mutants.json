@@ -1,0 +1,23 @@
+{
+  "target": "src/features/library/export.ts",
+  "tests": [
+    "tests/features/library/text-block-refs-export.test.ts"
+  ],
+  "mutants": [
+    {
+      "name": "markdown снова уносит текст без его источников",
+      "from": "        if (refs.length) out.push(...refs.map((x) => `- ${x}`), '')",
+      "to": ""
+    },
+    {
+      "name": "ссылка одним адресом снова пропадает из markdown",
+      "from": "  return r.url ? `<${r.url}>` : ''",
+      "to": "  return ''"
+    },
+    {
+      "name": "HTML снова уносит текст без источников",
+      "from": "          return `<div class=\"block-text\">${md ? `<p>${md}</p>` : ''}${refs ? `<ul class=\"refs\">${refs}</ul>` : ''}</div>`",
+      "to": "          return md ? `<div class=\"block-text\"><p>${md}</p></div>` : ''"
+    }
+  ]
+}

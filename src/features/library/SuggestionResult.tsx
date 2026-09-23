@@ -94,8 +94,14 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
         const md = blockText(it.content?.md, lang)
         return (
           <div key={i} className={cardClass()}>
-            {!isStep && md ? (
-              <Markdown>{md}</Markdown>
+            {!isStep && (md || (it.type === 'text' && refs.length > 0)) ? (
+              // Текст — со своими ссылками-источниками (#962): предпросмотр в редакторе
+              // и результат предложения обязаны их показать, иначе автор не видит, что
+              // сохранит, а текст только со ссылками выглядел бы пустой карточкой.
+              <>
+                {md && <Markdown>{md}</Markdown>}
+                <PreviewRefs refs={refs} className={md ? 'mt-2' : ''} />
+              </>
             ) : !isStep ? (
               <BlockPreview item={it} lang={lang} />
             ) : (
@@ -152,27 +158,34 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
                       ))}
                     </ul>
                   )}
-                  {refs.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                      {refs.map((r, ri) =>
-                        r.url ? (
-                          <SafeLink key={ri} href={r.url} className="text-body-sm text-ink-2 underline decoration-dotted hover:text-ink">
-                            {r.label || r.url}
-                          </SafeLink>
-                        ) : (
-                          <span key={ri} className="text-body-sm text-muted">
-                            {r.label}
-                          </span>
-                        ),
-                      )}
-                    </div>
-                  )}
+                  <PreviewRefs refs={refs} className="mt-2" />
                 </div>
               </div>
             )}
           </div>
         )
       })}
+    </div>
+  )
+}
+
+/** Ряд ссылок предпросмотра — у шага и у текста (#962). Один на оба: у текста своя
+ *  копия разошлась бы с шаговой видом и правилом «без подписи — адрес». */
+function PreviewRefs({ refs, className = '' }: { refs: { label: string; url?: string }[]; className?: string }) {
+  if (refs.length === 0) return null
+  return (
+    <div className={`flex flex-wrap gap-x-3 gap-y-1 ${className}`}>
+      {refs.map((r, ri) =>
+        r.url ? (
+          <SafeLink key={ri} href={r.url} className="text-body-sm text-ink-2 underline decoration-dotted hover:text-ink [overflow-wrap:anywhere]">
+            {r.label || r.url}
+          </SafeLink>
+        ) : (
+          <span key={ri} className="text-body-sm text-muted">
+            {r.label}
+          </span>
+        ),
+      )}
     </div>
   )
 }

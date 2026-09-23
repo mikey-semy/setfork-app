@@ -15,8 +15,21 @@ import { MenuItem } from '@/shared/ui/MenuItem'
  * дополняет радиальный инсертер, который хорош пальцем. Справочник типов общий с
  * инсертером и шапкой карточки: третьей копии списка блоков быть не должно.
  */
-export function useSlashMenu({ value, lang, onPick }: { value: string; lang: Lang; onPick: (type: BlockType) => void }) {
-  const query = slashQuery(value)
+export function useSlashMenu({
+  value,
+  lang,
+  onPick,
+  enabled = true,
+}: {
+  value: string
+  lang: Lang
+  onPick: (type: BlockType) => void
+  /** Меню — ярлык «превратить ПУСТОЙ блок в другой тип». Блок, у которого есть что-то
+   *  кроме текста (ссылки-источники, #962), пуст не бывает: смена типа заменила бы его
+   *  чистым блоком и молча выбросила это содержимое (находка Codex на #963). */
+  enabled?: boolean
+}) {
+  const query = enabled ? slashQuery(value) : null
   const options = query === null ? [] : matchBlockTypes(query, lang)
   // Помним ВЫБРАННЫЙ ТИП, а не его номер: список сужается на каждую букву запроса, и
   // номер в нём указывал бы то на исчезнувший пункт, то на соседний. Слетел из

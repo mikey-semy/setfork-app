@@ -126,7 +126,8 @@ export function TextBlockBody({
   onRetype: (type: BlockType) => void
   lang: Lang
 }) {
-  const menu = useSlashMenu({ value, lang, onPick: onRetype })
+  // Текст со ссылками не пуст: «/» в нём — просто символ, а не смена типа блока.
+  const menu = useSlashMenu({ value, lang, onPick: onRetype, enabled: refs.length === 0 })
   return (
     <div>
       {/* Обёртка ловит клавиши для slash-меню, всплывшие от поля ввода внутри; своей

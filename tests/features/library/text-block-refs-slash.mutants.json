@@ -1,0 +1,13 @@
+{
+  "target": "src/features/library/list-editor/MediaBlocks.tsx",
+  "tests": [
+    "tests/features/library/text-block-refs-surfaces.test.tsx"
+  ],
+  "mutants": [
+    {
+      "name": "слэш-меню снова меняет тип текста со ссылками и выбрасывает их",
+      "from": "enabled: refs.length === 0 })",
+      "to": "enabled: true })"
+    }
+  ]
+}
