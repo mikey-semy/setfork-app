@@ -1,19 +1,17 @@
 import Link from 'next/link'
-import { ExternalLink, Info, SquareCheckBig, UserRound } from 'lucide-react'
+import { Info, SquareCheckBig, UserRound } from 'lucide-react'
 import { DigChatOpen } from '@/features/dig/DigChat'
+import { BlockRefs } from './BlockRefs'
 import { CopyRow } from '@/shared/ui/CopyRow'
 import { splitOrdinal } from '@/shared/lib/ordinal'
 import { CodeCard } from '@/shared/ui/CodeCard'
 import { Markdown } from '@/shared/ui/Markdown'
-import { SafeLink } from '@/shared/ui/SafeLink'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { StepDangerBadge, StepLevelBadge } from '@/shared/ui/StepLevelBadge'
-import { linkLabel } from '@/shared/lib/link-label'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ListPageData } from './load'
 import { cardClass } from '@/shared/ui/card-style'
-import { badgeClass } from '@/shared/ui/badge'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 type Props = Pick<ListPageData, 'tpl' | 'base' | 'viewer' | 'readOnlyView' | 'isOwner' | 'digSteps' | 'stepImages' | 'mon'> & {
@@ -31,13 +29,6 @@ type Props = Pick<ListPageData, 'tpl' | 'base' | 'viewer' | 'readOnlyView' | 'is
 export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, isOwner, digSteps, stepImages, mon, lang }: Props) {
   // flatMap, а не map().filter(Boolean): один проход, пустой перевод отсеивается сразу.
   const subs = (step.subtasks as LocaleText[]).flatMap((x) => tr(x, lang) || [])
-  // href — через /api/go (журнал кликов), если трекинг включён в админке;
-  // у веток snapshot-шаги без DB-id → прямой url. Экспорт/MD не трогаем.
-  const refs = (step.refs as { label: LocaleText; url?: string }[]).map((x, ri) => ({
-    label: tr(x.label, lang),
-    url: x.url,
-    href: x.url && !readOnlyView && mon.linkTracking ? `/api/go/${step.id}/${ri}` : x.url,
-  }))
   const desc = tr(step.desc, lang)
   const why = tr(step.why, lang)
   // Автор пронумеровал заголовок сам — его номер идёт в колонку номера вместо нашего.
@@ -137,29 +128,7 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
               </ul>
             </div>
           )}
-          {refs.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {refs.map((r) => {
-                // Подпись ссылки нередко и есть URL — без переноса чип уносит страницу.
-                const cls = badgeClass({
-                  variant: 'chip',
-                  shape: 'square',
-                  className: 'min-w-0 px-2.5 py-1 text-accent [overflow-wrap:anywhere]',
-                })
-                // Подписи может не быть (ссылку кладут одним url) — показываем домен.
-                const text = linkLabel(r.label, r.url)
-                return r.url ? (
-                  <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className={cls}>
-                    <ExternalLink size={11} /> {text}
-                  </SafeLink>
-                ) : (
-                  <span key={`${r.label}:`} className={cls}>
-                    <ExternalLink size={11} /> {text}
-                  </span>
-                )
-              })}
-            </div>
-          )}
+          <BlockRefs step={step} readOnlyView={readOnlyView} mon={mon} lang={lang} />
         </div>
       </div>
     </div>

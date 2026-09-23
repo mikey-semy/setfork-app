@@ -39,6 +39,9 @@ export const itemShape = z.object({
   subtasks: z.array(z.string()).optional().describe('Step: verification checks'),
   needsHuman: z.boolean().optional().describe('Step: mark that this point needs a human — local prices, taste, personal experience'),
   needsHumanAsk: z.string().optional().describe('Step: what exactly to ask the human (shown with the mark)'),
+  // Ссылки — у шага И текстового блока (#962). Описание говорило «Step:», и агент,
+  // собирая справочный список из текстовых блоков, вписывал источники строкой в
+  // markdown: в тексте они не ссылки блока и не правятся как ссылки.
   refs: z
     .array(
       z.object({
@@ -47,7 +50,7 @@ export const itemShape = z.object({
       }),
     )
     .optional()
-    .describe('Step: reference links shown under the step (docs, sources). One link is just {"url": "..."} — label is optional. get_list returns them in the same shape'),
+    .describe('Step or text block: reference links shown under the block as link chips (docs, sources). One link is just {"url": "..."} — label is optional. get_list returns them in the same shape. Put sources HERE, not as a "Sources: [..](..)" line inside the text'),
   // text
   text: z.string().optional().describe('Text block: markdown content — for type "text"'),
   // image / video

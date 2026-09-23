@@ -7,6 +7,7 @@ import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { QuizBlock } from '@/features/quizzes/QuizBlock'
 import { DigChatOpen } from '@/features/dig/DigChat'
 import { Markdown } from '@/shared/ui/Markdown'
+import { BlockRefs } from './BlockRefs'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { SmartImage } from '@/shared/ui/SmartImage'
@@ -35,7 +36,7 @@ type BlockProps = Pick<
  * тогда блок не занимает места.
  */
 const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
-  text: ({ step, section, tpl, viewer, readOnlyView, digSteps, lang }) => {
+  text: ({ step, section, tpl, viewer, readOnlyView, digSteps, mon, lang }) => {
     const md = blockText(step.content?.md, lang)
     if (!md) return null
     // Текст-блок — такая же карточка с киркой, как шаг: это часть материала,
@@ -54,6 +55,8 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
           </span>
         )}
         <Markdown className={`text-body-lg leading-relaxed text-ink-2${canDig ? ' pr-10' : ''}`}>{renderWikiLinks(md)}</Markdown>
+        {/* Источники текста — тем же рядом чипов, что у шага (#962). */}
+        <BlockRefs step={step} readOnlyView={readOnlyView} mon={mon} lang={lang} />
       </div>
     )
   },

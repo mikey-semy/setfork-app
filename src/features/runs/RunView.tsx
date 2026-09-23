@@ -265,6 +265,8 @@ export function RunView({
                     </div>
                   )}
                   <Markdown className={`text-body-lg leading-relaxed text-ink-2${digEnabled ? ' pr-10' : ''}`}>{s.text}</Markdown>
+                  {/* Источники текста — тем же рядом, что у шага (#962). */}
+                  <RunRefs refs={s.refs} className="mt-3" />
                 </div>
               ) : null
             }
@@ -369,21 +371,7 @@ export function RunView({
                   </ul>
                 )}
 
-                {s.refs.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {s.refs.map((r) =>
-                      r.url ? (
-                        <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-caption text-accent [overflow-wrap:anywhere]">
-                          {linkLabel(r.label, r.url)}
-                        </SafeLink>
-                      ) : (
-                        <span key={`${r.label}:`} className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-caption text-ink-2 [overflow-wrap:anywhere]">
-                          {linkLabel(r.label, r.url)}
-                        </span>
-                      ),
-                    )}
-                  </div>
-                )}
+                <RunRefs refs={s.refs} />
 
                 {/* Ввод причины «не получилось» (открывает угловая иконка Ban). */}
                 {blockingId === s.id && (
@@ -458,6 +446,27 @@ export function RunView({
         })}
       </div>
       {confirmDialog}
+    </div>
+  )
+}
+
+/** Ссылки блока в прохождении — у шага и у текста (#962). Один ряд на оба, иначе
+ *  у текста завелась бы вторая копия со своим видом. */
+function RunRefs({ refs, className = '' }: { refs: RunStepVM['refs']; className?: string }) {
+  if (refs.length === 0) return null
+  return (
+    <div className={`flex flex-wrap gap-2 ${className}`}>
+      {refs.map((r) =>
+        r.url ? (
+          <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-caption text-accent [overflow-wrap:anywhere]">
+            {linkLabel(r.label, r.url)}
+          </SafeLink>
+        ) : (
+          <span key={`${r.label}:`} className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-caption text-ink-2 [overflow-wrap:anywhere]">
+            {linkLabel(r.label, r.url)}
+          </span>
+        ),
+      )}
     </div>
   )
 }
