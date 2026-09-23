@@ -773,7 +773,9 @@ src/features/mcp/registry/index.ts	H4
 src/features/mcp/registry/issues.ts	H4b
 src/features/mcp/registry/kit.ts	H4
 src/features/mcp/registry/lists.ts	H4
+src/features/mcp/registry/prompts.ts	H4
 src/features/mcp/registry/reads.ts	H4
+src/features/mcp/registry/resources.ts	H4
 src/features/mcp/registry/runs.ts	H4b
 src/features/mcp/registry/server-info.ts	H4
 src/features/mcp/registry/sources.ts	H4b
@@ -791,6 +793,7 @@ src/features/mcp/tools/lists/patch-block.ts	H4
 src/features/mcp/tools/lists/publish.ts	H4
 src/features/mcp/tools/lists/write.ts	H4
 src/features/mcp/tools/reads.ts	H4
+src/features/mcp/tools/resources.ts	H4
 src/features/mcp/tools/runs.ts	H4b
 src/features/mcp/tools/shared.ts	H4
 src/features/mcp/tools/sources.ts	H4b
@@ -1320,6 +1323,7 @@ tests/architecture/page-has-heading.test.ts	H12
 tests/architecture/page-path-without-lang.test.ts	H12
 tests/architecture/paging-discipline.test.ts	H12
 tests/architecture/plural-agreement.test.ts	H12
+tests/architecture/refs-follow-carries-refs.test.ts	H12
 tests/architecture/reports-append-only.test.ts	H12
 tests/architecture/review-gates-single-set.test.ts	H12
 tests/architecture/rsc-client-boundary.test.ts	H12
@@ -1526,6 +1530,9 @@ tests/features/library/suggestion-result-blocks.test.tsx	V1,V1k
 tests/features/library/suggestion-result.test.tsx	V1,V1k
 tests/features/library/suggestion-revert.itest.ts	V1
 tests/features/library/suggestion-revert.test.ts	V1,V1k
+tests/features/library/text-block-refs-export.test.ts	V1k
+tests/features/library/text-block-refs-surfaces.test.tsx	V1k
+tests/features/library/text-block-refs.test.ts	V1k
 tests/features/library/translate-merge.test.ts	V1k
 tests/features/library/translation-carry.test.ts	V1h,V1k
 tests/features/library/translation-state.test.ts	V1h,V1k
@@ -1550,6 +1557,7 @@ tests/features/mcp/lean-block-shape.test.ts	H4b
 tests/features/mcp/moved-lookup.itest.ts	H4
 tests/features/mcp/patch-block.test.ts	H4
 tests/features/mcp/patch-ops.test.ts	H4
+tests/features/mcp/prompts-resources.itest.ts	H4
 tests/features/mcp/publish-drafts.itest.ts	H4
 tests/features/mcp/publish-refs.itest.ts	H4
 tests/features/mcp/registry.test.ts	H4
