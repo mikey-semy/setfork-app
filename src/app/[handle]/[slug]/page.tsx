@@ -10,8 +10,10 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { FeedList } from '@/features/library/FeedList'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { getLang } from '@/shared/i18n/server'
+import { urlLangAt } from '@/shared/seo/with-lang'
+import { howToEligible } from '@/shared/seo/howto-eligible'
 import { t, tr } from '@/shared/i18n'
-import { breadcrumbList, creativeWork, itemList, JsonLd } from '@/shared/seo/jsonld'
+import { breadcrumbList, creativeWork, howTo, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { PAGE, STACK } from '@/shared/ui/control'
 import { ListAbout } from './ListAbout'
 import { ListAdNotices } from './ListAdNotices'
@@ -92,14 +94,19 @@ export default async function ListPage({
   params: Promise<{ handle: string; slug: string }>
   searchParams: Promise<{ find?: string; ref?: string; v?: string }>
 }) {
-  const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
+  const [{ handle: owner, slug }, sp, lang, at] = await Promise.all([params, searchParams, getLang(), urlLangAt()])
   const loaded = await loadListPage({ owner, slug, sp, lang })
-  const { tpl, currentVersion, steps, related, viewer, isOwner, readOnlyView, mon, digGnomes, quizBids, quizPassed, completion, base } = loaded
+  const { tpl, currentVersion, steps, related, viewer, isOwner, readOnlyView, mon, digGnomes, quizBids, quizPassed, completion, base, isStepBlock, find, firstLockedIdx } = loaded
 
   // Структурные данные — только у публично видимой страницы: у черновика их быть
   // не должно ровно потому же, почему его нет в карте сайта.
   const indexable = tpl.status === 'published' && tpl.visibility === 'public' && tpl.moderation === 'active'
-  const path = `/${owner}/${slug}`
+  // ⚠️ Адреса в разметке — НА ЯЗЫКЕ АДРЕСА. Страница, открытая по `/ru/…`, описывает
+  // русский текст; назвать его адресом без языка значит приписать его версии, которую
+  // поисковик считает другой страницей (находка авто-ревью к SEO-2). Касается всех
+  // адресов разметки сразу — самого списка, автора и крошек; `at` взят выше, вместе с
+  // параметрами запроса.
+  const path = at(`/${owner}/${slug}`)
 
   return (
     <>
@@ -111,7 +118,7 @@ export default async function ListPage({
               description: tr(tpl.desc, lang) || undefined,
               path,
               authorName: tpl.owner.name || owner,
-              authorPath: `/${owner}`,
+              authorPath: at(`/${owner}`),
               datePublished: tpl.createdAt,
               dateModified: tpl.updatedAt,
               tags: tpl.tags,
@@ -120,7 +127,7 @@ export default async function ListPage({
               version: currentVersion?.version ?? tpl.currentVersion,
             })}
           />
-          <JsonLd data={breadcrumbList([{ name: owner, path: `/${owner}` }, { name: tr(tpl.title, lang) || slug, path }])} />
+          <JsonLd data={breadcrumbList([{ name: owner, path: at(`/${owner}`) }, { name: tr(tpl.title, lang) || slug, path }])} />
           {/* Шаги отдаём списком: это то, ЧТО здесь исполняется, и единственная
               часть страницы, ради которой машина сюда приходит. Потолок в 25 —
               чтобы разметка не раздувалась на курсах в сотню уроков. */}
@@ -130,6 +137,38 @@ export default async function ListPage({
               steps.slice(0, 25).map((s) => ({ name: tr(s.title, lang) || `${s.n}` })),
             )}
           />
+          {/* `HowTo` — только там, где страница действительно инструкция: условия и
+              причина каждого — в `howToEligible`. */}
+          {howToEligible({
+            ordered: tpl.ordered,
+            listKind: tpl.listKind,
+            readOnlyView,
+            find,
+            firstLockedIdx,
+            stepCount: steps.filter((s) => isStepBlock(s)).length,
+          }) ? (
+            <JsonLd
+              data={howTo({
+                name: tr(tpl.title, lang) || slug,
+                description: tr(tpl.desc, lang) || undefined,
+                path,
+                // ⚠️ ТОЛЬКО блоки-шаги. В списке бывают текст, картинка, опрос и тест —
+                // страница их шагами не считает (`isStepBlock`, и `ListBlocks` их
+                // нумерацию пропускает). Объявить их шагами инструкции значит соврать
+                // поисковику о составе: человек увидел бы «шаг 3: картинка».
+                // ⚠️ ВСЕ шаги, без потолка. Инструкция, обрезанная на 25-м, объявляет
+                // процедуру законченной там, где страница продолжается, — и теряет как
+                // раз последние шаги, которые обычно и доводят дело до конца (находка
+                // авто-ревью). Страница и так отдаёт все шаги целиком.
+                steps: steps
+                  .filter((s) => isStepBlock(s))
+                  .map((s) => ({
+                    name: tr(s.title, lang) || `${s.n}`,
+                    text: tr(s.desc, lang) || undefined,
+                  })),
+              })}
+            />
+          ) : null}
         </>
       ) : null}
 

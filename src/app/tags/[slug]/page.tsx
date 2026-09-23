@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { withLang } from '@/shared/seo/with-lang'
+import { urlLangAt, withLang } from '@/shared/seo/with-lang'
 import { notFound } from 'next/navigation'
 import { breadcrumbList, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { Tag } from 'lucide-react'
@@ -60,7 +60,8 @@ export default async function TagPage({
 }) {
   const { slug: raw } = await params
   const slug = decodeSegment(raw).toLowerCase()
-  const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
+  // `at` — адреса в разметке на языке адреса страницы (см. `urlLangAt`).
+  const [lang, session, sp, at] = await Promise.all([getLang(), getSession(), searchParams, urlLangAt()])
   // Сначала СЧЁТ, потом окно: у популярного тега списков могут быть сотни, и страница
   // тянула их все вместе с аватарами авторов, чтобы показать экран.
   const [tag, total] = await Promise.all([getTag(slug), countLists({ tag: slug }, session?.userId)])
@@ -80,10 +81,10 @@ export default async function TagPage({
           <JsonLd
             data={itemList(
               `#${slug}`,
-              items.map((it) => ({ name: tr(it.title, lang) || it.slug, path: `/${it.ownerHandle}/${it.slug}` })),
+              items.map((it) => ({ name: tr(it.title, lang) || it.slug, path: at(`/${it.ownerHandle}/${it.slug}`) })),
             )}
           />
-          <JsonLd data={breadcrumbList([{ name: 'Tags', path: '/tags' }, { name: `#${slug}`, path: `/tags/${encodeURIComponent(slug)}` }])} />
+          <JsonLd data={breadcrumbList([{ name: 'Tags', path: at('/tags') }, { name: `#${slug}`, path: at(`/tags/${encodeURIComponent(slug)}`) }])} />
         </>
       ) : null}
       <PageHeader

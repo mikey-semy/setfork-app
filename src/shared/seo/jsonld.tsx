@@ -4,10 +4,16 @@ import { SITE_ORIGIN } from '@/shared/site'
  * Структурные данные (JSON-LD) — то, чем страница объясняет себя машине:
  * поисковику, превью-боту, ИИ-ассистенту.
  *
- * ⚠️ ЧЕГО ЗДЕСЬ НЕТ И НЕ БУДЕТ: `HowTo`. Разметка выглядит созданной ровно под
- * наши процедуры, но Google прекратил показывать её богатый результат в сентябре
- * 2023 — страница документации осталась, эффекта нет. Ставим то, что живо:
- * `BreadcrumbList`, `ItemList`, `CreativeWork`/`Article`, `ProfilePage`.
+ * ⚠️ `HowTo` — ЕСТЬ, но не ради карточки в Google. 28.08.2026 (#831) решили его не
+ * ставить: Google перестал показывать его богатый результат в сентябре 2023, и это
+ * по-прежнему так — в выдаче Google он ничего не даст. Аудит 22.09.2026 (работа 2)
+ * вернул его ради другого читателя: разметка — машинное описание процедуры для
+ * тех, кто страницу разбирает (другие поисковики, ИИ-ассистенты), а у SetFork
+ * содержимое совпадает со схемой один в один. Решение о ценности этого обмена за
+ * владельцем; пока оно не принято, правило простое — `HowTo` только там, где
+ * страница действительно инструкция (`howToEligible`), иначе разметка врёт.
+ * Остальное живо и в Google: `BreadcrumbList`, `ItemList`, `CreativeWork`/`Article`,
+ * `ProfilePage`, а для сайта — `Organization`, `WebSite`, `SoftwareApplication`.
  *
  * ⚠️ Разметку получает ТОЛЬКО публично видимая страница. Структурные данные —
  * это данные: у черновика и приватного списка их быть не должно ровно по той же
@@ -91,7 +97,7 @@ export function creativeWork(o: {
 }
 
 /** Страница профиля: кто автор корпуса. */
-export function profilePage(o: { name: string; handle: string; description?: string }): Record<string, unknown> {
+export function profilePage(o: { name: string; handle: string; description?: string; path?: string }): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'ProfilePage',
@@ -99,8 +105,104 @@ export function profilePage(o: { name: string; handle: string; description?: str
       '@type': 'Person',
       name: o.name,
       alternateName: o.handle,
-      url: absolute(`/${o.handle}`),
+      // `path` — адрес на языке адреса страницы (`/ru/miki`); без него — адрес без языка.
+      url: absolute(o.path ?? `/${o.handle}`),
       ...(o.description ? { description: o.description } : {}),
     },
+  }
+}
+
+/**
+ * САЙТ КАК ТАКОВОЙ: кто за ним стоит, как по нему искать, что это за продукт.
+ *
+ * Разметка в проекте была только у списков и профилей — у самого сайта ноль
+ * (`application/ld+json` на главной не встречался ни разу). Аудит 22.09.2026, работа 2:
+ * сниппет беднее конкурентского, строки поиска в выдаче нет, а главное — **разметка
+ * нужна для попадания в ответы нейросетей**, где сайт без неё просто не разбирается.
+ *
+ * Три схемы дают три разных ответа: `Organization` — кто, `WebSite` — как искать,
+ * `SoftwareApplication` — что за вещь и сколько стоит.
+ */
+export function organization(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'SetFork',
+    url: SITE_ORIGIN,
+    // ⚠️ Файл из ЖИВОГО набора иконок, а не выдуманный. Здесь стоял `/icon-512.png`,
+    // которого в репозитории нет вовсе: обходчик получил бы 404 на логотип организации,
+    // то есть разметка обещала бы картинку и не давала её. Проверено `ls public/`.
+    logo: absolute('/android-chrome-512x512.png'),
+    description: 'Canonical, runnable, versioned reference lists.',
+  }
+}
+
+/**
+ * `WebSite` с `SearchAction` — строка поиска по сайту прямо в выдаче.
+ *
+ * ⚠️ Адрес поиска берётся из ЖИВОГО маршрута (`/search?q=`), а не выдуман: шаблон,
+ * указывающий в несуществующее место, хуже отсутствующего — поисковик покажет строку,
+ * а она приведёт в 404.
+ */
+export function webSite(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'SetFork',
+    url: SITE_ORIGIN,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: { '@type': 'EntryPoint', urlTemplate: `${SITE_ORIGIN}/search?q={search_term_string}` },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+}
+
+/** Продукт: что это, для кого и сколько стоит. Бесплатность объявляется явно — её не угадывают. */
+export function softwareApplication(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'SetFork',
+    url: SITE_ORIGIN,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Web',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  }
+}
+
+/**
+ * `HowTo` — САМОЕ ЦЕННОЕ для SetFork, и вот почему.
+ *
+ * Содержимое списка структурно совпадает с этой схемой один в один: шаги по порядку,
+ * у каждого название и пояснение. Аудит называет это «редким совпадением, которое стоит
+ * занять первым»: большинству сайтов `HowTo` приходится натягивать на текст, а здесь
+ * она описывает ровно то, что есть.
+ *
+ * ⚠️ Схема применима ТОЛЬКО к упорядоченному списку с шагами. У неупорядоченного
+ * («подборка ссылок») порядка нет, и объявлять его инструкцией — враньё разметки:
+ * поисковик покажет «шаг 1 из 12» там, где никакого первого шага не существует.
+ */
+export function howTo(o: {
+  name: string
+  description?: string
+  path: string
+  steps: { name: string; text?: string }[]
+}): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: o.name,
+    ...(o.description ? { description: o.description } : {}),
+    url: absolute(o.path),
+    step: o.steps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.name,
+      ...(s.text ? { text: s.text } : {}),
+      // ⚠️ `url` у шага НЕ указываем. Здесь стояло `…#1`, но страница числовых якорей не
+      // рисует вовсе (единственные якоря — секции курса), и такая ссылка вела бы в никуда:
+      // разметка обещала бы переход к шагу, а он не сработал бы ни у человека, ни у робота.
+    })),
   }
 }

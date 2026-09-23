@@ -25,6 +25,15 @@ export async function withLang(meta: Metadata): Promise<Metadata> {
  * другой страницей (находка авто-ревью к SEO-2).
  */
 export async function urlLangPath(path: string): Promise<string> {
+  return (await urlLangAt())(path)
+}
+
+/**
+ * То же для НЕСКОЛЬКИХ путей одной страницы: язык берётся один раз, а наружу — функция.
+ * Разметке списка нужны сразу его адрес, адрес автора и крошки, и все они обязаны быть
+ * на одном языке — на языке адреса, по которому страницу открыли.
+ */
+export async function urlLangAt(): Promise<(path: string) => string> {
   const fromPath = (await headers()).get(LANG_HEADER)
-  return isLang(fromPath) ? langHref(path, fromPath) : path
+  return isLang(fromPath) ? (path) => langHref(path, fromPath) : (path) => path
 }
