@@ -1,0 +1,38 @@
+{
+  "target": "src/shared/lib/tar.ts",
+  "tests": [
+    "tests/features/library/skill.test.ts"
+  ],
+  "mutants": [
+    {
+      "name": "путь с .. пропускается",
+      "from": "seg === '' || seg === '.' || seg === '..'",
+      "to": "seg === ''"
+    },
+    {
+      "name": "права не пишутся — скрипт не исполняемый",
+      "from": "  h.write(octal(mode, 8), 100, 8, 'ascii')",
+      "to": "  h.write(octal(0o644, 8), 100, 8, 'ascii')"
+    },
+    {
+      "name": "контрольная сумма не считается",
+      "from": "  for (const b of h) sum += b",
+      "to": ""
+    },
+    {
+      "name": "данные без добивки до 512",
+      "from": "      if (pad) parts.push(Buffer.alloc(pad))",
+      "to": ""
+    },
+    {
+      "name": "размер считается в символах, а не байтах",
+      "from": "  h.write(octal(size, 12), 124, 12, 'ascii')",
+      "to": "  h.write(octal(Math.max(0, size - 4), 12), 124, 12, 'ascii')"
+    },
+    {
+      "name": "время зависит от часов — байты разные",
+      "from": "export function tarGz(entries: TarEntry[], mtime = 0): Buffer {",
+      "to": "export function tarGz(entries: TarEntry[], mtime = Date.now() + Math.floor(Math.random() * 1e6)): Buffer {"
+    }
+  ]
+}

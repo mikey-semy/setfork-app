@@ -242,6 +242,9 @@ export async function middleware(req: NextRequest) {
     // llms.txt («допишите .md к адресу»). Человеческая заглушка ремонта им не нужна.
     pathname.endsWith('.md') ||
     pathname.endsWith('/raw') ||
+    // Скилл архивом: его распаковывает программа, а не читает человек (`SKILL.md`
+    // попадает сюда по окончанию `.md` строкой выше).
+    pathname.endsWith('/skill.tar.gz') ||
     pathname.endsWith('/releases.atom') ||
     /\/(info\/refs|git-upload-pack|git-receive-pack)$/.test(pathname)
   if (machine) {

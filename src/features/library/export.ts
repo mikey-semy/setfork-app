@@ -27,9 +27,12 @@ export interface ExportStep {
   danger?: boolean
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
+  /** Заголовок раздела, к которому относится блок (пусто — без раздела). Раздел
+   *  начинается там, где заголовок сменился, — так же его рисует страница списка. */
+  section?: LocaleText
 }
 
-const isStepBlk = (s: ExportStep): boolean => !s.type || s.type === 'step'
+export const isStepBlk = (s: ExportStep): boolean => !s.type || s.type === 'step'
 // Скрипт языка зрителя не знает (его собирают и по curl) — там остаётся
 // оригинал: blockText без языка отдаёт первый доступный, а не пустоту.
 const blockMd = (s: ExportStep, lang?: Lang): string => blockText(s.content?.md, lang)
@@ -99,6 +102,7 @@ export function toExportList(detail: TemplateDetail, commitSha?: string | null):
       danger: s.danger,
       subtasks: s.subtasks,
       refs: s.refs,
+      section: s.section,
     })),
   }
 }
