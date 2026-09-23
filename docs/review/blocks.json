@@ -1,6 +1,7 @@
 {
   "review_id": "setfork-frontend-2026-09",
   "project": "SetFork",
+  "cli": "npm run review --",
   "readable_lines": 6000,
   "gates": [
     "npm run lint",
@@ -544,8 +545,8 @@
       "role": "reviewer",
       "goal": "Проверить инструменты, которые СУДЯТ о коде: оснастка сплошного ревью, узда шкалы контролов, проверки покрытия — и то, что они не зеленеют на пустом месте.",
       "paths": [
+        ".claude/skills/review-kit/**",
         "scripts/mutate.mjs",
-        "scripts/review/**",
         "scripts/ui-parity.mjs"
       ],
       "ref_paths": []
@@ -1324,6 +1325,7 @@
         "README.md",
         "SECURITY.md",
         ".claude/**",
+        ":(exclude).claude/skills/review-kit/**",
         ":(glob)docs/*.md"
       ],
       "ref_paths": []
@@ -1338,7 +1340,6 @@
       "paths": [
         ":(glob)docs/review/*.md",
         ":(glob)docs/review/blocks/*.md",
-        ":(glob)docs/review/prompts/*.md",
         "docs/review/blocks.json",
         "docs/review/findings.jsonl",
         "docs/review/reports/H1-findings.jsonl",

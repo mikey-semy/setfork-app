@@ -1,0 +1,125 @@
+{
+  "review_id": "2026-09-full-project-review",
+  "created": "2026-09-15",
+  "project": "Пример",
+  "gates": [
+    "make api-lint",
+    "make api-test",
+    "make web-test",
+    "make migrate-validate"
+  ],
+  "note": "Образец определения блоков. Пути обобщены: у вас они будут свои, и от того, насколько точно они названы, зависит, получит ли агент свой код целиком.",
+  "exclusions": [
+    {
+      "pattern": "package-lock.json",
+      "reason": "сгенерирован npm; версии проверяются в H11 через манифесты"
+    },
+    {
+      "pattern": "server/go.sum",
+      "reason": "сгенерирован Go; пины проверяются в H11"
+    },
+    {
+      "pattern": "web/src/fonts",
+      "reason": "бинарные шрифты"
+    },
+    {
+      "pattern": "apps/web/public/icons",
+      "reason": "сгенерированные иконки PWA"
+    },
+    {
+      "pattern": "apps/web/public/sounds",
+      "reason": "бинарные звуки уведомлений"
+    },
+    {
+      "pattern": "apps/web/public/.gitkeep",
+      "reason": "пустышка"
+    },
+    {
+      "pattern": "LICENSE",
+      "reason": "текст лицензии"
+    },
+    {
+      "pattern": "docs/review",
+      "reason": "сам аппарат ревью, не предмет ревью"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "H1",
+      "slug": "authz",
+      "phase": 1,
+      "title": "Авторизация: RBAC, IDOR, видимость данных",
+      "role": "security-authz",
+      "goal": "Найти любой путь, которым пользователь получает доступ к объекту или действию, на которое у него нет права: пропущенный гейт на маршруте, отсутствующая проверка владения в usecase, скоуп-фильтр, который не сужает выборку, и грант, потерянный на чистой установке.",
+      "paths": [
+        "server/internal/handler/router.go",
+        "server/internal/infrastructure/middleware/rbac.go",
+        "server/internal/guard",
+        "server/internal/domain/permission",
+        "server/internal/handler/v1/actor_permissions.go",
+        "server/internal/handler/v1/role_handler.go",
+        "server/internal/usecase/role",
+        "server/internal/infrastructure/repository/role_repo.go",
+        "server/internal/infrastructure/repository/user_role_repo.go",
+        "server/internal/domain/entity/role.go",
+        "db/seeds/001_roles_permissions.sql"
+      ],
+      "ref_paths": [
+        "server/internal/usecase",
+        "server/internal/infrastructure/repository",
+        "server/internal/handler/v1",
+        "db/migrations",
+        "web/src/lib/permission-categories.ts",
+        "shared/src/user-roles.ts"
+      ]
+    },
+    {
+      "id": "V1a",
+      "slug": "order-lifecycle",
+      "phase": 2,
+      "title": "Заказ: жизненный цикл, статусы, переходы",
+      "role": "domain-state-machine",
+      "goal": "Пройти заказ насквозь от создания до закрытия и найти состояния, в которые система может попасть и из которых не может выйти, а также переходы, которые выполняются в обход правил.",
+      "paths": [
+        "server/internal/usecase/order",
+        "server/internal/usecase/status",
+        "server/internal/usecase/workflow",
+        "server/internal/handler/v1/order_handler.go",
+        "server/internal/handler/v1/status_handler.go",
+        "server/internal/handler/v1/workflow_handler.go",
+        "server/internal/infrastructure/repository/status_repo.go",
+        "server/internal/infrastructure/repository/workflow_repo.go",
+        "server/internal/domain/entity/order.go",
+        "server/internal/domain/entity/workflow.go",
+        "server/internal/domain/service",
+        "web/src/app/(app)/workflow",
+        "web/src/components/order-*",
+        "web/src/components/status-*",
+        "web/src/components/force-close-dialog.tsx",
+        "web/src/components/force-close-dialog.test.tsx",
+        "shared/src/order-actions.ts",
+        "shared/src/order-actions.test.ts",
+        "shared/src/order-history.ts",
+        "shared/src/order-history.test.ts",
+        "web/src/app/(app)/orders/[id]/_components/status-action-menu.tsx"
+      ],
+      "ref_paths": [
+        "server/internal/infrastructure/repository/order_repo.go",
+        "db/seeds/002_statuses_transitions.sql"
+      ]
+    },
+    {
+      "id": "E1",
+      "slug": "rbac-probe",
+      "phase": 3,
+      "title": "Живая проверка матрицы прав по API",
+      "role": "security-live",
+      "goal": "Построить скрипт, который дёргает каждый маршрут каждой ролью и сверяет ответ с ожидаемой матрицей прав. Остаётся в репозитории и ловит регрессии навсегда.",
+      "paths": [],
+      "ref_paths": [
+        "server/internal/handler/router.go",
+        "db/seeds/001_roles_permissions.sql"
+      ]
+    }
+  ]
+}
