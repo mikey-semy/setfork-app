@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "review-kit": {
+      "source": "mikey-semy/review-kit",
+      "sourceType": "github",
+      "skillPath": "skills/review-kit/SKILL.md",
+      "computedHash": "a1e5b93aa6299dcb9d52258fb8ac7bc60933d50c5e8f1d30543244662ac91ad7"
+    }
+  }
+}

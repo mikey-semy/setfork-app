@@ -4,6 +4,21 @@ file	blocks
 .claude/settings.json	V12c
 .claude/skills/react-doctor/SKILL.md	V12c
 .claude/skills/react-doctor/references/explain.md	V12c
+.claude/skills/review-kit/LICENSE	H13d
+.claude/skills/review-kit/SKILL.md	H13d
+.claude/skills/review-kit/assets/agent-banner.md	H13d
+.claude/skills/review-kit/assets/blocks.example.json	H13d
+.claude/skills/review-kit/assets/entry-point.md	H13d
+.claude/skills/review-kit/assets/guard-grep.sh	H13d
+.claude/skills/review-kit/assets/invariants.example.md	H13d
+.claude/skills/review-kit/assets/journal.example.md	H13d
+.claude/skills/review-kit/assets/makefile-snippet.mk	H13d
+.claude/skills/review-kit/assets/manifest.example.md	H13d
+.claude/skills/review-kit/assets/package-json-snippet.json	H13d
+.claude/skills/review-kit/references/fix.md	H13d
+.claude/skills/review-kit/references/hunter.md	H13d
+.claude/skills/review-kit/references/verify.md	H13d
+.claude/skills/review-kit/scripts/review.py	H13d
 .dockerignore	H13
 .env.example	H13e
 .gitattributes	H13
@@ -62,9 +77,6 @@ docs/review/findings.jsonl	V12e
 docs/review/findings.md	V12e
 docs/review/invariants.md	V12e
 docs/review/journal.md	V12e
-docs/review/prompts/fix.md	V12e
-docs/review/prompts/hunter.md	V12e
-docs/review/prompts/verify.md	V12e
 docs/review/reports/H1-access.hunter.md	V12h
 docs/review/reports/H1-access.verify.md	V12h
 docs/review/reports/H1-findings.jsonl	V12e
@@ -138,7 +150,6 @@ scripts/mutate.mjs	H13d
 scripts/probe/touch-sweep.mjs	H13f
 scripts/purge-lists.ts	H13f
 scripts/restore.sh	H13f
-scripts/review/review.py	H13d
 scripts/seed-demo.ts	H13c
 scripts/seed-ops.ts	H13f
 scripts/seed.ts	H13c
@@ -146,6 +157,7 @@ scripts/ui-drift.mjs	H13f
 scripts/ui-parity.mjs	H13d
 scripts/ui-sizes.mjs	H13f
 scripts/verify-council-chat.ts	H13f
+skills-lock.json	H13
 src/app/.well-known/oauth-authorization-server/route.ts	H11
 src/app/.well-known/oauth-protected-resource/api/mcp/route.ts	H11
 src/app/.well-known/oauth-protected-resource/route.ts	H11
