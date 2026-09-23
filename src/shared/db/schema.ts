@@ -987,6 +987,8 @@ export const JOB_TYPES = [
   'git_push',
   // IndexNow: периодический проход, сообщающий поисковикам о новых версиях публичных списков.
   'indexnow',
+  // Подметальщик брошенных прямых загрузок в S3 (shared/media/sweep-job): раз в час.
+  'uploads_sweep',
 ] as const
 export type JobType = (typeof JOB_TYPES)[number]
 
