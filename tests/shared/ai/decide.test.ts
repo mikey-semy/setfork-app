@@ -14,8 +14,13 @@ vi.mock('@/shared/settings/ai', async (orig) => ({ ...(await orig()), getOpenRou
 const recordUsage = vi.fn(async (_row: Record<string, unknown>) => {})
 vi.mock('@/shared/ai/usage', async (orig) => ({ ...(await orig()), recordUsage: (row: Record<string, unknown>) => recordUsage(row) }))
 // Предохранитель расхода считает по базе — внешнее; по умолчанию бюджет есть.
-const budget = vi.hoisted(() => ({ ok: true }))
-vi.mock('@/shared/quota', () => ({ globalBudgetOk: async () => budget.ok }))
+const budget = vi.hoisted(() => ({ ok: true as boolean | 'throws' }))
+vi.mock('@/shared/quota', () => ({
+  globalBudgetOk: async () => {
+    if (budget.ok === 'throws') throw new Error('db down')
+    return budget.ok
+  },
+}))
 
 const { decide, decisionsUrl, parseAnswer } = await import('@/shared/ai/decide')
 
@@ -144,6 +149,13 @@ describe('сбой — null, а не исключение, и строка в ж
     await expect(decide({ state: 'пункт', questions: Q })).resolves.toBeNull()
     expect(spy).not.toHaveBeenCalled()
     expect(recordUsage).not.toHaveBeenCalled()
+  })
+
+  it('предохранитель сам упал — закрыто: null, без платного вызова и без исключения', async () => {
+    budget.ok = 'throws'
+    const spy = reply(okBody)
+    await expect(decide({ state: 'пункт', questions: Q })).resolves.toBeNull()
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('тело не JSON', async () => {

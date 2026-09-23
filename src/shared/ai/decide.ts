@@ -117,7 +117,11 @@ export async function decide<K extends string>(input: {
   // вызов дешёвый, но замер делает их десятками, а кирка — на каждый шаг. Проверка здесь, а
   // не у вызывающих: тогда её нельзя забыть (находка авто-ревью к #961). Вызова не было —
   // писать в журнал расходов нечего; ответ тот же, что при сбое, — `null`.
-  if (!(await globalBudgetOk())) return null
+  // Сам предохранитель тоже может упасть (база недоступна) — тогда закрыто: не платим и
+  // не бросаем, иначе обещание «сбой — null» нарушилось бы на первой же строке
+  // (авто-ревью к #961).
+  const budgetOk = await globalBudgetOk().catch(() => false)
+  if (!budgetOk) return null
   const model = input.model ?? (await decideModel())
   const t0 = Date.now()
   let outcome: AiOutcome = 'error'

@@ -225,11 +225,18 @@ async function selfcheck() {
 
   console.log(`политика данных: ${dataCollectionPolicy()}`)
   const ok = await decide({ state: stateOf(it), questions: { guide: QUESTION }, refType: 'gnome-routing-selfcheck', refId: ref })
+  // Проверка без кода выхода — не проверка: скрипт и оператор верят статусу, а не тексту
+  // (авто-ревью к #961). Каждый провал поднимает `process.exitCode`.
+  const fail = (why: string) => {
+    console.log(`   ⛔ ${why}`)
+    process.exitCode = 1
+  }
   if (ok) {
     const g = ok.answers.guide
     console.log(`1. Jev ответил под этой политикой: ${ok.model}, выбор ${g.type === 'choice' ? g.choice : g.type}, $${ok.usage.cost}`)
   } else {
-    console.log('1. ⛔ Jev НЕ ответил под этой политикой — смотри предупреждение [decide] выше')
+    console.log('1. Jev НЕ ответил под этой политикой — смотри предупреждение [decide] выше')
+    fail('политика данных не пропустила Jev (или сбой) — глобальную политику НЕ переключать, докладывать владельцу')
   }
 
   let threw = false
@@ -240,7 +247,8 @@ async function selfcheck() {
     threw = true
   }
   console.log(`2. несуществующая модель: результат ${JSON.stringify(res)}`)
-  if (threw) console.log('   ⛔ исключение — вызывающий упал бы')
+  if (threw) fail('исключение — вызывающий упал бы')
+  else if (res !== null) fail('ожидался null')
   else console.log('   исключения нет')
 
   const rows = await db
@@ -250,10 +258,16 @@ async function selfcheck() {
     .orderBy(desc(aiUsage.createdAt))
   console.log('строки ai_usage этого прогона:')
   for (const r of rows) console.log(`   ${r.feature} · ${r.model} · ${r.outcome} · $${r.cost}`)
+  if (!rows.some((r) => r.outcome === 'ok')) fail('в журнале нет строки удачного вызова')
+  if (!rows.some((r) => r.outcome === 'error' && r.model === 'typesafe/no-such-model')) fail('в журнале нет строки сбоя')
+  if (process.exitCode) console.log('ИТОГ: проверка НЕ пройдена')
+  else console.log('ИТОГ: все проверки пройдены')
 }
 
 main().then(
-  () => process.exit(0),
+  // Выход явный (пул базы иначе держит процесс), но с тем кодом, что выставили проверки:
+  // голый `exit(0)` затирал бы провал `--selfcheck`.
+  () => process.exit(process.exitCode ?? 0),
   (e) => {
     console.error(e)
     process.exit(1)
