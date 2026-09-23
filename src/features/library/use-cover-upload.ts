@@ -46,6 +46,16 @@ export function coverFailureNext(reason: CoverFailure): 'retry' | 'pick' | null 
   return null
 }
 
+/** Уменьшить, а при любом сбое уменьшения — отдать оригинал: размер и формат тогда
+ *  оценят проверка предела и сервер, каждый со своей понятной причиной. */
+async function shrinkOrOriginal(picked: File): Promise<File> {
+  try {
+    return await shrinkImage(picked)
+  } catch {
+    return picked
+  }
+}
+
 /**
  * Загрузка обложки. Экшен приходит параметром, чтобы состояние проверялось без
  * серверного кода (как `useBlockUploads`).
@@ -53,6 +63,8 @@ export function coverFailureNext(reason: CoverFailure): 'retry' | 'pick' | null 
  * ⚠️ Отклонённый промис экшена — ОБЫЧНЫЙ исход, а не исключительный: тело больше
  * предела Next, 500 из рендера, обрыв сети — всё это приходит reject'ом, а не
  * `{ error }`. Без catch он уходил в unhandled rejection, и человек не видел ничего.
+ * По той же причине `send` не бросает НИКОГДА: всё, что после «Загрузка…», обязано
+ * кончиться либо успехом, либо причиной на экране.
  */
 export function useCoverUpload(templateId: string, upload: Upload, onDone: (url: string, file: File) => void) {
   const [state, setState] = useState<CoverUploadState>({ kind: 'idle' })
@@ -62,16 +74,16 @@ export function useCoverUpload(templateId: string, upload: Upload, onDone: (url:
     // Фото с телефона — мегабайты; обложке хватает 1600px. Уменьшаем ДО проверки
     // предела: иначе обычное фото с iPhone отказывалось бы «больше 4 МБ», хотя после
     // уменьшения весит сотни килобайт.
-    const file = await shrinkImage(picked)
+    const file = await shrinkOrOriginal(picked)
     const early = imageRejection(file)
     if (early) {
       setState({ kind: 'failed', reason: early, file })
       return
     }
-    const fd = new FormData()
-    fd.append('templateId', templateId)
-    fd.append('file', file)
     try {
+      const fd = new FormData()
+      fd.append('templateId', templateId)
+      fd.append('file', file)
       const res = await upload(fd)
       if ('error' in res) {
         setState({ kind: 'failed', reason: res.error, file })
@@ -87,5 +99,10 @@ export function useCoverUpload(templateId: string, upload: Upload, onDone: (url:
     }
   }
 
-  return { state, send }
+  /** Убрать прежнюю ошибку загрузки — когда человек начал другое действие. */
+  function reset() {
+    setState((s) => (s.kind === 'failed' ? { kind: 'idle' } : s))
+  }
+
+  return { state, send, reset }
 }
