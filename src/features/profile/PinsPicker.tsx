@@ -68,6 +68,10 @@ export function PinsPicker({ lists, hasMore, lang }: { lists: PinnableList[]; ha
   // Закрыть без сохранения — вернуть выбор к закреплённому: иначе следующее открытие
   // показало бы галки, которых на профиле нет.
   const close = () => {
+    // Пока сохранение не вернулось, окно не закрывается: иначе оно откатило бы галки к
+    // прежнему, запись всё равно легла бы, и следующее «Сохранить» отменило бы её
+    // (находка авто-ревью). Кнопки внизу в это время и так недоступны.
+    if (pending) return
     // Незавершённый поиск не должен заполнить уже сброшенное окно: следующий номер
     // делает его ответ устаревшим (находка авто-ревью).
     seq.current++
@@ -90,7 +94,16 @@ export function PinsPicker({ lists, hasMore, lang }: { lists: PinnableList[]; ha
 
   return (
     <>
-      <TextButton tone="accent" onClick={() => setOpen(true)} className="gap-1">
+      <TextButton
+        tone="accent"
+        onClick={() => {
+          // Выбор — заново из закреплённого СЕЙЧАС: между открытиями его мог поменять
+          // сам же владелец — кнопкой в шапке списка или прошлым сохранением.
+          setSel(initial)
+          setOpen(true)
+        }}
+        className="gap-1"
+      >
         <Pencil size={11} /> {t('pinsCustomize', lang)}
       </TextButton>
       {/* Шапка одна — у PickerPanel; OverlayPanel без title, иначе два заголовка. */}
@@ -107,7 +120,7 @@ export function PinsPicker({ lists, hasMore, lang }: { lists: PinnableList[]; ha
                 {t('pinsRemaining', lang).replace('{n}', String(MAX_PINS - sel.size))}
               </span>
               <div className="flex gap-2">
-                <Button variant="ghost" onClick={close}>
+                <Button variant="ghost" onClick={close} disabled={pending}>
                   {t('cancel', lang)}
                 </Button>
                 <Button variant="primary" onClick={save} disabled={pending || !changed}>
