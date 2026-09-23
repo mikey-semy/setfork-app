@@ -43,7 +43,15 @@ type Pred = { id: string; pred: string; confidence?: number; probs?: Record<stri
 const roster: Gnome[] = JSON.parse(readFileSync(join(HERE, 'gnomes.json'), 'utf8')).gnomes
 const ds = JSON.parse(readFileSync(join(HERE, 'dataset.json'), 'utf8')) as { lists: Record<string, ListMeta>; items: Item[] }
 
-// ── базовая линия: ядро tenderForTags; никто не подошёл — универсал, как у вызывающих
+// ── базовая линия: ядро tenderForTags; никто не подошёл — универсал.
+//
+// ⚠️ Фолбэк на универсала — правило ЗАМЕРА (README HQ: «иначе универсал»), а не прода:
+// сам `tenderForTags` в этом случае возвращает null, и вызывающие берут служебный аккаунт
+// или отказываются. Для кирки универсал и есть задуманный запасной проводник, поэтому
+// правило сохранено — иначе не сошлась бы исходная базовая линия 30/57. Сколько её
+// «допустимых» держится только на фолбэке, отчёт показывает отдельной строкой (авто-ревью
+// к #961).
+const noSpecialist = (tags: string[]) => rankByAffinity(tags, roster).length === 0
 function baseline(tags: string[]): string {
   return rankByAffinity(tags, roster)[0]?.id ?? 'generalist'
 }
@@ -152,6 +160,12 @@ async function main() {
 
   const base: Pred[] = ds.items.map((it) => ({ id: it.id, pred: baseline(ds.lists[it.list].tags) }))
   const report = [`# Результаты — ${new Date().toISOString().slice(0, 10)}`, '', score('Базовая линия: tenderForTags (теги списка × домены)', base)]
+  const byFallback = ds.items.filter((it) => noSpecialist(ds.lists[it.list].tags))
+  const okByFallback = byFallback.filter((it) => it.gold === 'generalist' || it.ok.includes('generalist')).length
+  report.push(
+    `Мастера по тегам не нашлось у ${byFallback.length} пунктов из ${ds.items.length}: им назначен универсал — правило замера, в проде \`tenderForTags\` вернул бы null. Из «допустимых» базовой линии ${okByFallback} держатся только на этом фолбэке.`,
+    '',
+  )
 
   if (!args.includes('--baseline')) {
     const { decide, decideModel } = await import('../src/shared/ai/decide')
