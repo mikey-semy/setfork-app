@@ -4,7 +4,7 @@ import { aiUsage, db, users } from '@/shared/db'
 import { currentAiActor } from './actor-context'
 import type { AiProviderId } from '@/shared/settings/ai'
 
-export type AiFeature = 'generate' | 'regenerate' | 'refine' | 'note' | 'moderate' | 'embed' | 'translate' | 'mcp-gnome' | 'dig' | 'assist' | 'gate' | 'landing'
+export type AiFeature = 'generate' | 'regenerate' | 'refine' | 'note' | 'moderate' | 'embed' | 'translate' | 'mcp-gnome' | 'dig' | 'assist' | 'gate' | 'landing' | 'decide'
 
 // Форма usage-объекта OpenRouter (providerMetadata.openrouter.usage).
 export interface OpenRouterUsage {

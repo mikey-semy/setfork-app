@@ -119,11 +119,14 @@ scripts/eval-retrieval.ts	H13f
 scripts/facet-eval.ts	H13f
 scripts/fix-degenerate-slugs.ts	H13f
 scripts/git-parity-audit.ts	H13f
+scripts/gnome-routing-eval.ts	H13f
 scripts/gnome-society.ts	H13f
 scripts/gnomes-coupling.mjs	H13f
 scripts/golden-domain-read.ts	H13f
 scripts/itest-env.ts	H13c
 scripts/lib/audit-report.mjs	H13c
+scripts/lib/gnome-routing/dataset.json	H13c
+scripts/lib/gnome-routing/gnomes.json	H13c
 scripts/lib/row-touch.mjs	H13c
 scripts/lib/stacked-hit.mjs	H13c
 scripts/lib/ui-scan.mjs	H13c
@@ -925,6 +928,7 @@ src/shared/ai/council/text.ts	V8e
 src/shared/ai/council/types.ts	V8e
 src/shared/ai/council/voices.ts	V8e
 src/shared/ai/credits.ts	V8f
+src/shared/ai/decide.ts	V8f
 src/shared/ai/dehydrate.ts	V8f
 src/shared/ai/detail-level.ts	V8f
 src/shared/ai/dialogue.ts	V8f
@@ -1599,6 +1603,7 @@ tests/shared/ai/assist.test.ts	V8g
 tests/shared/ai/council-anonymity.test.ts	V8g
 tests/shared/ai/craft-rules.itest.ts	V8g
 tests/shared/ai/credits-unknown-shape.test.ts	V8g
+tests/shared/ai/decide.test.ts	V8g
 tests/shared/ai/dehydrate.test.ts	V8g
 tests/shared/ai/embed-capability.test.ts	V8g
 tests/shared/ai/embed-space.test.ts	V8g

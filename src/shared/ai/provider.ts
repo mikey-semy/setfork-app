@@ -39,8 +39,11 @@ export const dataCollectionPolicy = (): 'deny' | 'allow' =>
  * Собрано в одном месте намеренно. Раньше `extraBody` формировался по месту вызова (генерация,
  * совет, раскопка, гномы), и «добавить условие во все вызовы» означало не забыть ни одного из
  * них — а забыть легко: приватность как раз и отсутствовала везде.
+ *
+ * Экспортируется для вызовов МИМО чат-клиента: Decisions API (`decide.ts`) ходит своим
+ * `fetch`, и копия правила там разъехалась бы с этой на первой же правке.
  */
-function openRouterBody(extra?: Record<string, unknown>): Record<string, unknown> {
+export function openRouterBody(extra?: Record<string, unknown>): Record<string, unknown> {
   const caller = (extra?.provider as Record<string, unknown> | undefined) ?? {}
   return {
     ...extra,

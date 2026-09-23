@@ -172,9 +172,16 @@ export function resolveAiProvider(
     }
   }
   const apiKey = (m[API_KEY_SETTING]?.trim() || env.OPENROUTER_API_KEY || '').trim()
-  return apiKey
-    ? { provider: 'openrouter', baseUrl: (env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, ''), apiKey }
-    : null
+  return apiKey ? { provider: 'openrouter', baseUrl: openRouterBaseUrl(env), apiKey } : null
+}
+
+/**
+ * Корень API OpenRouter (…/v1) — один на все вызовы, которые туда ходят, включая те, что
+ * идут мимо активного провайдера (остаток на счету, Decisions API). В проде адрес может
+ * смотреть на egress-мост, и зашитый по месту вызова `openrouter.ai` его бы обошёл.
+ */
+export function openRouterBaseUrl(env: Record<string, string | undefined> = process.env): string {
+  return (env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1').trim().replace(/\/$/, '')
 }
 
 /** Откуда взялся ключ: из базы (правится в админке), из env стенда, или его нет вовсе.
