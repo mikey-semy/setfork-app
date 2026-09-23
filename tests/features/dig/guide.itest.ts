@@ -86,6 +86,53 @@ describe('решение по пункту', () => {
   })
 })
 
+describe('гонка двух первых вопросов по одному пункту', () => {
+  it('оба получают одного победителя, строка одна, и тень лежит у него', async () => {
+    // Первый запрос выберет dba, второй — devops; тени у обоих «да». Ответы на выбор
+    // придерживаются, пока не придут ОБА запроса: так оба гарантированно прошли мимо пустого
+    // кэша, и гонка воспроизводится каждый раз, а не когда повезёт.
+    let asked = 0
+    let both: () => void = () => {}
+    const bothAsked = new Promise<void>((r) => (both = r))
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_u, init) => {
+      const body = JSON.parse((init as RequestInit).body as string)
+      if (body.questions.fits) return json(noul(0.9))
+      const n = ++asked
+      if (n === 2) both()
+      await bothAsked
+      return json(choice(n === 1 ? 'dba' : 'devops'))
+    })
+    const [a, b] = await Promise.all([guideForItem(item(), ROSTER), guideForItem(item(), ROSTER)])
+    await Promise.all([a?.shadow, b?.shadow])
+    expect(asked).toBe(2)
+    const rows = await db.select().from(digGuides).where(eq(digGuides.templateId, tplId))
+    expect(rows).toHaveLength(1)
+    expect(a?.expert.id).toBe(rows[0].gnomeId)
+    expect(b?.expert.id).toBe(rows[0].gnomeId)
+    expect(rows[0].fits).toBeCloseTo(0.9, 5)
+  })
+
+  it('теневой ответ чужого мастера в строку не ложится', async () => {
+    // Строку перевыбрали, пока шёл теневой вопрос про dba: его ответ уже не про неё.
+    let release: () => void = () => {}
+    const gate = new Promise<void>((r) => (release = r))
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_u, init) => {
+      const body = JSON.parse((init as RequestInit).body as string)
+      if (body.questions.fits) {
+        await gate
+        return json(noul(0.9))
+      }
+      return json(choice('dba'))
+    })
+    const r = await guideForItem(item(), ROSTER)
+    await db.update(digGuides).set({ gnomeId: 'devops' }).where(eq(digGuides.templateId, tplId))
+    release()
+    await r?.shadow
+    const [row] = await db.select().from(digGuides).where(eq(digGuides.templateId, tplId))
+    expect(row).toMatchObject({ gnomeId: 'devops', fits: null })
+  })
+})
+
 describe('сбой — null, и в выборку калибровки ничего не попадает', () => {
   it('модель не ответила — null, строки нет', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ error: { message: 'down' } }, 503))
