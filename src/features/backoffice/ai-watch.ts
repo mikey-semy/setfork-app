@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, gt, gte, ne, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, gte, ne, notInArray, sql } from 'drizzle-orm'
 import { aiUsage, db } from '@/shared/db'
 import { ERROR_STREAK_TRIP } from '@/shared/agents/canary'
 
@@ -62,6 +62,19 @@ const FRESH_WINDOW_MS = 24 * 3_600_000
 // Ровно так первая версия этой правки погасила сторожа целиком.
 const notAccounting = sql`${aiUsage.refType} is distinct from 'council-run'`
 
+/**
+ * Вызов ЧАТ-канала — то, о чём сторож и говорит. Вызовы других эндпоинтов провайдера
+ * здоровье чата не показывают: их успехи прятали бы его поломку, а их сбои поднимали бы
+ * ложную тревогу. Таких двое:
+ *  • `embed` — эмбеддинги (в инциденте 12.08 проходили, пока чат лежал);
+ *  • `decide` — Decisions API (Jev): свой эндпоинт, и может работать, пока чат идёт к
+ *    другому провайдеру. Прогон замера — 57 вызовов разом — иначе стёр бы настоящую серию
+ *    отказов чата (находка авто-ревью к #961).
+ * Одно условие на все запросы сторожа: пять копий `ne(feature, 'embed')` рано или поздно
+ * разошлись бы на новом эндпоинте.
+ */
+const chatChannel = notInArray(aiUsage.feature, ['embed', 'decide'])
+
 export async function channelState(): Promise<ChannelState> {
   // ОБА чтения — из ОДНОГО снимка. Порознь они видят разное: успех, записанный между ними,
   // попадал во второй запрос и не попадал в первый, и состояние выходило противоречивым —
@@ -74,7 +87,7 @@ export async function channelState(): Promise<ChannelState> {
         tx
           .select({ outcome: aiUsage.outcome, model: aiUsage.model })
           .from(aiUsage)
-          .where(and(ne(aiUsage.feature, 'embed'), notAccounting, gte(aiUsage.createdAt, new Date(Date.now() - FRESH_WINDOW_MS))))
+          .where(and(chatChannel, notAccounting, gte(aiUsage.createdAt, new Date(Date.now() - FRESH_WINDOW_MS))))
           .orderBy(desc(aiUsage.createdAt))
           .limit(ERROR_STREAK_TRIP),
         // Последний успех берём БЕЗ окна свежести: имя эпизода должно быть устойчивым, даже
@@ -82,7 +95,7 @@ export async function channelState(): Promise<ChannelState> {
         tx
           .select({ at: aiUsage.createdAt })
           .from(aiUsage)
-          .where(and(ne(aiUsage.feature, 'embed'), notAccounting, eq(aiUsage.outcome, 'ok')))
+          .where(and(chatChannel, notAccounting, eq(aiUsage.outcome, 'ok')))
           .orderBy(desc(aiUsage.createdAt))
           .limit(1),
       ])
@@ -119,7 +132,7 @@ export async function successAfter(since: Date): Promise<boolean> {
   const [row] = await db
     .select({ id: aiUsage.id })
     .from(aiUsage)
-    .where(and(ne(aiUsage.feature, 'embed'), eq(aiUsage.outcome, 'ok'), gt(aiUsage.createdAt, since)))
+    .where(and(chatChannel, eq(aiUsage.outcome, 'ok'), gt(aiUsage.createdAt, since)))
     .limit(1)
   return !!row
 }
@@ -130,7 +143,7 @@ export async function callsLastDay(): Promise<number> {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(aiUsage)
-    .where(and(gte(aiUsage.createdAt, new Date(Date.now() - 86_400_000)), ne(aiUsage.feature, 'embed')))
+    .where(and(gte(aiUsage.createdAt, new Date(Date.now() - 86_400_000)), chatChannel))
   return row?.n ?? 0
 }
 
@@ -150,7 +163,7 @@ export async function callsOnDay(daysAgo: number): Promise<{ calls: number; fail
     .from(aiUsage)
     .where(
       and(
-        ne(aiUsage.feature, 'embed'),
+        chatChannel,
         notAccounting,
         // ТОЛЬКО ВЫЗОВЫ КОМПАНИИ: сводка говорит про её день, и чужие отказы ей приписывать
         // нельзя. Раньше признака не было, и пять неудачных генераций ЧЕЛОВЕКА читались как
