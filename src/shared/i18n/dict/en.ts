@@ -2300,6 +2300,7 @@ export const en = {
   'editor.pasteDropAttach': 'paste, drop, or attach files',
   'editor.uploadingFile': 'uploading',
   'editor.uploadFailed': 'upload failed',
+  'editor.uploadRejected': 'The file didn’t upload: the server refused it (it may be too large) or the connection dropped.',
   // Страница предложения: сравнение версий и судьба ветки
   'pr.basedOnV': 'based on v{v}',
   'pr.baseToSuggestion': 'v{v} → suggestion',

@@ -2291,6 +2291,7 @@ export const ru: Record<DictKey, string> = {
   'editor.pasteDropAttach': 'вставьте, перетащите или прикрепите файлы',
   'editor.uploadingFile': 'загрузка',
   'editor.uploadFailed': 'загрузка не удалась',
+  'editor.uploadRejected': 'Файл не загрузился: сервер его не принял (возможно, он слишком большой) или пропала связь.',
   // Страница предложения: сравнение версий и судьба ветки
   'pr.basedOnV': 'на основе v{v}',
   'pr.baseToSuggestion': 'v{v} → предложение',
