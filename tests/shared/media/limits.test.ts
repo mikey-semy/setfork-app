@@ -35,17 +35,20 @@ describe('uploadRejection', () => {
   it('клип хранится с настоящим видео-типом, вложение — только octet-stream', () => {
     expect(uploadContentType('video', 'webm')).toBe('video/webm')
     expect(uploadContentType('video', 'ogv')).toBe('video/ogg')
+    // Клип с iPhone — QuickTime, а не «не тот тип».
+    expect(uploadContentType('video', 'mov')).toBe('video/quicktime')
+    expect(uploadRejection('video', { name: 'IMG_0001.MOV', size: 10 })).toBeNull()
     expect(uploadContentType('file', 'pdf')).toBe('application/octet-stream')
   })
 
   it('accept для выбора файла — из той же таблицы', () => {
-    expect(uploadAccept('video').split(',')).toEqual(['.mp4', '.webm', '.ogv', '.ogg'])
+    expect(uploadAccept('video').split(',')).toEqual(['.mp4', '.webm', '.ogv', '.ogg', '.mov'])
     expect(uploadAccept('file')).not.toContain('.svg')
   })
 })
 
 describe('parseVideoEmbed узнаёт свой клип', () => {
-  it.each(['mp4', 'webm', 'ogv', 'ogg'])('/media/videos/…/uuid.%s → <video>', (ext) => {
+  it.each(['mp4', 'webm', 'ogv', 'ogg', 'mov', 'MOV'])('/media/videos/…/uuid.%s → <video>', (ext) => {
     const url = `/media/videos/u1/0b1c2d3e-0000-4000-8000-000000000000.${ext}`
     expect(parseVideoEmbed(url)).toEqual({ kind: 'file', src: url })
   })

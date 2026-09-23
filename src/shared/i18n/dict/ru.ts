@@ -2295,7 +2295,7 @@ export const ru: Record<DictKey, string> = {
   // Редактор списка: дропзона загрузки, опрос, тест
   'editor.uploading': 'Загрузка…',
   'editor.dropImage': 'Скриншот: перетащите или нажмите',
-  'editor.dropVideo': 'Свой файл: перетащите или нажмите (MP4/WEBM, до {n} МБ)',
+  'editor.dropVideo': 'Свой файл: перетащите или нажмите (MP4/MOV/WEBM, до {n} МБ)',
   'editor.dropFile': 'Файл: перетащите или нажмите (PDF/док/архив, до {n} МБ)',
   'editor.optionN': 'Вариант {n}',
   'editor.removeOption': 'Удалить вариант',

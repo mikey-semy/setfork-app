@@ -148,6 +148,21 @@ describe('completeUpload', () => {
     expect(await db.select().from(uploads)).toHaveLength(0)
   })
 
+  it('.mov с iPhone (QuickTime) — done и раздаётся как video/quicktime', async () => {
+    const qt = Buffer.concat([Buffer.from([0, 0, 0, 0x14]), Buffer.from('ftypqt  '), Buffer.alloc(20)])
+    const { id } = await begun(alice, 'IMG_0001.MOV', qt, 'video')
+    expect(await completeUpload(alice, id)).toMatchObject({ name: 'IMG_0001.MOV' })
+    const [row] = await db.select().from(uploads)
+    expect(row).toMatchObject({ status: 'done', contentType: 'video/quicktime' })
+    expect(row.key.endsWith('.mov')).toBe(true)
+    expect((await mediaReq(row.key)).headers.get('location')).toContain('type=video/quicktime')
+  })
+
+  it('mp4 под расширением .mov — bad_type: бренд обязан совпасть с расширением', async () => {
+    const { id } = await begun(alice, 'clip.mov', MP4, 'video')
+    expect(await completeUpload(alice, id)).toEqual({ error: 'bad_type' })
+  })
+
   it('webm под расширением .mp4 — bad_type: тип объекта обязан совпасть с расширением', async () => {
     const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(20)])
     const { id } = await begun(alice, 'clip.mp4', webm, 'video')

@@ -18,7 +18,9 @@ export function sniffImage(b: Buffer): string | null {
 }
 
 export function sniffVideo(b: Buffer): string | null {
-  if (b.length >= 12 && b.toString('ascii', 4, 8) === 'ftyp') return 'video/mp4' // ISO-BMFF (mp4/mov)
+  // ISO-BMFF: 'ftyp' в байтах 4..8, major brand в 8..12. 'qt  ' — QuickTime (.mov с
+  // iPhone), остальные бренды (isom, mp42, avc1, M4V …) — MP4.
+  if (b.length >= 12 && b.toString('ascii', 4, 8) === 'ftyp') return b.toString('ascii', 8, 12) === 'qt  ' ? 'video/quicktime' : 'video/mp4'
   if (b.length >= 4 && b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'video/webm' // EBML
   if (b.length >= 4 && b.toString('ascii', 0, 4) === 'OggS') return 'video/ogg'
   return null

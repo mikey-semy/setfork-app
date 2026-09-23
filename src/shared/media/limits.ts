@@ -77,7 +77,10 @@ export const UPLOAD_KINDS = {
     maxBytes: VIDEO_MAX_BYTES,
     // Клип проигрывается `<video>` инлайн — тип обязан быть настоящим; при финализации
     // он сверяется с сигнатурой содержимого (`sniffVideo`).
-    ext: { mp4: 'video/mp4', webm: 'video/webm', ogv: 'video/ogg', ogg: 'video/ogg' },
+    // mov — iPhone снимает в QuickTime; GitHub MOV принимает. Играет ли он в браузере,
+    // решает кодек, а не контейнер: H.264 — везде, HEVC — в Safari (Chrome/Firefox
+    // зависят от ОС и железа).
+    ext: { mp4: 'video/mp4', webm: 'video/webm', ogv: 'video/ogg', ogg: 'video/ogg', mov: 'video/quicktime' },
   },
 } as const satisfies Record<string, { maxBytes: number; ext: Record<string, string> }>
 

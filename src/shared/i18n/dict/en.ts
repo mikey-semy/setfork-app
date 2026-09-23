@@ -2305,7 +2305,7 @@ export const en = {
   // Редактор списка: дропзона загрузки, опрос, тест
   'editor.uploading': 'Uploading…',
   'editor.dropImage': 'Screenshot: drag or click',
-  'editor.dropVideo': 'Own file: drag or click (MP4/WEBM, up to {n} MB)',
+  'editor.dropVideo': 'Own file: drag or click (MP4/MOV/WEBM, up to {n} MB)',
   'editor.dropFile': 'File: drag or click (PDF/doc/archive, up to {n} MB)',
   'editor.optionN': 'Option {n}',
   'editor.removeOption': 'Remove option',
