@@ -179,6 +179,25 @@ describe('сбой — null, а не исключение, и строка в ж
     expect(recordUsage).not.toHaveBeenCalled()
   })
 
+  it('каждая попытка отдаётся с неокруглённой стоимостью — и удачная, и оплаченная неудача', async () => {
+    const seen: { cost: number; outcome: string }[] = []
+    reply(okBody)
+    await decide({ state: 'пункт', questions: Q, onAttempt: (x) => seen.push(x) })
+    reply({ model: 'm', answers: { guide: { choice: 'dba' } }, usage: { input_tokens: 5, output_tokens: 1, cost: 0.0000123456 } })
+    await decide({ state: 'пункт', questions: Q, onAttempt: (x) => seen.push(x) })
+    expect(seen).toEqual([
+      { cost: 0.000013692, inputTokens: 326, outcome: 'ok' },
+      { cost: 0.0000123456, inputTokens: 5, outcome: 'invalid' },
+    ])
+  })
+
+  it('без попытки (бюджет) — onAttempt не зовётся', async () => {
+    budget.ok = false
+    const onAttempt = vi.fn()
+    await decide({ state: 'пункт', questions: Q, onAttempt })
+    expect(onAttempt).not.toHaveBeenCalled()
+  })
+
   it('тело не JSON', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('<html>502</html>', { status: 502 }))
     await expect(decide({ state: 'пункт', questions: Q })).resolves.toBeNull()

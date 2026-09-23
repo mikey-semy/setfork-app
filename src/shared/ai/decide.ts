@@ -124,6 +124,13 @@ export async function decide<K extends string>(input: {
   /** uuid: колонка `ai_usage.ref_id` другого не примет, и строка журнала пропала бы молча. */
   refId?: string
   userId?: string | null
+  /**
+   * Каждая СОСТОЯВШАЯСЯ попытка запроса — с неокруглённой стоимостью из ответа, включая
+   * оплаченные неудачи. Нужна замеру: журнал `ai_usage` хранит стоимость с шестью знаками,
+   * а вызов Jev стоит порядка 0,00006 — сумма округлённых строк врала бы на процент, а
+   * число пунктов не равно числу запросов, если часть отсеял бюджет (авто-ревью к #961).
+   */
+  onAttempt?: (a: { cost: number; inputTokens: number; outcome: AiOutcome }) => void
 }): Promise<DecideResult<K> | null> {
   // Предохранитель инстанса — ПЕРЕД платным вызовом, как у любого вызова модели (AGENTS.md §9):
   // вызов дешёвый, но замер делает их десятками, а кирка — на каждый шаг. Проверка здесь, а
@@ -195,6 +202,7 @@ export async function decide<K extends string>(input: {
   } finally {
     // `return` здесь нельзя: он подменил бы собой результат `try`.
     if (attempted) {
+      input.onAttempt?.({ cost: usage.cost, inputTokens: usage.inputTokens, outcome })
       await recordUsage({
         userId: input.userId ?? null,
         feature: 'decide',

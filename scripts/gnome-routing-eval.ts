@@ -191,9 +191,18 @@ async function main() {
     const model = await decideModel()
     // Один uuid на прогон (`ai_usage.ref_id` — uuid): по нему расход прогона сверяется с журналом.
     const runId = randomUUID()
+    // Счёт по НАСТОЯЩИМ запросам, с неокруглённой стоимостью из ответов (`onAttempt`):
+    // пункт, отсеянный бюджетом, запросом не был, а журнал округляет стоимость до шести
+    // знаков — при цене вызова около 0,00006 это процент ошибки (авто-ревью к #961).
+    const attempts = { n: 0, cost: 0, tokens: 0 }
+    const count = (a: { cost: number; inputTokens: number }) => {
+      attempts.n++
+      attempts.cost += a.cost
+      attempts.tokens += a.inputTokens
+    }
     const t0 = Date.now()
     const jev: Pred[] = await pool(ds.items, CONCURRENCY, async (it) => {
-      const r = await decide({ state: stateOf(it), questions: { guide: QUESTION }, refType: 'gnome-routing-eval', refId: runId })
+      const r = await decide({ state: stateOf(it), questions: { guide: QUESTION }, refType: 'gnome-routing-eval', refId: runId, onAttempt: count })
       if (!r) return { id: it.id, pred: '?', error: 'decide() вернул null' }
       const a = r.answers.guide
       return {
@@ -208,28 +217,19 @@ async function main() {
     })
     const secs = (Date.now() - t0) / 1000
     const answered = [...new Set(jev.map((p) => p.model).filter(Boolean))].join(', ') || model
-    // Стоимость — ТОЛЬКО из ответов (`usage.cost`), без оценки по прайсу. Итог берётся из
-    // ЖУРНАЛА по uuid прогона, а не суммой удачных ответов: неразобранный ответ, за который
-    // провайдер взял деньги, `decide()` отдаёт как null, и сумма по предсказаниям делала
-    // бы сбойный прогон дешевле, чем он был (находка авто-ревью к #961). В журнал `decide()`
-    // пишет `usage.cost` как есть.
+    // Стоимость — ТОЛЬКО из ответов (`usage.cost`), без оценки по прайсу, неокруглённая и
+    // включая оплаченные неудачи. Журнал `ai_usage` — для сверки: там те же вызовы, но с
+    // округлением до шести знаков.
     const { db, aiUsage } = await import('../src/shared/db')
     const { and, eq, sql } = await import('drizzle-orm')
-    const [spent] = await db
-      .select({
-        usd: sql<number>`coalesce(sum(${aiUsage.costUsd}), 0)::float8`,
-        calls: sql<number>`count(*)::int`,
-        tokens: sql<number>`coalesce(sum(${aiUsage.inputTokens}), 0)::int`,
-      })
+    const [journal] = await db
+      .select({ usd: sql<number>`coalesce(sum(${aiUsage.costUsd}), 0)::float8`, calls: sql<number>`count(*)::int` })
       .from(aiUsage)
       .where(and(eq(aiUsage.refType, 'gnome-routing-eval'), eq(aiUsage.refId, runId)))
-    const billed = spent?.usd ?? 0
-    // Токены — из того же журнала: оплаченный неразобранный ответ их тоже потратил.
-    const tokens = spent?.tokens ?? 0
     const errors = jev.filter((p) => p.error)
     report.push(score(`Jev (${answered}, через OpenRouter Decisions)`, jev))
     report.push(
-      `Прогон: ${jev.length} запросов за ${secs.toFixed(1)} с, ${tokens} входных токенов, $${billed.toFixed(5)} — сумма \`usage.cost\` по журналу \`ai_usage\` (${spent?.calls ?? 0} строк прогона), ошибок: ${errors.length}.`,
+      `Прогон: ${jev.length} пунктов, ${attempts.n} запросов к провайдеру за ${secs.toFixed(1)} с, ${attempts.tokens} входных токенов, $${attempts.cost.toFixed(6)} — сумма \`usage.cost\` из ответов (журнал \`ai_usage\`: ${journal?.calls ?? 0} строк, $${(journal?.usd ?? 0).toFixed(6)} с округлением до 6 знаков), ошибок: ${errors.length}.`,
       '',
     )
     // Сырые ответы — рядом с отчётом, а не в репозитории: иначе каждый прогон пачкал бы дерево.
