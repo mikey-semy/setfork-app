@@ -8,6 +8,9 @@ import type { ListPageData } from './load'
 type Props = Pick<ListPageData, 'readOnlyView' | 'mon'> & {
   step: ListPageData['steps'][number]
   lang: Lang
+  /** Отступы ряда. По умолчанию — отступ сверху от содержимого над ним; у текста без
+   *  слов ряд первый в карточке и вместо этого резервирует угол кнопки раскопки. */
+  className?: string
 }
 
 /**
@@ -18,7 +21,7 @@ type Props = Pick<ListPageData, 'readOnlyView' | 'mon'> & {
  * было собрать только из шагов или вписывать ссылки в текст строкой. Хранилище и
  * канон `refs` держат у любого блока, поэтому и показ у них один (#962).
  */
-export function BlockRefs({ step, readOnlyView, mon, lang }: Props) {
+export function BlockRefs({ step, readOnlyView, mon, lang, className = 'mt-3' }: Props) {
   // href — через /api/go (журнал кликов), если трекинг включён в админке. Маршрут
   // берёт refs[i] у любой строки, не только у шага. У веток snapshot-блоки без
   // DB-id → прямой url. Экспорт/MD не трогаем.
@@ -29,7 +32,7 @@ export function BlockRefs({ step, readOnlyView, mon, lang }: Props) {
   }))
   if (refs.length === 0) return null
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
+    <div className={`flex flex-wrap gap-2 ${className}`}>
       {refs.map((r) => {
         // Подпись ссылки нередко и есть URL — без переноса чип уносит страницу.
         const cls = badgeClass({

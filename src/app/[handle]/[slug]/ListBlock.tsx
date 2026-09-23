@@ -58,8 +58,10 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
           </span>
         )}
         {md && <Markdown className={`text-body-lg leading-relaxed text-ink-2${canDig ? ' pr-10' : ''}`}>{renderWikiLinks(md)}</Markdown>}
-        {/* Источники текста — тем же рядом чипов, что у шага (#962). */}
-        <BlockRefs step={step} readOnlyView={readOnlyView} mon={mon} lang={lang} />
+        {/* Источники текста — тем же рядом чипов, что у шага (#962). У текста без слов
+            ряд первый в карточке и сам резервирует угол кирки, как в RunTextBlock, —
+            иначе длинная ссылка уходит под кнопку (находка Codex на #963). */}
+        <BlockRefs step={step} readOnlyView={readOnlyView} mon={mon} lang={lang} className={md ? 'mt-3' : canDig ? 'pr-10' : ''} />
       </div>
     )
   },
