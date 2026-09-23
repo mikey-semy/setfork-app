@@ -65,6 +65,9 @@ export function PinsPicker({ lists, hasMore, lang }: { lists: PinnableList[]; ha
   // Закрыть без сохранения — вернуть выбор к закреплённому: иначе следующее открытие
   // показало бы галки, которых на профиле нет.
   const close = () => {
+    // Незавершённый поиск не должен заполнить уже сброшенное окно: следующий номер
+    // делает его ответ устаревшим (находка авто-ревью).
+    seq.current++
     setOpen(false)
     setSel(initial)
     setQ('')
@@ -74,6 +77,7 @@ export function PinsPicker({ lists, hasMore, lang }: { lists: PinnableList[]; ha
   const save = () =>
     start(async () => {
       await updatePins([...sel])
+      seq.current++
       setOpen(false)
       setQ('')
       setFound(null)

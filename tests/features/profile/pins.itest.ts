@@ -168,12 +168,15 @@ describe('кнопка в шапке списка', () => {
     expect(await pinnedSlugs()).toHaveLength(6)
   })
 
-  it('закреплённый, ставший приватным, слот не занимает', async () => {
-    // Флаг у него остаётся, но на профиле его нет: отказ «уже шесть», когда видно пять,
-    // был бы враньём.
+  it('закреплённый, ставший приватным, слот не занимает — и седьмым не вернётся', async () => {
+    // На профиле его нет: отказ «уже шесть», когда видно пять, был бы враньём. Но и
+    // просто не считать его мало — вернись он в публичные, на профиле стало бы семь.
     for (let i = 1; i <= 6; i++) await setListPinned(id[`pub-${i}`], true)
     await db.update(templates).set({ visibility: 'private' }).where(eq(templates.id, id['pub-1']))
     expect(await setListPinned(id['pub-7'], true)).toEqual({ ok: true })
+    await db.update(templates).set({ visibility: 'public' }).where(eq(templates.id, id['pub-1']))
+    expect(await pinnedSlugs()).toHaveLength(6)
+    expect(await pinnedSlugs()).not.toContain('pub-1')
   })
 
   it('приватный — отказ «не видят все»', async () => {

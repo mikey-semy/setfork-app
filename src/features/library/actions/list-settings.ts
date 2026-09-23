@@ -104,10 +104,19 @@ export async function setListPinned(templateId: string, pinned: boolean): Promis
         .from(templates)
         .where(and(eq(templates.id, templateId), eq(templates.ownerId, session.userId), publiclyVisible()))
       if (!target) return 'notPublic' as const
+      // Закрепление, «уснувшее» вместе со списком (стал приватным, черновиком, снят
+      // модерацией), снимается ЗДЕСЬ, до подсчёта. Просто не считать его мало: вернись
+      // список в публичные — на профиле стало бы семь (находка авто-ревью). А снимать в
+      // каждом пути, где список теряет видимость, значит однажды забыть один из пяти.
+      // Так же ведёт себя GitHub: ставший приватным репозиторий с профиля открепляется.
+      await tx
+        .update(templates)
+        .set({ pinned: false })
+        .where(and(eq(templates.ownerId, session.userId), eq(templates.pinned, true), sql`not (${publiclyVisible()})`))
       const [{ n }] = await tx
         .select({ n: sql<number>`count(*)::int` })
         .from(templates)
-        .where(and(eq(templates.ownerId, session.userId), eq(templates.pinned, true), publiclyVisible(), ne(templates.id, templateId)))
+        .where(and(eq(templates.ownerId, session.userId), eq(templates.pinned, true), ne(templates.id, templateId)))
       if (n >= MAX_PINS) return 'full' as const
       await tx.update(templates).set({ pinned: true }).where(eq(templates.id, templateId))
       return 'ok' as const

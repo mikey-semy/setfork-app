@@ -1,3 +1,4 @@
+import { isPubliclyVisible } from '@/core/domain/access'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Archive, Eye, GitFork, Snowflake, Star } from 'lucide-react'
@@ -116,7 +117,9 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
           <div className="order-1 flex w-full flex-wrap items-center gap-2 sm:order-none sm:w-auto">
             {/* Pin — свой публичный. Кнопкой ВЕЗДЕ: на мобиле она иконкой, и «...»-меню
                 ради одного пункта больше не нужно (владелец: «Поделиться влезла бы»). */}
-            {isOwner && meta.visibility === 'public' && (
+            {/* Тот же предикат, что у записи (`isPubliclyVisible`): черновик или список на
+                модерации кнопку не видят — иначе любое нажатие кончалось бы отказом. */}
+            {isOwner && isPubliclyVisible(meta) && (
               <PinButton templateId={meta.id} pinned={meta.pinned} pinLabel={t('pin', lang)} unpinLabel={t('unpin', lang)} lang={lang} />
             )}
             {session && watchState && (
