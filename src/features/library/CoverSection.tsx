@@ -55,18 +55,37 @@ export function CoverSection({
   const pick = () => inputRef.current?.click()
   const next = state.kind === 'failed' ? coverFailureNext(state.reason) : null
 
+  // Удаление обложки и смена акцента показываются сразу, до ответа сервера. Сбой —
+  // обычный исход (связь на телефоне), и без отката экран врал бы: обложка «убрана»,
+  // а на странице списка осталась. Откатываем и называем причину с «Повторить».
+  const [saveFailed, setSaveFailed] = useState<null | (() => void)>(null)
+
   function clear() {
-    dropBlob()
+    const prev = cover
+    setSaveFailed(null)
     setCover(null)
     start(async () => {
-      await removeListCover(templateId)
+      try {
+        await removeListCover(templateId)
+        dropBlob()
+      } catch {
+        setCover(prev)
+        setSaveFailed(() => clear)
+      }
     })
   }
 
   function pickAccent(a: string) {
+    const prev = accent
+    setSaveFailed(null)
     setAccent(a)
     start(async () => {
-      await setListAccent(templateId, a)
+      try {
+        await setListAccent(templateId, a)
+      } catch {
+        setAccent(prev)
+        setSaveFailed(() => () => pickAccent(a))
+      }
     })
   }
 
@@ -145,6 +164,19 @@ export function CoverSection({
           }
         >
           {coverFailureText(state.reason, state.file, lang)}
+        </Alert>
+      )}
+      {saveFailed && (
+        <Alert
+          variant="danger"
+          className="mt-2"
+          action={
+            <Button size="xs" onClick={saveFailed}>
+              {t('tryAgain', lang)}
+            </Button>
+          }
+        >
+          {t('cover.errSettingSave', lang)}
         </Alert>
       )}
 

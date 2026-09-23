@@ -53,6 +53,7 @@ export const ru: Record<DictKey, string> = {
   'cover.errBadType': 'Формат не подходит — нужен PNG, JPG, WEBP или GIF.',
   'cover.errNetwork': 'Нет связи с сервером — файл не отправился.',
   'cover.errServer': 'Сервер не сохранил обложку.',
+  'cover.errSettingSave': 'Изменение не сохранилось: нет связи или сервер не ответил.',
   'cover.errForbidden': 'Менять обложку может только владелец или соавтор списка.',
   'cover.errNoFile': 'Файл пришёл пустым — выберите его ещё раз.',
   'cover.pickAnother': 'Выбрать другую',

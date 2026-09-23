@@ -57,6 +57,7 @@ export const en = {
   'cover.errBadType': 'This format won’t work — use PNG, JPG, WEBP or GIF.',
   'cover.errNetwork': 'No connection to the server — the file wasn’t sent.',
   'cover.errServer': 'The server didn’t save the cover.',
+  'cover.errSettingSave': 'The change wasn’t saved: no connection or the server didn’t respond.',
   'cover.errForbidden': 'Only the owner or a collaborator can change the cover.',
   'cover.errNoFile': 'The file arrived empty — pick it again.',
   'cover.pickAnother': 'Pick another',

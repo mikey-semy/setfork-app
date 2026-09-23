@@ -18,10 +18,11 @@ import { TooltipProvider } from '@/shared/ui/Tooltip'
  * причин и сам компонент — настоящие.
  */
 const setListCover = vi.fn()
+const setListAccent = vi.fn(async (_id: string, _a: string) => {})
 vi.mock('@/features/library/cover-actions', () => ({
   setListCover: (fd: FormData) => setListCover(fd),
   removeListCover: vi.fn(async () => {}),
-  setListAccent: vi.fn(async () => {}),
+  setListAccent: (id: string, a: string) => setListAccent(id, a),
 }))
 
 const { CoverSection } = await import('@/features/library/CoverSection')
@@ -39,6 +40,7 @@ function renderSection(lang: 'ru' | 'en' = 'ru') {
 
 beforeEach(() => {
   setListCover.mockReset()
+  setListAccent.mockReset()
 })
 
 describe('CoverSection — загрузка обложки', () => {
@@ -126,5 +128,24 @@ describe('CoverSection — загрузка обложки', () => {
     await waitFor(() => expect(document.querySelector('img')?.getAttribute('src')).toBe('https://img.example/c.webp'))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(inputOf().value).toBe('')
+  })
+})
+
+describe('CoverSection — акцент и удаление не врут при сбое', () => {
+  it('сервер не сохранил акцент → выбор откатывается, причина и «Повторить»', async () => {
+    setListAccent.mockRejectedValueOnce(new TypeError('Load failed'))
+    setListAccent.mockResolvedValueOnce(undefined)
+    renderSection()
+    const blue = screen.getByRole('button', { name: '#2159d6' })
+
+    await userEvent.click(blue)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Изменение не сохранилось')
+    // Откат: выбранным снова стоит прежний (по умолчанию), а не тот, что не сохранился.
+    expect(blue.getAttribute('aria-pressed')).not.toBe('true')
+    await userEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+    await waitFor(() => expect(setListAccent).toHaveBeenCalledTimes(2))
+    expect(setListAccent.mock.calls[1]).toEqual(['t1', '#2159d6'])
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
   })
 })
