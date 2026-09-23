@@ -1,8 +1,9 @@
 'use server'
 
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { collaborators, db, templates, users } from '@/shared/db'
+import { normalizeHandle } from '@/shared/auth/handle-input'
 import { requireSession } from '@/shared/auth/session'
 
 async function ownerGuard(templateId: string, userId: string) {
@@ -21,9 +22,15 @@ export async function addCollaborator(templateId: string, formData: FormData): P
   const session = await requireSession()
   const tpl = await ownerGuard(templateId, session.userId)
   if (!tpl) return
-  const handle = String(formData.get('handle') ?? '').trim().replace(/^@/, '')
+  // То же правило, что у поля ввода: «@mike», « @Mike » и «mike» — один человек.
+  const handle = normalizeHandle(String(formData.get('handle') ?? ''))
   if (!handle) return
-  const [u] = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
+  // Сверка без учёта регистра — как в handleBlock: колонка text unique регистрозависима.
+  const [u] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(sql`lower(${users.handle}) = ${handle}`, eq(users.deleted, false)))
+    .limit(1)
   if (!u || u.id === tpl.ownerId) return // нет такого / это владелец
   await db.insert(collaborators).values({ templateId, userId: u.id, role: 'write' }).onConflictDoNothing()
   revalidatePath(`/${tpl.ownerHandle}/${tpl.slug}/settings`)

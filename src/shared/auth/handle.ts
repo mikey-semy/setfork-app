@@ -6,8 +6,11 @@ import { handleHoldAlive, handleHoldUntil } from '@/shared/db/resolve-list'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { RESERVED_TOP } from '@/shared/nav/reserved-top'
 import { translitRu } from '@/shared/lib/translit'
+import { normalizeHandle } from './handle-input'
 
 export { translitRu }
+// Нормализация ввода живёт в чистом модуле: её зовёт и клиентское поле ника.
+export { normalizeHandle }
 export const HANDLE_RE = /^[a-z0-9-]{3,30}$/
 export const RESERVED_HANDLES = new Set([
   // ВСЕ корневые сегменты приложения: адрес профиля — это `/<ник>`, поэтому ник,
@@ -94,11 +97,6 @@ export async function handleBlock(h: string, exceptUserId?: string): Promise<Han
  *  и в одном месте: две независимые проверки занятости уже расходились. */
 export async function handleTaken(h: string, exceptUserId?: string): Promise<boolean> {
   return (await handleBlock(h, exceptUserId)) !== null
-}
-
-/** Нормализовать ввод ника (обрезка, нижний регистр, снятие ведущего @). */
-export function normalizeHandle(raw: string): string {
-  return raw.trim().toLowerCase().replace(/^@+/, '')
 }
 
 /** Валиден ли ник по форме (НЕ занятость): длина/алфавит + не зарезервирован. */

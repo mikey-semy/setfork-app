@@ -9,6 +9,7 @@ import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
 import { IconButton } from '@/shared/ui/IconButton'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
+import { searchUsers } from '@/shared/ui/user-search'
 
 
 type Person = { handle: string; avatarUrl: string | null }
@@ -50,13 +51,7 @@ export function AssigneePicker({
     start(() => void (onToggle ? onToggle(handle) : number != null ? toggleIssueAssignee(owner, slug, number, handle) : Promise.resolve()))
 
   async function search(v: string) {
-    if (!v.trim()) return setFound([])
-    try {
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(v.trim())}`)
-      setFound((await res.json()) as Person[])
-    } catch {
-      setFound([])
-    }
+    setFound(await searchUsers(v))
   }
 
   return (

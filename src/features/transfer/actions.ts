@@ -3,6 +3,7 @@
 import { and, eq, ne } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { collaborators, db, listRedirects, templates, transferInvites, users } from '@/shared/db'
+import { normalizeHandle } from '@/shared/auth/handle-input'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
@@ -21,7 +22,7 @@ export async function initiateTransfer(templateId: string, _prev: TransferResult
   if ((tpl.moderation === 'flagged' || tpl.moderation === 'hidden') && !isAdminHandle(session.handle)) {
     return { error: 'Список, снятый модерацией, передать нельзя.' }
   }
-  const toHandle = String(formData.get('toHandle') ?? '').trim().toLowerCase().replace(/^@+/, '')
+  const toHandle = normalizeHandle(String(formData.get('toHandle') ?? ''))
   if (!toHandle) return { error: 'Укажите ник получателя.' }
   const [to] = await db.select({ id: users.id, deleted: users.deleted }).from(users).where(eq(users.handle, toHandle)).limit(1)
   if (!to || to.deleted) return { error: 'Пользователь не найден.' }

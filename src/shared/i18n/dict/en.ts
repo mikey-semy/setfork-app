@@ -671,7 +671,7 @@ export const en = {
   contributors: 'Contributors',
   collaboratorsHeading: 'Collaborators',
   collaboratorsHint: 'Collaborators can edit the list and push over git.',
-  addCollaboratorPh: '@handle',
+  addCollaboratorPh: 'handle',
   addCollaborator: 'Add',
   noCollaborators: 'No collaborators yet.',
   removeLabel: 'Remove',

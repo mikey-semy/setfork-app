@@ -663,7 +663,7 @@ export const ru: Record<DictKey, string> = {
   contributors: 'Контрибьюторы',
   collaboratorsHeading: 'Соавторы',
   collaboratorsHint: 'Соавторы могут править список и пушить по git.',
-  addCollaboratorPh: '@handle',
+  addCollaboratorPh: 'ник',
   addCollaborator: 'Добавить',
   noCollaborators: 'Пока нет соавторов.',
   removeLabel: 'Убрать',
