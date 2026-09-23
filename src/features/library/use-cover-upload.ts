@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { fill, t, type Lang } from '@/shared/i18n'
 import { IMAGE_MAX_BYTES, imageRejection, megabytes } from '@/shared/media/limits'
+import { shrinkImage } from '@/shared/media/shrink-image'
 import type { CoverUploadError } from './cover-actions'
 
 /** Всё, из-за чего обложка может не встать: коды сервера + то, что видно только
@@ -56,13 +57,17 @@ export function coverFailureNext(reason: CoverFailure): 'retry' | 'pick' | null 
 export function useCoverUpload(templateId: string, upload: Upload, onDone: (url: string, file: File) => void) {
   const [state, setState] = useState<CoverUploadState>({ kind: 'idle' })
 
-  async function send(file: File) {
+  async function send(picked: File) {
+    setState({ kind: 'uploading' })
+    // Фото с телефона — мегабайты; обложке хватает 1600px. Уменьшаем ДО проверки
+    // предела: иначе обычное фото с iPhone отказывалось бы «больше 4 МБ», хотя после
+    // уменьшения весит сотни килобайт.
+    const file = await shrinkImage(picked)
     const early = imageRejection(file)
     if (early) {
       setState({ kind: 'failed', reason: early, file })
       return
     }
-    setState({ kind: 'uploading' })
     const fd = new FormData()
     fd.append('templateId', templateId)
     fd.append('file', file)

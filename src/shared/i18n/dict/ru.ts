@@ -46,7 +46,7 @@ export const ru: Record<DictKey, string> = {
   mirrorCheckSaveFirst: 'Сначала сохраните изменения — проверка читает сохранённые настройки.',
   generalIntro: 'Название, описание, теги и видимость списка.',
   coverTitle: 'Обложка',
-  'cover.pickHint': 'Нажмите или перетащите картинку: PNG, JPG, WEBP или GIF, до {n} МБ.',
+  'cover.pickHint': 'Нажмите или перетащите картинку: PNG, JPG, WEBP или GIF. Большое фото уменьшится само, GIF — до {n} МБ.',
   'cover.accent': 'Акцент:',
   'cover.remove': 'Убрать обложку',
   'cover.errTooBig': 'Файл {size} МБ — больше {n} МБ. Выберите фото поменьше.',

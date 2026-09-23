@@ -50,7 +50,7 @@ export const en = {
   mirrorCheckSaveFirst: 'Save the changes first — the check reads the saved settings.',
   generalIntro: 'Name, description, tags and visibility of the list.',
   coverTitle: 'Cover',
-  'cover.pickHint': 'Tap or drop an image: PNG, JPG, WEBP or GIF, up to {n} MB.',
+  'cover.pickHint': 'Tap or drop an image: PNG, JPG, WEBP or GIF. Large photos are scaled down for you; GIF up to {n} MB.',
   'cover.accent': 'Accent:',
   'cover.remove': 'Remove cover',
   'cover.errTooBig': 'The file is {size} MB — the limit is {n} MB. Pick a smaller photo.',
