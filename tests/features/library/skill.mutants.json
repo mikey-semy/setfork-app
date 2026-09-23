@@ -81,7 +81,7 @@
     },
     {
       "name": "команда потеряна",
-      "from": "  if (s.command) out.push('', ...markdownCodeBlock(s.command, { indent, lang: 'sh' }))",
+      "from": "    out.push('', ...markdownCodeBlock(s.command, { indent, lang: danger ? '' : 'sh' }))",
       "to": ""
     },
     {
@@ -168,6 +168,26 @@
       "name": "картинка пропадает целиком",
       "from": "  if (s.type === 'image' && caption) return `- 🖼 ${caption}`",
       "to": ""
+    },
+    {
+      "name": "имя без кавычек — «1984» читается числом",
+      "from": "  return ['---', `name: ${q(name)}`,",
+      "to": "  return ['---', `name: ${name}`,"
+    },
+    {
+      "name": "разрушительный шаг без пометки",
+      "from": "    if (danger) out.push('', `${indent}⚠ DESTRUCTIVE",
+      "to": "    if (false) out.push('', `${indent}⚠ DESTRUCTIVE"
+    },
+    {
+      "name": "разрушительный шаг подан блоком sh",
+      "from": "{ indent, lang: danger ? '' : 'sh' }",
+      "to": "{ indent, lang: 'sh' }"
+    },
+    {
+      "name": "пометка на каждой команде",
+      "from": "    const danger = stepDanger(s)\n",
+      "to": "    const danger = stepDanger(s) ?? 'x'\n"
     }
   ]
 }

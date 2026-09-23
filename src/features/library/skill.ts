@@ -6,6 +6,7 @@ import { tr, type Lang } from '@/shared/i18n'
 import { translitRu } from '@/shared/lib/translit'
 import { markdownCodeBlock } from '@/shared/lib/markdown'
 import { safeHref } from '@/shared/lib/safe-url'
+import { stepDanger } from '@/core/domain/destructive-command'
 import { blockText } from './blocks'
 import { isStepBlk, toRunnableScript, type ExportList, type ExportStep } from './export'
 
@@ -107,7 +108,9 @@ function frontmatter(name: string, description: string, list: ExportList, ctx: S
   // JSON-строка — допустимый YAML в двойных кавычках: экранирует кавычки, переводы строк и
   // двоеточия, из-за которых голое значение сломало бы разбор шапки.
   const q = JSON.stringify
-  return ['---', `name: ${name}`, `description: ${q(description)}`, 'metadata:', ...meta.map(([k, v]) => `  ${k}: ${q(v)}`), '---'].join('\n')
+  // ⚠️ И имя тоже в кавычках: слаг «1984» голым значением js-yaml (им читает `npx skills`)
+  // превращает в ЧИСЛО, `null` — в null, и имя перестаёт совпадать с папкой.
+  return ['---', `name: ${q(name)}`, `description: ${q(description)}`, 'metadata:', ...meta.map(([k, v]) => `  ${k}: ${q(v)}`), '---'].join('\n')
 }
 
 /** Пункт как шаг инструкции: заголовок, описание, зачем, команда, проверки, ссылки. */
@@ -121,7 +124,15 @@ function stepLines(s: ExportStep, marker: string, lang: Lang): string[] {
   if (desc) out.push('', ...desc.split('\n').map((l) => (l ? indent + l : '')))
   const why = tr(s.why, lang)
   if (why) out.push('', `${indent}Why: ${why.replace(/\s*\n\s*/g, ' ')}`)
-  if (s.command) out.push('', ...markdownCodeBlock(s.command, { indent, lang: 'sh' }))
+  if (s.command) {
+    // ⚠️ РАЗРУШИТЕЛЬНЫЙ ПУНКТ — С ПОМЕТКОЙ, как в `/raw` и в `scripts/run.sh`, где он
+    // закомментирован. SKILL.md агент ИСПОЛНЯЕТ как инструкцию: голый блок `sh` с
+    // `rm -rf …` он выполнил бы, хотя тот же пункт в скрипте рядом пропущен. Команду не
+    // прячем — человек обязан видеть, что пропущено, — но без подтверждения её не трогают.
+    const danger = stepDanger(s)
+    if (danger) out.push('', `${indent}⚠ DESTRUCTIVE (${danger}) — do not run this without explicit confirmation from the human. scripts/run.sh skips it.`)
+    out.push('', ...markdownCodeBlock(s.command, { indent, lang: danger ? '' : 'sh' }))
+  }
   const checks = s.subtasks.map((t) => tr(t, lang)).filter(Boolean)
   if (checks.length) out.push('', `${indent}Check:`, ...checks.map((t) => `${indent}- [ ] ${t}`))
   // Адрес ссылки — через `safeHref`, как у блоков: файл уходит в чужого агента.

@@ -79,7 +79,7 @@ describe('кто получает скилл', () => {
     const res = await getMd('runbook')
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('text/markdown')
-    expect(await res.text()).toMatch(/^---\nname: runbook\n/)
+    expect(await res.text()).toMatch(/^---\nname: "runbook"\n/)
   })
 
   it.each([['SKILL.md'], ['skill.tar.gz']])('приватный список анониму — 404 (%s)', async (tail) => {
@@ -112,7 +112,7 @@ describe('архив', () => {
     const { dir, paths } = await unpack(await getTar('skripty-obsluzhivaniya-servera-chto-est-chto-delaet-i-kogda-'))
     const name = 'skripty-obsluzhivaniya-servera-chto-est-chto-delaet-i-kogda'
     expect(paths[0].split('/')[0], 'папка с дефисом на конце — стандарт её отвергнет').toBe(name)
-    expect(readFileSync(join(dir, name, 'SKILL.md'), 'utf8')).toContain(`\nname: ${name}\n`)
+    expect(readFileSync(join(dir, name, 'SKILL.md'), 'utf8')).toContain(`\nname: "${name}"\n`)
   })
 
   it('scripts/run.sh — байт в байт ответ /raw', async () => {

@@ -69,7 +69,7 @@ function frontmatter(md: string): { name: string; description: string; metadata:
     const top = /^([a-z-]+):(?: (.*))?$/.exec(line)
     if (!top) throw new Error(`bad frontmatter line: ${line}`)
     keys.push(top[1])
-    if (top[1] === 'name') name = top[2]
+    if (top[1] === 'name') name = JSON.parse(top[2])
     if (top[1] === 'description') description = JSON.parse(top[2])
   }
   return { name, description, metadata, keys }
@@ -100,6 +100,13 @@ describe('имя скилла', () => {
 
   // ⚠️ Обратная сторона: правильное имя трогать нельзя — оно совпадает с адресом списка,
   // и человек узнаёт скилл по нему.
+  // ⚠️ Имя из одних цифр — законный слаг («1984»), но голым значением YAML читает его
+  // числом, и имя перестаёт совпадать с папкой у того, кто ставит скилл.
+  it('имя в шапке — строка в кавычках, даже из одних цифр', () => {
+    const md = toSkill(list({ slug: '1984' }), 'ru', ctx).files[0].content
+    expect(md, 'имя «1984» прочтётся числом').toContain('\nname: "1984"\n')
+  })
+
   it('валидный слаг не меняется', () => {
     expect(skillName('otkaz-veb-servisa-poryadok-reagirovaniya')).toBe('otkaz-veb-servisa-poryadok-reagirovaniya')
   })
@@ -193,6 +200,26 @@ describe('SKILL.md по стандарту', () => {
     expect(md).toContain('ping -c1 host')
     expect(md).toContain('- [ ] ответ пришёл')
     expect(md).toContain('[man ping](https://man.example/ping)')
+  })
+
+  // ⚠️ SKILL.md агент исполняет как инструкцию. Разрушительный пункт в скрипте рядом
+  // закомментирован — здесь он обязан быть так же явно помечен, а не лежать обычным `sh`.
+  it('разрушительный шаг помечен и не подан как исполняемый блок sh', () => {
+    const md = toSkill(list({ steps: [step({ title: { ru: 'Почистить' }, command: 'rm -rf /var/lib/app' })] }), 'ru', ctx).files[0].content
+    expect(md, 'агент получил rm -rf обычным шагом').toMatch(/DESTRUCTIVE \(\w+\) — do not run this without explicit confirmation/)
+    expect(md, 'опасная команда подана блоком sh').not.toMatch(/```sh\n\s*rm -rf/)
+    expect(md, 'команду спрятали — человек не увидит, что пропущено').toContain('rm -rf /var/lib/app')
+  })
+
+  it('пометка автора «опасно» тоже помечает шаг', () => {
+    const md = toSkill(list({ steps: [step({ command: 'systemctl restart app', danger: true })] }), 'ru', ctx).files[0].content
+    expect(md).toContain('DESTRUCTIVE (danger)')
+  })
+
+  it('обычная команда — обычный блок sh, без пометки', () => {
+    const md = toSkill(list({ steps: [step({ command: 'systemctl status nginx' })] }), 'ru', ctx).files[0].content
+    expect(md).toMatch(/```sh\n\s*systemctl status nginx/)
+    expect(md, 'пометка на безобидной команде').not.toContain('DESTRUCTIVE')
   })
 
   it('разделы — заголовками, как на странице', () => {
