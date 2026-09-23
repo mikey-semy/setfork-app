@@ -321,7 +321,12 @@ async function findByAddress(owner: string | null, slug: string) {
  * то есть ровно в том случае, ради которого прежние адреса и заведены.
  */
 export async function detailByRefOrMoved(handle: string, slug: string) {
-  const found = await resolveListRefOrMoved(`${handle}/${slug}`)
+  return detailByRef(`${handle}/${slug}`)
+}
+
+/** То же по готовой ссылке — «handle/slug» или голый «slug», как у `resolveListRefOrMoved`. */
+export async function detailByRef(ref: string) {
+  const found = await resolveListRefOrMoved(ref)
   if (!found) return null
   const detail = await getTemplateDetail(found.ownerHandle, found.slug)
   return detail ? { ...detail, movedTo: found.movedTo } : null

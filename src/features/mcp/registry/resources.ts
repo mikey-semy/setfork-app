@@ -12,13 +12,21 @@ import { userIdOf, type Extra, type McpServer } from './kit'
  * который уже заменён, незачем.
  */
 
-/** Переменная шаблона; битое процент-кодирование (`%E0`) — ошибка параметров, а не сбой сервера. */
+/**
+ * Переменная шаблона. Битое процент-кодирование (`%E0`) — ошибка параметров, а не сбой
+ * сервера. Косая черта ВНУТРИ части (`%2F`) — тоже: иначе `h/a%2Fb` превратился бы в
+ * ссылку «h/a/b», резолвер взял бы из неё первые две части, и один список отвечал бы
+ * по чужому адресу.
+ */
 function one(v: string | string[]): string {
+  let out: string
   try {
-    return decodeURIComponent(Array.isArray(v) ? (v[0] ?? '') : v)
+    out = decodeURIComponent(Array.isArray(v) ? (v[0] ?? '') : v)
   } catch {
     throw new McpError(ErrorCode.InvalidParams, 'Malformed list address')
   }
+  if (!out || out.includes('/')) throw new McpError(ErrorCode.InvalidParams, 'Malformed list address')
+  return out
 }
 
 export function registerResources(server: McpServer) {
@@ -29,16 +37,18 @@ export function registerResources(server: McpServer) {
     {
       title: 'SetFork list',
       description:
-        'A list as markdown — the same text as its Markdown export: every block in order, steps with commands and links. Attach it as context instead of calling get_list.',
+        'A list as markdown — the same text as its Markdown export: steps with commands, danger marks and links, text blocks in order. Quizzes and files are left out and block ids (bid) are not included: to edit or review a list, use get_list.',
       mimeType: 'text/markdown',
     },
     async (uri, vars, extra) => {
       const userId = userIdOf(extra as Extra)
       if (!userId) throw new McpError(ErrorCode.InvalidRequest, 'Unauthorized')
-      const text = await mcpListMarkdown(userId, one(vars.handle), one(vars.slug))
+      const found = await mcpListMarkdown(userId, `${one(vars.handle)}/${one(vars.slug)}`)
       // Чужой приватный и несуществующий — одним и тем же ответом.
-      if (text === null) throw new McpError(ErrorCode.InvalidParams, LIST_NOT_FOUND)
-      return { contents: [{ uri: uri.href, mimeType: 'text/markdown', text }] }
+      if (!found) throw new McpError(ErrorCode.InvalidParams, LIST_NOT_FOUND)
+      // `uri` — тот, что спросили (так велит протокол), даже у переехавшего списка:
+      // актуальный адрес агент видит в шапке текста.
+      return { contents: [{ uri: uri.href, mimeType: 'text/markdown', text: found.text }] }
     },
   )
 
@@ -50,6 +60,8 @@ export function registerResources(server: McpServer) {
   // ⚠️ `resources/list` — СВОИМ обработчиком, а не колбэком шаблона: высокоуровневый
   // `McpServer` курсор в колбэк не передаёт и `nextCursor` не возвращает, то есть отдаёт
   // перечень целиком. Здесь — свои списки владельца токена, порциями по курсору.
+  // ⚠️ Обработчик заменяет перечень SDK ЦЕЛИКОМ: ресурс с фиксированным адресом, заведённый
+  // позже через `registerResource`, в перечень сам не попадёт — его надо добавить сюда.
   server.server.setRequestHandler(ListResourcesRequestSchema, async (req, extra) => {
     const userId = userIdOf(extra as Extra)
     if (!userId) throw new McpError(ErrorCode.InvalidRequest, 'Unauthorized')

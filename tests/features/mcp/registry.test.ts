@@ -18,21 +18,26 @@ type Captured = {
 }
 
 /** Всё, что сборка поверхности регистрирует: инструменты, сценарии, шаблоны ресурсов. */
-const surface = { tools: [] as Captured[], prompts: [] as string[], templates: [] as string[] }
+type PromptCb = (args: Record<string, string>, extra: unknown) => Promise<{ messages: { content: { type: string; text?: string } }[] }>
+const surface = { tools: [] as Captured[], prompts: [] as string[], templates: [] as string[], promptCbs: new Map<string, PromptCb>() }
 
 function collect(): Captured[] {
   const tools: Captured[] = []
   const prompts: string[] = []
   const templates: string[] = []
+  const promptCbs = new Map<string, PromptCb>()
   const server = {
     registerTool: (name: string, config: Captured['config'], cb: Captured['cb']) => tools.push({ name, config, cb }),
-    registerPrompt: (name: string) => prompts.push(name),
+    registerPrompt: (name: string, _config: unknown, cb: PromptCb) => {
+      prompts.push(name)
+      promptCbs.set(name, cb)
+    },
     registerResource: (_name: string, template: { uriTemplate: { toString(): string } }) => templates.push(template.uriTemplate.toString()),
     server: { registerCapabilities: () => {}, setRequestHandler: () => {} },
   }
   // Та же функция, что зовёт маршрут: пропажа сценария или ресурса видна здесь, а не у агента.
   registerSurface(server as unknown as Parameters<typeof registerSurface>[0])
-  Object.assign(surface, { tools, prompts, templates })
+  Object.assign(surface, { tools, prompts, templates, promptCbs })
   return tools
 }
 
@@ -64,6 +69,24 @@ describe('реестр MCP: сценарии и ресурсы', () => {
   })
   it('шаблоны ресурсов — поимённо', () => {
     expect(surface.templates).toEqual(['setfork://lists/{handle}/{slug}'])
+  })
+  it('сценарии зовут только НАСТОЯЩИЕ инструменты: опечатка в имени — красный CI', async () => {
+    // Сценарий — слова, которые агент исполняет. `check_steps` вместо `check_step` в тексте
+    // прошёл бы проверку «слово есть» и сломал бы сценарий у каждого агента.
+    const tools = new Set(surface.tools.map((t) => t.name))
+    const args: Record<string, Record<string, string>> = {
+      'run-list': { list: 'a-b/c' },
+      'review-list': { list: 'a-b/c', gnome: 'devops' },
+      commitics: { url: 'https://example.org/x/y/pull/1' },
+    }
+    for (const [name, cb] of surface.promptCbs) {
+      // Без токена вложение списка не строится — база не нужна, проверяется только текст.
+      const { messages } = await cb(args[name], ANONYMOUS)
+      const text = messages.map((m) => m.content.text ?? '').join('\n')
+      const named = [...new Set(text.match(/\b[a-z]+(?:_[a-z]+)+\b/g) ?? [])]
+      expect(named.length, `${name}: сценарий не назвал ни одного инструмента`).toBeGreaterThan(0)
+      for (const tool of named) expect(tools.has(tool), `${name}: «${tool}» — такого инструмента нет`).toBe(true)
+    }
   })
 })
 
