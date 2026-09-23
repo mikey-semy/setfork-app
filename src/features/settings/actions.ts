@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { and, eq, inArray, ne, or, sql } from 'drizzle-orm'
-import { db, stars, suggestions, templates, userRedirects, users, sessions } from '@/shared/db'
+import { db, stars, suggestions, templates, uploads, userRedirects, users, sessions } from '@/shared/db'
 import type { Social } from '@/shared/db/schema'
 import { clearSessionCookie, refreshSessionCookie, requireSession } from '@/shared/auth/session'
 import { recordAudit } from '@/shared/audit'
@@ -201,6 +201,11 @@ export async function deleteAccount(_prev: ActionResult | null, formData: FormDa
 
   // 2) Авторство предложений тоже на ghost (сохраняем историю правок).
   await db.update(suggestions).set({ authorId: ghostId }).where(eq(suggestions.authorId, session.userId))
+
+  // 2б) Загруженные вложения и клипы — туда же. Их ссылки `/media/…` живут в
+  // переданных списках и комментариях; каскад по users стёр бы строки раздачи, и
+  // файлы в чужих теперь уже списках отвечали бы 404 при целом объекте в бакете.
+  await db.update(uploads).set({ userId: ghostId }).where(eq(uploads.userId, session.userId))
 
   // 3) Списки, которые пользователь звёздил, потеряют его звезду (каскад) — уменьшаем счётчик заранее.
   const starred = await db.select({ tid: stars.templateId }).from(stars).where(eq(stars.userId, session.userId))

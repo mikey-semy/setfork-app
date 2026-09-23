@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { FileDrop } from '@/features/library/list-editor/FileDrop'
-import { ATTACH_MAX_BYTES, megabytes, VIDEO_MAX_BYTES } from '@/shared/media/limits'
+import { ATTACH_MAX_BYTES, megabytes, uploadAccept, VIDEO_MAX_BYTES } from '@/shared/media/limits'
 
 /**
  * ОДНА ДРОПЗОНА НА ТРИ ВИДА ЗАГРУЗКИ.
@@ -18,16 +18,18 @@ import { ATTACH_MAX_BYTES, megabytes, VIDEO_MAX_BYTES } from '@/shared/media/lim
 const inputOf = (): HTMLInputElement => document.querySelector('input[type="file"]')!
 
 describe('FileDrop', () => {
-  it('вид задаёт MIME-фильтр: картинка и видео фильтруют, вложение принимает любой тип', () => {
+  it('вид задаёт фильтр выбора: клип и вложение — из той же таблицы, что проверка сервера', () => {
     const { rerender } = render(<FileDrop kind="image" uploading={false} onFile={() => {}} lang="ru" />)
     expect(inputOf().accept).toContain('image/png')
 
     rerender(<FileDrop kind="video" uploading={false} onFile={() => {}} lang="ru" />)
-    expect(inputOf().accept).toContain('video/mp4')
+    expect(inputOf().accept).toBe(uploadAccept('video'))
 
-    // Вложению фильтр не ставим: расширение проверяет сервер по своему белому списку.
+    // Вложение раньше фильтра не имело: белый список жил только на сервере. Теперь он
+    // клиент-безопасный (UPLOAD_KINDS), и выбор файла предлагает ровно то, что примут.
     rerender(<FileDrop kind="file" uploading={false} onFile={() => {}} lang="ru" />)
-    expect(inputOf().accept).toBe('')
+    expect(inputOf().accept).toBe(uploadAccept('file'))
+    expect(inputOf().accept).not.toContain('.svg')
   })
 
   it('размер в подписи — из константы сервера, а не своим числом', () => {

@@ -5,7 +5,7 @@ import { ImageUp, Paperclip, Video as VideoIcon } from 'lucide-react'
 import { TEXT, TOUCH_MIN_H } from '@/shared/ui/control'
 import { Spinner } from '@/shared/ui/Spinner'
 import { t, type Lang, type TKey } from '@/shared/i18n'
-import { ATTACH_MAX_BYTES, IMAGE_ACCEPT, megabytes, VIDEO_MAX_BYTES } from '@/shared/media/limits'
+import { IMAGE_ACCEPT, megabytes, uploadAccept, UPLOAD_KINDS } from '@/shared/media/limits'
 
 export type DropKind = 'image' | 'video' | 'file'
 
@@ -13,12 +13,13 @@ export type DropKind = 'image' | 'video' | 'file'
  * Виды дропзоны — таблица, а не три копии одного компонента: скриншот, свой видеофайл
  * и вложение отличались только MIME-фильтром, иконкой и подписью. Размер в подписи
  * подставляется из констант, по которым отказывает сервер, — иначе текст разъезжается
- * с проверкой. У вложения фильтра нет намеренно: расширения режет сервер белым списком.
+ * с проверкой. Фильтр выбора файла у клипа и вложения — из той же таблицы
+ * (`UPLOAD_KINDS`), по которой их принимает сервер.
  */
 const KINDS: Record<DropKind, { accept?: string; Icon: typeof ImageUp; label: TKey; mb?: number }> = {
   image: { accept: IMAGE_ACCEPT, Icon: ImageUp, label: 'editor.dropImage' },
-  video: { accept: 'video/mp4,video/webm,video/ogg', Icon: VideoIcon, label: 'editor.dropVideo', mb: megabytes(VIDEO_MAX_BYTES) },
-  file: { Icon: Paperclip, label: 'editor.dropFile', mb: megabytes(ATTACH_MAX_BYTES) },
+  video: { accept: uploadAccept('video'), Icon: VideoIcon, label: 'editor.dropVideo', mb: megabytes(UPLOAD_KINDS.video.maxBytes) },
+  file: { accept: uploadAccept('file'), Icon: Paperclip, label: 'editor.dropFile', mb: megabytes(UPLOAD_KINDS.file.maxBytes) },
 }
 
 export function FileDrop({ kind, uploading, onFile, lang }: { kind: DropKind; uploading: boolean; onFile: (f: File) => void; lang: Lang }) {
