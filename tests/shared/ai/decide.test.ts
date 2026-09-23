@@ -13,6 +13,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 vi.mock('@/shared/settings/ai', async (orig) => ({ ...(await orig()), getOpenRouterApiKey: async () => 'k' }))
 const recordUsage = vi.fn(async (_row: Record<string, unknown>) => {})
 vi.mock('@/shared/ai/usage', async (orig) => ({ ...(await orig()), recordUsage: (row: Record<string, unknown>) => recordUsage(row) }))
+// Предохранитель расхода считает по базе — внешнее; по умолчанию бюджет есть.
+const budget = vi.hoisted(() => ({ ok: true }))
+vi.mock('@/shared/quota', () => ({ globalBudgetOk: async () => budget.ok }))
 
 const { decide, decisionsUrl, parseAnswer } = await import('@/shared/ai/decide')
 
@@ -29,6 +32,7 @@ const sent = (spy: ReturnType<typeof vi.spyOn>) => ({
 })
 
 afterEach(() => {
+  budget.ok = true
   vi.restoreAllMocks()
   recordUsage.mockClear()
   delete process.env.SETFORK_OPENROUTER_DATA_COLLECTION
@@ -132,6 +136,14 @@ describe('сбой — null, а не исключение, и строка в ж
     reply({ model: 'm', answers: { guide: { choice: 'dba' } }, usage: { input_tokens: 1, output_tokens: 1, cost: 0.00001 } })
     await expect(decide({ state: 'пункт', questions: Q })).resolves.toBeNull()
     expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'invalid', cost: 0.00001 }))
+  })
+
+  it('бюджет инстанса исчерпан — платного вызова нет вовсе', async () => {
+    budget.ok = false
+    const spy = reply(okBody)
+    await expect(decide({ state: 'пункт', questions: Q })).resolves.toBeNull()
+    expect(spy).not.toHaveBeenCalled()
+    expect(recordUsage).not.toHaveBeenCalled()
   })
 
   it('тело не JSON', async () => {

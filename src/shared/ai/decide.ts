@@ -2,6 +2,7 @@ import 'server-only'
 import { getOpenRouterApiKey, openRouterBaseUrl } from '@/shared/settings/ai'
 import { openRouterBody } from './provider'
 import { outcomeOf, recordUsage, type AiOutcome } from './usage'
+import { globalBudgetOk } from '@/shared/quota'
 
 /**
  * РЕШЕНИЕ, А НЕ ТЕКСТ: клиент Decisions API (TypeSafe Jev через OpenRouter).
@@ -112,6 +113,11 @@ export async function decide<K extends string>(input: {
   refId?: string
   userId?: string | null
 }): Promise<DecideResult<K> | null> {
+  // Предохранитель инстанса — ПЕРЕД платным вызовом, как у любого вызова модели (AGENTS.md §9):
+  // вызов дешёвый, но замер делает их десятками, а кирка — на каждый шаг. Проверка здесь, а
+  // не у вызывающих: тогда её нельзя забыть (находка авто-ревью к #961). Вызова не было —
+  // писать в журнал расходов нечего; ответ тот же, что при сбое, — `null`.
+  if (!(await globalBudgetOk())) return null
   const model = input.model ?? (await decideModel())
   const t0 = Date.now()
   let outcome: AiOutcome = 'error'
