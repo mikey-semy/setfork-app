@@ -113,7 +113,7 @@ export async function loadProfilePage({ handle, sp: raw, lang }: { handle: strin
     avatarSrc(user.avatarUrl, 180),
     getContributions(user.id, graphYear, viewer?.userId),
     getReceivedStats(user.id),
-    getPinnedTemplates(user.id, viewer?.userId),
+    getPinnedTemplates(user.id),
     getOwnerCatalogs(user.id, viewer?.userId),
     getAchievementDisplay(),
   ])

@@ -30,7 +30,10 @@ export type PinnableList = { id: string; slug: string; title: string; stars: num
 export function PinsPicker({ lists, hasMore, lang }: { lists: PinnableList[]; hasMore: boolean; lang: Lang }) {
   const [open, setOpen] = useState(false)
   const [pending, start] = useTransition()
-  const initial = useMemo(() => new Set(lists.filter((l) => l.pinned).map((l) => l.id)), [lists])
+  // Закреплённых по старым правилам бывает больше шести; окно начинает с тех же шести,
+  // что показывает профиль (порядок совпадает), и первое же сохранение приводит флаги в
+  // порядок. Иначе «Осталось» ушло бы в минус.
+  const initial = useMemo(() => new Set(lists.filter((l) => l.pinned).slice(0, MAX_PINS).map((l) => l.id)), [lists])
   const [sel, setSel] = useState<Set<string>>(initial)
   const [q, setQ] = useState('')
   // Найденное сервером: ищем по ВСЕМ спискам, а не по загруженному окну (см.

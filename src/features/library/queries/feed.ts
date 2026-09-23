@@ -6,6 +6,7 @@ import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { feedWindow } from '@/shared/lib/paging'
+import { MAX_PINS } from '@/core/domain/pins'
 import type { ActivityItem, FeedItem, FeedSort, ListSuggestion, TagRow, TrendRange } from './list'
 import { descText, extraFilters, FEED_COLS, langPref, keywordFeed, searchCondition, semanticFeed, tagFilter, titleText, visibleFilter, withAvatar } from './shared'
 import { likeContains } from '@/shared/db/like'
@@ -186,14 +187,25 @@ export async function searchListSuggestions(q: string, limit = 6): Promise<ListS
   return rows as ListSuggestion[]
 }
 
-/** Закреплённые списки пользователя (для профиля). */
-export async function getPinnedTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
+/**
+ * Закреплённые списки пользователя (для профиля) — РОВНО то, что видит посетитель, и
+ * владельцу тоже, как у GitHub: закрепляют, чтобы показать всем.
+ *
+ * ⚠️ Правило чтения, а не только записи. Флаг `pinned` переживает потерю видимости
+ * (список стал приватным, черновиком, снят модерацией), а до 23.09.2026 кнопка в шапке
+ * закрепляла сверх шести. Покажи раздел флаги как есть — владелец видел бы приватную
+ * карточку, открепить которую нечем (в окне её нет, кнопки в шапке тоже), а профиль,
+ * закреплённый по старым правилам, так и держал бы семь-восемь (находки авто-ревью).
+ * Порядок тот же, что у окна закрепления, — окно начинает с этих же шести.
+ */
+export async function getPinnedTemplates(userId: string): Promise<FeedItem[]> {
   const rows = await db
     .select(FEED_COLS)
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(and(eq(templates.ownerId, userId), eq(templates.pinned, true), visibleFilter(viewerId)))
+    .where(and(eq(templates.ownerId, userId), eq(templates.pinned, true), publiclyVisible()))
     .orderBy(desc(templates.updatedAt))
+    .limit(MAX_PINS)
   return withAvatar(rows as FeedItem[])
 }
 

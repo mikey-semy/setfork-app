@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetTables } from '../../helpers/reset-db'
 
@@ -23,6 +23,7 @@ vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 const { db, templates, users } = await import('@/shared/db')
 const { updatePins, setListPinned } = await import('@/features/library/actions/list-settings')
 const { getPinnableLists } = await import('@/features/profile/queries')
+const { getPinnedTemplates } = await import('@/features/library/queries/feed')
 const { LISTS_PER_PAGE } = await import('@/shared/lib/paging')
 
 const id: Record<string, string> = {}
@@ -182,5 +183,20 @@ describe('кнопка в шапке списка', () => {
   it('приватный — отказ «не видят все»', async () => {
     expect(await setListPinned(id.private, true)).toEqual({ error: 'notPublic' })
     expect(await pinnedSlugs()).toEqual([])
+  })
+})
+
+describe('раздел «Закреплённые» на профиле', () => {
+  it('закреплённых по старым правилам больше шести — показывается шесть', async () => {
+    // До 23.09.2026 кнопка в шапке закрепляла без счёта; такие профили есть.
+    await db.update(templates).set({ pinned: true }).where(eq(templates.ownerId, owner))
+    expect(await getPinnedTemplates(owner)).toHaveLength(6)
+  })
+
+  it('приватный закреплённый не показывается и владельцу: открепить его было бы нечем', async () => {
+    // Флаги напрямую, как их оставили прежние правила: запись через setListPinned
+    // сама сняла бы уснувшее закрепление, и правило чтения осталось бы непроверенным.
+    await db.update(templates).set({ pinned: true }).where(inArray(templates.id, [id.private, id['pub-1']]))
+    expect((await getPinnedTemplates(owner)).map((t) => t.slug)).toEqual(['pub-1'])
   })
 })
