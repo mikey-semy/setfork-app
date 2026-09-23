@@ -81,6 +81,7 @@ export async function GET() {
     `- [Explore](${SITE_ORIGIN}/explore): browse lists by topic`,
     `- [Search](${SITE_ORIGIN}/search): full-text and qualifier search (\`by:\`, \`tag:\`, \`type:\`)`,
     '- Any list is available as markdown: append `.md` to its address',
+    '- Any public list installs as an Agent Skill: `npx skills add <list address>/SKILL.md` (or `/skill.tar.gz` for the full folder)',
     '- MCP server at `/api/mcp`: read lists, propose edits, record run reports',
     '',
     '## Lists',

@@ -1,0 +1,213 @@
+{
+  "target": "src/features/library/skill.ts",
+  "tests": [
+    "tests/features/library/skill.test.ts"
+  ],
+  "mutants": [
+    {
+      "name": "дефис на конце слага остаётся в имени",
+      "from": "  const clean = (s: string) => s.replace(/-+/g, '-').replace(/^-+|-+$/g, '')",
+      "to": "  const clean = (s: string) => s.replace(/-+/g, '-')"
+    },
+    {
+      "name": "два дефиса подряд не схлопываются",
+      "from": "  const clean = (s: string) => s.replace(/-+/g, '-').replace(/^-+|-+$/g, '')",
+      "to": "  const clean = (s: string) => s.replace(/^-+|-+$/g, '')"
+    },
+    {
+      "name": "обрез до 64 оставляет дефис на конце",
+      "from": "  const name = clean(clean(translitRu(slug).replace(/[^a-z0-9-]/g, '-')).slice(0, SKILL_NAME_MAX))",
+      "to": "  const name = clean(translitRu(slug).replace(/[^a-z0-9-]/g, '-')).slice(0, SKILL_NAME_MAX)"
+    },
+    {
+      "name": "кириллица вырезается вместо транслита",
+      "from": "  const name = clean(clean(translitRu(slug).replace(/[^a-z0-9-]/g, '-')).slice(0, SKILL_NAME_MAX))",
+      "to": "  const name = clean(clean(slug.toLowerCase().replace(/[^a-z0-9-]/g, '-')).slice(0, SKILL_NAME_MAX))"
+    },
+    {
+      "name": "имя из одних дефисов — пустое",
+      "from": "  return name || 'setfork-list'",
+      "to": "  return name"
+    },
+    {
+      "name": "пустое описание не заменяется названием",
+      "from": "  const text = flat(tr(list.desc, lang)) || flat(tr(list.title, lang)) || skillName(list.slug)",
+      "to": "  const text = flat(tr(list.desc, lang))"
+    },
+    {
+      "name": "описание не режется",
+      "from": "  if (chars.length <= SKILL_DESCRIPTION_MAX) return text",
+      "to": "  return text"
+    },
+    {
+      "name": "разрез посреди слова",
+      "from": "  const head = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).join('').replace(/[\\s,.;:—-]+$/, '')",
+      "to": "  const head = cut.join('')"
+    },
+    {
+      "name": "переводы строк остаются в описании",
+      "from": "  const flat = (s: string) => s.replace(/\\s+/g, ' ').trim()",
+      "to": "  const flat = (s: string) => s.trim()"
+    },
+    {
+      "name": "версия — число, а не строка",
+      "from": "    ['setfork-version', String(list.version)],",
+      "to": "    ['setfork-version', list.version as unknown as string],"
+    },
+    {
+      "name": "подпись пишется пустой строкой",
+      "from": "  if (ctx.commitSha) meta.push(['setfork-sha', ctx.commitSha])",
+      "to": "  meta.push(['setfork-sha', ctx.commitSha ?? ''])"
+    },
+    {
+      "name": "прогон потерян",
+      "from": "  if (ctx.lastRun) {",
+      "to": "  if (false) {"
+    },
+    {
+      "name": "значения шапки без кавычек",
+      "from": "  const q = JSON.stringify",
+      "to": "  const q = (s: string) => s"
+    },
+    {
+      "name": "в шапку вписана лицензия",
+      "from": "`description: ${q(description)}`, 'metadata:'",
+      "to": "`description: ${q(description)}`, 'license: unknown', 'metadata:'"
+    },
+    {
+      "name": "зачем потерян",
+      "from": "  if (why) out.push('', `${indent}Why: ${why.replace(/\\s*\\n\\s*/g, ' ')}`)",
+      "to": ""
+    },
+    {
+      "name": "команда потеряна",
+      "from": "    out.push('', ...markdownCodeBlock(s.command, { indent, lang: danger || human ? '' : 'sh' }))",
+      "to": ""
+    },
+    {
+      "name": "проверки потеряны",
+      "from": "  if (checks.length) out.push('', `${indent}Check:`, ...checks.map((t) => `${indent}- [ ] ${t}`))",
+      "to": ""
+    },
+    {
+      "name": "ссылки потеряны",
+      "from": "  if (refs.length) out.push('', `${indent}See:`, ...refs)",
+      "to": ""
+    },
+    {
+      "name": "раздел повторяется у каждого пункта",
+      "from": "    if (sec && sec !== section) out.push(`## ${sec}`, '')\n    section = sec\n    stepNo++",
+      "to": "    if (sec) out.push(`## ${sec}`, '')\n    section = sec\n    stepNo++"
+    },
+    {
+      "name": "история остаётся в SKILL.md вместо references",
+      "from": "    if (!isStepBlk(s)) {\n      const m = mediaLine(s, lang)",
+      "to": "    if (s.type === 'text') { out.push(blockText(s.content?.md, lang), '') }\n    if (!isStepBlk(s)) {\n      const m = mediaLine(s, lang)"
+    },
+    {
+      "name": "текстовые блоки не собираются в context.md",
+      "from": "  if (!out.length) return null",
+      "to": "  return null"
+    },
+    {
+      "name": "SKILL.md не ссылается на context.md",
+      "from": "    if (withContext) out.push(`Background",
+      "to": "    if (false) out.push(`Background"
+    },
+    {
+      "name": "однофайловый ссылается на соседние файлы",
+      "from": "  if (mode === 'folder') {",
+      "to": "  if (true) {"
+    },
+    {
+      "name": "ссылки на канон в конце нет",
+      "from": "  out.push('---', '', `Source:",
+      "to": "  if (false) out.push('---', '', `Source:"
+    },
+    {
+      "name": "скрипт собран своим путём, а не как /raw",
+      "from": "    files.push({ path: SKILL_SCRIPT_PATH, content: toRunnableScript(list, lang, rawUrl, 'sh'), executable: true })",
+      "to": "    files.push({ path: SKILL_SCRIPT_PATH, content: toRunnableScript(list, lang, listUrl(list, ctx.origin), 'sh'), executable: true })"
+    },
+    {
+      "name": "скрипт не исполняемый",
+      "from": "content: toRunnableScript(list, lang, rawUrl, 'sh'), executable: true })",
+      "to": "content: toRunnableScript(list, lang, rawUrl, 'sh') })"
+    },
+    {
+      "name": "scripts/ есть и у списка без команд",
+      "from": "const hasCommands = (list: ExportList): boolean => list.steps.some((s) => isStepBlk(s) && Boolean((s.command ?? '').trim()))",
+      "to": "const hasCommands = (list: ExportList): boolean => true"
+    },
+    {
+      "name": "опрос попадает в скилл",
+      "from": "  if (s.type === 'image' && caption) return `- 🖼 ${caption}`",
+      "to": "  if (s.type === 'poll') return `- ${String(c.question)}`\n  if (s.type === 'image' && caption) return `- 🖼 ${caption}`"
+    },
+    {
+      "name": "файл без ссылки — одно имя",
+      "from": "  if (s.type === 'file' && href) return `- 📎 [${(typeof c.name === 'string' && c.name.trim()) || href}](${href})`",
+      "to": "  if (s.type === 'file' && href) return `- 📎 ${String(c.name)}`"
+    },
+    {
+      "name": "адрес блока без safeHref",
+      "from": "  const href = typeof c.url === 'string' ? safeHref(c.url) : null",
+      "to": "  const href = typeof c.url === 'string' ? c.url : null"
+    },
+    {
+      "name": "адрес ссылки шага без safeHref",
+      "from": "    const href = safeHref(r.url)",
+      "to": "    const href = r.url"
+    },
+    {
+      "name": "подпись видео мультиязычная — теряется",
+      "from": "  const caption = blockText(c.caption, lang).trim()",
+      "to": "  const caption = typeof c.caption === 'string' ? c.caption : ''"
+    },
+    {
+      "name": "картинка пропадает целиком",
+      "from": "  if (s.type === 'image' && caption) return `- 🖼 ${caption}`",
+      "to": ""
+    },
+    {
+      "name": "имя без кавычек — «1984» читается числом",
+      "from": "  return ['---', `name: ${q(name)}`,",
+      "to": "  return ['---', `name: ${name}`,"
+    },
+    {
+      "name": "разрушительный шаг без пометки",
+      "from": "    if (danger) out.push('', `${indent}⚠ DESTRUCTIVE",
+      "to": "    if (false) out.push('', `${indent}⚠ DESTRUCTIVE"
+    },
+    {
+      "name": "разрушительный шаг подан блоком sh",
+      "from": "{ indent, lang: danger || human ? '' : 'sh' }",
+      "to": "{ indent, lang: human ? '' : 'sh' }"
+    },
+    {
+      "name": "пометка на каждой команде",
+      "from": "    const danger = stepDanger(s)\n",
+      "to": "    const danger = stepDanger(s) ?? 'x'\n"
+    },
+    {
+      "name": "шаг «нужен человек» без пометки",
+      "from": "  const human = s.needsHuman === true",
+      "to": "  const human = false"
+    },
+    {
+      "name": "вопрос автора к человеку потерян",
+      "from": "    const ask = tr(s.needsHumanAsk, lang).trim()",
+      "to": "    const ask = ''"
+    },
+    {
+      "name": "шаг человека подан исполняемым блоком sh",
+      "from": "{ indent, lang: danger || human ? '' : 'sh' }",
+      "to": "{ indent, lang: danger ? '' : 'sh' }"
+    },
+    {
+      "name": "оговорки про чужие инструкции нет",
+      "from": "  out.push(`> ⚠ Review before use",
+      "to": "  if (false) out.push(`> ⚠ Review before use"
+    }
+  ]
+}

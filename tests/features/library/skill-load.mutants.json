@@ -1,0 +1,19 @@
+{
+  "target": "src/features/library/skill-load.ts",
+  "tests": [
+    "tests/app/skill-routes.itest.ts"
+  ],
+  "config": "vitest.integration.config.ts",
+  "mutants": [
+    {
+      "name": "guard снят: берутся сырые данные без проверки прав",
+      "from": "requireViewableDetail(handle, slug)])",
+      "to": "(await import('./queries')).getTemplateDetail(handle, slug)])"
+    },
+    {
+      "name": "адрес — из запроса, а не из конфигурации",
+      "from": "    origin: appOrigin(),",
+      "to": "    origin: 'http://0.0.0.0:3000',"
+    }
+  ]
+}
