@@ -112,7 +112,15 @@ export async function getPinnableLists(
       and(
         eq(templates.ownerId, userId),
         publiclyVisible(),
-        q ? or(ilike(templates.slug, likeContains(q)), ilike(sql`${templates.title}::text`, likeContains(q))) : undefined,
+        // По ЗНАЧЕНИЯМ переводов, а не по тексту JSON: в `{"ru": …}` ищутся и ключи, и
+        // «r» совпадало бы с каждым списком, у которого есть русское название (находка
+        // авто-ревью).
+        q
+          ? or(
+              ilike(templates.slug, likeContains(q)),
+              sql`exists (select 1 from jsonb_each_text(${templates.title}) v where v.value ilike ${likeContains(q)})`,
+            )
+          : undefined,
       ),
     )
     .orderBy(desc(templates.pinned), desc(templates.updatedAt))

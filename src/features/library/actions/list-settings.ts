@@ -1,9 +1,9 @@
 'use server'
 
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, ne, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, publiclyVisible, templates } from '@/shared/db'
+import { db, publiclyVisible, templates, users } from '@/shared/db'
 import { MAX_PINS } from '@/core/domain/pins'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
@@ -41,30 +41,45 @@ export async function setListVisibility(templateId: string, visibility: 'public'
 }
 
 /** «Customize your pins»: закрепить ровно выбранный набор своих списков (кап 6). */
+/**
+ * Закрепления владельца меняются ПО ОЧЕРЕДИ: строка владельца берётся `for update`.
+ * Счёт и запись в разных строках списков не сериализуются сами — два одновременных
+ * «закрепить» из соседних вкладок читали бы один и тот же счёт и оба проходили (находка
+ * авто-ревью). Тот же приём, что у ключей входа (`auth/passkey-core`).
+ */
+async function withPinsLock<T>(userId: string, fn: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<T>): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${users} where ${users.id} = ${userId} for update`)
+    return fn(tx)
+  })
+}
+
 export async function updatePins(templateIds: string[]): Promise<void> {
   const session = await requireSession()
-  // Правило то же, что у окна (`features/profile/pins`): только свои, видимые всем, не
+  // Правило то же, что у окна (`core/domain/pins`): только свои, видимые всем, не
   // больше шести. Проверяем здесь, а не верим окну: экшен зовут и мимо него.
   const wanted = [...new Set(templateIds)]
-  const allowed = wanted.length
-    ? new Set(
-        (
-          await db
-            .select({ id: templates.id })
-            .from(templates)
-            .where(and(eq(templates.ownerId, session.userId), inArray(templates.id, wanted), publiclyVisible()))
-        ).map((r) => r.id),
-      )
-    : new Set<string>()
-  const ids = wanted.filter((id) => allowed.has(id)).slice(0, MAX_PINS)
-  // Сначала снимаем все свои пины, затем ставим выбранные — итог точно равен выбору.
-  await db.update(templates).set({ pinned: false }).where(eq(templates.ownerId, session.userId))
-  if (ids.length) {
-    await db
-      .update(templates)
-      .set({ pinned: true })
-      .where(and(eq(templates.ownerId, session.userId), inArray(templates.id, ids)))
-  }
+  await withPinsLock(session.userId, async (tx) => {
+    const allowed = wanted.length
+      ? new Set(
+          (
+            await tx
+              .select({ id: templates.id })
+              .from(templates)
+              .where(and(eq(templates.ownerId, session.userId), inArray(templates.id, wanted), publiclyVisible()))
+          ).map((r) => r.id),
+        )
+      : new Set<string>()
+    const ids = wanted.filter((id) => allowed.has(id)).slice(0, MAX_PINS)
+    // Сначала снимаем все свои пины, затем ставим выбранные — итог точно равен выбору.
+    await tx.update(templates).set({ pinned: false }).where(eq(templates.ownerId, session.userId))
+    if (ids.length) {
+      await tx
+        .update(templates)
+        .set({ pinned: true })
+        .where(and(eq(templates.ownerId, session.userId), inArray(templates.id, ids)))
+    }
+  })
   revalidatePath(`/${session.handle}`)
 }
 
@@ -78,30 +93,26 @@ export async function setListPinned(templateId: string, pinned: boolean): Promis
   if (!pinned) {
     await db.update(templates).set({ pinned: false }).where(eq(templates.id, templateId))
   } else {
-    // ⚠️ ПРЕДЕЛ — В САМОМ UPDATE, а не проверкой перед ним. Кнопка в шапке списка
-    // закрепляла без счёта вовсе, и седьмой, восьмой ложились на профиль. Условие в
-    // той же строке, что и запись: между «посчитали» и «записали» никто не влезет с
-    // соседней вкладки. Видимость — там же: закреплённый приватный занял бы слот,
-    // невидимый посетителю.
-    const done = await db
-      .update(templates)
-      .set({ pinned: true })
-      .where(
-        and(
-          eq(templates.id, templateId),
-          eq(templates.ownerId, session.userId),
-          publiclyVisible(),
-          sql`(select count(*) from templates o where o.owner_id = ${session.userId} and o.pinned and o.id <> ${templateId}) < ${MAX_PINS}`,
-        ),
-      )
-      .returning({ id: templates.id })
-    if (!done.length) {
-      const [vis] = await db
+    // ⚠️ Счёт и запись — под замком владельца (`withPinsLock`), а в счёт идут только
+    // закреплённые, которые ВИДНЫ: список, ставший приватным или снятый модерацией,
+    // флаг сохраняет, но на профиле его нет — занимать им слот значило бы отказывать
+    // «уже шесть», когда видно пять (находка авто-ревью). Кнопка в шапке раньше не
+    // считала вовсе и закрепляла седьмой, восьмой и дальше.
+    const outcome = await withPinsLock(session.userId, async (tx) => {
+      const [target] = await tx
         .select({ id: templates.id })
         .from(templates)
-        .where(and(eq(templates.id, templateId), publiclyVisible()))
-      return { error: vis ? 'full' : 'notPublic' }
-    }
+        .where(and(eq(templates.id, templateId), eq(templates.ownerId, session.userId), publiclyVisible()))
+      if (!target) return 'notPublic' as const
+      const [{ n }] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(templates)
+        .where(and(eq(templates.ownerId, session.userId), eq(templates.pinned, true), publiclyVisible(), ne(templates.id, templateId)))
+      if (n >= MAX_PINS) return 'full' as const
+      await tx.update(templates).set({ pinned: true }).where(eq(templates.id, templateId))
+      return 'ok' as const
+    })
+    if (outcome !== 'ok') return { error: outcome }
   }
   revalidatePath(`/${session.handle}`)
   revalidatePath(`/${session.handle}/${tpl.slug}/settings`)

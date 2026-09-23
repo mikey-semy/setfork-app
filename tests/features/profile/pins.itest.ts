@@ -116,6 +116,12 @@ describe('окно при сотнях списков', () => {
     expect((await getPinnableLists(owner)).items[0].slug).toBe('pub-1')
   })
 
+  it('ищется название, а не служебные ключи переводов', async () => {
+    // Поиск по тексту JSON находил «r» и «u» в ключе `ru` у каждого списка.
+    expect((await getPinnableLists(owner, { q: 'ru' })).items).toEqual([])
+    expect((await getPinnableLists(owner, { q: 'Публичный 3' })).items.map((l) => l.slug)).toEqual(['pub-3'])
+  })
+
   it('знак % в поиске — буква, а не «что угодно»', async () => {
     expect((await getPinnableLists(owner, { q: '%' })).items).toEqual([])
   })
@@ -151,6 +157,23 @@ describe('кнопка в шапке списка', () => {
     // бы переподтвердить.
     for (let i = 1; i <= 6; i++) await setListPinned(id[`pub-${i}`], true)
     expect(await setListPinned(id['pub-6'], true)).toEqual({ ok: true })
+  })
+
+  it('одновременные «закрепить» из разных вкладок не проходят за шесть', async () => {
+    // Условие в самом UPDATE не спасает: строки разные, и каждая транзакция видит свой
+    // снимок счёта. Держит замок строки владельца.
+    for (let i = 1; i <= 4; i++) await setListPinned(id[`pub-${i}`], true)
+    const res = await Promise.all(['pub-5', 'pub-6', 'pub-7'].map((s) => setListPinned(id[s], true)))
+    expect(res.filter((r) => 'ok' in r)).toHaveLength(2)
+    expect(await pinnedSlugs()).toHaveLength(6)
+  })
+
+  it('закреплённый, ставший приватным, слот не занимает', async () => {
+    // Флаг у него остаётся, но на профиле его нет: отказ «уже шесть», когда видно пять,
+    // был бы враньём.
+    for (let i = 1; i <= 6; i++) await setListPinned(id[`pub-${i}`], true)
+    await db.update(templates).set({ visibility: 'private' }).where(eq(templates.id, id['pub-1']))
+    expect(await setListPinned(id['pub-7'], true)).toEqual({ ok: true })
   })
 
   it('приватный — отказ «не видят все»', async () => {
