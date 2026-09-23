@@ -2150,6 +2150,39 @@ export const digLayers = pgTable(
 )
 
 /**
+ * КТО ВЕДЁТ ПО ПУНКТУ — решение Jev (Decisions API) для кирки, одно на пункт версии.
+ *
+ * Двойная роль. Кэш: спрашивать модель на каждый вопрос в чате незачем — пункт тот же,
+ * и ответ тот же (два прогона замера дали одинаковый выбор на всех 57 пунктах). И набор
+ * для калибровки: уверенность choice и теневой ответ «подходит ли ремеслу» (`fits`)
+ * копятся на живых пунктах, и порог «отдать универсалу» подбирается по ним, а не на глаз.
+ *
+ * Запасное правило (`pickExpert`) сюда НЕ пишется: строка — это ответ модели, и
+ * выборка для калибровки не должна смешиваться с ответами правила по тегам.
+ * Привязка к (template, version, stepN) — как у `dig_layers`: новая версия меняет пункты.
+ */
+export const digGuides = pgTable(
+  'dig_guides',
+  {
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    stepN: integer('step_n').notNull(),
+    /** id гнома из ростера (text, неприкосновенен — AGENTS.md §4). */
+    gnomeId: text('gnome_id').notNull(),
+    confidence: real('confidence').notNull(),
+    probabilities: jsonb('probabilities').notNull().default({}).$type<Record<string, number>>(),
+    /** Теневой noul «пункт в ремесле выбранного»; null — не спросили или сбой. */
+    fits: real('fits'),
+    /** Какая модель ответила на самом деле (с датой сборки). */
+    model: text('model').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('dig_guides_step_idx').on(t.templateId, t.version, t.stepN)],
+)
+
+/**
  * Благодарности гному (одушевление, идея владельца «скажут спасибо — запомнит и
  * будет добрым»): явный положительный сигнал сверх принятия списка. Питает
  * настроение (теплеет) и — позже — эпизодическую память (личные уроки). Одна

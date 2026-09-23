@@ -12,6 +12,7 @@ import { rateLimit } from '@/shared/rate-limit'
 import { getAiSettings } from '@/shared/settings/ai'
 import { tr, trLoose, type Lang, type LocaleText } from '@/shared/i18n'
 import { pickExpert } from './pick-expert'
+import { guideForItem } from './guide'
 import { digDepth } from './depth'
 import { formatHistory } from './history'
 import { craftBasis } from './basis'
@@ -58,10 +59,6 @@ export async function digChatAsk(input: {
   if (!rl.ok) return { error: 'ratelimited' }
 
   const roster = await getRoster()
-  // Кто спустится в шахту — решает отдельное правило (см. `pick-expert`): выбор человека,
-  // иначе мастер по ремеслу, иначе универсал. Линза там каноническая.
-  const expert = pickExpert(roster, tpl.tags, input.gnome)
-  if (!expert) return { error: 'ai_off' }
 
   const [ver] = await db
     .select({ id: templateVersions.id })
@@ -78,6 +75,29 @@ export async function digChatAsk(input: {
   // Текст-блок хранит markdown в content.md (не в desc) — без этого кирка на
   // «Тексте» отдала бы гному пустой контекст.
   const blockMd = row.type === 'text' ? trLoose((row.content as { md?: unknown } | null)?.md, input.lang) : ''
+
+  // КТО СПУСТИТСЯ В ШАХТУ. Порядок: явный выбор человека → проводник по ПУНКТУ (Jev,
+  // `guideForItem`) → прежнее правило по тегам СПИСКА (`pickExpert`: мастер по ремеслу,
+  // иначе универсал). Последнее — не украшение, а запасной путь: модель может не
+  // ответить, бюджет — кончиться, и решение, роняющее запрос, хуже совпадения тегов.
+  const chosen = input.gnome && input.gnome !== 'auto' ? roster.find((e) => e.id === input.gnome) : undefined
+  const guide = chosen
+    ? null
+    : await guideForItem(
+        {
+          templateId: tpl.id,
+          version: tpl.currentVersion,
+          stepN: input.stepN,
+          listTitle: tr(tpl.title as LocaleText, input.lang),
+          tags: tpl.tags,
+          section: row.section ? tr(row.section as LocaleText, input.lang) : null,
+          item: [tr(row.title as LocaleText, input.lang), tr(row.desc as LocaleText, input.lang), blockMd].filter(Boolean).join('\n'),
+          userId: session.userId,
+        },
+        roster,
+      )
+  const expert = chosen ?? guide?.expert ?? pickExpert(roster, tpl.tags, 'auto')
+  if (!expert) return { error: 'ai_off' }
   const stepCtx = [
     `List: ${tr(tpl.title as LocaleText, input.lang)}`,
     tpl.tags.length ? `Tags: ${tpl.tags.join(', ')}` : '',
@@ -124,6 +144,8 @@ export async function digChatAsk(input: {
     refId: tpl.id,
     userId: session.userId,
   })
+  // Теневой вопрос о ремесле шёл параллельно с ответом гнома — дожидаемся записи.
+  await guide?.shadow
   if (!replies.length) return { error: 'aifail' }
 
   // Сессия: пишем вопрос + ВСЕ реплики гномов (созванный тоже сохраняется).
