@@ -146,6 +146,16 @@ async function main() {
   const args = process.argv.slice(2)
   const outAt = args.indexOf('--out')
   const out = outAt >= 0 ? args[outAt + 1] : undefined
+  // Незнакомый ключ — ошибка, а не молчание: иначе прогон с опечаткой или с ключом из
+  // другой версии скрипта тихо мерит не то, что написано в его подписи (так и случилось с
+  // `--roster prod` — авто-ревью к #961).
+  const KNOWN = new Set(['--baseline', '--dry', '--selfcheck', '--out'])
+  const unknown = args.filter((a, i) => a.startsWith('--') && !KNOWN.has(a) && args[i - 1] !== '--out')
+  if (unknown.length) {
+    console.error(`незнакомые ключи: ${unknown.join(', ')}; известны: ${[...KNOWN].join(', ')}`)
+    process.exitCode = 2
+    return
+  }
 
   if (args.includes('--selfcheck')) {
     await selfcheck()
@@ -153,8 +163,10 @@ async function main() {
   }
 
   if (args.includes('--dry')) {
-    const { decideModel } = await import('../src/shared/ai/decide')
-    console.log(JSON.stringify({ model: await decideModel(), state: stateOf(ds.items[0]), questions: { guide: QUESTION } }, null, 2))
+    // Ровно то тело, что уйдёт в запрос (`decideBody`): со spotlight и политикой данных, а
+    // не заготовка до них — иначе предпросмотр не проверяет самого важного (авто-ревью к #961).
+    const { decideBody, decideModel } = await import('../src/shared/ai/decide')
+    console.log(JSON.stringify(decideBody(await decideModel(), stateOf(ds.items[0]), { guide: QUESTION }), null, 2))
     return
   }
 
@@ -189,7 +201,6 @@ async function main() {
     })
     const secs = (Date.now() - t0) / 1000
     const answered = [...new Set(jev.map((p) => p.model).filter(Boolean))].join(', ') || model
-    const tokens = jev.reduce((s, p) => s + (p.inputTokens ?? 0), 0)
     // Стоимость — ТОЛЬКО из ответов (`usage.cost`), без оценки по прайсу. Итог берётся из
     // ЖУРНАЛА по uuid прогона, а не суммой удачных ответов: неразобранный ответ, за который
     // провайдер взял деньги, `decide()` отдаёт как null, и сумма по предсказаниям делала
@@ -198,10 +209,16 @@ async function main() {
     const { db, aiUsage } = await import('../src/shared/db')
     const { and, eq, sql } = await import('drizzle-orm')
     const [spent] = await db
-      .select({ usd: sql<number>`coalesce(sum(${aiUsage.costUsd}), 0)::float8`, calls: sql<number>`count(*)::int` })
+      .select({
+        usd: sql<number>`coalesce(sum(${aiUsage.costUsd}), 0)::float8`,
+        calls: sql<number>`count(*)::int`,
+        tokens: sql<number>`coalesce(sum(${aiUsage.inputTokens}), 0)::int`,
+      })
       .from(aiUsage)
       .where(and(eq(aiUsage.refType, 'gnome-routing-eval'), eq(aiUsage.refId, runId)))
     const billed = spent?.usd ?? 0
+    // Токены — из того же журнала: оплаченный неразобранный ответ их тоже потратил.
+    const tokens = spent?.tokens ?? 0
     const errors = jev.filter((p) => p.error)
     report.push(score(`Jev (${answered}, через OpenRouter Decisions)`, jev))
     report.push(
