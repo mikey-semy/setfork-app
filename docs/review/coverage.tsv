@@ -316,6 +316,7 @@ src/core/domain/block-identity.ts	H15
 src/core/domain/destructive-command.ts	H15
 src/core/domain/entities.ts	H15
 src/core/domain/links.ts	H15
+src/core/domain/pins.ts	H15
 src/core/domain/product.ts	H15
 src/core/domain/quiz-fingerprint.ts	H15
 src/core/domain/quiz.ts	H15
@@ -832,6 +833,7 @@ src/features/profile/activity/details-actions.ts	V7
 src/features/profile/activity/grid.ts	V7
 src/features/profile/activity/types.ts	V7
 src/features/profile/activity/use-details.ts	V7
+src/features/profile/pin-actions.ts	V7
 src/features/profile/queries.ts	V7
 src/features/profile/search.ts	V7
 src/features/quizzes/CertificatePrintButton.tsx	V3b
@@ -1556,6 +1558,7 @@ tests/features/profile/achievements.test.ts	V7
 tests/features/profile/activity-grid.test.ts	V7
 tests/features/profile/counts-visibility.itest.ts	V7
 tests/features/profile/lists-toolbar.test.tsx	V7
+tests/features/profile/pins.itest.ts	V7
 tests/features/profile/profile-lists.itest.ts	V7
 tests/features/related-lists.itest.ts	V6
 tests/features/releases/paging.itest.ts	V1i

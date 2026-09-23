@@ -1,9 +1,10 @@
 'use server'
 
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, templates } from '@/shared/db'
+import { db, publiclyVisible, templates } from '@/shared/db'
+import { MAX_PINS } from '@/core/domain/pins'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
@@ -42,7 +43,20 @@ export async function setListVisibility(templateId: string, visibility: 'public'
 /** «Customize your pins»: закрепить ровно выбранный набор своих списков (кап 6). */
 export async function updatePins(templateIds: string[]): Promise<void> {
   const session = await requireSession()
-  const ids = templateIds.slice(0, 6)
+  // Правило то же, что у окна (`features/profile/pins`): только свои, видимые всем, не
+  // больше шести. Проверяем здесь, а не верим окну: экшен зовут и мимо него.
+  const wanted = [...new Set(templateIds)]
+  const allowed = wanted.length
+    ? new Set(
+        (
+          await db
+            .select({ id: templates.id })
+            .from(templates)
+            .where(and(eq(templates.ownerId, session.userId), inArray(templates.id, wanted), publiclyVisible()))
+        ).map((r) => r.id),
+      )
+    : new Set<string>()
+  const ids = wanted.filter((id) => allowed.has(id)).slice(0, MAX_PINS)
   // Сначала снимаем все свои пины, затем ставим выбранные — итог точно равен выбору.
   await db.update(templates).set({ pinned: false }).where(eq(templates.ownerId, session.userId))
   if (ids.length) {
@@ -54,13 +68,44 @@ export async function updatePins(templateIds: string[]): Promise<void> {
   revalidatePath(`/${session.handle}`)
 }
 
-export async function setListPinned(templateId: string, pinned: boolean): Promise<void> {
+/** `full` — уже закреплено шесть; `notPublic` — список видят не все. */
+export type PinResult = { ok: true } | { error: 'full' | 'notPublic' }
+
+export async function setListPinned(templateId: string, pinned: boolean): Promise<PinResult> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
-  if (!tpl || tpl.ownerId !== session.userId) return
-  await db.update(templates).set({ pinned }).where(eq(templates.id, templateId))
+  if (!tpl || tpl.ownerId !== session.userId) return { error: 'notPublic' }
+  if (!pinned) {
+    await db.update(templates).set({ pinned: false }).where(eq(templates.id, templateId))
+  } else {
+    // ⚠️ ПРЕДЕЛ — В САМОМ UPDATE, а не проверкой перед ним. Кнопка в шапке списка
+    // закрепляла без счёта вовсе, и седьмой, восьмой ложились на профиль. Условие в
+    // той же строке, что и запись: между «посчитали» и «записали» никто не влезет с
+    // соседней вкладки. Видимость — там же: закреплённый приватный занял бы слот,
+    // невидимый посетителю.
+    const done = await db
+      .update(templates)
+      .set({ pinned: true })
+      .where(
+        and(
+          eq(templates.id, templateId),
+          eq(templates.ownerId, session.userId),
+          publiclyVisible(),
+          sql`(select count(*) from templates o where o.owner_id = ${session.userId} and o.pinned and o.id <> ${templateId}) < ${MAX_PINS}`,
+        ),
+      )
+      .returning({ id: templates.id })
+    if (!done.length) {
+      const [vis] = await db
+        .select({ id: templates.id })
+        .from(templates)
+        .where(and(eq(templates.id, templateId), publiclyVisible()))
+      return { error: vis ? 'full' : 'notPublic' }
+    }
+  }
   revalidatePath(`/${session.handle}`)
   revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
+  return { ok: true }
 }
 
 export async function deleteListAction(templateId: string): Promise<void> {

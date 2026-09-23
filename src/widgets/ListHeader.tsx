@@ -117,7 +117,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             {/* Pin — свой публичный. Кнопкой ВЕЗДЕ: на мобиле она иконкой, и «...»-меню
                 ради одного пункта больше не нужно (владелец: «Поделиться влезла бы»). */}
             {isOwner && meta.visibility === 'public' && (
-              <PinButton templateId={meta.id} pinned={meta.pinned} pinLabel={t('pin', lang)} unpinLabel={t('unpin', lang)} />
+              <PinButton templateId={meta.id} pinned={meta.pinned} pinLabel={t('pin', lang)} unpinLabel={t('unpin', lang)} lang={lang} />
             )}
             {session && watchState && (
               <WatchButton

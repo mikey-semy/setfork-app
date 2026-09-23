@@ -1,10 +1,12 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, desc, eq, or, sql } from 'drizzle-orm'
+import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import { courseCompletions, db, issues, runs, stars, suggestions, templateVersions, templates, users, publiclyVisible } from '@/shared/db'
-import type { LocaleText } from '@/shared/i18n'
+import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { FeedItem } from '@/features/library/queries'
 import { avatarSrc } from '@/shared/media'
+import { likeContains } from '@/shared/db/like'
+import { LISTS_PER_PAGE, takePage } from '@/shared/lib/paging'
 import type { ActivityKind, ActivityTopic, DetailsPage, ListEvent, TopicList } from './activity/types'
 
 // cache() — дедуп в рамках одного запроса (generateMetadata + сама страница
@@ -88,13 +90,46 @@ export async function getActivityTopics(userId: string, from: Date, to: Date, vi
 }
 
 /** Лёгкий список своих списков для пикера пинов («Customize your pins»). */
-export async function getOwnListsLight(userId: string): Promise<{ id: string; slug: string; pinned: boolean }[]> {
-  return db
-    .select({ id: templates.id, slug: templates.slug, pinned: templates.pinned })
+/**
+ * Что владелец может закрепить: только его списки, видимые ВСЕМ (как у GitHub: «public
+ * repositories … you'd like to show to anyone»). Приватный или черновик занял бы слот,
+ * а посетитель профиля его не увидел бы.
+ *
+ * ОКНОМ, а не всё сразу, и с признаком «есть ещё»: у владельца бывают сотни списков, а
+ * окно их не листает — оно ищет. Закреплённые идут первыми и в окно попадают всегда (их
+ * не больше шести). Раньше здесь стоял молчаливый предел в 100: списки за ним окно не
+ * показывало и не говорило, что они есть. Теперь поиск идёт сюда же, по всем.
+ */
+export async function getPinnableLists(
+  userId: string,
+  opts: { q?: string } = {},
+): Promise<{ items: { id: string; slug: string; title: LocaleText; stars: number; pinned: boolean }[]; hasMore: boolean }> {
+  const q = opts.q?.trim()
+  const rows = await db
+    .select({ id: templates.id, slug: templates.slug, title: templates.title, stars: templates.starsCount, pinned: templates.pinned })
     .from(templates)
-    .where(eq(templates.ownerId, userId))
+    .where(
+      and(
+        eq(templates.ownerId, userId),
+        publiclyVisible(),
+        q ? or(ilike(templates.slug, likeContains(q)), ilike(sql`${templates.title}::text`, likeContains(q))) : undefined,
+      ),
+    )
     .orderBy(desc(templates.pinned), desc(templates.updatedAt))
-    .limit(100)
+    .limit(LISTS_PER_PAGE + 1)
+  const { items, hasNext } = takePage(rows)
+  return { items, hasMore: hasNext }
+}
+
+/** Строки окна закрепления — с названием на языке интерфейса: окну незачем тащить все
+ *  переводы. Одно место на загрузку профиля и на поиск в окне. */
+export async function pinnableFor(
+  userId: string,
+  lang: Lang,
+  q?: string,
+): Promise<{ items: { id: string; slug: string; title: string; stars: number; pinned: boolean }[]; hasMore: boolean }> {
+  const { items, hasMore } = await getPinnableLists(userId, { q })
+  return { items: items.map((l) => ({ ...l, title: tr(l.title, lang) })), hasMore }
 }
 
 /** Активность по дням за ~год: версии списков, задачи и предложения правок. */
