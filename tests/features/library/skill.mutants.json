@@ -208,6 +208,41 @@
       "name": "оговорки про чужие инструкции нет",
       "from": "  out.push(`> ⚠ Review before use",
       "to": "  if (false) out.push(`> ⚠ Review before use"
+    },
+    {
+      "name": "кривой путь автора уходит в архив",
+      "from": "  return (ctx.authored ?? []).filter((f) => AUTHORED_PATH.test(f.path) && !f.path.split('/').includes('..'))",
+      "to": "  return ctx.authored ?? []"
+    },
+    {
+      "name": "авторские файлы не попадают в архив",
+      "from": "  for (const f of authoredOf(ctx)) files.push(",
+      "to": "  for (const f of [] as AuthoredFile[]) files.push("
+    },
+    {
+      "name": "авторский run.sh не главнее сгенерированного",
+      "from": "  const script = !taken.has(SKILL_SCRIPT_PATH) && hasCommands(list)",
+      "to": "  const script = hasCommands(list)"
+    },
+    {
+      "name": "авторский context.md не главнее собранного",
+      "from": "  const context = taken.has(SKILL_CONTEXT_PATH) ? null : contextFile(list, lang)",
+      "to": "  const context = contextFile(list, lang)"
+    },
+    {
+      "name": "SKILL.md не перечисляет авторские файлы",
+      "from": "    if (authoredPaths.length) {\n      out.push(`Files from the author",
+      "to": "    if (false) {\n      out.push(`Files from the author"
+    },
+    {
+      "name": "однофайловый не называет архив при авторских файлах",
+      "from": "  } else if (withContext || withScript || authoredPaths.length) {",
+      "to": "  } else if (withContext || withScript) {"
+    },
+    {
+      "name": "исполняемость авторского файла потеряна",
+      "from": "files.push({ path: f.path, content: f.content, executable: f.executable })",
+      "to": "files.push({ path: f.path, content: f.content, executable: false })"
     }
   ]
 }

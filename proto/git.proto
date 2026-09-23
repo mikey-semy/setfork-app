@@ -186,6 +186,12 @@ service GitCore {
   // именно в нём не так. Ошибки приходят ВСЕ разом и кодами, а не текстом:
   // язык читателя знает интерфейс, а не ядро.
   rpc ParseCanon(ParseCanonRequest) returns (ParseCanonResponse);
+  // Agent Skills (ADR-0028): авторские файлы версии — scripts/, references/,
+  // assets/ из git-дерева, ровно те байты, что покрыты SHA этой версии. Их не
+  // генерирует никто, поэтому экспорт скилла не может собрать их из блоков.
+  // found = false — нет такой версии (или ветки main); пустой files при found —
+  // авторских файлов у версии нет, и это обычный случай.
+  rpc GetAuthoredFiles(AuthoredFilesRequest) returns (AuthoredFilesResponse);
 }
 
 message RenderCanonRequest {
@@ -460,4 +466,22 @@ message CapabilitiesRequest {}
 message CapabilitiesResponse {
   // Ядро смотрит на роль пушащего и держит постороннего в его пространстве (Ф5).
   bool enforces_push_roles = 1;
+}
+
+// Agent Skills (ADR-0028): какие авторские файлы лежат в дереве версии.
+message AuthoredFilesRequest {
+  RepoRef repo = 1;
+  // Номер версии (тег vN). 0 — вершина main: для списка без версий и для отладки.
+  int32 version = 2;
+}
+
+message AuthoredFile {
+  string path = 1;     // «scripts/run.sh» — от корня дерева, через /
+  bytes content = 2;   // байты как в git; ядро пускает туда только текст
+  bool executable = 3; // режим 100755 — в архиве скилла файл остаётся исполняемым
+}
+
+message AuthoredFilesResponse {
+  bool found = 1;
+  repeated AuthoredFile files = 2; // по порядку дерева: каталог, затем имя
 }

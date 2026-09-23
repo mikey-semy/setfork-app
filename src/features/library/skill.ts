@@ -3,6 +3,7 @@
 // Чистые функции: ни базы, ни сети. Всё, что знает только маршрут (адрес сайта,
 // подпись версии, уровень проверки, последний прогон), приходит в `SkillContext`.
 import { tr, type Lang } from '@/shared/i18n'
+import type { AuthoredFile } from '@/core'
 import { translitRu } from '@/shared/lib/translit'
 import { markdownCodeBlock } from '@/shared/lib/markdown'
 import { safeHref } from '@/shared/lib/safe-url'
@@ -28,11 +29,14 @@ export interface SkillContext {
   verification?: string | null
   /** Последний прогон текущей версии. Нет прогона — нет и строки. */
   lastRun?: { verdict: string; passed: number; total: number; at: Date } | null
+  /** Авторские файлы версии из git-дерева (ADR-0028). Нет — скилл собирается из блоков. */
+  authored?: AuthoredFile[] | null
 }
 
 export interface SkillFile {
   path: string
-  content: string
+  /** Сгенерированное — строкой, авторское — байтами как в git. */
+  content: string | Uint8Array
   /** Исполняемый файл — в архиве получает права 0755. */
   executable?: boolean
 }
@@ -40,6 +44,22 @@ export interface SkillFile {
 export interface Skill {
   name: string
   files: SkillFile[]
+  /** Текст `SKILL.md` — для проверки длины, без поиска по `files`. */
+  markdown: string
+}
+
+/** Путь авторского файла — ровно `<каталог>/<имя>`, как принимает ядро (ADR-0028). */
+const AUTHORED_PATH = /^(scripts|references|assets)\/[^/]+$/
+
+/**
+ * Авторские файлы, которые можно положить в архив.
+ *
+ * Ядро пускает в дерево только такие пути, но архив их проверяет сам: `tarGz` на
+ * небезопасном пути бросает исключение, и одно кривое имя уронило бы маршрут в 500
+ * вместо архива. Неподходящее отбрасывается, остальное уходит как есть.
+ */
+function authoredOf(ctx: SkillContext): AuthoredFile[] {
+  return (ctx.authored ?? []).filter((f) => AUTHORED_PATH.test(f.path) && !f.path.split('/').includes('..'))
 }
 
 /**
@@ -205,7 +225,15 @@ type Mode = 'folder' | 'single'
  * `single` — однофайловая отдача без соседних файлов: ссылок на `references/` и
  * `scripts/` в ней нет (они вели бы в пустоту), вместо них — адрес архива целиком.
  */
-function skillBody(list: ExportList, lang: Lang, ctx: SkillContext, mode: Mode, withContext: boolean, withScript: boolean): string {
+function skillBody(
+  list: ExportList,
+  lang: Lang,
+  ctx: SkillContext,
+  mode: Mode,
+  withContext: boolean,
+  withScript: boolean,
+  authoredPaths: string[],
+): string {
   const out: string[] = []
   out.push(`# ${tr(list.title, lang)}`, '')
   const desc = tr(list.desc, lang).trim()
@@ -217,8 +245,13 @@ function skillBody(list: ExportList, lang: Lang, ctx: SkillContext, mode: Mode, 
   if (mode === 'folder') {
     if (withContext) out.push(`Background and the reasoning behind the steps: [${SKILL_CONTEXT_PATH}](${SKILL_CONTEXT_PATH}) — read it when you need to know why.`, '')
     if (withScript) out.push(`All commands as one script: [${SKILL_SCRIPT_PATH}](${SKILL_SCRIPT_PATH}) — review it before running.`, '')
-  } else if (withContext || withScript) {
-    out.push(`This file is the instructions only. The full skill${withContext ? ' with background' : ''}${withScript ? ' and the script' : ''}: ${skillArchiveUrl(list, ctx.origin)}`, '')
+    // Авторские файлы — перечнем: агент узнаёт о них только из SKILL.md, а сами они
+    // из блоков не выводятся. Скрипты среди них — такие же чужие, как шаги.
+    if (authoredPaths.length) {
+      out.push(`Files from the author, exactly as in this version (review scripts before running):`, '', ...authoredPaths.map((p) => `- [${p}](${p})`), '')
+    }
+  } else if (withContext || withScript || authoredPaths.length) {
+    out.push(`This file is the instructions only. The full skill${withContext ? ' with background' : ''}${withScript ? ' and the script' : ''}${authoredPaths.length ? ' and the author\u2019s files' : ''}: ${skillArchiveUrl(list, ctx.origin)}`, '')
   }
 
   let section = ''
@@ -245,9 +278,14 @@ function skillBody(list: ExportList, lang: Lang, ctx: SkillContext, mode: Mode, 
 
 function skillMarkdown(list: ExportList, lang: Lang, ctx: SkillContext, mode: Mode): { name: string; markdown: string; context: string | null; script: boolean } {
   const name = skillName(list.slug)
-  const context = contextFile(list, lang)
-  const script = hasCommands(list)
-  const body = skillBody(list, lang, ctx, mode, Boolean(context), script)
+  // ⚠️ Авторский файл на месте сгенерированного — решение автора, и он главнее. Тогда
+  // сгенерированный не создаётся, и строки о нём нет: «все команды одним скриптом» про
+  // авторский `scripts/run.sh` было бы неправдой — он может делать совсем другое.
+  const authoredPaths = authoredOf(ctx).map((f) => f.path)
+  const taken = new Set(authoredPaths)
+  const context = taken.has(SKILL_CONTEXT_PATH) ? null : contextFile(list, lang)
+  const script = !taken.has(SKILL_SCRIPT_PATH) && hasCommands(list)
+  const body = skillBody(list, lang, ctx, mode, Boolean(context), script, authoredPaths)
   return { name, markdown: `${frontmatter(name, skillDescription(list, lang), list, ctx)}\n\n${body}`, context, script }
 }
 
@@ -272,7 +310,9 @@ export function toSkill(list: ExportList, lang: Lang, ctx: SkillContext): Skill 
     const rawUrl = `${listUrl(list, ctx.origin)}/raw`
     files.push({ path: SKILL_SCRIPT_PATH, content: toRunnableScript(list, lang, rawUrl, 'sh'), executable: true })
   }
-  return { name, files }
+  // Авторские — байтами из дерева версии: ровно то, что покрыто её SHA.
+  for (const f of authoredOf(ctx)) files.push({ path: f.path, content: f.content, executable: f.executable })
+  return { name, files, markdown }
 }
 
 /** Однофайловый `SKILL.md` — для адреса `/{handle}/{slug}/SKILL.md`. */

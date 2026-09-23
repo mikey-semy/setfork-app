@@ -1,4 +1,5 @@
 import { loadSkill, warnIfLong } from '@/features/library/skill-load'
+import { gitCore } from '@/features/git/core'
 import { toSkillMarkdown } from '@/features/library/skill'
 import { cacheHeaders, noStoreHeaders } from '@/shared/http/cache'
 
@@ -15,7 +16,7 @@ import { cacheHeaders, noStoreHeaders } from '@/shared/http/cache'
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
-  const loaded = await loadSkill(handle, slug)
+  const loaded = await loadSkill(handle, slug, gitCore)
   if (!loaded) return new Response('Not found', { status: 404, headers: noStoreHeaders() })
 
   const body = toSkillMarkdown(loaded.list, loaded.lang, loaded.ctx)
