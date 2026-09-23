@@ -22,15 +22,20 @@ import { searchUsers, type FoundUser } from './user-search'
 export function UserHandleInput({
   name,
   placeholder,
+  defaultValue,
   size = 'md',
   className,
   'aria-label': ariaLabel,
+  'aria-invalid': ariaInvalid,
 }: {
   name: string
   placeholder?: string
+  /** Начальное значение неуправляемого поля (например, ник, вернувшийся с отказом). */
+  defaultValue?: string
   size?: InputSize
   className?: string
   'aria-label'?: string
+  'aria-invalid'?: boolean
 }) {
   // Поле НЕУПРАВЛЯЕМОЕ (значение правим через ref): после успешного `<form action>`
   // React 19 сам сбрасывает форму, и добавленный ник уходит из поля, как у GitHub.
@@ -91,12 +96,14 @@ export function UserHandleInput({
         size={size}
         ref={ref}
         name={name}
+        defaultValue={defaultValue}
         onChange={(e) => onChange(e.currentTarget)}
         onKeyDown={onKeyDown}
         onBlur={() => setOpen(false)}
         onFocus={() => users.length > 0 && setOpen(true)}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        aria-invalid={ariaInvalid || undefined}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={expanded}

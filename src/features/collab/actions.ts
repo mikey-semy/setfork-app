@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { collaborators, db, templates, users } from '@/shared/db'
 import { normalizeHandle } from '@/shared/auth/handle-input'
 import { requireSession } from '@/shared/auth/session'
+import { notify } from '@/features/notifications/notify'
 
 async function ownerGuard(templateId: string, userId: string) {
   const [tpl] = await db
@@ -17,23 +18,53 @@ async function ownerGuard(templateId: string, userId: string) {
   return owner ? { ...tpl, ownerHandle: owner.handle } : null
 }
 
+/** Почему соавтор не добавился — код, а не текст: форма переводит его на язык
+ *  страницы. Раньше каждый отказ молчал, и «не нашёлся такой ник» выглядел так же,
+ *  как «ничего не произошло» (правило проекта: без тихой деградации). */
+export type AddCollaboratorResult = {
+  ok?: true
+  error?: 'empty' | 'notFound' | 'owner' | 'forbidden'
+  /** Набранный ник при отказе: React 19 сбрасывает форму после экшена и при ошибке,
+   *  и без эха человек терял бы то, что набрал, вместе с причиной отказа. */
+  handle?: string
+}
+
 /** Добавить коллаборатора по handle (только владелец). */
-export async function addCollaborator(templateId: string, formData: FormData): Promise<void> {
+export async function addCollaborator(
+  templateId: string,
+  _prev: AddCollaboratorResult | null,
+  formData: FormData,
+): Promise<AddCollaboratorResult> {
   const session = await requireSession()
   const tpl = await ownerGuard(templateId, session.userId)
-  if (!tpl) return
+  if (!tpl) return { error: 'forbidden' }
   // То же правило, что у поля ввода: «@mike», « @Mike » и «mike» — один человек.
   const handle = normalizeHandle(String(formData.get('handle') ?? ''))
-  if (!handle) return
+  if (!handle) return { error: 'empty' }
   // Сверка без учёта регистра — как в handleBlock: колонка text unique регистрозависима.
   const [u] = await db
     .select({ id: users.id })
     .from(users)
     .where(and(sql`lower(${users.handle}) = ${handle}`, eq(users.deleted, false)))
     .limit(1)
-  if (!u || u.id === tpl.ownerId) return // нет такого / это владелец
-  await db.insert(collaborators).values({ templateId, userId: u.id, role: 'write' }).onConflictDoNothing()
+  if (!u) return { error: 'notFound', handle }
+  if (u.id === tpl.ownerId) return { error: 'owner', handle }
+  const added = await db
+    .insert(collaborators)
+    .values({ templateId, userId: u.id, role: 'write' })
+    .onConflictDoNothing()
+    .returning({ userId: collaborators.userId })
+  // Письмо и колокольчик — только за НОВОГО соавтора: повторное «Добавить» того же
+  // человека не должно слать ему второе письмо. Соавтору — кто его добавил; владельцу —
+  // копия с соавтором в роли действующего лица, чтобы помнить, кому выдан доступ
+  // (от своего имени notify себе не шлёт). После вставки: соавтор уже видит список,
+  // и гейт видимости уведомления его пропускает.
+  if (added.length > 0) {
+    await notify({ recipientId: u.id, actorId: session.userId, type: 'collaborator_added', templateId })
+    await notify({ recipientId: tpl.ownerId, actorId: u.id, type: 'collaborator_joined', templateId })
+  }
   revalidatePath(`/${tpl.ownerHandle}/${tpl.slug}/settings`)
+  return { ok: true }
 }
 
 /** Убрать коллаборатора (только владелец). */

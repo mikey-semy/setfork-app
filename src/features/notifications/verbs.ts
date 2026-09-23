@@ -35,4 +35,6 @@ export const NOTIF_VERB: Record<NotificationType, TKey> = {
   transfer_incoming: 'notifTransferIncoming',
   transfer_accepted: 'notifTransferAccepted',
   transfer_declined: 'notifTransferDeclined',
+  collaborator_added: 'notifCollaboratorAdded',
+  collaborator_joined: 'notifCollaboratorJoined',
 }

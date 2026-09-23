@@ -108,6 +108,8 @@ export const notificationType = pgEnum('notification_type', [
   'transfer_incoming', // тебе предлагают принять владение списком
   'transfer_accepted', // получатель принял твою передачу
   'transfer_declined', // получатель отклонил твою передачу
+  'collaborator_added', // тебя добавили соавтором списка
+  'collaborator_joined', // в твоём списке появился соавтор (копия владельцу)
 ])
 
 export const issueStatus = pgEnum('issue_status', ['open', 'closed'])

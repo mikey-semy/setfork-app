@@ -4,11 +4,11 @@ import { Button } from '@/shared/ui/button'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { UserLine } from '@/shared/ui/UserLine'
-import { addCollaborator, removeCollaborator } from './actions'
+import { removeCollaborator } from './actions'
+import { AddCollaboratorForm } from './AddCollaboratorForm'
 import type { CollaboratorRow } from './queries'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Badge } from '@/shared/ui/badge'
-import { UserHandleInput } from '@/shared/ui/UserHandleInput'
 
 /** Управление соавторами (только владелец; страница settings уже owner-gated). */
 export function CollaboratorsSection({
@@ -28,19 +28,7 @@ export function CollaboratorsSection({
         </span>
       }
     >
-      {/* Поле и кнопка в одном ряду без переноса: на телефоне поле ужимается (flex-1 +
-          min-w-0 внутри), на широком экране — ширина меню, чтобы не тянуться на всю секцию. */}
-      <form action={addCollaborator.bind(null, templateId)} className="mb-3 flex items-center gap-2">
-        <UserHandleInput
-          name="handle"
-          placeholder={t('addCollaboratorPh', lang)}
-          aria-label={t('addCollaboratorPh', lang)}
-          className="flex-1 sm:w-menu sm:flex-none"
-        />
-        <Button type="submit" variant="primary" size="md" className="shrink-0">
-          {t('addCollaborator', lang)}
-        </Button>
-      </form>
+      <AddCollaboratorForm templateId={templateId} lang={lang} />
 
       {collaborators.length === 0 ? (
         <p className="text-body text-muted">{t('noCollaborators', lang)}</p>
