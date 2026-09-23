@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { plannedDrops, typeFamily, typeMods, type Schema } from '../../scripts/migrate-drops'
+import { enumDrift, enumsFromDdl, plannedDrops, typeFamily, typeMods, type Enums, type Schema } from '../../scripts/migrate-drops'
 
 /**
  * ПРОД-МИГРАЦИЯ НЕ УДАЛЯЕТ МОЛЧА.
@@ -18,7 +18,7 @@ const m = (o: Record<string, Record<string, string>>): Schema =>
 describe('что удалил бы push --force', () => {
   it('схемы совпадают → удалять нечего', () => {
     const same = { users: { id: 'uuid', handle: 'text' }, templates: { id: 'uuid', slug: 'text' } }
-    expect(plannedDrops(m(same), m(same))).toEqual({ tables: [], columns: [], retypes: [] })
+    expect(plannedDrops(m(same), m(same))).toEqual({ tables: [], columns: [], retypes: [], enumValues: [] })
   })
 
   it('колонка есть в БД, но не в коде — это удаление данных', () => {
@@ -41,12 +41,12 @@ describe('что удалил бы push --force', () => {
 
   it('журнал самих миграций drizzle не считаем лишним', () => {
     const d = plannedDrops(m({ users: { id: 'uuid' } }), m({ users: { id: 'uuid' }, __drizzle_migrations: { id: 'int4', hash: 'text' } }))
-    expect(d).toEqual({ tables: [], columns: [], retypes: [] })
+    expect(d).toEqual({ tables: [], columns: [], retypes: [], enumValues: [] })
   })
 
   it('добавления не мешают: новой колонки в БД пока нет — это обычная волна схемы', () => {
     const d = plannedDrops(m({ users: { id: 'uuid', handle: 'text', lang: 'text' } }), m({ users: { id: 'uuid', handle: 'text' } }))
-    expect(d).toEqual({ tables: [], columns: [], retypes: [] })
+    expect(d).toEqual({ tables: [], columns: [], retypes: [], enumValues: [] })
   })
 })
 
@@ -67,7 +67,7 @@ describe('смена типа при том же имени', () => {
     expect(d.retypes).toEqual([])
   })
 
-  it('незнакомый тип (свой enum) молчит: барьер не встаёт поперёк каждой миграции', () => {
+  it('незнакомый тип без сведений о перечислениях молчит: барьер не встаёт поперёк каждой миграции', () => {
     const d = plannedDrops(m({ lists: { status: 'list_status' } }), m({ lists: { status: 'list_status_v2' } }))
     expect(d.retypes).toEqual([])
   })
@@ -121,5 +121,81 @@ describe('семейства типов', () => {
     expect(typeMods('numeric(12, 6)')).toEqual([12, 6])
     expect(typeMods('character varying(64)')).toEqual([64])
     expect(typeMods('text')).toEqual([])
+  })
+})
+
+/**
+ * ПЕРЕЧИСЛЕНИЯ (ревью #973). Откат правки, добавившей значение enum, drizzle-kit
+ * проводит цепочкой «колонку в text → DROP TYPE → CREATE TYPE без значения → колонку
+ * обратно», без транзакции, и падение последнего шага на записанных строках глотает с
+ * кодом 0. Итог — колонка навсегда text при зелёной выкатке. Барьер останавливает это
+ * ДО push, сверка — ловит после, если push всё же применился наполовину.
+ */
+const e = (o: Record<string, string[]>): Enums => new Map(Object.entries(o))
+// Ровно так печатает `drizzle-kit export` (0.31): тип со схемой, колонка — по имени.
+const DDL = `CREATE TYPE "public"."notification_type" AS ENUM('mention', 'collaborator_added');
+CREATE TYPE "public"."collaborator_role" AS ENUM('write');
+CREATE TABLE "notifications" (
+	"type" "notification_type" NOT NULL,
+);`
+
+describe('перечисления из DDL кода', () => {
+  it('читаются имя и значения по порядку', () => {
+    expect(enumsFromDdl(DDL)).toEqual(e({ notification_type: ['mention', 'collaborator_added'], collaborator_role: ['write'] }))
+  })
+
+  it('кавычка внутри значения не рвёт разбор', () => {
+    expect(enumsFromDdl(`CREATE TYPE "public"."x" AS ENUM('it''s', 'b');`)).toEqual(e({ x: ["it's", 'b'] }))
+  })
+})
+
+describe('барьер: удалённое значение перечисления', () => {
+  const code = m({ notifications: { type: '"notification_type"' } })
+  const db = m({ notifications: { type: 'notification_type' } })
+
+  it('⚠️ откат правки, добавившей значение, останавливает миграцию', () => {
+    const d = plannedDrops(code, db, e({ notification_type: ['mention'] }), e({ notification_type: ['mention', 'collaborator_added'] }))
+    expect(d.enumValues).toEqual([{ enum: 'notification_type', values: ['collaborator_added'] }])
+  })
+
+  it('добавленное значение — обычная волна схемы, не тревога', () => {
+    const d = plannedDrops(code, db, e({ notification_type: ['mention', 'collaborator_added'] }), e({ notification_type: ['mention'] }))
+    expect(d.enumValues).toEqual([])
+    expect(d.retypes).toEqual([])
+  })
+
+  it('колонка-перечисление, ставшая text, — смена типа', () => {
+    const d = plannedDrops(code, m({ notifications: { type: 'text' } }), e({ notification_type: ['mention'] }), e({ notification_type: ['mention'] }))
+    expect(d.retypes).toEqual([{ column: 'notifications.type', from: 'text', to: '"notification_type"' }])
+  })
+
+  it('кавычки и схема в имени типа — не повод для тревоги', () => {
+    const d = plannedDrops(m({ t: { s: '"public"."notification_type"' } }), m({ t: { s: 'notification_type' } }), e({ notification_type: ['a'] }), e({ notification_type: ['a'] }))
+    expect(d.retypes).toEqual([])
+  })
+})
+
+describe('сверка после push: перечисления', () => {
+  const code = m({ notifications: { type: '"notification_type"' } })
+  const codeEnums = e({ notification_type: ['mention', 'collaborator_added'] })
+
+  it('совпадение — пусто', () => {
+    expect(enumDrift(code, m({ notifications: { type: 'notification_type' } }), codeEnums, codeEnums)).toEqual([])
+  })
+
+  it('⚠️ push применился наполовину: колонка осталась text', () => {
+    expect(enumDrift(code, m({ notifications: { type: 'text' } }), codeEnums, codeEnums)).toEqual([
+      'notifications.type: text вместо notification_type',
+    ])
+  })
+
+  it('значения не добавились — вставка упадёт 22P02', () => {
+    expect(enumDrift(code, m({ notifications: { type: 'notification_type' } }), codeEnums, e({ notification_type: ['mention'] }))).toEqual([
+      'у notification_type нет значений: collaborator_added',
+    ])
+  })
+
+  it('типа нет вовсе', () => {
+    expect(enumDrift(code, m({ notifications: { type: 'notification_type' } }), codeEnums, new Map())).toEqual(['нет типа notification_type'])
   })
 })

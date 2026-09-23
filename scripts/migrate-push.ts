@@ -31,7 +31,7 @@
 import 'dotenv/config'
 import { spawnSync } from 'node:child_process'
 import { Pool } from 'pg'
-import { plannedDrops, type Schema, type TableColumns } from './migrate-drops'
+import { enumDrift, enumsFromDdl, plannedDrops, type Enums, type Schema, type TableColumns } from './migrate-drops'
 import { bootstrapPost, bootstrapPre } from './db-bootstrap'
 import { EMBEDDING_COLUMN_DIM } from '@/shared/db/schema'
 
@@ -58,13 +58,18 @@ const TYPE_MARKERS: Array<{ table: string; column: string; udt: string }> = [
   { table: 'embeddings', column: 'embedding', udt: 'halfvec' }, // P4 #380
 ]
 
-/** Ожидаемая схема ИЗ КОДА: таблицы, колонки и их типы, как их описывает schema.ts. */
-function expectedSchema(): Schema {
-  const out: Schema = new Map()
-  // drizzle-kit export печатает полный DDL по schema.ts, ни к чему не подключаясь.
+/** Полный DDL по schema.ts: drizzle-kit export печатает его, ни к чему не подключаясь.
+ *  Один раз на миграцию — из него берутся и таблицы, и перечисления. */
+function exportDdl(): string {
   const res = spawnSync('npx', ['drizzle-kit', 'export'], { encoding: 'utf8', shell: true })
   if (res.status !== 0 || !res.stdout) throw new Error(`drizzle-kit export не отработал: ${res.stderr?.slice(0, 300)}`)
-  for (const m of res.stdout.matchAll(/CREATE TABLE(?: IF NOT EXISTS)? "?(\w+)"?\s*\(([\s\S]*?)\n\);/g)) {
+  return res.stdout
+}
+
+/** Ожидаемая схема ИЗ КОДА: таблицы, колонки и их типы, как их описывает schema.ts. */
+function expectedSchema(ddl: string): Schema {
+  const out: Schema = new Map()
+  for (const m of ddl.matchAll(/CREATE TABLE(?: IF NOT EXISTS)? "?(\w+)"?\s*\(([\s\S]*?)\n\);/g)) {
     const cols: TableColumns = new Map()
     for (const line of m[2].split('\n')) {
       const t = line.trim()
@@ -107,6 +112,21 @@ async function dbSchema(pool: Pool): Promise<Schema> {
     if (!out.has(r.table_name)) out.set(r.table_name, new Map())
     out.get(r.table_name)!.set(r.column_name, r.udt_name)
   }
+  return out
+}
+
+/** Перечисления, которые СЕЙЧАС есть в БД: имя типа → значения по порядку. */
+async function dbEnums(pool: Pool): Promise<Enums> {
+  const { rows } = await pool.query<{ name: string; value: string }>(
+    `SELECT t.typname AS name, e.enumlabel AS value
+       FROM pg_type t
+       JOIN pg_enum e ON e.enumtypid = t.oid
+       JOIN pg_namespace n ON n.oid = t.typnamespace
+      WHERE n.nspname = 'public'
+      ORDER BY t.typname, e.enumsortorder`,
+  )
+  const out: Enums = new Map()
+  for (const r of rows) out.set(r.name, [...(out.get(r.name) ?? []), r.value])
   return out
 }
 
@@ -241,12 +261,21 @@ export async function main() {
   }
 
   // ── барьер против удаления ──────────────────────────────────────────
-  const { tables: dropTables, columns: dropCols, retypes } = plannedDrops(expectedSchema(), await dbSchema(pool))
-  if (dropTables.length || dropCols.length || retypes.length) {
+  const ddl = exportDdl()
+  const expected = expectedSchema(ddl)
+  const expectedEnums = enumsFromDdl(ddl)
+  const {
+    tables: dropTables,
+    columns: dropCols,
+    retypes,
+    enumValues,
+  } = plannedDrops(expected, await dbSchema(pool), expectedEnums, await dbEnums(pool))
+  if (dropTables.length || dropCols.length || retypes.length || enumValues.length) {
     const what = [
       dropTables.length ? `таблицы: ${dropTables.join(', ')}` : '',
       dropCols.length ? `колонки: ${dropCols.slice(0, 40).join(', ')}` : '',
       retypes.length ? `смена типа: ${retypes.slice(0, 20).map((r) => `${r.column} ${r.from}→${r.to}`).join(', ')}` : '',
+      enumValues.length ? `значения перечислений: ${enumValues.map((e) => `${e.enum} −{${e.values.join(', ')}}`).join('; ')}` : '',
     ].filter(Boolean).join('; ')
     if (process.env.ALLOW_DESTRUCTIVE_MIGRATION === '1') {
       console.warn(`[preflight] РАЗРУШАЮЩАЯ МИГРАЦИЯ РАЗРЕШЕНА явно (ALLOW_DESTRUCTIVE_MIGRATION=1) → ${what}`)
@@ -270,7 +299,6 @@ export async function main() {
   console.log('[migrate] канон поиска (0028: порог word_similarity + GIN-индексы) применён')
 
   // ПОЛНАЯ сверка: что описано в коде — то обязано быть в БД.
-  const expected = expectedSchema()
   const have = await dbSchema(pool)
   const missingTables: string[] = []
   const missingCols: string[] = []
@@ -287,6 +315,16 @@ export async function main() {
     if (missingTables.length) console.error(`[verify] нет таблиц (${missingTables.length}): ${missingTables.join(', ')}`)
     if (missingCols.length) console.error(`[verify] нет колонок (${missingCols.length}): ${missingCols.slice(0, 40).join(', ')}`)
     console.error('[verify] приложение с такой схемой упадёт на первом же запросе — запуск остановлен.')
+    process.exit(1)
+  }
+
+  // Перечисления: значения и колонки на них. push применяет смену типа без транзакции
+  // и глотает падение последнего шага — колонка остаётся text при коде выхода 0.
+  const drift = enumDrift(expected, have, expectedEnums, await dbEnums(pool))
+  if (drift.length) {
+    console.error('[verify] ПЕРЕЧИСЛЕНИЯ В БД РАСХОДЯТСЯ С КОДОМ — push применился наполовину.')
+    for (const d of drift.slice(0, 40)) console.error(`[verify] ${d}`)
+    console.error('[verify] вставка нового значения упадёт 22P02, а колонка-text молча примет что угодно — запуск остановлен.')
     process.exit(1)
   }
 
