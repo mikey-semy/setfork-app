@@ -30,6 +30,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { rankByAffinity } from '../src/shared/ai/precedent-filter'
+import { pickExpert } from '../src/features/dig/pick-expert'
 import { guideAbout, guideQuestion, guideState } from '../src/shared/ai/guide-question'
 
 const HERE = join(dirname(fileURLToPath(import.meta.url)), 'lib', 'gnome-routing')
@@ -44,7 +45,14 @@ type Pred = { id: string; pred: string; confidence?: number; probs?: Record<stri
 // `--roster prod` — ростер прода (`list_gnomes` 23.09.2026): домены те же, что в наборе, а
 // `about` — как его отдаёт персона, без ручной нормализации. Так мерится ровно то, что
 // кирка отправит в проде. По умолчанию — исходный ростер исследования (для 30/57).
-const ROSTER_FILE = process.argv.includes('--roster') && process.argv[process.argv.indexOf('--roster') + 1] === 'prod' ? 'gnomes-prod.json' : 'gnomes.json'
+//
+// ⚠️ Это СНИМОК прода, а не живая база: ростер правится в админке, и замер по текущему
+// состоянию нельзя было бы повторить. Снимок — `gnomes-prod.json`; обновлять его — осознанно,
+// новым файлом с датой.
+const ROSTERS: Record<string, string> = { set: 'gnomes.json', prod: 'gnomes-prod.json' }
+const rosterAt = process.argv.indexOf('--roster')
+const rosterArg = rosterAt >= 0 ? process.argv[rosterAt + 1] : 'set'
+const ROSTER_FILE = ROSTERS[rosterArg] ?? 'gnomes.json'
 const roster: Gnome[] = JSON.parse(readFileSync(join(HERE, ROSTER_FILE), 'utf8')).gnomes
 const ds = JSON.parse(readFileSync(join(HERE, 'dataset.json'), 'utf8')) as { lists: Record<string, ListMeta>; items: Item[] }
 
@@ -146,8 +154,13 @@ async function main() {
     process.exitCode = 2
     return
   }
-  const KNOWN = new Set(['--baseline', '--dry', '--selfcheck', '--out'])
-  const unknown = args.filter((a, i) => a.startsWith('--') && !KNOWN.has(a) && args[i - 1] !== '--out')
+  if (!(rosterArg in ROSTERS)) {
+    console.error(`--roster принимает: ${Object.keys(ROSTERS).join(', ')}`)
+    process.exitCode = 2
+    return
+  }
+  const KNOWN = new Set(['--baseline', '--dry', '--selfcheck', '--out', '--roster'])
+  const unknown = args.filter((a, i) => a.startsWith('--') && !KNOWN.has(a) && args[i - 1] !== '--out' && args[i - 1] !== '--roster')
   if (unknown.length) {
     console.error(`незнакомые ключи: ${unknown.join(', ')}; известны: ${[...KNOWN].join(', ')}`)
     process.exitCode = 2
@@ -169,6 +182,11 @@ async function main() {
 
   const base: Pred[] = ds.items.map((it) => ({ id: it.id, pred: baseline(ds.lists[it.list].tags) }))
   const report = [`# Результаты — ${new Date().toISOString().slice(0, 10)}`, '', score('Базовая линия: tenderForTags (теги списка × домены)', base)]
+  // Правило, которое кирка использовала ДО встраивания Jev: первый по порядку ростера
+  // мастер с совпавшим тегом списка, иначе универсал. Замер HQ сравнивал с tenderForTags;
+  // встраивание заменяет именно это правило, поэтому считаем и его — тем же кодом.
+  const kirka: Pred[] = ds.items.map((it) => ({ id: it.id, pred: pickExpert(roster, ds.lists[it.list].tags, 'auto')?.id ?? '?' }))
+  report.push(score('Кирка до встраивания: pickExpert (первый совпавший по ростеру)', kirka))
   const byFallback = ds.items.filter((it) => noSpecialist(ds.lists[it.list].tags))
   const okByFallback = byFallback.filter((it) => it.gold === 'generalist' || it.ok.includes('generalist')).length
   report.push(
@@ -217,7 +235,8 @@ async function main() {
       .from(aiUsage)
       .where(and(eq(aiUsage.refType, 'gnome-routing-eval'), eq(aiUsage.refId, runId)))
     const errors = jev.filter((p) => p.error)
-    report.push(score(`Jev (${answered}, через OpenRouter Decisions, ростер ${ROSTER_FILE})`, jev))
+    const rosterNote = rosterArg === 'prod' ? `${ROSTER_FILE}, снимок list_gnomes прода 23.09.2026` : ROSTER_FILE
+    report.push(score(`Jev (${answered}, через OpenRouter Decisions, ростер ${rosterNote})`, jev))
     report.push(
       `Прогон: ${jev.length} пунктов, ${attempts.n} запросов к провайдеру за ${secs.toFixed(1)} с, ${attempts.tokens} входных токенов, $${attempts.cost.toFixed(6)} — сумма \`usage.cost\` из ответов (журнал \`ai_usage\`: ${journal?.calls ?? 0} строк, $${(journal?.usd ?? 0).toFixed(6)} с округлением до 6 знаков), ошибок: ${errors.length}.`,
       '',
