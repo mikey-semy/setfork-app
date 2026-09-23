@@ -7,9 +7,13 @@
 // Заодно фиксируется САМ СОСТАВ: инструменты — публичный контракт для агентов, и
 // пропажа или переименование обязаны быть видны как падение, а не как тихое изменение
 // поверхности.
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 import { registerSurface } from '@/features/mcp/registry'
+
+// Метод Commitics берётся из настройки в базе; здесь базы нет, а проверяется только ТЕКСТ
+// сценариев. Сам поиск метода по настройке — в prompts-resources.itest.ts, на настоящей базе.
+vi.mock('@/features/mcp/tools/commitics', () => ({ commiticsMethod: async () => ({ handle: 'owner', slug: 'method' }) }))
 
 type Captured = {
   name: string

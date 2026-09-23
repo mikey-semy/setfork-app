@@ -1096,6 +1096,7 @@ src/shared/lib/sidebar-cookie.ts	V12b
 src/shared/lib/slug.ts	V12b
 src/shared/lib/slugify.ts	V12b
 src/shared/lib/step-input.ts	V12b
+src/shared/lib/tar.ts	V12b
 src/shared/lib/text-input.ts	V12b
 src/shared/lib/translit.ts	V12b
 src/shared/lib/wiki-links.ts	V12b
@@ -1295,6 +1296,7 @@ tests/app/raw-error-contract.test.ts	V12d
 tests/app/raw-failure-loud.test.ts	V12d
 tests/app/sitemap-verification.itest.ts	V12d
 tests/app/sitemap.itest.ts	V12d
+tests/app/skill-routes.itest.ts	V12d
 tests/app/telegram-link-page.test.tsx	V12d
 tests/architecture/audit-gate-split.test.ts	H12
 tests/architecture/block-fields-reach-the-wire.mutants.json	H12
@@ -1485,6 +1487,7 @@ tests/features/library/hotkeys.test.ts	V1k
 tests/features/library/keyset-indexes.itest.ts	V1g
 tests/features/library/lineage.itest.ts	V1d
 tests/features/library/list-actions-menu.test.tsx	V1k
+tests/features/library/list-editor/block-uploads.test.tsx	V1k
 tests/features/library/localized-content.test.ts	V1k
 tests/features/library/maintainer-parity.itest.ts	V1
 tests/features/library/merge-not-projected.test.ts	V1k,V1d
@@ -1519,6 +1522,7 @@ tests/features/library/search-ranking.itest.ts	V1g
 tests/features/library/selfgen-outcome.test.ts	V1h,V1k
 tests/features/library/semantic-order.itest.ts	V1g
 tests/features/library/set-verification-level.itest.ts	V1h
+tests/features/library/skill.test.ts	V1k
 tests/features/library/slug.test.ts	V1k
 tests/features/library/suggest-refusal-keeps-edit.test.ts	V1k
 tests/features/library/suggestion-apply.test.ts	V1,V1k
@@ -1719,6 +1723,7 @@ tests/shared/lib/paging.test.ts	V12b
 tests/shared/lib/safe-fetch.test.ts	V12b
 tests/shared/lib/safe-url.test.ts	V12b
 tests/shared/lib/step-field-parity.test.ts	V12b
+tests/shared/lib/tar.mutants.json	V12b
 tests/shared/lib/text-input.test.ts	V12b
 tests/shared/lib/translit.test.ts	V12b
 tests/shared/link-health.test.ts	V12f

@@ -5,6 +5,9 @@ import { getAiProviderRaw, getAiSettings, maskKey } from '@/shared/settings/ai'
 import { getMediaSettings, maskSecret } from '@/shared/settings/media'
 import { getChangelogSettings } from '@/shared/settings/changelog'
 import { ChangelogSettingsForm } from '@/features/admin/ChangelogSettingsForm'
+import { McpSettingsForm } from '@/features/mcp/McpSettingsForm'
+import { getMcpSettings } from '@/shared/settings/mcp'
+import { publicListAddress } from '@/features/mcp/tools/commitics'
 import { getSearchSettings } from '@/shared/settings/search'
 import { getEmailSettings } from '@/shared/settings/email'
 import { maintenanceEnvOverride, maintenanceFlag } from '@/shared/settings/maintenance'
@@ -70,7 +73,7 @@ export async function generateMetadata() {
 
 export default async function AdminPage() {
   await requireAdmin()
-  const [lang, settings, aiProv, media, search, email, online, vapid, achDisplay, maintOn, monetization, changelogSettings] = await Promise.all([
+  const [lang, settings, aiProv, media, search, email, online, vapid, achDisplay, maintOn, monetization, changelogSettings, mcpSettings] = await Promise.all([
     getLang(),
     getAiSettings(),
     getAiProviderRaw(),
@@ -83,7 +86,15 @@ export default async function AdminPage() {
     maintenanceFlag(),
     getMonetizationSettings(),
     getChangelogSettings(),
+    getMcpSettings(),
   ])
+  // Метод Commitics: id из настройки → текущий адрес. «Задан, но не находится» — список
+  // удалили или закрыли; форма показывает это отдельно, а не как «не задан».
+  const methodAddress = mcpSettings.commiticsListId ? await publicListAddress(mcpSettings.commiticsListId) : null
+  const commitics = {
+    address: methodAddress ? `${methodAddress.handle}/${methodAddress.slug}` : null,
+    broken: !!mcpSettings.commiticsListId && !methodAddress,
+  }
   const ru = lang === 'ru'
   const pushValues = { publicKey: vapid.publicKey, subject: vapid.subject, configured: Boolean(vapid.publicKey && vapid.privateKey) }
   const emailValues = {
@@ -343,6 +354,11 @@ export default async function AdminPage() {
           }
         >
           <SearchSettingsForm current={search} lang={lang} />
+        </SettingsSection>
+      ),
+    mcp: (
+        <SettingsSection title={t('admin.sect.mcp', lang)}>
+          <McpSettingsForm current={commitics} lang={lang} />
         </SettingsSection>
       ),
     changelog: (

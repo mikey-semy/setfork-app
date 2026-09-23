@@ -142,6 +142,7 @@
         "src/features/mcp/registry/resources.ts",
         "src/features/mcp/registry/server-info.ts",
         "src/features/mcp/tools/index.ts",
+        "src/features/mcp/tools/commitics.ts",
         "src/features/mcp/tools/lists",
         "src/features/mcp/tools/reads.ts",
         "src/features/mcp/tools/resources.ts",
@@ -175,7 +176,9 @@
       "goal": "Проверить инструменты, которыми агент участвует в работе людей — задачи, правки, прогоны, проверки, источники: те же права и та же частота, что у форм сайта.",
       "paths": [
         "src/features/mcp/ApiTokensSection.tsx",
+        "src/features/mcp/McpSettingsForm.tsx",
         "src/features/mcp/actions.ts",
+        "src/features/mcp/admin-actions.ts",
         "src/features/mcp/council.ts",
         "src/features/mcp/gnome.ts",
         "src/features/mcp/queries.ts",

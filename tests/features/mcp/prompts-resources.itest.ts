@@ -16,14 +16,20 @@ import { resetTables } from '../../helpers/reset-db'
 const viewer = vi.hoisted(() => ({ session: null as null | { userId: string; handle: string } }))
 vi.mock('@/shared/auth/session', () => ({ getSession: async () => viewer.session, requireSession: async () => viewer.session }))
 vi.mock('@/shared/i18n/server', async (orig) => ({ ...(await orig()), getLang: async () => 'en' }))
+// Экшен админки: права админа и сброс кэша страниц — не предмет этих тестов.
+vi.mock('@/shared/auth/admin', async (orig) => ({ ...(await orig()), requireAdmin: async () => ({ userId: 'admin', handle: 'admin' }) }))
+vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 
-const { db, collaborators, steps, templateVersions, templates, users } = await import('@/shared/db')
+const { db, appSettings, collaborators, steps, templateVersions, templates, users } = await import('@/shared/db')
+const { MCP_KEYS, clearMcpCache } = await import('@/shared/settings/mcp')
+const { resolveMethodList } = await import('@/features/mcp/tools/commitics')
+const { setCommiticsMethod } = await import('@/features/mcp/admin-actions')
 const { registerSurface, serverOptions } = await import('@/features/mcp/registry')
 const { GET: exportRoute } = await import('@/app/[handle]/[slug]/export/route')
 const { SITE_URL } = await import('@/features/mcp/tools/shared')
 const { LISTS_PER_PAGE } = await import('@/shared/lib/paging')
 
-const ids = { owner: '', other: '', collab: '' }
+const ids = { owner: '', other: '', collab: '', method: '' }
 
 type ListOpts = { status?: 'draft' | 'published'; moderation?: 'active' | 'hidden' }
 
@@ -58,7 +64,7 @@ async function connectAs(userId: string) {
 }
 
 beforeAll(async () => {
-  await resetTables([collaborators, steps, templateVersions, templates, users])
+  await resetTables([appSettings, collaborators, steps, templateVersions, templates, users])
   const [o, x, c] = await db.insert(users).values([{ handle: 'owner-1' }, { handle: 'other-1' }, { handle: 'collab-1' }]).returning({ id: users.id })
   ids.owner = o.id
   ids.other = x.id
@@ -69,11 +75,19 @@ beforeAll(async () => {
   await list(ids.owner, 'draft-ops', 'public', 'Draft ops', { status: 'draft' })
   // Снятый модерацией — не виден даже соавтору, только владельцу.
   const hidden = await list(ids.owner, 'hidden-ops', 'public', 'Hidden ops', { moderation: 'hidden' })
+  // Метод Commitics — публичный список; сценарий находит его по id из настройки.
+  ids.method = await list(ids.owner, 'commitics-method', 'public', 'Commitics method')
+  await setMethodSetting(ids.method)
   await db.insert(collaborators).values([
     { templateId: secret, userId: ids.collab },
     { templateId: hidden, userId: ids.collab },
   ])
 })
+
+async function setMethodSetting(value: string) {
+  await db.insert(appSettings).values({ key: MCP_KEYS.commiticsListId, value }).onConflictDoUpdate({ target: appSettings.key, set: { value } })
+  clearMcpCache()
+}
 
 /** Код ошибки протокола и текст — для сравнения «скрытый» против «несуществующего». */
 const failure = (p: Promise<unknown>) => p.then(() => null, (e: { code?: number; message: string }) => ({ code: e.code, message: e.message }))
@@ -162,9 +176,69 @@ describe('сценарии (prompts)', () => {
     expect((review.messages[0].content as { text: string }).text).toMatch(/BEGIN GNOME [0-9a-f]+\ndevops\nEND GNOME/)
     const com = await c.getPrompt({ name: 'commitics', arguments: { url: 'https://github.com/a/b/pull/1' } })
     const t = JSON.stringify(com.messages)
-    expect(t).toContain('kak-razobrat-chuzhuyu-oshibku-metod-kommitsov')
+    expect(t).toContain('get_list handle \\"owner-1\\", slug \\"commitics-method\\"')
     expect(t).toContain('create_list')
     expect(t).toContain('PRIVATE DRAFT')
+  })
+})
+
+describe('метод commitics — по id из настройки', () => {
+  const text = async (c: Awaited<ReturnType<typeof connectAs>>) =>
+    (await c.getPrompt({ name: 'commitics', arguments: { url: 'https://github.com/a/b/pull/1' } })).messages
+      .map((m) => (m.content as { text?: string }).text ?? '')
+      .join('\n')
+
+  it('переименование списка-метода сценарий не ломает: адрес берётся текущий', async () => {
+    const c = await connectAs(ids.other)
+    await db.update(templates).set({ slug: 'commitics-method-v2' }).where(eq(templates.id, ids.method))
+    try {
+      expect(await text(c)).toContain('slug "commitics-method-v2"')
+    } finally {
+      await db.update(templates).set({ slug: 'commitics-method' }).where(eq(templates.id, ids.method))
+    }
+  })
+
+  it('не задан, закрыт или пропал — «не настроен», и агента не ведут разбирать без метода', async () => {
+    const c = await connectAs(ids.other)
+    const unset = async () => {
+      const t = await text(c)
+      expect(t).toContain('not configured')
+      expect(t).not.toContain('create_list')
+    }
+    try {
+      await setMethodSetting('')
+      await unset()
+      await setMethodSetting('00000000-0000-4000-8000-000000000000')
+      await unset()
+      await setMethodSetting('not-a-uuid')
+      await unset()
+      await setMethodSetting(ids.method)
+      await db.update(templates).set({ visibility: 'private' }).where(eq(templates.id, ids.method))
+      await unset()
+    } finally {
+      await db.update(templates).set({ visibility: 'public' }).where(eq(templates.id, ids.method))
+      await setMethodSetting(ids.method)
+    }
+  })
+
+  it('админ задаёт метод АДРЕСОМ, хранится id; закрытый и несуществующий — отказ с причиной', async () => {
+    expect(await resolveMethodList(`${SITE_URL}/ru/owner-1/commitics-method`)).toEqual({ id: ids.method, handle: 'owner-1', slug: 'commitics-method' })
+    expect(await resolveMethodList('owner-1/secret-ops')).toEqual({ error: 'notPublic' })
+    expect(await resolveMethodList('owner-1/draft-ops')).toEqual({ error: 'notPublic' })
+    expect(await resolveMethodList('owner-1/no-such-list')).toEqual({ error: 'notFound' })
+    expect(await resolveMethodList('https://github.com/owner-1/commitics-method')).toEqual({ error: 'notFound' })
+
+    const stored = async () => (await db.select().from(appSettings).where(eq(appSettings.key, MCP_KEYS.commiticsListId)))[0]?.value
+    try {
+      expect(await setCommiticsMethod('owner-1/secret-ops')).toEqual({ error: 'notPublic' })
+      expect(await stored()).toBe(ids.method) // отказ не трогает сохранённое
+      expect(await setCommiticsMethod('')).toEqual({ ok: true, address: null })
+      expect(await stored()).toBeUndefined() // пустое значение общий `saveSettings` удаляет
+      expect(await setCommiticsMethod('setfork://lists/owner-1/commitics-method')).toEqual({ ok: true, address: 'owner-1/commitics-method' })
+      expect(await stored()).toBe(ids.method)
+    } finally {
+      await setMethodSetting(ids.method)
+    }
   })
 })
 
@@ -242,9 +316,9 @@ describe('ресурсы', () => {
     const other = await connectAs(ids.other)
     expect(await other.listResources()).toEqual({ resources: [] })
 
-    // Своих — 4 засеянных + добор до полутора страниц.
+    // Своих — 5 засеянных (4 + метод Commitics) + добор до полутора страниц.
     for (let i = 0; i < LISTS_PER_PAGE + 2; i++) await list(ids.owner, `bulk-${i}`, 'public', `Bulk ${i}`)
-    const total = LISTS_PER_PAGE + 6
+    const total = LISTS_PER_PAGE + 7
     const c = await connectAs(ids.owner)
     const first = await c.listResources()
     expect(first.resources).toHaveLength(LISTS_PER_PAGE)
