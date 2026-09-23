@@ -2434,7 +2434,7 @@ export const en = {
   'canon.issueSyntax': 'the file is not valid JSON',
   'canon.issueSchema': 'value does not match the manifest schema',
   'canon.issueStepTitle': 'a step needs a title — otherwise the item is lost',
-  'canon.issueRefLabel': 'a reference needs a label — otherwise the link is lost',
+  'canon.issueRefEmpty': 'a reference needs a URL or a label — an empty one is dropped',
   'canon.atLine': 'line {n}',
   'canon.unavailableTitle': 'The text cannot be shown right now',
   'canon.unavailableHint': 'The canon is built by the core, and it did not answer. Blocks keep working as usual.',

@@ -93,13 +93,16 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["label"],
             "properties": {
               "label": { "type": "string" },
               "url": { "type": "string", "format": "uri" }
-            }
+            },
+            "anyOf": [
+              { "required": ["url"], "properties": { "url": { "minLength": 1 } } },
+              { "required": ["label"], "properties": { "label": { "pattern": "\\S" } } }
+            ]
           },
-          "description": "Ссылки шага (label обязателен, url — нет)."
+          "description": "Ссылки блока (шага или текста). Нужен непустой адрес или подпись не из одних пробелов — хотя бы одно из двух; без подписи интерфейс показывает домен адреса. Ссылку без обоих разбор отвергает придиркой ref_empty."
         }
       }
     }
