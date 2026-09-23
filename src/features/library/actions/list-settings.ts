@@ -58,7 +58,9 @@ export async function updatePins(templateIds: string[]): Promise<void> {
   const session = await requireSession()
   // Правило то же, что у окна (`core/domain/pins`): только свои, видимые всем, не
   // больше шести. Проверяем здесь, а не верим окну: экшен зовут и мимо него.
-  const wanted = [...new Set(templateIds)]
+  // Предел — ДО запроса: экшен можно позвать мимо окна с тысячей id, и каждый попал бы
+  // в `IN` (находка авто-ревью). Окно больше шести не присылает.
+  const wanted = [...new Set(templateIds)].slice(0, MAX_PINS)
   await withPinsLock(session.userId, async (tx) => {
     const allowed = wanted.length
       ? new Set(
@@ -70,7 +72,7 @@ export async function updatePins(templateIds: string[]): Promise<void> {
           ).map((r) => r.id),
         )
       : new Set<string>()
-    const ids = wanted.filter((id) => allowed.has(id)).slice(0, MAX_PINS)
+    const ids = wanted.filter((id) => allowed.has(id))
     // Сначала снимаем все свои пины, затем ставим выбранные — итог точно равен выбору.
     await tx.update(templates).set({ pinned: false }).where(eq(templates.ownerId, session.userId))
     if (ids.length) {

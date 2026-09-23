@@ -204,7 +204,9 @@ export async function getPinnedTemplates(userId: string): Promise<FeedItem[]> {
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(templates.ownerId, userId), eq(templates.pinned, true), publiclyVisible()))
-    .orderBy(desc(templates.updatedAt))
+    // `id` — последний ключ: при равном `updatedAt` порядок иначе не определён, и раздел
+    // с окном выбрали бы РАЗНЫЕ шесть (находка авто-ревью). Тот же порядок — в окне.
+    .orderBy(desc(templates.updatedAt), desc(templates.id))
     .limit(MAX_PINS)
   return withAvatar(rows as FeedItem[])
 }

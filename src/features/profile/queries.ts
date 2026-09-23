@@ -123,7 +123,8 @@ export async function getPinnableLists(
           : undefined,
       ),
     )
-    .orderBy(desc(templates.pinned), desc(templates.updatedAt))
+    // Порядок совпадает с разделом на профиле (`getPinnedTemplates`), включая `id`.
+    .orderBy(desc(templates.pinned), desc(templates.updatedAt), desc(templates.id))
     .limit(LISTS_PER_PAGE + 1)
   const { items, hasNext } = takePage(rows)
   return { items, hasMore: hasNext }

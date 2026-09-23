@@ -193,6 +193,16 @@ describe('раздел «Закреплённые» на профиле', () => 
     expect(await getPinnedTemplates(owner)).toHaveLength(6)
   })
 
+  it('при равном времени правки раздел и окно выбирают одни и те же шесть', async () => {
+    // Без последнего ключа порядок не определён, и профиль показал бы закрепление,
+    // которое в окне стоит без галки, — сохранение его бы молча сняло.
+    const same = new Date(Date.UTC(2026, 0, 1))
+    await db.update(templates).set({ pinned: true, updatedAt: same }).where(eq(templates.ownerId, owner))
+    const onProfile = (await getPinnedTemplates(owner)).map((t) => t.slug)
+    const inPicker = (await getPinnableLists(owner)).items.filter((l) => l.pinned).slice(0, 6).map((l) => l.slug)
+    expect(onProfile).toEqual(inPicker)
+  })
+
   it('приватный закреплённый не показывается и владельцу: открепить его было бы нечем', async () => {
     // Флаги напрямую, как их оставили прежние правила: запись через setListPinned
     // сама сняла бы уснувшее закрепление, и правило чтения осталось бы непроверенным.
