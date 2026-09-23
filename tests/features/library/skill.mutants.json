@@ -81,7 +81,7 @@
     },
     {
       "name": "команда потеряна",
-      "from": "    out.push('', ...markdownCodeBlock(s.command, { indent, lang: danger ? '' : 'sh' }))",
+      "from": "    out.push('', ...markdownCodeBlock(s.command, { indent, lang: danger || human ? '' : 'sh' }))",
       "to": ""
     },
     {
@@ -181,13 +181,33 @@
     },
     {
       "name": "разрушительный шаг подан блоком sh",
-      "from": "{ indent, lang: danger ? '' : 'sh' }",
-      "to": "{ indent, lang: 'sh' }"
+      "from": "{ indent, lang: danger || human ? '' : 'sh' }",
+      "to": "{ indent, lang: human ? '' : 'sh' }"
     },
     {
       "name": "пометка на каждой команде",
       "from": "    const danger = stepDanger(s)\n",
       "to": "    const danger = stepDanger(s) ?? 'x'\n"
+    },
+    {
+      "name": "шаг «нужен человек» без пометки",
+      "from": "  const human = s.needsHuman === true",
+      "to": "  const human = false"
+    },
+    {
+      "name": "вопрос автора к человеку потерян",
+      "from": "    const ask = tr(s.needsHumanAsk, lang).trim()",
+      "to": "    const ask = ''"
+    },
+    {
+      "name": "шаг человека подан исполняемым блоком sh",
+      "from": "{ indent, lang: danger || human ? '' : 'sh' }",
+      "to": "{ indent, lang: danger ? '' : 'sh' }"
+    },
+    {
+      "name": "оговорки про чужие инструкции нет",
+      "from": "  out.push(`> ⚠ Review before use",
+      "to": "  if (false) out.push(`> ⚠ Review before use"
     }
   ]
 }

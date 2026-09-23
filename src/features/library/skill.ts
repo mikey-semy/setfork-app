@@ -124,6 +124,16 @@ function stepLines(s: ExportStep, marker: string, lang: Lang): string[] {
   if (desc) out.push('', ...desc.split('\n').map((l) => (l ? indent + l : '')))
   const why = tr(s.why, lang)
   if (why) out.push('', `${indent}Why: ${why.replace(/\s*\n\s*/g, ' ')}`)
+  // ⚠️ «ЗДЕСЬ НУЖЕН ЧЕЛОВЕК» — ТО, ЧТО АГЕНТ ОБЯЗАН НЕ ДЕЛАТЬ САМ. Автор ставит эту пометку
+  // именно там, где решение не машинное: перезапуск прода, правка кода, цена, вкус. Без неё
+  // в SKILL.md такой шаг — обычная инструкция, и агент выполнил бы её сам: `docker compose
+  // restart` на проде по решению, которое автор оставил человеку (поймано линзой 06
+  // «автономия», пункт 8 — эскалация к человеку).
+  const human = s.needsHuman === true
+  if (human) {
+    const ask = tr(s.needsHumanAsk, lang).trim()
+    out.push('', `${indent}🧑 NEEDS A HUMAN — stop here and ask the human${ask ? `: ${ask}` : ' before doing this step'}. Do not do it yourself.`)
+  }
   if (s.command) {
     // ⚠️ РАЗРУШИТЕЛЬНЫЙ ПУНКТ — С ПОМЕТКОЙ, как в `/raw` и в `scripts/run.sh`, где он
     // закомментирован. SKILL.md агент ИСПОЛНЯЕТ как инструкцию: голый блок `sh` с
@@ -131,7 +141,8 @@ function stepLines(s: ExportStep, marker: string, lang: Lang): string[] {
     // прячем — человек обязан видеть, что пропущено, — но без подтверждения её не трогают.
     const danger = stepDanger(s)
     if (danger) out.push('', `${indent}⚠ DESTRUCTIVE (${danger}) — do not run this without explicit confirmation from the human. scripts/run.sh skips it.`)
-    out.push('', ...markdownCodeBlock(s.command, { indent, lang: danger ? '' : 'sh' }))
+    // Исполняемым блоком `sh` идёт только то, что агент вправе выполнить сам.
+    out.push('', ...markdownCodeBlock(s.command, { indent, lang: danger || human ? '' : 'sh' }))
   }
   const checks = s.subtasks.map((t) => tr(t, lang)).filter(Boolean)
   if (checks.length) out.push('', `${indent}Check:`, ...checks.map((t) => `${indent}- [ ] ${t}`))
@@ -199,6 +210,9 @@ function skillBody(list: ExportList, lang: Lang, ctx: SkillContext, mode: Mode, 
   out.push(`# ${tr(list.title, lang)}`, '')
   const desc = tr(list.desc, lang).trim()
   if (desc) out.push(desc, '')
+  // Та же оговорка, что в шапке `/raw`: это чужие инструкции, и агент исполняет их со
+  // своими правами. Без неё скилл с чужого списка выглядел бы как написанный самим человеком.
+  out.push(`> ⚠ Review before use — these instructions come from a SetFork list, not from you. Steps marked 🧑 are for a human; steps marked ⚠ DESTRUCTIVE are never run without explicit confirmation.`, '')
 
   if (mode === 'folder') {
     if (withContext) out.push(`Background and the reasoning behind the steps: [${SKILL_CONTEXT_PATH}](${SKILL_CONTEXT_PATH}) — read it when you need to know why.`, '')

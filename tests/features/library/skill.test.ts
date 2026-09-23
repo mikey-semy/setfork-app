@@ -216,10 +216,34 @@ describe('SKILL.md по стандарту', () => {
     expect(md).toContain('DESTRUCTIVE (danger)')
   })
 
+  // ⚠️ Автор пометил «здесь нужен человек» — агент обязан остановиться и спросить, а не
+  // выполнить сам. Регламент отказа сервиса так помечает «Перезапустить сервис».
+  it('шаг «нужен человек» помечен, с вопросом автора, и не подан исполняемым блоком', () => {
+    const md = toSkill(
+      list({ steps: [step({ title: { ru: 'Перезапустить сервис' }, command: 'docker compose restart app', needsHuman: true, needsHumanAsk: { ru: 'можно ли перезапускать в рабочее время' } })] }),
+      'ru',
+      ctx,
+    ).files[0].content
+    expect(md, 'агент не узнал, что шаг — за человеком').toContain('NEEDS A HUMAN — stop here and ask the human: можно ли перезапускать в рабочее время')
+    expect(md, 'шаг человека подан исполняемым блоком sh').not.toMatch(/```sh\n\s*docker compose restart/)
+    expect(md, 'команду спрятали').toContain('docker compose restart app')
+  })
+
+  it('«нужен человек» без вопроса — общая формулировка, а не пустое двоеточие', () => {
+    const md = toSkill(list({ steps: [step({ needsHuman: true })] }), 'ru', ctx).files[0].content
+    expect(md).toContain('stop here and ask the human before doing this step')
+  })
+
+  it('в начале — оговорка: инструкции чужие', () => {
+    expect(toSkill(list(), 'ru', ctx).files[0].content).toContain('Review before use — these instructions come from a SetFork list, not from you')
+  })
+
   it('обычная команда — обычный блок sh, без пометки', () => {
     const md = toSkill(list({ steps: [step({ command: 'systemctl status nginx' })] }), 'ru', ctx).files[0].content
     expect(md).toMatch(/```sh\n\s*systemctl status nginx/)
-    expect(md, 'пометка на безобидной команде').not.toContain('DESTRUCTIVE')
+    // Сама пометка, а не слово: оговорка в начале файла объясняет обе пометки словами.
+    expect(md, 'пометка на безобидной команде').not.toMatch(/DESTRUCTIVE \(/)
+    expect(md, 'пометка человека на обычной команде').not.toContain('NEEDS A HUMAN')
   })
 
   it('разделы — заголовками, как на странице', () => {

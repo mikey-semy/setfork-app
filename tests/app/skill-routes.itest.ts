@@ -66,6 +66,9 @@ beforeAll(async () => {
   ])
   await makeList('prose', {}, [{ command: '' }])
   await makeList('priv', { visibility: 'private' })
+  // Пометка «здесь нужен человек» — надстройка в строке шага (в канон git не пишется),
+  // поэтому доехать до SKILL.md она может только через toExportList.
+  await makeList('human-step', {}, [{ command: 'docker compose restart app', needsHuman: true, needsHumanAsk: { en: 'is it ok to restart now' } }])
   // Настоящая форма с прода: слаг обрезан до 60 знаков и кончается дефисом.
   await makeList('skripty-obsluzhivaniya-servera-chto-est-chto-delaet-i-kogda-')
 })
@@ -96,6 +99,14 @@ describe('кто получает скилл', () => {
 
   it('несуществующий — 404', async () => {
     expect((await getMd('no-such-list')).status).toBe(404)
+  })
+})
+
+describe('что агент получает в SKILL.md', () => {
+  it('шаг «нужен человек» из базы доезжает до SKILL.md пометкой с вопросом автора', async () => {
+    const md = await (await getMd('human-step')).text()
+    expect(md, 'флаг из строки шага потерялся по дороге в экспорт').toContain('NEEDS A HUMAN — stop here and ask the human: is it ok to restart now')
+    expect(md, 'шаг человека подан исполняемым блоком').not.toMatch(/```sh\n\s*docker compose restart/)
   })
 })
 
