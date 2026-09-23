@@ -211,12 +211,12 @@
     },
     {
       "name": "кривой путь автора уходит в архив",
-      "from": "  return (ctx.authored ?? []).filter((f) => AUTHORED_PATH.test(f.path) && !f.path.split('/').includes('..'))",
+      "from": "  return (ctx.authored ?? []).filter((f) => AUTHORED_PATH.test(f.path) && !f.path.split('/').includes('..') && fitsArchive(f.path))",
       "to": "  return ctx.authored ?? []"
     },
     {
       "name": "авторские файлы не попадают в архив",
-      "from": "  for (const f of authoredOf(ctx)) files.push(",
+      "from": "  for (const f of kept) files.push(",
       "to": "  for (const f of [] as AuthoredFile[]) files.push("
     },
     {
@@ -243,6 +243,16 @@
       "name": "исполняемость авторского файла потеряна",
       "from": "files.push({ path: f.path, content: f.content, executable: f.executable })",
       "to": "files.push({ path: f.path, content: f.content, executable: false })"
+    },
+    {
+      "name": "длинное имя не отсеивается — маршрут падает",
+      "from": " && fitsArchive(f.path))",
+      "to": ")"
+    },
+    {
+      "name": "пропуск молчаливый",
+      "from": "  const skipped = (ctx.authored ?? []).map((f) => f.path).filter((p) => !kept.some((k) => k.path === p))",
+      "to": "  const skipped: string[] = []"
     }
   ]
 }

@@ -479,3 +479,48 @@ describe('авторские файлы версии', () => {
     expect(toSkill(list(), 'ru', { ...ctx, authored: null }).markdown).toBe(toSkill(list(), 'ru', ctx).markdown)
   })
 })
+
+/**
+ * ДЛИННЫЕ ПУТИ В АРХИВЕ. Имя в заголовке ustar — до 100 байт, а путь в архиве —
+ * `<имя скилла до 64>/<каталог>/<файл>`. Ядро длину имени файла не ограничивает, и
+ * кириллица набирает 100 байт быстро. Раньше такой файл ронял маршрут в 500 (находка
+ * ревью диффа): каталоги теперь уходят в родное поле ustar `prefix`, а файл, чьё
+ * ИМЯ само длиннее 100 байт, в архив не кладётся и называется в `skipped`.
+ */
+describe('длинные пути авторских файлов', () => {
+  const enc = (s: string) => new TextEncoder().encode(s)
+  const longSlug = 'a'.repeat(60)
+
+  function extract(buf: Buffer): string[] {
+    const dir = mkdtempSync(join(tmpdir(), 'skill-long-'))
+    writeFileSync(join(dir, 'a.tgz'), buf)
+    execFileSync('tar', ['-xzf', join(dir, 'a.tgz'), '-C', dir])
+    const walk = (d: string): string[] =>
+      readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : [relative(dir, join(d, f))]))
+    return walk(dir).filter((p) => p !== 'a.tgz')
+  }
+
+  it('путь длиннее 100 байт распаковывается туда, куда должен', () => {
+    const file = `references/${'почему-так-сделано-'.repeat(2)}.md`
+    const skill = toSkill(list({ slug: longSlug }), 'ru', { ...ctx, authored: [{ path: file, content: enc('x'), executable: false }] })
+    const full = `${skill.name}/${file}`
+    expect(Buffer.byteLength(full), 'проба не проверяет длинный путь').toBeGreaterThan(100)
+    const paths = extract(
+      tarGz([{ path: `${skill.name}/` }, { path: `${skill.name}/references/` }, ...skill.files.map((f) => ({ path: `${skill.name}/${f.path}`, content: f.content }))]),
+    )
+    expect(paths, 'файл с длинным путём потерялся или лёг не туда').toContain(full)
+  })
+
+  it('имя файла длиннее 100 байт в архив не кладётся — и называется, а не теряется молча', () => {
+    const tooLong = `scripts/${'очень-длинное-имя-'.repeat(4)}.sh`
+    const skill = toSkill(list(), 'ru', { ...ctx, authored: [{ path: tooLong, content: enc('x'), executable: true }, { path: 'scripts/ok.sh', content: enc('ok'), executable: true }] })
+    expect(skill.files.map((f) => f.path)).not.toContain(tooLong)
+    expect(skill.files.map((f) => f.path), 'вместе с длинным выброшен и законный').toContain('scripts/ok.sh')
+    expect(skill.skipped, 'пропуск молчаливый').toEqual([tooLong])
+    expect(() => tarGz(skill.files.map((f) => ({ path: `n/${f.path}`, content: f.content })).concat({ path: 'n/', content: '' }))).not.toThrow()
+  })
+
+  it('без пропусков skipped пуст', () => {
+    expect(toSkill(list(), 'ru', { ...ctx, authored: [{ path: 'scripts/a.sh', content: enc('a'), executable: false }] }).skipped).toEqual([])
+  })
+})

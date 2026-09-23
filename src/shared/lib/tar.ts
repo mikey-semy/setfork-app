@@ -13,9 +13,24 @@ import { gzipSync } from 'node:zlib'
  *  • символических и жёстких ссылок — архив пишет только обычные файлы и каталоги;
  *  • путей с `..`, абсолютных и пустых сегментов — их отвергает `assertSafePath`: архив
  *    распаковывают чужие программы, и путь из архива не должен выводить за его папку;
- *  • длинных имён (GNU/pax-расширений) — путь длиннее 100 байт считается ошибкой
- *    вызывающего, а не молча обрезается: обрезанный путь лёг бы не туда.
+ *  • GNU/pax-расширений для длинных имён — хватает родного поля ustar `prefix`: путь
+ *    режется по `/` на каталог (до 155 байт) и имя (до 100). Не влезает и так — ошибка
+ *    вызывающего, а не молчаливая обрезка: обрезанный путь лёг бы не туда.
  */
+
+/** Разрезать путь под поля ustar: `prefix` (каталог, ≤155 байт) и `name` (≤100 байт). */
+export function splitUstarPath(path: string): { prefix: string; name: string } | null {
+  if (Buffer.byteLength(path) <= 100) return { prefix: '', name: path }
+  // Каталог (`…/`) хранится без хвостового слеша: его ставит распаковщик.
+  const bare = path.endsWith('/') ? path.slice(0, -1) : path
+  const tail = path.endsWith('/') ? '/' : ''
+  for (let i = bare.lastIndexOf('/'); i > 0; i = bare.lastIndexOf('/', i - 1)) {
+    const prefix = bare.slice(0, i)
+    const name = bare.slice(i + 1) + tail
+    if (Buffer.byteLength(prefix) <= 155 && Buffer.byteLength(name) <= 100) return { prefix, name }
+  }
+  return null
+}
 
 export interface TarEntry {
   /** Путь внутри архива, через `/`. Каталоги — с `/` на конце. */
@@ -35,7 +50,7 @@ function assertSafePath(path: string): void {
   if (!bare || bare.split('/').some((seg) => seg === '' || seg === '.' || seg === '..')) {
     throw new Error(`tar: unsafe path ${JSON.stringify(path)}`)
   }
-  if (Buffer.byteLength(path) > 100) throw new Error(`tar: path longer than 100 bytes: ${path}`)
+  if (!splitUstarPath(path)) throw new Error(`tar: path does not fit ustar (name ≤100 bytes, directory ≤155): ${path}`)
 }
 
 /** Число в восьмеричном поле фиксированной ширины: цифры, добитые нулями, и NUL в конце. */
@@ -45,7 +60,8 @@ function octal(n: number, width: number): string {
 
 function header(path: string, size: number, mode: number, mtime: number, dir: boolean): Buffer {
   const h = Buffer.alloc(BLOCK)
-  h.write(path, 0, 100, 'utf8')
+  const { prefix, name } = splitUstarPath(path)!
+  h.write(name, 0, 100, 'utf8')
   h.write(octal(mode, 8), 100, 8, 'ascii')
   h.write(octal(0, 8), 108, 8, 'ascii') // uid
   h.write(octal(0, 8), 116, 8, 'ascii') // gid
@@ -56,6 +72,7 @@ function header(path: string, size: number, mode: number, mtime: number, dir: bo
   h.write(dir ? '5' : '0', 156, 1, 'ascii')
   h.write('ustar\0', 257, 6, 'ascii')
   h.write('00', 263, 2, 'ascii')
+  if (prefix) h.write(prefix, 345, 155, 'utf8')
   let sum = 0
   for (const b of h) sum += b
   // Шесть восьмеричных цифр, NUL и пробел — форма, которую понимают все распаковщики.

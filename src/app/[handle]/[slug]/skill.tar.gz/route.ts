@@ -2,6 +2,7 @@ import { loadSkill, warnIfLong } from '@/features/library/skill-load'
 import { gitCore } from '@/features/git/core'
 import { toSkill } from '@/features/library/skill'
 import { tarGz } from '@/shared/lib/tar'
+import { log } from '@/shared/observability'
 import { cacheHeaders, noStoreHeaders } from '@/shared/http/cache'
 
 /**
@@ -25,6 +26,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ handle:
 
   const skill = toSkill(loaded.list, loaded.lang, loaded.ctx)
   warnIfLong(skill.markdown, handle, slug)
+  // Пропуск авторского файла — не молча: в журнал, с путями.
+  if (skill.skipped.length) log.warn('skill archive skipped authored files', { handle, slug, skipped: skill.skipped })
   const dirs = [...new Set(skill.files.flatMap((f) => (f.path.includes('/') ? [f.path.slice(0, f.path.lastIndexOf('/') + 1)] : [])))]
   const archive = tarGz([
     { path: `${skill.name}/` },

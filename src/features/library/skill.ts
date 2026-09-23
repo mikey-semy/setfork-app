@@ -46,10 +46,17 @@ export interface Skill {
   files: SkillFile[]
   /** Текст `SKILL.md` — для проверки длины, без поиска по `files`. */
   markdown: string
+  /** Авторские файлы, которые в архив не легли (путь не по формату). Маршрут пишет их в
+   *  журнал: пропуск не должен быть молчаливым. */
+  skipped: string[]
 }
 
 /** Путь авторского файла — ровно `<каталог>/<имя>`, как принимает ядро (ADR-0028). */
 const AUTHORED_PATH = /^(scripts|references|assets)\/[^/]+$/
+/** Имя файла в заголовке ustar — не длиннее 100 байт (каталоги уходят в поле `prefix`).
+ *  Ядро длину имени не ограничивает, а кириллица набирает 100 байт на ~50 символах. */
+const TAR_NAME_MAX_BYTES = 100
+const fitsArchive = (path: string): boolean => new TextEncoder().encode(path.slice(path.lastIndexOf('/') + 1)).length <= TAR_NAME_MAX_BYTES
 
 /**
  * Авторские файлы, которые можно положить в архив.
@@ -59,7 +66,7 @@ const AUTHORED_PATH = /^(scripts|references|assets)\/[^/]+$/
  * вместо архива. Неподходящее отбрасывается, остальное уходит как есть.
  */
 function authoredOf(ctx: SkillContext): AuthoredFile[] {
-  return (ctx.authored ?? []).filter((f) => AUTHORED_PATH.test(f.path) && !f.path.split('/').includes('..'))
+  return (ctx.authored ?? []).filter((f) => AUTHORED_PATH.test(f.path) && !f.path.split('/').includes('..') && fitsArchive(f.path))
 }
 
 /**
@@ -311,8 +318,10 @@ export function toSkill(list: ExportList, lang: Lang, ctx: SkillContext): Skill 
     files.push({ path: SKILL_SCRIPT_PATH, content: toRunnableScript(list, lang, rawUrl, 'sh'), executable: true })
   }
   // Авторские — байтами из дерева версии: ровно то, что покрыто её SHA.
-  for (const f of authoredOf(ctx)) files.push({ path: f.path, content: f.content, executable: f.executable })
-  return { name, files, markdown }
+  const kept = authoredOf(ctx)
+  for (const f of kept) files.push({ path: f.path, content: f.content, executable: f.executable })
+  const skipped = (ctx.authored ?? []).map((f) => f.path).filter((p) => !kept.some((k) => k.path === p))
+  return { name, files, markdown, skipped }
 }
 
 /** Однофайловый `SKILL.md` — для адреса `/{handle}/{slug}/SKILL.md`. */
