@@ -2,8 +2,9 @@
 
 import { useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { caretCoords } from './caret-coords'
+import { searchUsers, type FoundUser } from './user-search'
 
-export type MentionUser = { handle: string; avatarUrl: string | null }
+export type MentionUser = FoundUser
 
 /** Сколько подсказок показываем: больше в узкий список всё равно не помещается. */
 const LIMIT = 8
@@ -55,18 +56,14 @@ export function useMention({
     setUsers(near)
     setIndex(0)
     if (!query) return
-    try {
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
-      const data = (await res.json()) as MentionUser[]
-      if (my === seq.current) {
-        // Причастные остаются первыми, сетевые — следом и без повторов.
-        const seen = new Set(near.map((p) => p.handle))
-        const rest = (Array.isArray(data) ? data : []).filter((u) => !seen.has(u.handle))
-        setUsers([...near, ...rest].slice(0, LIMIT))
-        setIndex(0)
-      }
-    } catch {
-      /* сеть отвалилась — останутся причастные, список не опустеет */
+    // Сеть отвалилась — searchUsers вернёт пусто, останутся причастные, список не опустеет.
+    const data = await searchUsers(query)
+    if (my === seq.current) {
+      // Причастные остаются первыми, сетевые — следом и без повторов.
+      const seen = new Set(near.map((p) => p.handle))
+      const rest = data.filter((u) => !seen.has(u.handle))
+      setUsers([...near, ...rest].slice(0, LIMIT))
+      setIndex(0)
     }
   }
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { searchUsers, TYPEAHEAD_DEBOUNCE_MS } from '@/shared/ui/user-search'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Hash, List, ListChecks, ListOrdered, Search } from 'lucide-react'
@@ -133,10 +134,8 @@ export function QualifierSearch({
           .map((tg) => ({ action: 'insert', label: tg.tag, value: tg.tag, group: t('tags', lang), kind: 'tag', count: tg.count }))
       } else if (tok && (tok.key === 'by' || tok.key === 'owner' || tok.key === 'author')) {
         if (tok.partial.length >= 1) {
-          const rows = (await fetch(`/api/users/search?q=${encodeURIComponent(tok.partial)}`, { cache: 'no-store', signal: ctrl.signal })
-            .then((r) => (r.ok ? r.json() : []))
-            .catch(() => [])) as { handle: string; avatarUrl?: string }[]
-          list = rows.slice(0, 8).map((u) => ({ action: 'insert', label: u.handle, value: u.handle, group: t('people', lang), kind: 'user', avatarUrl: u.avatarUrl }))
+          const rows = await searchUsers(tok.partial, ctrl.signal)
+          list = rows.slice(0, 8).map((u) => ({ action: 'insert', label: u.handle, value: u.handle, group: t('people', lang), kind: 'user', avatarUrl: u.avatarUrl ?? undefined }))
         }
       } else if (tok && tok.key === 'type') {
         list = (['ordered', 'unordered'] as const)
@@ -149,13 +148,13 @@ export function QualifierSearch({
         if (term.length >= 1) {
           const [lists, users] = await Promise.all([
             fetch(`/api/lists/search?q=${encodeURIComponent(term)}`, { signal: ctrl.signal }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
-            fetch(`/api/users/search?q=${encodeURIComponent(term)}`, { signal: ctrl.signal }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+            searchUsers(term, ctrl.signal),
           ])
           for (const l of (lists as { handle: string; slug: string; title: string }[]).slice(0, 5)) {
             list.push({ action: 'navigate', label: l.title || l.slug, value: `${l.handle}/${l.slug}`, sub: `${l.handle}/${l.slug}`, href: `/${l.handle}/${l.slug}`, group: t('scopeLists', lang), kind: 'list' })
           }
-          for (const u of (users as { handle: string; avatarUrl?: string }[]).slice(0, 4)) {
-            list.push({ action: 'navigate', label: `@${u.handle}`, value: u.handle, href: `/${u.handle}`, group: t('people', lang), kind: 'user', avatarUrl: u.avatarUrl })
+          for (const u of users.slice(0, 4)) {
+            list.push({ action: 'navigate', label: `@${u.handle}`, value: u.handle, href: `/${u.handle}`, group: t('people', lang), kind: 'user', avatarUrl: u.avatarUrl ?? undefined })
           }
         }
       }
@@ -163,7 +162,7 @@ export function QualifierSearch({
       setSugs(list)
       setOpen(list.length > 0)
       setActive(-1)
-    }, 150)
+    }, TYPEAHEAD_DEBOUNCE_MS)
     return () => {
       cancelled = true
       clearTimeout(timer)

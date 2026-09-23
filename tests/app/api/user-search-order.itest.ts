@@ -78,6 +78,17 @@ describe('поиск пользователей', () => {
     expect(got).toEqual([...HANDLES].sort((a, b) => a.length - b.length || a.localeCompare(b)).slice(0, 8))
   })
 
+  it('«@» в запросе снимается, `%` — буква, а не шаблон', async () => {
+    expect(await search('@msort-bb')).toEqual(['msort-bb'])
+    expect(await search('msort%')).toEqual([])
+  })
+
+  it('приватный профиль в подсказку не попадает (schema.ts: убран из поиска людей)', async () => {
+    await db.update(users).set({ profilePrivate: true }).where(inArray(users.handle, ['msort-a']))
+    expect(await search('msort-')).not.toContain('msort-a')
+    expect(await search('msort-a')).toEqual([])
+  })
+
   it('одинаковый запрос — одинаковый ответ', async () => {
     const first = await search('msort-')
     await db.update(users).set({ avatarUrl: null }).where(inArray(users.handle, [HANDLES[2]]))

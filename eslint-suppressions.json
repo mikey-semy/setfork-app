@@ -203,6 +203,11 @@
       "count": 1
     }
   },
+  "src/features/collab/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
   "src/features/collections/CollectionCard.tsx": {
     "no-restricted-syntax": {
       "count": 1

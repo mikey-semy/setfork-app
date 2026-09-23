@@ -58,6 +58,10 @@ const TYPE_PREF: Record<NotifType, keyof NotifyPrefs | null> = {
   transfer_incoming: null, // тебе предлагают принять список — без этого предложение зависнет
   transfer_accepted: null,
   transfer_declined: null,
+  // Право править список выдают адресно: человек должен узнать, что теперь может
+  // (и отвечает за) правки, а владелец — помнить, кому выдал доступ.
+  collaborator_added: null,
+  collaborator_joined: null,
 }
 
 /**

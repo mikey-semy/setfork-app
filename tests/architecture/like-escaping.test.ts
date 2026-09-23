@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { likeContains } from '@/shared/db/like'
+import { likeContains, likePrefix } from '@/shared/db/like'
 
 /**
  * ШАБЛОН ДЛЯ ILIKE СТРОИТ ТОЛЬКО `likeContains`.
@@ -28,8 +28,10 @@ const walk = (dir: string): string[] =>
     return statSync(p).isDirectory() ? walk(p) : [p]
   })
 
-/** `%${...}%` и `'%' + x + '%'` — обе формы рукописного шаблона. */
-const HANDMADE = [/%\$\{[^}]+\}%/, /'%'\s*\+/]
+/** `%${...}%`, `'%' + x + '%'` и префиксный `${...}%` прямо в вызове like/ilike —
+ *  все формы рукописного шаблона. Префиксную ловим только внутри вызова: сама по себе
+ *  `${pct}%` — это CSS-ширина, их в коде десяток. Её пропустил сторож в #973. */
+const HANDMADE = [/%\$\{[^}]+\}%/, /'%'\s*\+/, /\bi?like\([^)]*`\$\{[^}]+\}%`/]
 
 describe('экранирование шаблона поиска', () => {
   it('рукописного `%q%` в коде нет', () => {
@@ -70,6 +72,8 @@ describe('экранирование шаблона поиска', () => {
     expect(likeContains('100%')).toBe('%100\\%%')
     expect(likeContains('_b')).toBe('%\\_b%')
     expect(likeContains('a\\b')).toBe('%a\\\\b%')
+    expect(likePrefix('100%')).toBe('100\\%%')
+    expect(likePrefix('_b')).toBe('\\_b%')
     expect(likeContains('обычный')).toBe('%обычный%')
   })
 })
