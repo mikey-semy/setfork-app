@@ -3,10 +3,9 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { isS3Configured } from '@/shared/settings/media'
-import { ATTACH_MAX_BYTES, megabytes, VIDEO_MAX_BYTES } from './limits'
+import { ATTACH_MAX_BYTES, IMAGE_MAX_BYTES, megabytes, VIDEO_MAX_BYTES, type ImageRejection } from './limits'
 import { deleteObject, putObject } from './s3'
 
-const MAX_BYTES = 4 * 1024 * 1024 // 4 МБ для скриншотов
 const EXT: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
@@ -23,17 +22,30 @@ function sniffImage(b: Buffer): string | null {
   return null
 }
 
+/** Отказ по самому файлу (размер/формат), а не сбой хранилища. `reason` — код для
+ *  интерфейса: экшен не может вернуть переводимую строку, а клиент переводит код сам.
+ *  Текст сообщения прежний — его показывают редактор и /api/upload. */
+export class ImageRejectedError extends Error {
+  constructor(
+    readonly reason: ImageRejection,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'ImageRejectedError'
+  }
+}
+
 /**
  * Универсальная загрузка картинки. Тип определяется по СОДЕРЖИМОМУ (magic bytes),
  * client-provided mime игнорируется (защита от подмены). Возвращает ref:
  * S3 → storage_key (`{dir}/{uuid}.ext`); иначе диск → `/uploads/{dir}/{uuid}.ext`.
  */
 export async function uploadImageFile(dir: string, file: File): Promise<string> {
-  if (file.size > MAX_BYTES) throw new Error('Файл больше 4 МБ.')
+  if (file.size > IMAGE_MAX_BYTES) throw new ImageRejectedError('too_big', `Файл больше ${megabytes(IMAGE_MAX_BYTES)} МБ.`)
   const buffer = Buffer.from(await file.arrayBuffer())
   const mime = sniffImage(buffer)
   const ext = mime ? EXT[mime] : undefined
-  if (!ext) throw new Error('Файл не похож на изображение (PNG, JPG, WEBP или GIF).')
+  if (!ext) throw new ImageRejectedError('bad_type', 'Файл не похож на изображение (PNG, JPG, WEBP или GIF).')
   const name = `${randomUUID()}.${ext}`
 
   if (await isS3Configured()) {

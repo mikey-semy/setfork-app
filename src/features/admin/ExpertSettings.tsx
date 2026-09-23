@@ -24,6 +24,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
 import { TextButton } from '@/shared/ui/TextButton'
+import { IMAGE_ACCEPT } from '@/shared/media/limits'
 
 /**
  * Менеджер ростера совета: кто такие эксперты, как их зовут, чем они думают.
@@ -133,7 +134,7 @@ function AvatarPicker({
             <label className="cursor-pointer rounded-md border border-border px-2 py-1 text-caption text-ink-2 hover:text-ink">
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
+                accept={IMAGE_ACCEPT}
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0]

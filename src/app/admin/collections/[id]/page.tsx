@@ -15,6 +15,7 @@ import { cardClass } from '@/shared/ui/card-style'
 import { buttonClass } from '@/shared/ui/button-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { Checkbox } from '@/shared/ui/checkbox'
+import { IMAGE_ACCEPT } from '@/shared/media/limits'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,7 +77,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         </div>
         <form action={setCollectionCover} className="flex items-center gap-2">
           <Checkbox type="hidden" name="id" value={c.id} />
-          <input type="file" name="file" accept="image/*" required className={buttonClass({ variant: 'ghost' })} />
+          <input type="file" name="file" accept={IMAGE_ACCEPT} required className={buttonClass({ variant: 'ghost' })} />
           <button type="submit" className={buttonClass()}>
             <ImagePlus size={14} /> {ru ? 'Загрузить' : 'Upload'}
           </button>
