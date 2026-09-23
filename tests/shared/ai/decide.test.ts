@@ -10,7 +10,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
  *    роняющее запрос, хуже нынешнего совпадения строк.
  * Подменены только внешние стороны: сеть, ключ из базы и запись в журнал расходов.
  */
-vi.mock('@/shared/settings/ai', async (orig) => ({ ...(await orig()), getOpenRouterApiKey: async () => 'k' }))
+const keyState = vi.hoisted(() => ({ key: 'k' }))
+vi.mock('@/shared/settings/ai', async (orig) => ({ ...(await orig()), getOpenRouterApiKey: async () => keyState.key }))
 const recordUsage = vi.fn(async (_row: Record<string, unknown>) => {})
 vi.mock('@/shared/ai/usage', async (orig) => ({ ...(await orig()), recordUsage: (row: Record<string, unknown>) => recordUsage(row) }))
 // Предохранитель расхода считает по базе — внешнее; по умолчанию бюджет есть.
@@ -38,6 +39,7 @@ const sent = (spy: ReturnType<typeof vi.spyOn>) => ({
 
 afterEach(() => {
   budget.ok = true
+  keyState.key = 'k'
   vi.restoreAllMocks()
   recordUsage.mockClear()
   delete process.env.SETFORK_OPENROUTER_DATA_COLLECTION
@@ -167,6 +169,14 @@ describe('сбой — null, а не исключение, и строка в ж
     const spy = reply(okBody)
     await expect(decide({ state: 'пункт', questions: Q })).resolves.toBeNull()
     expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('ключа нет — запроса нет, и строки «сбой» в журнале тоже нет', async () => {
+    keyState.key = ''
+    const spy = reply(okBody)
+    await expect(decide({ state: 'пункт', questions: Q })).resolves.toBeNull()
+    expect(spy).not.toHaveBeenCalled()
+    expect(recordUsage).not.toHaveBeenCalled()
   })
 
   it('тело не JSON', async () => {

@@ -139,9 +139,14 @@ export async function decide<K extends string>(input: {
   let outcome: AiOutcome = 'error'
   let answeredModel = model
   let usage = { inputTokens: 0, outputTokens: 0, cost: 0 }
+  // Журнал — только о состоявшейся попытке. Без ключа запроса нет, и строка `error` в
+  // `ai_usage` соврала бы: сторож ИИ (`backoffice/ai-watch`) считает такие строки
+  // падениями канала (авто-ревью к #961).
+  let attempted = false
   try {
     const key = await getOpenRouterApiKey()
     if (!key) return null
+    attempted = true
     const res = await fetch(decisionsUrl(openRouterBaseUrl()), {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'X-Title': 'SetFork' },
@@ -188,19 +193,22 @@ export async function decide<K extends string>(input: {
     console.warn('[decide] вызов не удался', e instanceof Error ? e.message : e)
     return null
   } finally {
-    await recordUsage({
-      userId: input.userId ?? null,
-      feature: 'decide',
-      model: answeredModel,
-      input: usage.inputTokens,
-      output: usage.outputTokens,
-      total: usage.inputTokens + usage.outputTokens,
-      cost: usage.cost,
-      refType: input.refType,
-      refId: input.refId,
-      outcome,
-      durationMs: Date.now() - t0,
-      provider: 'openrouter',
-    })
+    // `return` здесь нельзя: он подменил бы собой результат `try`.
+    if (attempted) {
+      await recordUsage({
+        userId: input.userId ?? null,
+        feature: 'decide',
+        model: answeredModel,
+        input: usage.inputTokens,
+        output: usage.outputTokens,
+        total: usage.inputTokens + usage.outputTokens,
+        cost: usage.cost,
+        refType: input.refType,
+        refId: input.refId,
+        outcome,
+        durationMs: Date.now() - t0,
+        provider: 'openrouter',
+      })
+    }
   }
 }

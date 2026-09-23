@@ -149,6 +149,13 @@ async function main() {
   // Незнакомый ключ — ошибка, а не молчание: иначе прогон с опечаткой или с ключом из
   // другой версии скрипта тихо мерит не то, что написано в его подписи (так и случилось с
   // `--roster prod` — авто-ревью к #961).
+  // `--out` без значения потерял бы отчёт после платного прогона, а следующий ключ съелся
+  // бы как имя файла — проверяем ДО прогона (авто-ревью к #961).
+  if (outAt >= 0 && (!out || out.startsWith('--'))) {
+    console.error('--out требует путь к файлу отчёта')
+    process.exitCode = 2
+    return
+  }
   const KNOWN = new Set(['--baseline', '--dry', '--selfcheck', '--out'])
   const unknown = args.filter((a, i) => a.startsWith('--') && !KNOWN.has(a) && args[i - 1] !== '--out')
   if (unknown.length) {
