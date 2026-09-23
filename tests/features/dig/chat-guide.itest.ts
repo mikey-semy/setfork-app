@@ -83,6 +83,23 @@ describe('кто отвечает в кирке', () => {
     expect(spoke).toHaveBeenCalledWith('dba')
   })
 
+  it('зависший теневой вопрос ответ не задерживает', async () => {
+    let release: () => void = () => {}
+    const hang = new Promise<void>((r) => (release = r))
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_u, init) => {
+      const body = JSON.parse((init as RequestInit).body as string)
+      if (body.questions.fits) {
+        await hang
+        return fits()
+      }
+      return decision('dba')
+    })
+    // Ответ пришёл, пока тень ещё висит.
+    const res = await ask('auto')
+    expect('replies' in res).toBe(true)
+    release()
+  })
+
   it('Jev не ответил — прежнее правило по тегам, кирка не падает', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 503 }))
     const res = await ask('auto')

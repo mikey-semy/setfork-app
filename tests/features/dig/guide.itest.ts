@@ -86,6 +86,36 @@ describe('решение по пункту', () => {
   })
 })
 
+describe('кэш знает, о чём спрашивал', () => {
+  it('ростер поменялся — пункт переспрашивается, а не держится за старого', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(choice('dba'))).mockResolvedValueOnce(json(noul(0.9)))
+    await (await guideForItem(item(), ROSTER))?.shadow
+    vi.restoreAllMocks()
+    // Админ переписал персону DevOps: вопрос уже другой.
+    const edited = ROSTER.map((e) => (e.id === 'devops' ? g('devops', 'a database-savvy SRE. Owns Postgres in prod.', ['postgresql', 'deploy']) : e))
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(choice('devops'))).mockResolvedValueOnce(json(noul(0.7)))
+    const r = await guideForItem(item(), edited)
+    await r?.shadow
+    expect(spy).toHaveBeenCalled()
+    expect(r?.expert.id).toBe('devops')
+    const rows = await db.select().from(digGuides).where(eq(digGuides.templateId, tplId))
+    expect(rows.map((x) => x.gnomeId)).toEqual(['devops'])
+  })
+
+  it('теневой ответ однажды не пришёл — при следующем визите спрашивается снова', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(choice('dba'))).mockRejectedValueOnce(new TypeError('fetch failed'))
+    await (await guideForItem(item(), ROSTER))?.shadow
+    vi.restoreAllMocks()
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json(noul(0.77)))
+    const r = await guideForItem(item(), ROSTER)
+    await r?.shadow
+    // Решение из кэша (вопроса choice нет), а тень — заново.
+    expect(spy).toHaveBeenCalledTimes(1)
+    const [row] = await db.select().from(digGuides).where(eq(digGuides.templateId, tplId))
+    expect(row.fits).toBeCloseTo(0.77, 5)
+  })
+})
+
 describe('гонка двух первых вопросов по одному пункту', () => {
   it('оба получают одного победителя, строка одна, и тень лежит у него', async () => {
     // Первый запрос выберет dba, второй — devops; тени у обоих «да». Ответы на выбор

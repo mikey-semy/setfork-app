@@ -1,7 +1,8 @@
 import 'server-only'
+import { createHash } from 'node:crypto'
 import { and, eq, isNull } from 'drizzle-orm'
 import { db, digGuides } from '@/shared/db'
-import { decide } from '@/shared/ai/decide'
+import { decide, decideModel } from '@/shared/ai/decide'
 import { fitsQuestion, guideAbout, guideQuestion, guideState, type GuideCandidate } from '@/shared/ai/guide-question'
 import type { Expert } from '@/shared/ai/roster'
 
@@ -20,7 +21,7 @@ import type { Expert } from '@/shared/ai/roster'
  *  • порога уверенности НЕТ: набор замера упёрся в потолок (ни одного промаха), и
  *    откалибровать порог было не на чем. Решения и уверенность копятся в `dig_guides`,
  *    порог подберут по ним;
- *  • один вопрос на пункт версии — ответ кэшируется в `dig_guides`;
+ *  • один вопрос на пункт версии и отпечаток вопроса — ответ кэшируется в `dig_guides`;
  *  • вопрос «подходит ли пункт ремеслу выбранного» задаётся в ТЕНИ (`fits`): пишется, ни
  *    на что не влияет.
  */
@@ -50,19 +51,53 @@ export interface ItemGuide {
 
 const done: Promise<void> = Promise.resolve()
 
+/**
+ * Отпечаток ВОПРОСА: модель и то, что она знает о кандидатах. Решение годно, пока он тот
+ * же. Поправил админ персону или домены, включил нового мастера, сменилась модель — пункты
+ * переспрашиваются, иначе старый проводник держался бы до смены версии списка, и правка
+ * ростера ни на что не влияла бы (авто-ревью к #964).
+ */
+function questionFingerprint(model: string, q: ReturnType<typeof guideQuestion>): string {
+  return createHash('sha256').update(JSON.stringify({ model, instructions: q.instructions, criteria: q.criteria })).digest('hex').slice(0, 16)
+}
+
 export async function guideForItem(it: GuideItem, roster: Expert[]): Promise<ItemGuide | null> {
   const where = and(eq(digGuides.templateId, it.templateId), eq(digGuides.version, it.version), eq(digGuides.stepN, it.stepN))
-  const [cached] = await db.select({ gnomeId: digGuides.gnomeId }).from(digGuides).where(where).limit(1)
-  const hit = cached && roster.find((e) => e.id === cached.gnomeId)
-  // Выбранный гном мог быть выключен в админке с тех пор — тогда спрашиваем заново.
-  if (hit) return { expert: hit, shadow: done }
-
   const question = guideQuestion(roster.map(candidateOf))
+  const fingerprint = questionFingerprint(await decideModel(), question)
+  const state = guideState({ listTitle: it.listTitle, tags: it.tags, section: it.section, item: it.item })
+  const ref = { refType: 'template', refId: it.templateId, userId: it.userId }
+
+  /**
+   * Теневой вопрос о ремесле — только своему мастеру и только в пустое поле: строку могли
+   * перевыбрать, пока шёл вопрос. Не удался (таймаут, бюджет, мусор) — поле остаётся пустым
+   * и вопрос повторяется при следующем визите, иначе образец калибровки пропал бы навсегда
+   * (авто-ревью к #964).
+   */
+  const askFits = (expert: Expert): Promise<void> =>
+    (async () => {
+      const f = await decide({ state, questions: { fits: fitsQuestion(candidateOf(expert)) }, ...ref })
+      const n = f?.answers.fits
+      if (n?.type === 'noul') {
+        await db
+          .update(digGuides)
+          .set({ fits: n.noul })
+          .where(and(where, eq(digGuides.gnomeId, expert.id), isNull(digGuides.fits)))
+      }
+    })().catch((e) => console.warn('[dig-guide] теневой вопрос о ремесле не записан', e instanceof Error ? e.message : e))
+
+  const [cached] = await db
+    .select({ gnomeId: digGuides.gnomeId, fits: digGuides.fits, fingerprint: digGuides.fingerprint })
+    .from(digGuides)
+    .where(where)
+    .limit(1)
+  // Годно, пока вопрос тот же и выбранный не выключен в админке.
+  const hit = cached && cached.fingerprint === fingerprint ? roster.find((e) => e.id === cached.gnomeId) : undefined
+  if (hit) return { expert: hit, shadow: cached.fits === null ? askFits(hit) : done }
+
   // Выбирать не из кого — спрашивать модель незачем.
   if (Object.keys(question.criteria).length < 2) return null
 
-  const state = guideState({ listTitle: it.listTitle, tags: it.tags, section: it.section, item: it.item })
-  const ref = { refType: 'template', refId: it.templateId, userId: it.userId }
   const r = await decide({ state, questions: { guide: question }, ...ref })
   const a = r?.answers.guide
   if (!r || a?.type !== 'choice') return null
@@ -72,14 +107,14 @@ export async function guideForItem(it: GuideItem, roster: Expert[]): Promise<Ite
   // ⚠️ ГОНКА ДВУХ ПЕРВЫХ ВОПРОСОВ. Оба прошли мимо пустого кэша и спросили модель сами;
   // перезапиши второй первого — пропал бы `fits` победителя, а теневой ответ одного мастера
   // лёг бы к другому, и выборка калибровки испортилась бы молча (авто-ревью к #964).
-  // Поэтому строка пишется только если её ещё нет, а замена выключенного — только если в
-  // строке всё ещё прежний; проигравший берёт победителя и тень не задаёт.
-  const row = { gnomeId: expert.id, confidence: a.confidence, probabilities: a.probabilities, model: r.model, fits: null }
+  // Поэтому строка пишется только если её ещё нет, а замена устаревшей — только если в
+  // строке всё ещё прежнее решение; проигравший берёт победителя и тень не задаёт.
+  const row = { gnomeId: expert.id, confidence: a.confidence, probabilities: a.probabilities, model: r.model, fingerprint, fits: null }
   const written = cached
     ? await db
         .update(digGuides)
         .set(row)
-        .where(and(where, eq(digGuides.gnomeId, cached.gnomeId)))
+        .where(and(where, eq(digGuides.gnomeId, cached.gnomeId), eq(digGuides.fingerprint, cached.fingerprint)))
         .returning({ gnomeId: digGuides.gnomeId })
     : await db
         .insert(digGuides)
@@ -92,17 +127,5 @@ export async function guideForItem(it: GuideItem, roster: Expert[]): Promise<Ite
     return won ? { expert: won, shadow: done } : null
   }
 
-  const shadow = (async () => {
-    const f = await decide({ state, questions: { fits: fitsQuestion(candidateOf(expert)) }, ...ref })
-    const n = f?.answers.fits
-    // Только своему мастеру и только в пустое поле: строку могли перевыбрать, пока шёл вопрос.
-    if (n?.type === 'noul') {
-      await db
-        .update(digGuides)
-        .set({ fits: n.noul })
-        .where(and(where, eq(digGuides.gnomeId, expert.id), isNull(digGuides.fits)))
-    }
-  })().catch((e) => console.warn('[dig-guide] теневой вопрос о ремесле не записан', e instanceof Error ? e.message : e))
-
-  return { expert, shadow }
+  return { expert, shadow: askFits(expert) }
 }

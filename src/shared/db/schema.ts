@@ -2177,6 +2177,8 @@ export const digGuides = pgTable(
     fits: real('fits'),
     /** Какая модель ответила на самом деле (с датой сборки). */
     model: text('model').notNull(),
+    /** Отпечаток вопроса (модель + критерии кандидатов): сменился — решение переспрашивается. */
+    fingerprint: text('fingerprint').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('dig_guides_step_idx').on(t.templateId, t.version, t.stepN)],
