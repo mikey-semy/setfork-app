@@ -34,11 +34,11 @@ export function UploadsCorsPanel({ lang }: { lang: Lang }) {
     <div className="flex flex-col gap-2">
       <p className="text-body-sm text-muted">{t('admin.uploadsCors.hint', lang)}</p>
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" onClick={() => run('setup')} disabled={busy !== null}>
+        <Button type="button" touch="grow" onClick={() => run('setup')} disabled={busy !== null}>
           {busy === 'setup' ? <Spinner size="md" /> : <Wrench size={14} />}
           {t('admin.uploadsCors.setup', lang)}
         </Button>
-        <Button type="button" onClick={() => run('check')} disabled={busy !== null}>
+        <Button type="button" touch="grow" onClick={() => run('check')} disabled={busy !== null}>
           {busy === 'check' ? <Spinner size="md" /> : <ShieldCheck size={14} />}
           {t('admin.uploadsCors.check', lang)}
         </Button>
