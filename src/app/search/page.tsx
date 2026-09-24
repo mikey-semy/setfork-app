@@ -72,7 +72,7 @@ export default async function SearchPage({
   const issueState = (ISSUE_STATES.find((s) => s.key === sp.state)?.key ?? 'open') as IssueStateFilter
   const type = sp.type === 'ordered' ? 'ordered' : sp.type === 'unordered' ? 'unordered' : undefined
   // Квалификаторы из строки поиска (by:/tag:/type:/stars:) + свободный текст.
-  // `is:` снят вместе с публичным отбором «только проверенные» (решение 0006).
+  // `is:` — только род списка (is:skill, is:template); «только проверенные» снят решением 0006.
   const parsed = parseSearchQuery(sp.q ?? '')
   const typeQ = parsed.type ?? type
   const text = parsed.text.trim() || undefined
@@ -86,6 +86,8 @@ export default async function SearchPage({
     by: parsed.by,
     tags: parsed.tags.length ? parsed.tags : undefined,
     minStars: parsed.minStars,
+    isSkill: parsed.is?.includes('skill') || undefined,
+    isTemplate: parsed.is?.includes('template') || undefined,
   }
 
   const [lang, session] = await Promise.all([getLang(), getSession()])

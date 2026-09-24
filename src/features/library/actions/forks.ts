@@ -26,13 +26,24 @@ import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from '../pr-settings'
 
 // ── Форк ──────────────────────────────────────────────────────────────
 // ── «Use this template»: копия списка БЕЗ fork-связи ─────────────────
-export async function setListTemplate(templateId: string, isTemplate: boolean): Promise<void> {
+export async function setListTemplate(templateId: string, isTemplate: boolean): Promise<boolean> {
+  return setListFlag(templateId, { isTemplate })
+}
+
+/** «Это скилл для агентов» (ADR-0028): метка у имени и фильтр `is:skill`. Решает владелец. */
+export async function setListSkill(templateId: string, isSkill: boolean): Promise<boolean> {
+  return setListFlag(templateId, { isSkill })
+}
+
+/** Признак рода списка — только владелец. `false` — не записано: переключатель откатится. */
+async function setListFlag(templateId: string, patch: { isTemplate: boolean } | { isSkill: boolean }): Promise<boolean> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
-  if (!tpl || tpl.ownerId !== session.userId) return
-  await db.update(templates).set({ isTemplate }).where(eq(templates.id, templateId))
+  if (!tpl || tpl.ownerId !== session.userId) return false
+  await db.update(templates).set(patch).where(eq(templates.id, templateId))
   revalidatePath(`/${session.handle}/${tpl.slug}`)
   revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
+  return true
 }
 
 /**

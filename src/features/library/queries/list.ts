@@ -70,6 +70,9 @@ export interface FeedItem {
   accent?: string | null
   coverImage?: string | null // после withAvatar — готовый URL обложки (null/undef → авто-баннер)
   repositoryId?: string | null // каталог-«полка»; null = список ещё не разложен
+  /** Метки рода у имени: скилл для агентов и шаблон (как «Public template» у GitHub). */
+  isSkill?: boolean
+  isTemplate?: boolean
 }
 
 export interface TagRow {
@@ -368,6 +371,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       discussionsEnabled: templates.discussionsEnabled,
       pinned: templates.pinned,
       isTemplate: templates.isTemplate,
+      isSkill: templates.isSkill,
       living: templates.living, // лента: свежесть вместо полноты, рост вместо полировки
       repositoryId: templates.repositoryId,
       visibility: templates.visibility,

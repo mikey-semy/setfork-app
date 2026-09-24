@@ -20,7 +20,7 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { isPubliclyVisible, type AuthoredFile } from '@/core'
-import { db, listDrafts } from '@/shared/db'
+import { db, listDrafts, templates } from '@/shared/db'
 import { detectTextLang } from '@/shared/lib/translit'
 import { AUTHORED_PATH, fitsArchive } from '@/features/library/skill'
 import { parseSkillMd } from '@/features/library/skill-parse'
@@ -139,6 +139,10 @@ export function mergeSkillFiles(
   return { files: [...next.values()], added, changed, removed, unknown }
 }
 
+/** Метка «Скилл» — publish_skill ставит её сам: намерение названо вызовом, как у GitHub
+ *  шаблон ставят галочкой. Снять её можно в настройках; вызов её не снимает. */
+const markSkill = (where: ReturnType<typeof eq>) => db.update(templates).set({ isSkill: true }).where(where)
+
 const installLine = (ref: string) => `npx skills add ${SITE_URL}/${ref}/skill.tar.gz`
 
 /** Ядро не подтвердило набор после записи: версия уже лежит, но без файлов. Правду — агенту. */
@@ -190,6 +194,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         authored: authored.length ? authored : undefined,
       })
       if ('error' in res) return res
+      await markSkill(and(eq(templates.ownerId, userId), eq(templates.slug, res.ref.split('/')[1]))!)
       if (authored.length && res.authoredApplied !== true) return notApplied(`the draft ${res.ref} (version 1)`)
       const { authoredApplied: _applied, ...rest } = res
       return {
@@ -246,6 +251,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
 
   const filesChanged = merged ? merged.added.length + merged.changed.length + merged.removed.length > 0 : false
   if (!input.items && !filesChanged && !title && !desc && !input.tags && input.ordered === undefined) {
+    await markSkill(eq(templates.id, tpl.id))
     if (input.catalog) await assignCatalogByName(tpl.id, userId, input.catalog)
     return { ref: `${handle}/${slug}`, version: current, note: 'Nothing to change — the files and blocks are already like this; no version was made.' }
   }
@@ -276,6 +282,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
     merged && filesChanged ? merged.files : undefined,
   )
   if ('error' in res) return res
+  await markSkill(eq(templates.id, tpl.id))
   if (merged && filesChanged && res.authoredApplied !== true) return notApplied(`version ${res.version}`)
   const filed = input.catalog ? await assignCatalogByName(tpl.id, userId, input.catalog) : undefined
   const { authoredApplied: _applied, ...rest } = res

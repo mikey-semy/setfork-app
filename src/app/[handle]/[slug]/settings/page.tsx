@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { BadgeCheck, FolderGit2, GitFork, GitPullRequest, Image as ImageIcon, Info, LayoutTemplate, Radio, SlidersHorizontal, TriangleAlert, Users } from 'lucide-react'
+import { BadgeCheck, FolderGit2, GitFork, GitPullRequest, Image as ImageIcon, Info, LayoutTemplate, Radio, SlidersHorizontal, TriangleAlert, Users, Bot } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
@@ -13,7 +13,7 @@ import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { CatalogSection } from '@/features/catalogs/CatalogSection'
 import { VerificationSection } from '@/features/library/VerificationSection'
 import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
-import { TemplateSection } from '@/features/library/TemplateSection'
+import { SkillSection, TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
 import { GeneralSection } from '@/features/library/GeneralSection'
 import { FeaturesSection } from '@/features/library/FeaturesSection'
@@ -145,6 +145,13 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       icon: <LayoutTemplate size={15} />,
       keywords: ['template', 'use this template', 'reuse', 'шаблон', 'использовать шаблон'],
       content: <TemplateSection templateId={meta.id} isTemplate={meta.isTemplate} lang={lang} />,
+    },
+    {
+      id: 'skill',
+      title: t('skillListTitle', lang),
+      icon: <Bot size={15} />,
+      keywords: ['skill', 'agent skill', 'agents', 'claude', 'codex', 'скилл', 'навык', 'агент', 'агенты'],
+      content: <SkillSection templateId={meta.id} isSkill={meta.isSkill} lang={lang} />,
     },
     {
       id: 'danger',

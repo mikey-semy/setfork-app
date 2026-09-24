@@ -36,7 +36,7 @@ const coreAccepts = async () => (await coreCapabilities())?.acceptsAuthoredFiles
 
 const row = async (slug: string) => {
   const [r] = await db
-    .select({ id: templates.id, version: templates.currentVersion, desc: templates.desc })
+    .select({ id: templates.id, version: templates.currentVersion, desc: templates.desc, isSkill: templates.isSkill })
     .from(templates)
     .where(eq(templates.slug, slug))
   return r
@@ -58,6 +58,8 @@ description('publish_skill', () => {
   it('новый скилл без файлов — обычный черновик, ядру набор не шлётся', async () => {
     const res = await mcpPublishSkill(ownerId, { title: 'Plain skill', items: [{ title: 'Do it' }] })
     expect(res).toMatchObject({ ref: `${HANDLE}/plain-skill`, version: 1, status: 'draft' })
+    // Метку «Скилл» ставит сам вызов: намерение названо им.
+    expect((await row('plain-skill')).isSkill).toBe(true)
   })
 
   it('новый скилл с файлами: либо файлы в версии 1, либо честный отказ без записи', async () => {
@@ -126,8 +128,10 @@ description('publish_skill', () => {
   it('ничего не меняется — версии нет', async () => {
     await mcpPublishSkill(ownerId, { title: 'Still skill', items: [{ title: 'x' }] })
     const r = await row('still-skill')
+    await db.update(templates).set({ isSkill: false }).where(eq(templates.id, r.id))
     const res = await mcpPublishSkill(ownerId, { list: `${HANDLE}/still-skill`, baseVersion: r.version })
     expect(res).toMatchObject({ version: r.version, note: expect.stringContaining('no version was made') })
+    expect((await row('still-skill')).isSkill).toBe(true)
     expect((await row('still-skill')).version).toBe(r.version)
   })
 

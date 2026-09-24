@@ -96,3 +96,18 @@ describe('is:verified снят', () => {
     expect(p.text, 'слово не должно исчезать из запроса без объяснения').toBe('docker is:verified')
   })
 })
+
+describe('is: — только род списка', () => {
+  it('is:skill и is:template разбираются и собираются обратно', async () => {
+    const { parseSearchQuery, buildSearchQuery } = await import('@/features/library/search-query')
+    const p = parseSearchQuery('review is:skill is:template is:skill')
+    expect(p).toMatchObject({ text: 'review', is: ['skill', 'template'] })
+    expect(buildSearchQuery(p)).toBe('review is:skill is:template')
+  })
+
+  it('прочие is: не проглатываются — уходят в текст целиком (решение 0006)', async () => {
+    const { parseSearchQuery } = await import('@/features/library/search-query')
+    expect(parseSearchQuery('is:verified docker')).toMatchObject({ text: 'is:verified docker' })
+    expect(parseSearchQuery('is:verified').is).toBeUndefined()
+  })
+})

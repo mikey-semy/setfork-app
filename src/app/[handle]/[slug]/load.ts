@@ -274,8 +274,22 @@ export async function loadListPage({
   // не вело НИ ОДНОЙ ссылки на другой список, и обходчику корпус был доступен
   // только из ленты. У списка без тегов соседей не ищем — запрос вернёт пусто.
   const related = await getRelatedLists({ id: tpl.id, tags: tpl.tags })
+  // Файлы автора (ADR-0028) показанной версии — перечнем, без содержимого: его проводник
+  // подгружает по щелчку (`blob`). У ветки и коммита по ?ref= номера версии нет — там их
+  // не показываем, а не показываем чужие. Ядро не ответило — блока нет, страница цела.
+  const shownVersion = histNum ?? curNum
+  const skillFiles =
+    refBranch || refCommit
+      ? []
+      : ((await gitCore.authoredFiles({ owner, slug }, shownVersion).catch(() => null)) ?? []).map((f) => ({
+          path: f.path,
+          executable: f.executable,
+          bytes: f.content.length,
+        }))
   return {
     related,
+    skillFiles,
+    shownVersion,
     owner,
     slug,
     gatedFromLesson,

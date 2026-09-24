@@ -398,6 +398,10 @@ export const templates = pgTable(
     verified: boolean('verified').notNull().default(false),
     pinned: boolean('pinned').notNull().default(false), // закреплён владельцем на профиле
     isTemplate: boolean('is_template').notNull().default(false), // «Use this template» (копия без fork-связи)
+    // «Это скилл для агентов» (Agent Skills, ADR-0028): метка у имени и фильтр `is:skill`.
+    // Решает автор, как галочку «Template repository» у GitHub: чек-лист со скриптом ещё не
+    // обязательно скилл. publish_skill ставит её сам — там намерение названо вызовом.
+    isSkill: boolean('is_skill').notNull().default(false),
     coverImage: text('cover_image'), // storage_key обложки-баннера (витрина/og); null → авто-баннер
     accent: text('accent'), // hex акцента карточки/авто-баннера ('' / null = дефолт)
     // Тип списка (ADR-0010): переносится из generations при принятии кандидата,
