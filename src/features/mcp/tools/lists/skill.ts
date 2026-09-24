@@ -125,7 +125,9 @@ export function mergeSkillFiles(
   const changed: string[] = []
   for (const g of given) {
     const was = byPath.get(g.path)
-    const executable = g.execGiven ? g.executable : (was?.executable ?? false)
+    // Режим прежнего файла переносим только в scripts/: исполняемые разрешены лишь там, а
+    // файл, пришедший пушем раньше правила (assets/x.sh с 755), иначе валил бы всю запись.
+    const executable = g.execGiven ? g.executable : g.path.startsWith('scripts/') ? (was?.executable ?? false) : false
     next.set(g.path, { path: g.path, content: g.content, executable })
     if (!was) added.push(g.path)
     else if (!same(was.content, g.content) || was.executable !== executable) changed.push(g.path)

@@ -1,3 +1,4 @@
+import { appOrigin } from '@/shared/auth/app-origin'
 import { movedPath } from '@/shared/db/moved-list'
 
 /**
@@ -10,9 +11,15 @@ import { movedPath } from '@/shared/db/moved-list'
  *
  * Решение о самом перенаправлении принято раньше — в гейте доступа, вместе с проверкой
  * видимости цели. Здесь только форма ответа, без БД и без прав.
+ *
+ * ⚠️ Адрес — от КОНФИГУРАЦИИ (`appOrigin`), а не от `req.url`: за прокси запрос приходит
+ * на привязку сервера, и `Location` выходил `https://0.0.0.0:3000/…` — git-клиент шёл
+ * туда и падал, то есть `git clone` старой ссылки после переименования не работал вовсе
+ * (живой прод, переименование review-kit → finetooth 24.09). Страницы этим не болели:
+ * их перенаправление строится от адреса сайта.
  */
 export function gitMovedResponse(req: Request, repo: { owner: string; slug: string }, to: string): Response {
   const url = new URL(req.url)
-  const location = new URL(movedPath(url.pathname + url.search, `/${repo.owner}/${repo.slug}`, to), url)
+  const location = new URL(movedPath(url.pathname + url.search, `/${repo.owner}/${repo.slug}`, to), appOrigin())
   return new Response(null, { status: 301, headers: { Location: location.toString() } })
 }
