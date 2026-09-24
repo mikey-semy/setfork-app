@@ -131,14 +131,30 @@ const PLURALS = {
 
 export type PluralKey = keyof typeof PLURALS
 
+/**
+ * Категория числа по CLDR — у платформы, а не своей арифметикой (`Intl.PluralRules`).
+ * Своё правило для русского («кончается на 1, но не на 11») было верным для целых, но
+ * каждый новый язык пришлось бы писать руками — а у CLDR правила есть для всех.
+ * Экземпляр на язык кэшируется: конструктор дорогой, а зовут `plural` в каждом списке.
+ */
+const pluralRules = new Map<Lang, Intl.PluralRules>()
+function pluralCategory(n: number, lang: Lang): Intl.LDMLPluralRule {
+  let rules = pluralRules.get(lang)
+  if (!rules) pluralRules.set(lang, (rules = new Intl.PluralRules(lang)))
+  return rules.select(n)
+}
+
+/**
+ * Категория CLDR → номер формы в словаре. У русского форм три: «одна» (1, 21),
+ * «несколько» (2–4, 22) и «много» (5, 11). `other` у русского — только ДРОБНЫЕ числа, и
+ * при дроби нужен родительный единственного: «1,5 версии», как у «нескольких».
+ */
+const RU_FORM: Record<Intl.LDMLPluralRule, 0 | 1 | 2> = { zero: 2, one: 0, two: 1, few: 1, many: 2, other: 1 }
+
 /** Форма слова при числе: `plural(1, 'branches', 'ru')` → «ветка». */
 export function plural(n: number, key: PluralKey, lang: Lang): string {
   const forms = PLURALS[key]
-  if (lang !== 'ru') return forms.en[n === 1 ? 0 : 1]
-  const abs = Math.abs(n) % 100
-  const last = abs % 10
-  if (abs > 10 && abs < 20) return forms.ru[2]
-  if (last === 1) return forms.ru[0]
-  if (last >= 2 && last <= 4) return forms.ru[1]
-  return forms.ru[2]
+  const category = pluralCategory(n, lang)
+  if (lang === 'ru') return forms.ru[RU_FORM[category]]
+  return forms.en[category === 'one' ? 0 : 1]
 }
