@@ -456,7 +456,7 @@
         "src/app/llms-full.txt/**",
         "src/app/llms.txt/**",
         "src/app/opensearch.xml/**",
-        "src/app/robots.txt/**",
+        "src/app/robots.ts",
         "src/app/sitemap.ts",
         "src/features/library/indexnow-jobs.ts",
         "src/features/library/indexnow.ts",

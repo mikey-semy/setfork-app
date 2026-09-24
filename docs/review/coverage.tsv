@@ -306,6 +306,7 @@ src/app/notifications/page.tsx	V7b
 src/app/oauth/authorize/actions.ts	V11
 src/app/oauth/authorize/page.tsx	V11
 src/app/oauth/token/route.ts	V11
+src/app/opensearch.xml/route.ts	H11
 src/app/page.tsx	V12
 src/app/privacy/page.tsx	V12
 src/app/register/page.tsx	V11
@@ -1134,6 +1135,7 @@ src/shared/seo/jsonld.tsx	H11
 src/shared/seo/llms.ts	H11
 src/shared/seo/localize.ts	H11
 src/shared/seo/page-meta.ts	H11
+src/shared/seo/search-url.ts	H11
 src/shared/seo/with-lang.ts	H11
 src/shared/settings/ai.ts	V9
 src/shared/settings/changelog.ts	V9
@@ -1302,13 +1304,16 @@ tests/app/llms-and-md.itest.ts	V12d
 tests/app/maintenance-machine-body.test.ts	V12d
 tests/app/middleware-lang-prefix.test.ts	V12d
 tests/app/og-image.itest.ts	V12d
+tests/app/profile-og-image.itest.ts	H11,V12d
 tests/app/raw-dialect.test.ts	V12d
 tests/app/raw-error-contract.test.ts	V12d
 tests/app/raw-failure-loud.test.ts	V12d
+tests/app/robots-opensearch.test.ts	H11,V12d
 tests/app/sitemap-verification.itest.ts	V12d
 tests/app/sitemap.itest.ts	V12d
 tests/app/skill-routes.itest.ts	V12d
 tests/app/telegram-link-page.test.tsx	V12d
+tests/app/web-manifest.test.ts	H11,V12d
 tests/architecture/audit-gate-split.test.ts	H12
 tests/architecture/block-fields-reach-the-wire.mutants.json	H12
 tests/architecture/block-fields-reach-the-wire.test.ts	H12

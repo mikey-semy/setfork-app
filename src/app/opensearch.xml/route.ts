@@ -1,5 +1,5 @@
 import { SITE_ORIGIN } from '@/shared/site'
-import { escapeHtml as esc } from '@/shared/lib/escape'
+import { escapeXml as esc } from '@/shared/lib/escape'
 import { siteSearchUrl } from '@/shared/seo/search-url'
 
 /**

@@ -5,6 +5,7 @@
 import type { Metadata } from 'next'
 import { urlLangAt, withLang } from '@/shared/seo/with-lang'
 import { SITE_OG_IMAGE } from '@/shared/seo/page-meta'
+import { avatarSrc } from '@/shared/media'
 import { canonicalPageParam, pageHref } from '@/shared/lib/paging'
 import { breadcrumbList, JsonLd, profilePage } from '@/shared/seo/jsonld'
 import { BookOpen, FolderGit2, ListChecks, Star, Users } from 'lucide-react'
@@ -52,7 +53,11 @@ async function baseMetadata({
   }
   const title = user.name ? `${user.name} (${handle})` : handle
   const description = user.bio ?? `Lists by ${title} on SetFork.`
-  const image = user.avatarUrl || SITE_OG_IMAGE
+  // ⚠️ `avatar_url` — не всегда адрес: у загруженного аватара там КЛЮЧ хранилища
+  // (`avatars/<id>/<uuid>.webp`), и Next достроил бы из него `https://setfork.com/avatars/…`
+  // — битую ссылку. Адрес — тем же `avatarSrc`, что и на странице. 400: у Facebook минимум
+  // картинки карточки — 200×200. Нет imgproxy — `null`, и берётся общесайтовая.
+  const image = (await avatarSrc(user.avatarUrl, 400)) ?? SITE_OG_IMAGE
   return {
     title,
     description,

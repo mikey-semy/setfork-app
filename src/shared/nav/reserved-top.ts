@@ -28,7 +28,6 @@ export const RESERVED_TOP = new Set([
   'llms-full.txt',
   'llms.txt',
   'opensearch.xml',
-  'robots.txt',
   'login',
   'my-lists',
   'new',
