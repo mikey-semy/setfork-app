@@ -1,6 +1,7 @@
 import 'server-only'
 import { Code, ConnectError, createClient } from '@connectrpc/connect'
 import { coreTransport, mirrorPushTimeoutMs } from '@/shared/core-transport'
+import { coreCapabilities } from '@/shared/core-capabilities'
 import type { GitCore, GitRepoRef } from '@/core'
 import { BranchOpError } from '@/core'
 import { toTransportError } from './transport-error'
@@ -218,8 +219,8 @@ export const gitCoreRemote: GitCore = {
    *  Различать их не нужно, потому что вывод из обоих один: раз ядро не
    *  подтвердило, что исполняет роли, постороннего пускать нельзя. */
   async capabilities(opts) {
-    const res = await client.getCapabilities({}, { timeoutMs: opts?.timeoutMs }).catch(() => null)
-    return { enforcesPushRoles: res?.enforcesPushRoles === true }
+    const caps = await coreCapabilities(opts?.timeoutMs)
+    return { enforcesPushRoles: caps?.enforcesPushRoles === true }
   },
 
   async updateBranch(repo, name) {
@@ -366,6 +367,11 @@ const REASON_TO_CODE: Record<string, BranchOpError['code']> = {
   GATE_UNAVAILABLE: 'gate-unavailable',
   GATE_MALFORMED: 'gate-malformed',
   RESERVED_TAG_NAME: 'bad-name',
+  // Файлы автора с записи не прошли правило дерева. На путях веток и слияний не случается
+  // (они файлы только переносят), а запись списка разбирает эту причину сама — в
+  // `list-store.remote.ts`, с текстом ядра для агента. Строка здесь — чтобы сверка причин
+  // ядра с фронтом (check-proto-sync.sh) знала: причина разобрана, а не забыта.
+  AUTHORED_INVALID: 'protected',
   // Репозиторий разошёлся с базой. Отдельный код, а НЕ 'internal': человеку важно
   // знать, что повторять бесполезно и что его правка ни при чём.
   OUT_OF_SYNC: 'out-of-sync',

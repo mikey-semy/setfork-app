@@ -62,6 +62,8 @@ export interface List {
   runsCount: number
   createdAt: Date
   updatedAt: Date
+  /** Только у ответа Create с файлами автора: ядро подтвердило, что набор лёг в v1. */
+  authoredApplied?: boolean
 }
 
 // ── Version (снимок = git-коммит + тег vN) ───────────────────────────
@@ -73,6 +75,10 @@ export interface Version {
   /** SHA коммита в git-репо, если известен (пуш/материализация). */
   commitSha: string | null
   createdAt: Date
+  /** Только у ответа записи с файлами автора: ядро подтвердило, что набор лёг тем же
+   *  коммитом. `false` при отправленном наборе — версия записана БЕЗ него (ядро откатили
+   *  между проверкой возможности и записью), и вызывающий обязан это сказать. */
+  authoredApplied?: boolean
 }
 
 export interface StepRef {

@@ -466,6 +466,9 @@ message CapabilitiesRequest {}
 message CapabilitiesResponse {
   // Ядро смотрит на роль пушащего и держит постороннего в его пространстве (Ф5).
   bool enforces_push_roles = 1;
+  // Ядро понимает файлы автора в ListWrite.AddVersion/Create (AuthoredFileSet). Фронт
+  // шлёт их только при true: старое ядро выбросило бы поле молча.
+  bool accepts_authored_files = 2;
 }
 
 // Agent Skills (ADR-0028): какие авторские файлы лежат в дереве версии.

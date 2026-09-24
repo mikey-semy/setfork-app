@@ -8,7 +8,8 @@
 import 'server-only'
 import { eq } from 'drizzle-orm'
 import { db, templates, type ProposedItem } from '@/shared/db'
-import { canEditList, ListWriteError } from '@/core'
+import type { LocaleText } from '@/shared/i18n'
+import { AuthoredFilesError, canEditList, ListWriteError, type AuthoredFile } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { listStore } from '@/features/library/list-store'
 // Единый конвертер шагов на запись — тот же, что у веба, садовника и предложений.
@@ -18,10 +19,22 @@ import { resolveListRefOrMoved } from '../shared'
 import { duplicateBid } from './draft-store'
 
 /** Отказ стража разрушительных команд → ответ инструмента. Это не сбой, а
- *  вердикт: агенту нужно назвать причину, а не увидеть стектрейс. */
+ *  вердикт: агенту нужно назвать причину, а не увидеть стектрейс. Опасное в файле из
+ *  `scripts/` называется файлом: «шаг 0» агент не нашёл бы нигде. */
 export const destructiveError = (e: unknown): { error: string } | null =>
   e instanceof DestructiveCommandError
-    ? { error: `refused: step ${e.stepIndex} has a destructive command (${e.reason}): ${e.fragment}` }
+    ? e.path
+      ? { error: `refused: ${e.path} has a destructive command (${e.reason}): ${e.fragment}` }
+      : { error: `refused: step ${e.stepIndex} has a destructive command (${e.reason}): ${e.fragment}` }
+    : null
+
+/** Отказ по файлам автора → ответ инструмента: набор не прошёл правило дерева (текст ядра
+ *  называет файл и предел) или ядро файлов не понимает — тогда повтор сейчас бесполезен. */
+export const authoredError = (e: unknown): { error: string } | null =>
+  e instanceof AuthoredFilesError
+    ? e.code === 'invalid'
+      ? { error: `refused: the files do not fit the skill tree — ${e.detail}` }
+      : { error: `refused before writing: ${e.detail || 'the git core does not accept author files yet'} — nothing was written; the blocks can still be saved without files (update_list / patch_list)` }
     : null
 
 /** Список во владении пользователя (для записи) + его версии.
@@ -57,11 +70,14 @@ export async function writeProposed(
   slug: string,
   proposed: ProposedItem[],
   note: string,
-  meta: { tags: string[]; ordered: boolean },
+  // title/desc — только когда их меняют: патч меты, отсутствующее поле ядро не трогает.
+  meta: { tags: string[]; ordered: boolean; title?: LocaleText; desc?: LocaleText },
   // Версия, от которой собран состав. ОБЯЗАТЕЛЬНА, а не «если знаете»: необязательной
   // она была ровно один вызов, и `update_list` её не передавал — полная замена уезжала
   // в ядро без сверки и молча вытесняла чужую версию, пока патч был защищён.
   expectedVersion: number,
+  // Файлы автора тем же коммитом (ADR-0028). Не задано — ядро переносит их из родителя.
+  authored?: AuthoredFile[],
 ) {
   if (!proposed.length) return { error: 'at least one item with a title is required' }
   const dup = duplicateBid(proposed)
@@ -83,7 +99,7 @@ export async function writeProposed(
   // замком строки, иначе между ними успевает лечь чужая версия.
   let ver
   try {
-    ver = await listStore.addVersion(tpl.id, { note, steps: stepInput(proposed), meta, expectedVersion })
+    ver = await listStore.addVersion(tpl.id, { note, steps: stepInput(proposed), meta, expectedVersion, authored })
   } catch (e) {
     // Отказ ядра по устаревшей версии — не сбой, а нормальный исход гонки: пока
     // правку готовили, список ушёл вперёд. Агент перечитывает и накладывает заново.
@@ -99,16 +115,17 @@ export async function writeProposed(
     // причину. Раньше он превращался в ответ только в ветке правки черновика; когда та
     // ушла, стражевой отказ полетел исключением — то есть агент получал бы стектрейс
     // вместо «отказано, потому что».
-    const refused = destructiveError(e)
+    const refused = destructiveError(e) ?? authoredError(e)
     if (refused) return refused
     throw e
   }
-  // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающий
-  // контент, залитый через MCP, не минует модерацию, и здесь её дублировать не нужно.
+  // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающие
+  // БЛОКИ, залитые через MCP, модерацию не минуют. ⚠️ Тексты файлов автора (references/,
+  // assets/) модерация не читает — ни здесь, ни на push: это открытый вопрос ADR-0028.
   const { enqueueReindex } = await import('@/features/library/jobs')
   await enqueueReindex(tpl.id)
   // Статус отдаём НАСТОЯЩИЙ: он был захардкожен 'published', и черновик, получив версию,
   // отвечал агенту «опубликован» — то есть врал про видимость ровно там, где агент решает,
   // показывать ли ссылку человеку.
-  return { ref: `${handle}/${slug}`, status: tpl.status, version: ver.version }
+  return { ref: `${handle}/${slug}`, status: tpl.status, version: ver.version, authoredApplied: ver.authoredApplied }
 }

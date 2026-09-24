@@ -82,11 +82,11 @@ description + JSON-схему`, посчитать `o200k_base`. Замер от
 спрашивать человека. Значит перечень тех, кто стирает или заменяет чужое, обязан быть
 виден:
 
-**Разрушающие** (12 из 25 пишущих):
+**Разрушающие** (13 из 27 пишущих; число сверено с перечнями `registry.test.ts`):
 
 | стирают состав списка | стирают одно поле |
 |---|---|
-| `update_list`, `patch_list`, `discard_draft`, `delete_list`, `apply_suggestion`, `merge_suggestion` | `check_step` (заметку к шагу), `report_run` (`verified_by`), `review_suggestion` (чужой вердикт и отклонение ревью), `report_check`, `register_source`, `reopen_issue` (исход закрытия) |
+| `update_list`, `patch_list`, `discard_draft`, `delete_list`, `apply_suggestion`, `merge_suggestion`, `publish_skill` (`removeFiles` / `replaceFiles` удаляют файлы автора) | `check_step` (заметку к шагу), `report_run` (`verified_by`), `review_suggestion` (чужой вердикт и отклонение ревью), `report_check`, `register_source`, `reopen_issue` (исход закрытия) |
 
 Правый столбец — вторая редакция перечня, и первая на нём попалась. Соблазн считать
 разрушающим только то, что сносит целое; на деле **перезапись одного поля уже не

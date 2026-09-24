@@ -13,6 +13,7 @@ import { patchBlock, rowsToProposed } from './patch-block'
 import { duplicateBid, listWritable, lockList } from './draft-store'
 import { draftBaseMismatch, headVersion, staleBase } from './base-version'
 import { destructiveError, ownedList, writeProposed } from './write'
+import { normalizeTags } from './create'
 
 /** Обновить список (только владелец): новая версия через ядро, либо накопление в рабочей
  *  копии при publish:false. Статус списка на механику записи не влияет (ADR-0020). */
@@ -42,9 +43,7 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
   const found = await ownedList(userId, handle, slug)
   if ('error' in found) return found
   const { tpl } = found
-  const tags = input.tags
-    ? input.tags.map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
-    : tpl.tags
+  const tags = input.tags ? normalizeTags(input.tags) : tpl.tags
   const proposed = toProposed(input.items ?? [])
 
   // publish:false — полная замена ложится в РАБОЧУЮ КОПИЮ, версии не создавая. Тот же

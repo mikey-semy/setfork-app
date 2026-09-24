@@ -1,9 +1,10 @@
 import 'server-only'
 import { Code, ConnectError, createClient } from '@connectrpc/connect'
 import { coreTransport } from '@/shared/core-transport'
-import { assertNoDestructiveSteps } from '@/core/domain/destructive-command'
-import { ListWriteError } from '@/core'
-import type { Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
+import { assertNoDestructiveContent } from '@/core/domain/destructive-command'
+import { AuthoredFilesError, ListWriteError } from '@/core'
+import type { AuthoredFile, Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
+import { coreCapabilities } from '@/shared/core-capabilities'
 import {
   ListRead,
   ListWrite,
@@ -20,6 +21,31 @@ import {
 const transport = coreTransport()
 const client = createClient(ListRead, transport)
 const writeClient = createClient(ListWrite, transport)
+/**
+ * ФАЙЛЫ АВТОРА — только ядру, которое их понимает.
+ *
+ * Незнакомое поле proto3 теряется МОЛЧА (доказано на этом проекте не раз): старое ядро
+ * записало бы версию с файлами родителя и ответило бы успехом. Поэтому два замка:
+ *  • ДО записи — ядро подтверждает возможность (`shared/core-capabilities`, без кэша);
+ *  • ПОСЛЕ — эхо `authored_applied` уезжает вызывающему в ответе. Не исключением: версия к
+ *    этому моменту уже записана, и исключение отрезало бы барьеры фасада (модерация) от
+ *    записанного. Вызывающий, который слал набор, обязан эхо прочитать и сказать правду.
+ */
+async function assertCoreAcceptsAuthored(): Promise<void> {
+  const caps = await coreCapabilities()
+  if (!caps) throw new AuthoredFilesError('unsupported', 'the git core did not answer whether it accepts author files')
+  if (!caps.acceptsAuthoredFiles) throw new AuthoredFilesError('unsupported')
+}
+
+const toPbAuthored = (files: AuthoredFile[] | undefined) =>
+  files === undefined ? undefined : { files: files.map((f) => ({ path: f.path, content: f.content, executable: f.executable })) }
+
+/** Отказ ядра по набору файлов — с его текстом: он называет файл и предел. */
+function authoredRefusal(e: unknown): never | void {
+  if (e instanceof ConnectError && e.metadata.get('sf-reason') === 'AUTHORED_INVALID') {
+    throw new AuthoredFilesError('invalid', e.rawMessage)
+  }
+}
 
 /** Вызов create с переводом отказа в доменную ошибку.
  *
@@ -41,6 +67,7 @@ async function callCreate(req: Parameters<typeof writeClient.create>[0]): Promis
   try {
     return await writeClient.create(req)
   } catch (e) {
+    authoredRefusal(e)
     if (e instanceof ConnectError && e.metadata.get('sf-reason') === 'EXISTS') {
       throw new ListWriteError('exists')
     }
@@ -57,6 +84,7 @@ async function callAddVersion(req: Parameters<typeof writeClient.addVersion>[0])
   try {
     return await writeClient.addVersion(req)
   } catch (e) {
+    authoredRefusal(e)
     if (e instanceof ConnectError && (e.metadata.get('sf-reason') === 'STALE' || e.code === Code.Aborted)) {
       throw new ListWriteError('stale')
     }
@@ -226,7 +254,8 @@ const toPbStep = (s: NewVersionInput['steps'][number]) => ({
 
 export const listWriteRemote = {
   async addVersion(listId: string, input: NewVersionInput): Promise<Version> {
-    assertNoDestructiveSteps(input.steps)
+    assertNoDestructiveContent(input.steps, input.authored)
+    if (input.authored !== undefined) await assertCoreAcceptsAuthored()
     const res = await callAddVersion({
       listId,
       note: input.note,
@@ -244,11 +273,14 @@ export const listWriteRemote = {
       // Версия, на которой основана правка: сверку делает ЯДРО в той же транзакции,
       // где строка списка уже заблокирована, — снаружи такой гарантии нет.
       expectedVersion: input.expectedVersion,
+      // Нет поля — ядро переносит файлы из родителя; есть — заменяет набор этим коммитом.
+      authored: toPbAuthored(input.authored),
     })
-    return toVersion(res)
+    return input.authored === undefined ? toVersion(res) : { ...toVersion(res), authoredApplied: res.authoredApplied }
   },
   async create(input: CreateListInput): Promise<List> {
-    assertNoDestructiveSteps(input.steps)
+    assertNoDestructiveContent(input.steps, input.authored)
+    if (input.authored !== undefined) await assertCoreAcceptsAuthored()
     const res = await callCreate({
       ownerId: input.ownerId,
       slug: input.slug,
@@ -266,7 +298,8 @@ export const listWriteRemote = {
       // рождается pending, а не становится им догоняющим апдейтом (окно между
       // insert в ядре и update в БД — это время, когда он публичен). '' = active.
       moderation: input.moderation ?? '',
+      authored: toPbAuthored(input.authored),
     })
-    return toList(res)
+    return input.authored === undefined ? toList(res) : { ...toList(res), authoredApplied: res.authoredApplied }
   },
 }

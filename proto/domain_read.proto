@@ -51,6 +51,7 @@ message List {
   string repository_id = 20; // '' = null (solo-список)
   int64 created_at_ms = 21;
   int64 updated_at_ms = 22;
+  bool authored_applied = 23; // то же эхо, что у Version, — для Create с файлами
 }
 
 message Version {
@@ -61,6 +62,10 @@ message Version {
   string commit_sha = 5; // '' = null
   int64 created_at_ms = 6;
   string author_id = 7; // '' = null (кто создал версию — для «Коммитов»)
+  // Эхо «ядро поле поняло»: true ТОЛЬКО когда набор файлов пришёл и лёг в коммит.
+  // Незнакомое поле proto3 теряется молча, и без эха старое ядро записало бы версию
+  // с файлами родителя, а вызывающий считал бы, что положил свои.
+  bool authored_applied = 8;
 }
 
 message StepRef {
@@ -237,6 +242,24 @@ message AddVersionRequest {
   // Патч меты (может отсутствовать): ядро применяет его до сборки канона,
   // поэтому коммит версии сразу несёт свежие title/desc/tags/ordered.
   ListMetaPatch meta = 5;
+  // Файлы автора: presence-семантика обёртки. Нет сообщения — перенести из родителя (как
+  // раньше); есть — ЗАМЕНИТЬ набор целиком тем же коммитом, что и блоки; есть и пусто —
+  // убрать все. Правило набора то же, что на push: scripts/, references/, assets/, один
+  // уровень, только текст, ≤50 файлов и ≤1 МБ на все три.
+  AuthoredFileSet authored = 7;
+}
+
+// Файл автора на ВХОДЕ записи. Режим задаётся флагом, а не числом: других режимов,
+// кроме 100644/100755, в дереве скилла не бывает.
+message AuthoredFileInput {
+  string path = 1; // «scripts/run.sh» — от корня дерева
+  bytes content = 2;
+  bool executable = 3;
+}
+
+// Обёртка ради presence: у repeated в proto3 «пусто» и «не задано» неотличимы.
+message AuthoredFileSet {
+  repeated AuthoredFileInput files = 1;
 }
 
 service ListWrite {
@@ -346,4 +369,8 @@ message CreateListRequest {
   // публичен всё время до «догоняющего» апдейта, и окно премодерации нельзя
   // закрыть снаружи (та же форма, что post_status у wp_insert_post).
   string moderation = 13;
+  // Файлы автора (ADR-0028) — в ПЕРВУЮ версию, тем же коммитом, что и блоки. Задано —
+  // список рождается git-first: репозиторий и тег v1 сразу, с файлами в дереве. Не задано —
+  // как раньше: только Postgres, репозиторий лениво при первом обращении.
+  AuthoredFileSet authored = 14;
 }

@@ -20,6 +20,7 @@ import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 // Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { toProposed, type McpItemInput } from '../shared'
+import type { AuthoredFile } from '@/core'
 
 export interface McpCreateInput {
   title: string
@@ -31,7 +32,14 @@ export interface McpCreateInput {
   lang?: string
   /** Имя полки владельца, на которую положить список. Нет такой — список остаётся без полки. */
   catalog?: string
+  /** Файлы автора в первую версию (ADR-0028) — тем же коммитом, что и блоки. */
+  authored?: AuthoredFile[]
 }
+
+/** Теги с MCP — в той же форме, что с сайта: нижний регистр, без пунктуации, не больше 8.
+ *  Одна функция на create, update и publish_skill: три копии уже успели появиться. */
+export const normalizeTags = (tags: string[]): string[] =>
+  tags.map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
 
 /** Создать список от имени пользователя. Всегда как ЧЕРНОВИК — публикует потом владелец на сайте. */
 export async function mcpCreateList(userId: string, input: McpCreateInput) {
@@ -44,7 +52,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   // Тот же лимит на число списков, что и в вебе (createTemplate) — MCP-путь его обходил.
   if (!(await listQuota(userId, u?.handle)).ok) return { error: 'list quota reached — delete a list first' }
   const slug = await uniqueSlug(title, userId)
-  const tags = (input.tags ?? []).map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
+  const tags = normalizeTags(input.tags ?? [])
   // Локаль заголовка/описания: явный lang из запроса или детект по тексту —
   // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
   const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
@@ -61,6 +69,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
     origin: 'authored',
     note: 'created via API',
     steps: stepInput(proposed),
+    authored: input.authored,
   })
 
   // Полка — тем же правилом, что и в форме сайта (features/catalogs/assign): своя,
@@ -70,6 +79,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   return {
     ref: `${u.handle}/${slug}`,
     status: 'draft',
+    authoredApplied: list.authoredApplied,
     catalog: input.catalog ? (filed ? input.catalog : `not found among your catalogs: ${input.catalog}`) : undefined,
     note: 'Created as a private draft — the owner publishes it on the site to make it public.',
   }

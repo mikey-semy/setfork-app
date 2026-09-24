@@ -21,7 +21,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file domain_read.proto.
  */
 export const file_domain_read: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb21haW5fcmVhZC5wcm90bxIRc2V0Zm9yay5kb21haW4udjEiZwoKTG9jYWxlVGV4dBIvCgF2GAEgAygLMiQuc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dC5WRW50cnkaKAoGVkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiJgoHTGlzdFJlZhINCgVvd25lchgBIAEoCRIMCgRzbHVnGAIgASgJIhQKBkxpc3RJZBIKCgJpZBgBIAEoCSLlAwoETGlzdBIKCgJpZBgBIAEoCRIQCghvd25lcl9pZBgCIAEoCRIMCgRzbHVnGAMgASgJEiwKBXRpdGxlGAQgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAUgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIMCgR0YWdzGAYgAygJEg8KB29yZGVyZWQYByABKAgSDgoGc3RhdHVzGAggASgJEhIKCnZpc2liaWxpdHkYCSABKAkSEgoKbW9kZXJhdGlvbhgKIAEoCRIZChFtb2RlcmF0aW9uX3JlYXNvbhgLIAEoCRIQCgh2ZXJpZmllZBgMIAEoCBIOCgZwaW5uZWQYDSABKAgSDgoGb3JpZ2luGA4gASgJEhYKDmZvcmtlZF9mcm9tX2lkGA8gASgJEhcKD2N1cnJlbnRfdmVyc2lvbhgQIAEoBRITCgtzdGFyc19jb3VudBgRIAEoBRITCgtmb3Jrc19jb3VudBgSIAEoBRISCgpydW5zX2NvdW50GBMgASgFEhUKDXJlcG9zaXRvcnlfaWQYFCABKAkSFQoNY3JlYXRlZF9hdF9tcxgVIAEoAxIVCg11cGRhdGVkX2F0X21zGBYgASgDIoMBCgdWZXJzaW9uEgoKAmlkGAEgASgJEg8KB2xpc3RfaWQYAiABKAkSDwoHdmVyc2lvbhgDIAEoBRIMCgRub3RlGAQgASgJEhIKCmNvbW1pdF9zaGEYBSABKAkSFQoNY3JlYXRlZF9hdF9tcxgGIAEoAxIRCglhdXRob3JfaWQYByABKAkiRAoHU3RlcFJlZhIsCgVsYWJlbBgBIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSCwoDdXJsGAIgASgJIvcDCgRTdGVwEgoKAmlkGAEgASgJEhIKCnZlcnNpb25faWQYAiABKAkSCQoBbhgDIAEoBRIsCgV0aXRsZRgEIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKwoEZGVzYxgFIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSDwoHY29tbWFuZBgGIAEoCRINCgVsZXZlbBgHIAEoCRIqCgN3aHkYCCABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Ei4KB3NlY3Rpb24YCSABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Ei8KCHN1YnRhc2tzGAogAygLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIoCgRyZWZzGAsgAygLMhouc2V0Zm9yay5kb21haW4udjEuU3RlcFJlZhIRCglpbWFnZV9yZWYYDCABKAkSDAoEdHlwZRgNIAEoCRIUCgxjb250ZW50X2pzb24YDiABKAkSEwoLbmVlZHNfaHVtYW4YDyABKAgSNgoPbmVlZHNfaHVtYW5fYXNrGBAgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIOCgZkYW5nZXIYESABKAgiQwoLQ29udHJpYnV0b3ISDgoGaGFuZGxlGAEgASgJEhIKCmF2YXRhcl9yZWYYAiABKAkSEAoIYWNjZXB0ZWQYAyABKAUiRwoPR2V0TGlzdFJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEiUKBGxpc3QYAiABKAsyFy5zZXRmb3JrLmRvbWFpbi52MS5MaXN0IkAKEFZlcnNpb25zUmVzcG9uc2USLAoIdmVyc2lvbnMYASADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uIjUKEUdldFZlcnNpb25SZXF1ZXN0Eg8KB2xpc3RfaWQYASABKAkSDwoHdmVyc2lvbhgCIAEoBSJ4ChJHZXRWZXJzaW9uUmVzcG9uc2USDQoFZm91bmQYASABKAgSKwoHdmVyc2lvbhgCIAEoCzIaLnNldGZvcmsuZG9tYWluLnYxLlZlcnNpb24SJgoFc3RlcHMYAyADKAsyFy5zZXRmb3JrLmRvbWFpbi52MS5TdGVwIkwKFENvbnRyaWJ1dG9yc1Jlc3BvbnNlEjQKDGNvbnRyaWJ1dG9ycxgBIAMoCzIeLnNldGZvcmsuZG9tYWluLnYxLkNvbnRyaWJ1dG9yIiwKCFVzZXJMaXN0Eg8KB2xpc3RfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCSIdCgxCb29sUmVzcG9uc2USDQoFdmFsdWUYASABKAgiHgoNQ291bnRSZXNwb25zZRINCgV2YWx1ZRgBIAEoBSIaCgtJZHNSZXNwb25zZRILCgNpZHMYASADKAki4QMKB05ld1N0ZXASLAoFdGl0bGUYASABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EisKBGRlc2MYAiABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Eg8KB2NvbW1hbmQYAyABKAkSDQoFbGV2ZWwYBCABKAkSKgoDd2h5GAUgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIuCgdzZWN0aW9uGAYgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIvCghzdWJ0YXNrcxgHIAMoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKAoEcmVmcxgIIAMoCzIaLnNldGZvcmsuZG9tYWluLnYxLlN0ZXBSZWYSEQoJaW1hZ2VfcmVmGAkgASgJEgwKBHR5cGUYCiABKAkSFAoMY29udGVudF9qc29uGAsgASgJEhAKCGJsb2NrX2lkGAwgASgJEhMKC25lZWRzX2h1bWFuGA0gASgIEjYKD25lZWRzX2h1bWFuX2FzaxgOIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSDgoGZGFuZ2VyGA8gASgIIhQKB1RhZ0xpc3QSCQoBdhgBIAMoCSK2AQoNTGlzdE1ldGFQYXRjaBIsCgV0aXRsZRgBIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKwoEZGVzYxgCIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKAoEdGFncxgDIAEoCzIaLnNldGZvcmsuZG9tYWluLnYxLlRhZ0xpc3QSFAoHb3JkZXJlZBgEIAEoCEgAiAEBQgoKCF9vcmRlcmVkItQBChFBZGRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEgwKBG5vdGUYAiABKAkSKQoFc3RlcHMYAyADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5OZXdTdGVwEhEKCWF1dGhvcl9pZBgEIAEoCRIdChBleHBlY3RlZF92ZXJzaW9uGAYgASgFSACIAQESLgoEbWV0YRgFIAEoCzIgLnNldGZvcmsuZG9tYWluLnYxLkxpc3RNZXRhUGF0Y2hCEwoRX2V4cGVjdGVkX3ZlcnNpb24ivwEKBUlzc3VlEgoKAmlkGAEgASgJEg8KB2xpc3RfaWQYAiABKAkSDgoGbnVtYmVyGAMgASgFEhEKCWF1dGhvcl9pZBgEIAEoCRINCgV0aXRsZRgFIAEoCRIMCgRib2R5GAYgASgJEg4KBnN0YXR1cxgHIAEoCRIOCgZsYWJlbHMYCCADKAkSEgoKY3JlYXRlZF9hdBgJIAEoAxISCgp1cGRhdGVkX2F0GAogASgDEhEKCWNsb3NlZF9hdBgLIAEoAyJhCgxJc3N1ZUNvbW1lbnQSCgoCaWQYASABKAkSEAoIaXNzdWVfaWQYAiABKAkSEQoJYXV0aG9yX2lkGAMgASgJEgwKBGJvZHkYBCABKAkSEgoKY3JlYXRlZF9hdBgFIAEoAyLEAQoKU3VnZ2VzdGlvbhIKCgJpZBgBIAEoCRIPCgdsaXN0X2lkGAIgASgJEhEKCWF1dGhvcl9pZBgDIAEoCRIOCgZzdGF0dXMYBCABKAkSDAoEbm90ZRgFIAEoCRIUCgxiYXNlX3ZlcnNpb24YBiABKAUSKQoFc3RlcHMYByADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5OZXdTdGVwEhIKCmNyZWF0ZWRfYXQYCCABKAMSEwoLcmVzb2x2ZWRfYXQYCSABKAMiawoRU3VnZ2VzdGlvbkNvbW1lbnQSCgoCaWQYASABKAkSFQoNc3VnZ2VzdGlvbl9pZBgCIAEoCRIRCglhdXRob3JfaWQYAyABKAkSDAoEYm9keRgEIAEoCRISCgpjcmVhdGVkX2F0GAUgASgDImMKEE9wZW5Jc3N1ZVJlcXVlc3QSDwoHbGlzdF9pZBgBIAEoCRIRCglhdXRob3JfaWQYAiABKAkSDQoFdGl0bGUYAyABKAkSDAoEYm9keRgEIAEoCRIOCgZsYWJlbHMYBSADKAkiSwoWQWRkSXNzdWVDb21tZW50UmVxdWVzdBIQCghpc3N1ZV9pZBgBIAEoCRIRCglhdXRob3JfaWQYAiABKAkSDAoEYm9keRgDIAEoCSI5ChVTZXRJc3N1ZVN0YXR1c1JlcXVlc3QSEAoIaXNzdWVfaWQYASABKAkSDgoGc3RhdHVzGAIgASgJInYKF0NyZWF0ZVN1Z2dlc3Rpb25SZXF1ZXN0Eg8KB2xpc3RfaWQYASABKAkSEQoJYXV0aG9yX2lkGAIgASgJEgwKBG5vdGUYAyABKAkSKQoFc3RlcHMYBCADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5OZXdTdGVwIlUKG0FkZFN1Z2dlc3Rpb25Db21tZW50UmVxdWVzdBIVCg1zdWdnZXN0aW9uX2lkGAEgASgJEhEKCWF1dGhvcl9pZBgCIAEoCRIMCgRib2R5GAMgASgJIsYCChFDcmVhdGVMaXN0UmVxdWVzdBIQCghvd25lcl9pZBgBIAEoCRIMCgRzbHVnGAIgASgJEiwKBXRpdGxlGAMgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAQgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIMCgR0YWdzGAUgAygJEg8KB29yZGVyZWQYBiABKAgSEgoKdmlzaWJpbGl0eRgHIAEoCRIOCgZzdGF0dXMYCCABKAkSDgoGb3JpZ2luGAkgASgJEhYKDmZvcmtlZF9mcm9tX2lkGAogASgJEgwKBG5vdGUYCyABKAkSKQoFc3RlcHMYDCADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5OZXdTdGVwEhIKCm1vZGVyYXRpb24YDSABKAky1wIKCExpc3RSZWFkEkkKB0dldExpc3QSGi5zZXRmb3JrLmRvbWFpbi52MS5MaXN0UmVmGiIuc2V0Zm9yay5kb21haW4udjEuR2V0TGlzdFJlc3BvbnNlEk4KDExpc3RWZXJzaW9ucxIZLnNldGZvcmsuZG9tYWluLnYxLkxpc3RJZBojLnNldGZvcmsuZG9tYWluLnYxLlZlcnNpb25zUmVzcG9uc2USWQoKR2V0VmVyc2lvbhIkLnNldGZvcmsuZG9tYWluLnYxLkdldFZlcnNpb25SZXF1ZXN0GiUuc2V0Zm9yay5kb21haW4udjEuR2V0VmVyc2lvblJlc3BvbnNlElUKD0dldENvbnRyaWJ1dG9ycxIZLnNldGZvcmsuZG9tYWluLnYxLkxpc3RJZBonLnNldGZvcmsuZG9tYWluLnYxLkNvbnRyaWJ1dG9yc1Jlc3BvbnNlMrkCCgxDdXJhdGlvblJlYWQSSQoJSXNTdGFycmVkEhsuc2V0Zm9yay5kb21haW4udjEuVXNlckxpc3QaHy5zZXRmb3JrLmRvbWFpbi52MS5Cb29sUmVzcG9uc2USSgoKSXNXYXRjaGluZxIbLnNldGZvcmsuZG9tYWluLnYxLlVzZXJMaXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlEkkKCldhdGNoQ291bnQSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaIC5zZXRmb3JrLmRvbWFpbi52MS5Db3VudFJlc3BvbnNlEkcKCldhdGNoZXJJZHMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaHi5zZXRmb3JrLmRvbWFpbi52MS5JZHNSZXNwb25zZTL1AQoNQ3VyYXRpb25Xcml0ZRJKCgpUb2dnbGVTdGFyEhsuc2V0Zm9yay5kb21haW4udjEuVXNlckxpc3QaHy5zZXRmb3JrLmRvbWFpbi52MS5Cb29sUmVzcG9uc2USSwoLVG9nZ2xlV2F0Y2gSGy5zZXRmb3JrLmRvbWFpbi52MS5Vc2VyTGlzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZRJLCgtFbnN1cmVXYXRjaBIbLnNldGZvcmsuZG9tYWluLnYxLlVzZXJMaXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlMqQBCglMaXN0V3JpdGUSTgoKQWRkVmVyc2lvbhIkLnNldGZvcmsuZG9tYWluLnYxLkFkZFZlcnNpb25SZXF1ZXN0Ghouc2V0Zm9yay5kb21haW4udjEuVmVyc2lvbhJHCgZDcmVhdGUSJC5zZXRmb3JrLmRvbWFpbi52MS5DcmVhdGVMaXN0UmVxdWVzdBoXLnNldGZvcmsuZG9tYWluLnYxLkxpc3Qy4gMKC0NvbGxhYldyaXRlEkoKCU9wZW5Jc3N1ZRIjLnNldGZvcmsuZG9tYWluLnYxLk9wZW5Jc3N1ZVJlcXVlc3QaGC5zZXRmb3JrLmRvbWFpbi52MS5Jc3N1ZRJdCg9BZGRJc3N1ZUNvbW1lbnQSKS5zZXRmb3JrLmRvbWFpbi52MS5BZGRJc3N1ZUNvbW1lbnRSZXF1ZXN0Gh8uc2V0Zm9yay5kb21haW4udjEuSXNzdWVDb21tZW50ElsKDlNldElzc3VlU3RhdHVzEiguc2V0Zm9yay5kb21haW4udjEuU2V0SXNzdWVTdGF0dXNSZXF1ZXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlEl0KEENyZWF0ZVN1Z2dlc3Rpb24SKi5zZXRmb3JrLmRvbWFpbi52MS5DcmVhdGVTdWdnZXN0aW9uUmVxdWVzdBodLnNldGZvcmsuZG9tYWluLnYxLlN1Z2dlc3Rpb24SbAoUQWRkU3VnZ2VzdGlvbkNvbW1lbnQSLi5zZXRmb3JrLmRvbWFpbi52MS5BZGRTdWdnZXN0aW9uQ29tbWVudFJlcXVlc3QaJC5zZXRmb3JrLmRvbWFpbi52MS5TdWdnZXN0aW9uQ29tbWVudGIGcHJvdG8z");
+  fileDesc("ChFkb21haW5fcmVhZC5wcm90bxIRc2V0Zm9yay5kb21haW4udjEiZwoKTG9jYWxlVGV4dBIvCgF2GAEgAygLMiQuc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dC5WRW50cnkaKAoGVkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiJgoHTGlzdFJlZhINCgVvd25lchgBIAEoCRIMCgRzbHVnGAIgASgJIhQKBkxpc3RJZBIKCgJpZBgBIAEoCSL/AwoETGlzdBIKCgJpZBgBIAEoCRIQCghvd25lcl9pZBgCIAEoCRIMCgRzbHVnGAMgASgJEiwKBXRpdGxlGAQgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAUgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIMCgR0YWdzGAYgAygJEg8KB29yZGVyZWQYByABKAgSDgoGc3RhdHVzGAggASgJEhIKCnZpc2liaWxpdHkYCSABKAkSEgoKbW9kZXJhdGlvbhgKIAEoCRIZChFtb2RlcmF0aW9uX3JlYXNvbhgLIAEoCRIQCgh2ZXJpZmllZBgMIAEoCBIOCgZwaW5uZWQYDSABKAgSDgoGb3JpZ2luGA4gASgJEhYKDmZvcmtlZF9mcm9tX2lkGA8gASgJEhcKD2N1cnJlbnRfdmVyc2lvbhgQIAEoBRITCgtzdGFyc19jb3VudBgRIAEoBRITCgtmb3Jrc19jb3VudBgSIAEoBRISCgpydW5zX2NvdW50GBMgASgFEhUKDXJlcG9zaXRvcnlfaWQYFCABKAkSFQoNY3JlYXRlZF9hdF9tcxgVIAEoAxIVCg11cGRhdGVkX2F0X21zGBYgASgDEhgKEGF1dGhvcmVkX2FwcGxpZWQYFyABKAginQEKB1ZlcnNpb24SCgoCaWQYASABKAkSDwoHbGlzdF9pZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFEgwKBG5vdGUYBCABKAkSEgoKY29tbWl0X3NoYRgFIAEoCRIVCg1jcmVhdGVkX2F0X21zGAYgASgDEhEKCWF1dGhvcl9pZBgHIAEoCRIYChBhdXRob3JlZF9hcHBsaWVkGAggASgIIkQKB1N0ZXBSZWYSLAoFbGFiZWwYASABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EgsKA3VybBgCIAEoCSL3AwoEU3RlcBIKCgJpZBgBIAEoCRISCgp2ZXJzaW9uX2lkGAIgASgJEgkKAW4YAyABKAUSLAoFdGl0bGUYBCABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EisKBGRlc2MYBSABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Eg8KB2NvbW1hbmQYBiABKAkSDQoFbGV2ZWwYByABKAkSKgoDd2h5GAggASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIuCgdzZWN0aW9uGAkgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIvCghzdWJ0YXNrcxgKIAMoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKAoEcmVmcxgLIAMoCzIaLnNldGZvcmsuZG9tYWluLnYxLlN0ZXBSZWYSEQoJaW1hZ2VfcmVmGAwgASgJEgwKBHR5cGUYDSABKAkSFAoMY29udGVudF9qc29uGA4gASgJEhMKC25lZWRzX2h1bWFuGA8gASgIEjYKD25lZWRzX2h1bWFuX2FzaxgQIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSDgoGZGFuZ2VyGBEgASgIIkMKC0NvbnRyaWJ1dG9yEg4KBmhhbmRsZRgBIAEoCRISCgphdmF0YXJfcmVmGAIgASgJEhAKCGFjY2VwdGVkGAMgASgFIkcKD0dldExpc3RSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRsaXN0GAIgASgLMhcuc2V0Zm9yay5kb21haW4udjEuTGlzdCJAChBWZXJzaW9uc1Jlc3BvbnNlEiwKCHZlcnNpb25zGAEgAygLMhouc2V0Zm9yay5kb21haW4udjEuVmVyc2lvbiI1ChFHZXRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3ZlcnNpb24YAiABKAUieAoSR2V0VmVyc2lvblJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEisKB3ZlcnNpb24YAiABKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uEiYKBXN0ZXBzGAMgAygLMhcuc2V0Zm9yay5kb21haW4udjEuU3RlcCJMChRDb250cmlidXRvcnNSZXNwb25zZRI0Cgxjb250cmlidXRvcnMYASADKAsyHi5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvciIsCghVc2VyTGlzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkiHQoMQm9vbFJlc3BvbnNlEg0KBXZhbHVlGAEgASgIIh4KDUNvdW50UmVzcG9uc2USDQoFdmFsdWUYASABKAUiGgoLSWRzUmVzcG9uc2USCwoDaWRzGAEgAygJIuEDCgdOZXdTdGVwEiwKBXRpdGxlGAEgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAIgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIPCgdjb21tYW5kGAMgASgJEg0KBWxldmVsGAQgASgJEioKA3doeRgFIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSLgoHc2VjdGlvbhgGIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSLwoIc3VidGFza3MYByADKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EigKBHJlZnMYCCADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5TdGVwUmVmEhEKCWltYWdlX3JlZhgJIAEoCRIMCgR0eXBlGAogASgJEhQKDGNvbnRlbnRfanNvbhgLIAEoCRIQCghibG9ja19pZBgMIAEoCRITCgtuZWVkc19odW1hbhgNIAEoCBI2Cg9uZWVkc19odW1hbl9hc2sYDiABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Eg4KBmRhbmdlchgPIAEoCCIUCgdUYWdMaXN0EgkKAXYYASADKAkitgEKDUxpc3RNZXRhUGF0Y2gSLAoFdGl0bGUYASABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EisKBGRlc2MYAiABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EigKBHRhZ3MYAyABKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5UYWdMaXN0EhQKB29yZGVyZWQYBCABKAhIAIgBAUIKCghfb3JkZXJlZCKKAgoRQWRkVmVyc2lvblJlcXVlc3QSDwoHbGlzdF9pZBgBIAEoCRIMCgRub3RlGAIgASgJEikKBXN0ZXBzGAMgAygLMhouc2V0Zm9yay5kb21haW4udjEuTmV3U3RlcBIRCglhdXRob3JfaWQYBCABKAkSHQoQZXhwZWN0ZWRfdmVyc2lvbhgGIAEoBUgAiAEBEi4KBG1ldGEYBSABKAsyIC5zZXRmb3JrLmRvbWFpbi52MS5MaXN0TWV0YVBhdGNoEjQKCGF1dGhvcmVkGAcgASgLMiIuc2V0Zm9yay5kb21haW4udjEuQXV0aG9yZWRGaWxlU2V0QhMKEV9leHBlY3RlZF92ZXJzaW9uIkYKEUF1dGhvcmVkRmlsZUlucHV0EgwKBHBhdGgYASABKAkSDwoHY29udGVudBgCIAEoDBISCgpleGVjdXRhYmxlGAMgASgIIkYKD0F1dGhvcmVkRmlsZVNldBIzCgVmaWxlcxgBIAMoCzIkLnNldGZvcmsuZG9tYWluLnYxLkF1dGhvcmVkRmlsZUlucHV0Ir8BCgVJc3N1ZRIKCgJpZBgBIAEoCRIPCgdsaXN0X2lkGAIgASgJEg4KBm51bWJlchgDIAEoBRIRCglhdXRob3JfaWQYBCABKAkSDQoFdGl0bGUYBSABKAkSDAoEYm9keRgGIAEoCRIOCgZzdGF0dXMYByABKAkSDgoGbGFiZWxzGAggAygJEhIKCmNyZWF0ZWRfYXQYCSABKAMSEgoKdXBkYXRlZF9hdBgKIAEoAxIRCgljbG9zZWRfYXQYCyABKAMiYQoMSXNzdWVDb21tZW50EgoKAmlkGAEgASgJEhAKCGlzc3VlX2lkGAIgASgJEhEKCWF1dGhvcl9pZBgDIAEoCRIMCgRib2R5GAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAMixAEKClN1Z2dlc3Rpb24SCgoCaWQYASABKAkSDwoHbGlzdF9pZBgCIAEoCRIRCglhdXRob3JfaWQYAyABKAkSDgoGc3RhdHVzGAQgASgJEgwKBG5vdGUYBSABKAkSFAoMYmFzZV92ZXJzaW9uGAYgASgFEikKBXN0ZXBzGAcgAygLMhouc2V0Zm9yay5kb21haW4udjEuTmV3U3RlcBISCgpjcmVhdGVkX2F0GAggASgDEhMKC3Jlc29sdmVkX2F0GAkgASgDImsKEVN1Z2dlc3Rpb25Db21tZW50EgoKAmlkGAEgASgJEhUKDXN1Z2dlc3Rpb25faWQYAiABKAkSEQoJYXV0aG9yX2lkGAMgASgJEgwKBGJvZHkYBCABKAkSEgoKY3JlYXRlZF9hdBgFIAEoAyJjChBPcGVuSXNzdWVSZXF1ZXN0Eg8KB2xpc3RfaWQYASABKAkSEQoJYXV0aG9yX2lkGAIgASgJEg0KBXRpdGxlGAMgASgJEgwKBGJvZHkYBCABKAkSDgoGbGFiZWxzGAUgAygJIksKFkFkZElzc3VlQ29tbWVudFJlcXVlc3QSEAoIaXNzdWVfaWQYASABKAkSEQoJYXV0aG9yX2lkGAIgASgJEgwKBGJvZHkYAyABKAkiOQoVU2V0SXNzdWVTdGF0dXNSZXF1ZXN0EhAKCGlzc3VlX2lkGAEgASgJEg4KBnN0YXR1cxgCIAEoCSJ2ChdDcmVhdGVTdWdnZXN0aW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEhEKCWF1dGhvcl9pZBgCIAEoCRIMCgRub3RlGAMgASgJEikKBXN0ZXBzGAQgAygLMhouc2V0Zm9yay5kb21haW4udjEuTmV3U3RlcCJVChtBZGRTdWdnZXN0aW9uQ29tbWVudFJlcXVlc3QSFQoNc3VnZ2VzdGlvbl9pZBgBIAEoCRIRCglhdXRob3JfaWQYAiABKAkSDAoEYm9keRgDIAEoCSL8AgoRQ3JlYXRlTGlzdFJlcXVlc3QSEAoIb3duZXJfaWQYASABKAkSDAoEc2x1ZxgCIAEoCRIsCgV0aXRsZRgDIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKwoEZGVzYxgEIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSDAoEdGFncxgFIAMoCRIPCgdvcmRlcmVkGAYgASgIEhIKCnZpc2liaWxpdHkYByABKAkSDgoGc3RhdHVzGAggASgJEg4KBm9yaWdpbhgJIAEoCRIWCg5mb3JrZWRfZnJvbV9pZBgKIAEoCRIMCgRub3RlGAsgASgJEikKBXN0ZXBzGAwgAygLMhouc2V0Zm9yay5kb21haW4udjEuTmV3U3RlcBISCgptb2RlcmF0aW9uGA0gASgJEjQKCGF1dGhvcmVkGA4gASgLMiIuc2V0Zm9yay5kb21haW4udjEuQXV0aG9yZWRGaWxlU2V0MtcCCghMaXN0UmVhZBJJCgdHZXRMaXN0Ehouc2V0Zm9yay5kb21haW4udjEuTGlzdFJlZhoiLnNldGZvcmsuZG9tYWluLnYxLkdldExpc3RSZXNwb25zZRJOCgxMaXN0VmVyc2lvbnMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaIy5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uc1Jlc3BvbnNlElkKCkdldFZlcnNpb24SJC5zZXRmb3JrLmRvbWFpbi52MS5HZXRWZXJzaW9uUmVxdWVzdBolLnNldGZvcmsuZG9tYWluLnYxLkdldFZlcnNpb25SZXNwb25zZRJVCg9HZXRDb250cmlidXRvcnMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaJy5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvcnNSZXNwb25zZTK5AgoMQ3VyYXRpb25SZWFkEkkKCUlzU3RhcnJlZBIbLnNldGZvcmsuZG9tYWluLnYxLlVzZXJMaXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlEkoKCklzV2F0Y2hpbmcSGy5zZXRmb3JrLmRvbWFpbi52MS5Vc2VyTGlzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZRJJCgpXYXRjaENvdW50Ehkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGiAuc2V0Zm9yay5kb21haW4udjEuQ291bnRSZXNwb25zZRJHCgpXYXRjaGVySWRzEhkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGh4uc2V0Zm9yay5kb21haW4udjEuSWRzUmVzcG9uc2Uy9QEKDUN1cmF0aW9uV3JpdGUSSgoKVG9nZ2xlU3RhchIbLnNldGZvcmsuZG9tYWluLnYxLlVzZXJMaXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlEksKC1RvZ2dsZVdhdGNoEhsuc2V0Zm9yay5kb21haW4udjEuVXNlckxpc3QaHy5zZXRmb3JrLmRvbWFpbi52MS5Cb29sUmVzcG9uc2USSwoLRW5zdXJlV2F0Y2gSGy5zZXRmb3JrLmRvbWFpbi52MS5Vc2VyTGlzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZTKkAQoJTGlzdFdyaXRlEk4KCkFkZFZlcnNpb24SJC5zZXRmb3JrLmRvbWFpbi52MS5BZGRWZXJzaW9uUmVxdWVzdBoaLnNldGZvcmsuZG9tYWluLnYxLlZlcnNpb24SRwoGQ3JlYXRlEiQuc2V0Zm9yay5kb21haW4udjEuQ3JlYXRlTGlzdFJlcXVlc3QaFy5zZXRmb3JrLmRvbWFpbi52MS5MaXN0MuIDCgtDb2xsYWJXcml0ZRJKCglPcGVuSXNzdWUSIy5zZXRmb3JrLmRvbWFpbi52MS5PcGVuSXNzdWVSZXF1ZXN0Ghguc2V0Zm9yay5kb21haW4udjEuSXNzdWUSXQoPQWRkSXNzdWVDb21tZW50Eikuc2V0Zm9yay5kb21haW4udjEuQWRkSXNzdWVDb21tZW50UmVxdWVzdBofLnNldGZvcmsuZG9tYWluLnYxLklzc3VlQ29tbWVudBJbCg5TZXRJc3N1ZVN0YXR1cxIoLnNldGZvcmsuZG9tYWluLnYxLlNldElzc3VlU3RhdHVzUmVxdWVzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZRJdChBDcmVhdGVTdWdnZXN0aW9uEiouc2V0Zm9yay5kb21haW4udjEuQ3JlYXRlU3VnZ2VzdGlvblJlcXVlc3QaHS5zZXRmb3JrLmRvbWFpbi52MS5TdWdnZXN0aW9uEmwKFEFkZFN1Z2dlc3Rpb25Db21tZW50Ei4uc2V0Zm9yay5kb21haW4udjEuQWRkU3VnZ2VzdGlvbkNvbW1lbnRSZXF1ZXN0GiQuc2V0Zm9yay5kb21haW4udjEuU3VnZ2VzdGlvbkNvbW1lbnRiBnByb3RvMw");
 
 /**
  * ── Примитивы ─────────────────────────────────────────────────────────
@@ -216,6 +216,13 @@ export type List = Message<"setfork.domain.v1.List"> & {
    * @generated from field: int64 updated_at_ms = 22;
    */
   updatedAtMs: bigint;
+
+  /**
+   * то же эхо, что у Version, — для Create с файлами
+   *
+   * @generated from field: bool authored_applied = 23;
+   */
+  authoredApplied: boolean;
 };
 
 /**
@@ -267,6 +274,15 @@ export type Version = Message<"setfork.domain.v1.Version"> & {
    * @generated from field: string author_id = 7;
    */
   authorId: string;
+
+  /**
+   * Эхо «ядро поле поняло»: true ТОЛЬКО когда набор файлов пришёл и лёг в коммит.
+   * Незнакомое поле proto3 теряется молча, и без эха старое ядро записало бы версию
+   * с файлами родителя, а вызывающий считал бы, что положил свои.
+   *
+   * @generated from field: bool authored_applied = 8;
+   */
+  authoredApplied: boolean;
 };
 
 /**
@@ -853,6 +869,16 @@ export type AddVersionRequest = Message<"setfork.domain.v1.AddVersionRequest"> &
    * @generated from field: setfork.domain.v1.ListMetaPatch meta = 5;
    */
   meta?: ListMetaPatch | undefined;
+
+  /**
+   * Файлы автора: presence-семантика обёртки. Нет сообщения — перенести из родителя (как
+   * раньше); есть — ЗАМЕНИТЬ набор целиком тем же коммитом, что и блоки; есть и пусто —
+   * убрать все. Правило набора то же, что на push: scripts/, references/, assets/, один
+   * уровень, только текст, ≤50 файлов и ≤1 МБ на все три.
+   *
+   * @generated from field: setfork.domain.v1.AuthoredFileSet authored = 7;
+   */
+  authored?: AuthoredFileSet | undefined;
 };
 
 /**
@@ -861,6 +887,57 @@ export type AddVersionRequest = Message<"setfork.domain.v1.AddVersionRequest"> &
  */
 export const AddVersionRequestSchema: GenMessage<AddVersionRequest> = /*@__PURE__*/
   messageDesc(file_domain_read, 20);
+
+/**
+ * Файл автора на ВХОДЕ записи. Режим задаётся флагом, а не числом: других режимов,
+ * кроме 100644/100755, в дереве скилла не бывает.
+ *
+ * @generated from message setfork.domain.v1.AuthoredFileInput
+ */
+export type AuthoredFileInput = Message<"setfork.domain.v1.AuthoredFileInput"> & {
+  /**
+   * «scripts/run.sh» — от корня дерева
+   *
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * @generated from field: bytes content = 2;
+   */
+  content: Uint8Array;
+
+  /**
+   * @generated from field: bool executable = 3;
+   */
+  executable: boolean;
+};
+
+/**
+ * Describes the message setfork.domain.v1.AuthoredFileInput.
+ * Use `create(AuthoredFileInputSchema)` to create a new message.
+ */
+export const AuthoredFileInputSchema: GenMessage<AuthoredFileInput> = /*@__PURE__*/
+  messageDesc(file_domain_read, 21);
+
+/**
+ * Обёртка ради presence: у repeated в proto3 «пусто» и «не задано» неотличимы.
+ *
+ * @generated from message setfork.domain.v1.AuthoredFileSet
+ */
+export type AuthoredFileSet = Message<"setfork.domain.v1.AuthoredFileSet"> & {
+  /**
+   * @generated from field: repeated setfork.domain.v1.AuthoredFileInput files = 1;
+   */
+  files: AuthoredFileInput[];
+};
+
+/**
+ * Describes the message setfork.domain.v1.AuthoredFileSet.
+ * Use `create(AuthoredFileSetSchema)` to create a new message.
+ */
+export const AuthoredFileSetSchema: GenMessage<AuthoredFileSet> = /*@__PURE__*/
+  messageDesc(file_domain_read, 22);
 
 /**
  * ── CollabWrite: issues/suggestions/comments (write) ─────────────────
@@ -934,7 +1011,7 @@ export type Issue = Message<"setfork.domain.v1.Issue"> & {
  * Use `create(IssueSchema)` to create a new message.
  */
 export const IssueSchema: GenMessage<Issue> = /*@__PURE__*/
-  messageDesc(file_domain_read, 21);
+  messageDesc(file_domain_read, 23);
 
 /**
  * @generated from message setfork.domain.v1.IssueComment
@@ -971,7 +1048,7 @@ export type IssueComment = Message<"setfork.domain.v1.IssueComment"> & {
  * Use `create(IssueCommentSchema)` to create a new message.
  */
 export const IssueCommentSchema: GenMessage<IssueComment> = /*@__PURE__*/
-  messageDesc(file_domain_read, 22);
+  messageDesc(file_domain_read, 24);
 
 /**
  * @generated from message setfork.domain.v1.Suggestion
@@ -1030,7 +1107,7 @@ export type Suggestion = Message<"setfork.domain.v1.Suggestion"> & {
  * Use `create(SuggestionSchema)` to create a new message.
  */
 export const SuggestionSchema: GenMessage<Suggestion> = /*@__PURE__*/
-  messageDesc(file_domain_read, 23);
+  messageDesc(file_domain_read, 25);
 
 /**
  * @generated from message setfork.domain.v1.SuggestionComment
@@ -1067,7 +1144,7 @@ export type SuggestionComment = Message<"setfork.domain.v1.SuggestionComment"> &
  * Use `create(SuggestionCommentSchema)` to create a new message.
  */
 export const SuggestionCommentSchema: GenMessage<SuggestionComment> = /*@__PURE__*/
-  messageDesc(file_domain_read, 24);
+  messageDesc(file_domain_read, 26);
 
 /**
  * @generated from message setfork.domain.v1.OpenIssueRequest
@@ -1104,7 +1181,7 @@ export type OpenIssueRequest = Message<"setfork.domain.v1.OpenIssueRequest"> & {
  * Use `create(OpenIssueRequestSchema)` to create a new message.
  */
 export const OpenIssueRequestSchema: GenMessage<OpenIssueRequest> = /*@__PURE__*/
-  messageDesc(file_domain_read, 25);
+  messageDesc(file_domain_read, 27);
 
 /**
  * @generated from message setfork.domain.v1.AddIssueCommentRequest
@@ -1131,7 +1208,7 @@ export type AddIssueCommentRequest = Message<"setfork.domain.v1.AddIssueCommentR
  * Use `create(AddIssueCommentRequestSchema)` to create a new message.
  */
 export const AddIssueCommentRequestSchema: GenMessage<AddIssueCommentRequest> = /*@__PURE__*/
-  messageDesc(file_domain_read, 26);
+  messageDesc(file_domain_read, 28);
 
 /**
  * @generated from message setfork.domain.v1.SetIssueStatusRequest
@@ -1155,7 +1232,7 @@ export type SetIssueStatusRequest = Message<"setfork.domain.v1.SetIssueStatusReq
  * Use `create(SetIssueStatusRequestSchema)` to create a new message.
  */
 export const SetIssueStatusRequestSchema: GenMessage<SetIssueStatusRequest> = /*@__PURE__*/
-  messageDesc(file_domain_read, 27);
+  messageDesc(file_domain_read, 29);
 
 /**
  * @generated from message setfork.domain.v1.CreateSuggestionRequest
@@ -1187,7 +1264,7 @@ export type CreateSuggestionRequest = Message<"setfork.domain.v1.CreateSuggestio
  * Use `create(CreateSuggestionRequestSchema)` to create a new message.
  */
 export const CreateSuggestionRequestSchema: GenMessage<CreateSuggestionRequest> = /*@__PURE__*/
-  messageDesc(file_domain_read, 28);
+  messageDesc(file_domain_read, 30);
 
 /**
  * @generated from message setfork.domain.v1.AddSuggestionCommentRequest
@@ -1214,7 +1291,7 @@ export type AddSuggestionCommentRequest = Message<"setfork.domain.v1.AddSuggesti
  * Use `create(AddSuggestionCommentRequestSchema)` to create a new message.
  */
 export const AddSuggestionCommentRequestSchema: GenMessage<AddSuggestionCommentRequest> = /*@__PURE__*/
-  messageDesc(file_domain_read, 29);
+  messageDesc(file_domain_read, 31);
 
 /**
  * Create: список + первая версия + шаги (одной транзакцией). Возврат — полный List.
@@ -1302,6 +1379,15 @@ export type CreateListRequest = Message<"setfork.domain.v1.CreateListRequest"> &
    * @generated from field: string moderation = 13;
    */
   moderation: string;
+
+  /**
+   * Файлы автора (ADR-0028) — в ПЕРВУЮ версию, тем же коммитом, что и блоки. Задано —
+   * список рождается git-first: репозиторий и тег v1 сразу, с файлами в дереве. Не задано —
+   * как раньше: только Postgres, репозиторий лениво при первом обращении.
+   *
+   * @generated from field: setfork.domain.v1.AuthoredFileSet authored = 14;
+   */
+  authored?: AuthoredFileSet | undefined;
 };
 
 /**
@@ -1309,7 +1395,7 @@ export type CreateListRequest = Message<"setfork.domain.v1.CreateListRequest"> &
  * Use `create(CreateListRequestSchema)` to create a new message.
  */
 export const CreateListRequestSchema: GenMessage<CreateListRequest> = /*@__PURE__*/
-  messageDesc(file_domain_read, 30);
+  messageDesc(file_domain_read, 32);
 
 /**
  * READ-часть порта ListStore. Резолв/фильтрация видимости — на BFF (как сейчас):

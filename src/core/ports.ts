@@ -53,6 +53,10 @@ export interface NewVersionInput {
    *  вытеснит чужую. Проверять это в приложении бесполезно: между проверкой и
    *  вызовом есть окно. Не задано — прежнее поведение (последняя запись побеждает). */
   expectedVersion?: number
+  /** Файлы автора (ADR-0028) — тем же коммитом, что и блоки. `undefined` — перенести из
+   *  предыдущей версии (как было всегда); массив — ЗАМЕНИТЬ набор целиком; `[]` — убрать
+   *  все. Передавать только осознанно: пустой массив по ошибке стирает файлы. */
+  authored?: AuthoredFile[]
 }
 
 export interface CreateListInput {
@@ -74,6 +78,9 @@ export interface CreateListInput {
    *  рано или поздно пустила бы непроверенное в паблик.
    *  Не задано = 'active' (ядро трактует пустое поле так же). */
   moderation?: Moderation
+  /** Файлы автора в ПЕРВУЮ версию: список рождается сразу с репозиторием и файлами в
+   *  дереве, одной версией. Не задано — как раньше, файлов нет. */
+  authored?: AuthoredFile[]
 }
 
 export interface ListStore {
@@ -437,6 +444,22 @@ export class ListWriteError extends Error {
   constructor(public code: ListWriteCode) {
     super(`list write rejected: ${code}`)
     this.name = 'ListWriteError'
+  }
+}
+
+/** Запись с файлами автора отклонена.
+ *  'invalid' — набор не прошёл правило дерева (путь, двоичный файл, число, размер):
+ *  `detail` — текст ядра, он называет файл и предел.
+ *  'unsupported' — ядро не подтвердило, что понимает файлы (окно выкатки, старое ядро).
+ *  Слать их вслепую нельзя: незнакомое поле proto3 теряется МОЛЧА, и версия легла бы с
+ *  файлами родителя, а вызывающий считал бы, что положил свои. */
+export class AuthoredFilesError extends Error {
+  constructor(
+    public code: 'invalid' | 'unsupported',
+    public detail = '',
+  ) {
+    super(`authored files rejected: ${code}${detail ? `: ${detail}` : ''}`)
+    this.name = 'AuthoredFilesError'
   }
 }
 

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
+import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpPublishSkill, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
 import { itemShape, itemShapeLean } from './block-schema'
 import { json, err, type ToolKit } from './kit'
 
@@ -7,11 +7,62 @@ import { json, err, type ToolKit } from './kit'
 export function registerLists({ readTool, writeTool }: ToolKit) {
   // ── WRITE-инструменты (userId + write-scope, вшито в writeTool) ────
   writeTool(
+    'publish_skill',
+    {
+      title: 'Publish an Agent Skill',
+      // Удаление файлов (removeFiles, replaceFiles) стирает то, что агент может не видеть
+      // целиком, — для клиента это разрушающая операция, он вправе спросить человека.
+      annotations: { destructiveHint: true },
+      description:
+        'Put an Agent Skill on SetFork: the blocks AND the author files (scripts/, references/, assets/) land in ONE version, so nobody installs a half-published skill. Without list — creates a new DRAFT (only you see it) whose version 1 already carries the files; publish it with publish_lists to make it installable. With list + baseVersion — writes a new version of your list: files ADDS or REPLACES the named files and keeps the rest, removeFiles deletes named ones, replaceFiles:true makes files the complete set; items omitted keeps the current blocks; title/desc/tags change the list itself. get_list shows the current files. Same rules as git push: files directly in the three folders, text only, a name up to 100 bytes, only scripts/ may be executable, a limited count and total size (the refusal names the file and the limit); scripts go through the same destructive-command check as steps. Refused if you have pending edits (publish_draft or discard_draft them first). A published public skill installs with: npx skills add <site>/<handle>/<slug>/skill.tar.gz',
+      inputSchema: {
+        list: z.string().optional().describe('Your list "handle/slug" to update; omit to create a new skill'),
+        baseVersion: z.number().int().optional().describe('Required with list: the "version" from get_list — the write is rejected if the list moved on'),
+        title: z.string().optional().describe('Title — required for a new skill'),
+        desc: z
+          .string()
+          .optional()
+          .describe('Description — agents decide whether to use the skill by it: say what it does AND when to use it'),
+        tags: z.array(z.string()).optional(),
+        ordered: z.boolean().optional(),
+        lang: z.enum(['ru', 'en']).optional().describe('Language of title/desc (default: detected)'),
+        catalog: z.string().optional().describe('Your catalog to file the skill into'),
+        items: z
+          .array(itemShapeLean)
+          .optional()
+          .describe('Blocks (as in create_list). Required for a new skill; omit when updating to keep the current blocks'),
+        files: z
+          .array(
+            z.object({
+              path: z.string().describe('"scripts/run.sh", "references/guide.md", "assets/template.json"'),
+              content: z.string().describe('File text (or base64 with encoding:"base64")'),
+              encoding: z.enum(['utf8', 'base64']).optional(),
+              executable: z
+                .boolean()
+                .optional()
+                .describe('Only for scripts/: keep it executable (mode 755). Omitted — an existing file keeps its mode'),
+            }),
+          )
+          .optional()
+          .describe('Files to add or replace; files you do not name stay as they are'),
+        removeFiles: z.array(z.string()).optional().describe('Paths of files to delete'),
+        replaceFiles: z.boolean().optional().describe('true — files becomes the COMPLETE set and every other file is deleted'),
+        note: z.string().optional().describe('Change note of the new version'),
+      },
+    },
+    async (userId, args) => {
+      // Полная форма блоков — по той же причине, что в create_list.
+      const res = await mcpPublishSkill(userId, { ...args, items: args.items ? z.array(itemShape).parse(args.items) : undefined })
+      return 'error' in res ? err(res.error as string) : json(res)
+    },
+  )
+
+  writeTool(
     'create_list',
     {
       title: 'Create a list',
       description:
-        'Create a new list owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site. Publishing makes version 1; every later edit makes the next version, and old ones stay readable. Items can be plain steps or richer blocks (text, image, poll, video, quiz) — set each item\'s "type". Content language is auto-detected (or pass "lang"); the slug is generated from the title (Cyrillic is transliterated). Per-step "subtasks" are VERIFICATION CHECKS shown to the person doing the step — phrase them as checkable conditions, not sub-steps. If you need an existing list\'s ref, call search_lists first. Creating several lists at once? Use bulk_create_lists — one call instead of N.\n\nHOW TO LAY A LIST OUT — one block is one thing, and headings live in "section":\n• "section" is a HEADING ABOVE a block and works on ANY block type. Consecutive blocks sharing it are grouped under it and it lands in the table of contents. Do not fake headings by writing "## Heading" at the top of a text block — the reader sees it glued to that block, the next block looks like part of it, and the contents misses it.\n• One block = one item. A person, a rule, an idea — its own block, so it can be moved, quoted and patched by bid later.\n• "step" for something the reader DOES (it gets a number and a checkbox); "text" for prose that is only read. Mixing them is fine: frames as text, actions as steps.\n• Sources and links go in "refs" — on a step OR a text block; they show under the block as link chips. Do not write a "Sources: [..](..)" line into the text: there they are not the block\'s links and cannot be edited as links.\n• Markdown inside a block is for emphasis, lists, quotes and code — not for structure. Structure is blocks and sections.\n• ⚠️ Rendering is strict CommonMark: a SINGLE newline inside a paragraph is NOT a line break — it is joined into one line, unlike GitHub comments. Separate paragraphs with a BLANK line. You cannot see the result, so this is the one layout rule you have to take on trust.',
+        'Create a new list owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site. For an Agent Skill that carries files (scripts/, references/, assets/) use publish_skill instead: blocks and files land in one version. Publishing makes version 1; every later edit makes the next version, and old ones stay readable. Items can be plain steps or richer blocks (text, image, poll, video, quiz) — set each item\'s "type". Content language is auto-detected (or pass "lang"); the slug is generated from the title (Cyrillic is transliterated). Per-step "subtasks" are VERIFICATION CHECKS shown to the person doing the step — phrase them as checkable conditions, not sub-steps. If you need an existing list\'s ref, call search_lists first. Creating several lists at once? Use bulk_create_lists — one call instead of N.\n\nHOW TO LAY A LIST OUT — one block is one thing, and headings live in "section":\n• "section" is a HEADING ABOVE a block and works on ANY block type. Consecutive blocks sharing it are grouped under it and it lands in the table of contents. Do not fake headings by writing "## Heading" at the top of a text block — the reader sees it glued to that block, the next block looks like part of it, and the contents misses it.\n• One block = one item. A person, a rule, an idea — its own block, so it can be moved, quoted and patched by bid later.\n• "step" for something the reader DOES (it gets a number and a checkbox); "text" for prose that is only read. Mixing them is fine: frames as text, actions as steps.\n• Sources and links go in "refs" — on a step OR a text block; they show under the block as link chips. Do not write a "Sources: [..](..)" line into the text: there they are not the block\'s links and cannot be edited as links.\n• Markdown inside a block is for emphasis, lists, quotes and code — not for structure. Structure is blocks and sections.\n• ⚠️ Rendering is strict CommonMark: a SINGLE newline inside a paragraph is NOT a line break — it is joined into one line, unlike GitHub comments. Separate paragraphs with a BLANK line. You cannot see the result, so this is the one layout rule you have to take on trust.',
       inputSchema: {
         title: z.string().describe('List title'),
         lang: z.enum(['en', 'ru']).optional().describe('Content language; omit to auto-detect from the title/description'),

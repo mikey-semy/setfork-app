@@ -527,6 +527,8 @@ export class DestructiveCommandError extends Error {
     readonly stepIndex: number,
     readonly reason: string,
     readonly fragment: string,
+    /** Файл из `scripts/`, если опасное нашлось в нём, а не в шаге. */
+    readonly path?: string,
   ) {
     super(`destructive_command:${reason}`)
     this.name = 'DestructiveCommandError'
@@ -539,6 +541,26 @@ export function assertNoDestructiveSteps(steps: { command?: string | null }[]): 
   if (!found.length) return
   const first = found[0]
   throw new DestructiveCommandError(first.index + 1, first.match.reason, first.match.fragment)
+}
+
+/**
+ * Страж записи С ФАЙЛАМИ АВТОРА: шаги и тексты `scripts/*` — на одну проверку.
+ *
+ * Ровно то же, что делает ядро на push (`cli.rs`, check-content): скрипты подаются
+ * «командами» после блоков. Иначе `rm -rf /`, который форма не пустит в шаг, въезжал бы
+ * в `scripts/run.sh` через агента — и уходил в каждый поставленный скилл. `references/`
+ * и `assets/` не исполняются и не проверяются — как на push.
+ */
+export function assertNoDestructiveContent(
+  steps: { command?: string | null }[],
+  authored: { path: string; content: Uint8Array }[] | undefined,
+): void {
+  assertNoDestructiveSteps(steps)
+  for (const f of authored ?? []) {
+    if (!f.path.startsWith('scripts/')) continue
+    const match = findDestructive(new TextDecoder().decode(f.content))
+    if (match) throw new DestructiveCommandError(0, match.reason, match.fragment, f.path)
+  }
 }
 
 /** Индексы шагов с разрушительными командами — для отказа на записи. */
