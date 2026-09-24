@@ -1,6 +1,7 @@
 'use server'
 
 import { and, eq, sql } from 'drizzle-orm'
+import { findUserByHandle } from '@/shared/auth/handle'
 import { revalidatePath } from 'next/cache'
 import { collaborators, db, notifications, templates, users } from '@/shared/db'
 import { normalizeHandle } from '@/shared/auth/handle-input'
@@ -38,12 +39,7 @@ export async function addCollaborator(
   // То же правило, что у поля ввода: «@mike», « @Mike » и «mike» — один человек.
   const handle = normalizeHandle(String(formData.get('handle') ?? ''))
   if (!handle) return { error: 'empty' }
-  // Сверка без учёта регистра — как в handleBlock: колонка text unique регистрозависима.
-  const [u] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(and(sql`lower(${users.handle}) = ${handle}`, eq(users.deleted, false)))
-    .limit(1)
+  const u = await findUserByHandle(handle)
   if (!u) return { error: 'notFound' }
   if (u.id === tpl.ownerId) return { error: 'owner' }
   const added = await db
