@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { relSrc, walkSrc } from '../helpers/walk-src'
+import { RESERVED_HANDLES } from '@/shared/auth/handle'
 
 /**
  * ЗАНЯТОСТЬ НИКА СПРАШИВАЮТ У КАНОНА — ВСЕ, КТО НИК ЗАВОДИТ.
@@ -60,8 +61,11 @@ describe('занятость ника спрашивают у канона', () 
     ).toEqual([])
   })
 
-  it('исключения — действительно системные ники, а не забытые места', async () => {
-    const { RESERVED_HANDLES } = await import('@/shared/auth/handle')
+  // Импорт — на уровне модуля, а не внутри теста: модуль ника тянет за собой базу и
+  // словари, его загрузка стоит 1,2–1,6 с на спокойной машине, и внутри теста это время
+  // шло в его таймаут (5 с). Под нагрузкой — CI на тех же ядрах, широкий прогон — тест
+  // падал «сам по себе» (трижды за 23–24.09), хотя проверка ни разу не была нарушена.
+  it('исключения — действительно системные ники, а не забытые места', () => {
     for (const [file, handle] of Object.entries(SYSTEM_HANDLE_FILES)) {
       expect(RESERVED_HANDLES.has(handle), `${file}: «${handle}» не зарезервирован — значит его можно занять`).toBe(
         true,
