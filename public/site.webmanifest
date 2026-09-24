@@ -1,6 +1,10 @@
 {
-  "name": "Setfork",
-  "short_name": "Setfork",
+  "id": "/",
+  "name": "SetFork",
+  "short_name": "SetFork",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",

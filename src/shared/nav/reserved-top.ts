@@ -27,6 +27,7 @@ export const RESERVED_TOP = new Set([
   // Машиночитаемые выходы: адрес занят файлом, значит ником стать не может.
   'llms-full.txt',
   'llms.txt',
+  'opensearch.xml',
   'login',
   'my-lists',
   'new',

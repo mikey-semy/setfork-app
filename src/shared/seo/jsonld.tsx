@@ -1,4 +1,5 @@
 import { SITE_ORIGIN } from '@/shared/site'
+import { siteSearchUrl } from './search-url'
 
 /**
  * Структурные данные (JSON-LD) — то, чем страница объясняет себя машине:
@@ -152,7 +153,7 @@ export function webSite(): Record<string, unknown> {
     url: SITE_ORIGIN,
     potentialAction: {
       '@type': 'SearchAction',
-      target: { '@type': 'EntryPoint', urlTemplate: `${SITE_ORIGIN}/search?q={search_term_string}` },
+      target: { '@type': 'EntryPoint', urlTemplate: siteSearchUrl('{search_term_string}') },
       'query-input': 'required name=search_term_string',
     },
   }
