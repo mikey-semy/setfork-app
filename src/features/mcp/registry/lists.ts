@@ -14,7 +14,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
       // целиком, — для клиента это разрушающая операция, он вправе спросить человека.
       annotations: { destructiveHint: true },
       description:
-        'Put an Agent Skill on SetFork: the blocks AND the author files (scripts/, references/, assets/) land in ONE version, so nobody installs a half-published skill. Without list — creates a new DRAFT (only you see it) whose version 1 already carries the files; publish it with publish_lists to make it installable. With list + baseVersion — writes a new version of your list: files ADDS or REPLACES the named files and keeps the rest, removeFiles deletes named ones, replaceFiles:true makes files the complete set; items omitted keeps the current blocks; title/desc/tags change the list itself. get_list shows the current files. Same rules as git push: files directly in the three folders, text only, a name up to 100 bytes, only scripts/ may be executable, a limited count and total size (the refusal names the file and the limit); scripts go through the same destructive-command check as steps. Refused if you have pending edits (publish_draft or discard_draft them first). A published public skill installs with: npx skills add <site>/<handle>/<slug>/skill.tar.gz',
+        'Put an Agent Skill on SetFork: the blocks AND the author files (scripts/, references/, assets/) land in ONE version, so nobody installs a half-published skill. Without list — creates a new DRAFT (only you see it) whose version 1 already carries the files; publish it with publish_lists to make it installable. Pass skillMd to bring an existing SKILL.md as is — it is split into blocks. With list + baseVersion — writes a new version of your list: files ADDS or REPLACES the named files and keeps the rest, removeFiles deletes named ones, replaceFiles:true makes files the complete set; items omitted keeps the current blocks; title/desc/tags change the list itself. get_list shows the current files. Same rules as git push: files directly in the three folders, text only, a name up to 100 bytes, only scripts/ may be executable, a limited count and total size (the refusal names the file and the limit); scripts go through the same destructive-command check as steps. Refused if you have pending edits (publish_draft or discard_draft them first). A published public skill installs with: npx skills add <site>/<handle>/<slug>/skill.tar.gz',
       inputSchema: {
         list: z.string().optional().describe('Your list "handle/slug" to update; omit to create a new skill'),
         baseVersion: z.number().int().optional().describe('Required with list: the "version" from get_list — the write is rejected if the list moved on'),
@@ -31,6 +31,10 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
           .array(itemShapeLean)
           .optional()
           .describe('Blocks (as in create_list). Required for a new skill; omit when updating to keep the current blocks'),
+        skillMd: z
+          .string()
+          .optional()
+          .describe('The whole SKILL.md instead of items: numbered steps become steps, prose becomes text blocks, the header gives title and description (explicit title/desc win). parseNotes in the answer says what was not taken over'),
         files: z
           .array(
             z.object({

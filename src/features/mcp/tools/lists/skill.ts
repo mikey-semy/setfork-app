@@ -23,6 +23,7 @@ import { isPubliclyVisible, type AuthoredFile } from '@/core'
 import { db, listDrafts } from '@/shared/db'
 import { detectTextLang } from '@/shared/lib/translit'
 import { AUTHORED_PATH, fitsArchive } from '@/features/library/skill'
+import { parseSkillMd } from '@/features/library/skill-parse'
 import { assignCatalogByName } from '@/features/catalogs/assign'
 import { gitCore } from '@/features/git/core'
 import { SITE_URL, detailByRefOrMoved, toProposed, type McpItemInput } from '../shared'
@@ -53,6 +54,9 @@ export interface McpPublishSkillInput {
   catalog?: string
   /** Блоки. У существующего списка не заданы — остаются текущие. */
   items?: McpItemInput[]
+  /** Исходный SKILL.md целиком: блоки, название и описание берутся из него (если не заданы
+   *  явно). Разбор — `features/library/skill-parse`, обратный экспорту. */
+  skillMd?: string
   /** Добавить или заменить эти файлы; прочие остаются. */
   files?: McpSkillFileInput[]
   /** Удалить эти файлы (пути). */
@@ -143,9 +147,30 @@ const notApplied = (what: string) => ({
 })
 
 /** ОПУБЛИКОВАТЬ СКИЛЛ: блоки + файлы автора одной версией. */
-export async function mcpPublishSkill(userId: string, input: McpPublishSkillInput) {
-  const decoded = decodeSkillFiles(input.files ?? [])
+export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillInput) {
+  const decoded = decodeSkillFiles(rawInput.files ?? [])
   if ('error' in decoded) return decoded
+  // SKILL.md → блоки, название, описание. Явные поля главнее: агент мог поправить описание.
+  const parsed = rawInput.skillMd ? parseSkillMd(rawInput.skillMd) : null
+  if (parsed && rawInput.items) return { error: 'pass either skillMd or items, not both — skillMd already becomes the blocks' }
+  if (parsed && !parsed.items.length) return { error: 'the SKILL.md has no body to turn into blocks' }
+  const input: McpPublishSkillInput = parsed
+    ? {
+        ...rawInput,
+        title: rawInput.title ?? parsed.title,
+        desc: rawInput.desc ?? (parsed.description || undefined),
+        items: parsed.items as McpItemInput[],
+      }
+    : rawInput
+  // Что из исходника в список не попадает (license, compatibility, metadata…) — называем,
+  // а не теряем молча; хранение шапки — следующий шаг трека.
+  const headerKeys = parsed ? Object.keys(parsed.header) : []
+  const parseNotes = parsed
+    ? [
+        ...parsed.warnings,
+        ...(headerKeys.length ? [`not stored yet from the SKILL.md header: ${headerKeys.join(', ')}`] : []),
+      ]
+    : []
 
   if (!input.list) {
     if (!input.title?.trim()) return { error: 'title is required for a new skill (or pass list to update an existing one)' }
@@ -169,6 +194,7 @@ export async function mcpPublishSkill(userId: string, input: McpPublishSkillInpu
       const { authoredApplied: _applied, ...rest } = res
       return {
         ...rest,
+        ...(parseNotes.length ? { parseNotes } : {}),
         version: 1,
         files: { added: authored.map((f) => f.path) },
         url: `${SITE_URL}/${res.ref}`,
@@ -255,6 +281,7 @@ export async function mcpPublishSkill(userId: string, input: McpPublishSkillInpu
   const { authoredApplied: _applied, ...rest } = res
   return {
     ...rest,
+    ...(parseNotes.length ? { parseNotes } : {}),
     url: `${SITE_URL}/${handle}/${slug}`,
     files: merged ? { added: merged.added, changed: merged.changed, removed: merged.removed, total: merged.files.length } : { unchanged: true },
     catalog: input.catalog ? (filed ? input.catalog : `not found among your catalogs: ${input.catalog}`) : undefined,

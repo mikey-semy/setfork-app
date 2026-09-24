@@ -1,0 +1,269 @@
+import { parse as parseYaml } from 'yaml'
+
+/**
+ * РАЗБОР `SKILL.md` В БЛОКИ СПИСКА — обратная к `toSkillMarkdown` (skill.ts).
+ *
+ * Решение владельца 24.09.2026: «блоки — правда». Импорт раскладывает скилл в блоки, а
+ * экспорт собирает его обратно; байты исходника не хранятся. Поэтому разбор обязан
+ * понимать и СВОЙ вывод (круг «экспорт → разбор → экспорт» не должен ничего терять), и
+ * чужой скилл, где инструкция — свободная проза.
+ *
+ * Правила, по которым текст становится блоками:
+ *  • `## Заголовок` — раздел (`section`) следующих блоков;
+ *  • пункт НУМЕРОВАННОГО списка на верхнем уровне — шаг: процедура в скиллах пишется
+ *    именно так. Пункт маркированного списка — шаг, только если начинается с `**жирного**`
+ *    (так наш экспорт пишет шаги неупорядоченного списка); прочие маркеры — заметки,
+ *    остаются текстом;
+ *  • внутри шага: `Why:` → зачем, `Check:` + `- [ ]` → подпункты, `See:` + ссылки → ссылки,
+ *    блок кода → команда, метки `🧑 NEEDS A HUMAN` и `⚠ DESTRUCTIVE` → флаги, `_(optional)_`
+ *    у заголовка → уровень; остальное — описание;
+ *  • всё прочее (абзацы, таблицы, код вне пунктов, цитаты) — текстовые блоки по порядку.
+ *
+ * Шум нашего же экспорта (предупреждение, ссылки на архив, строка «Source:») выбрасывается:
+ * иначе каждый круг добавлял бы его в список ещё раз.
+ */
+
+export interface ParsedSkillBlock {
+  type?: 'step' | 'text'
+  title?: string
+  desc?: string
+  command?: string
+  level?: 'required' | 'recommended' | 'optional'
+  why?: string
+  section?: string
+  subtasks?: string[]
+  refs?: { label: string; url?: string }[]
+  text?: string
+  needsHuman?: boolean
+  needsHumanAsk?: string
+  danger?: boolean
+}
+
+export interface ParsedSkill {
+  /** Имя из шапки (`name`) — годится в адрес списка. */
+  name: string
+  description: string
+  /** Заголовок `# …` тела; нет — имя. */
+  title: string
+  /** Прочие поля шапки как есть (license, compatibility, metadata…). */
+  header: Record<string, unknown>
+  items: ParsedSkillBlock[]
+  /** Что разобрано с допущениями — чтобы сказать человеку, а не промолчать. */
+  warnings: string[]
+}
+
+const FRONT = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/
+const HEADING = /^(#{1,6})\s+(.*?)\s*#*\s*$/
+const OL = /^(\d+)[.)]\s+(.*)$/
+const UL = /^[-*+]\s+(.*)$/
+const FENCE = /^(\s*)(`{3,}|~{3,})\s*([\w+-]*)\s*$/
+const LEVEL = /\s*_\((required|recommended|optional)\)_\s*$/
+const HUMAN = /^🧑 NEEDS A HUMAN — stop here and ask the human(?:: (.*?))?(?: before doing this step)?\. Do not do it yourself\.$/
+const DANGER = /^⚠ DESTRUCTIVE \(.*?\) — /
+
+/** Строки нашего собственного экспорта, которые в список возвращаться не должны. */
+const NOISE = [
+  /^> ⚠ Review before use/,
+  /^Background and the reasoning behind the steps:/,
+  /^All commands as one script:/,
+  /^This file is the instructions only\./,
+  /^Files from the author, exactly as in this version/,
+]
+
+/** `**Заголовок.** продолжение` → заголовок и хвост строки. Наш экспорт пишет после
+ *  жирного только метку уровня (`_(optional)_`), чужой скилл — часто начало описания. */
+function stripBold(s: string): { title: string; bold: boolean; rest: string } {
+  const m = /^\*\*(.+?)\*\*(.*)$/.exec(s.trim())
+  if (!m) return { title: s.trim(), bold: false, rest: '' }
+  const tail = m[2].trim()
+  if (!tail || LEVEL.test(` ${tail}`)) return { title: (m[1] + m[2]).trim(), bold: true, rest: '' }
+  return { title: m[1].trim().replace(/[.:]$/, ''), bold: true, rest: tail }
+}
+
+export function parseSkillMd(md: string): ParsedSkill {
+  const warnings: string[] = []
+  let header: Record<string, unknown> = {}
+  let body = md.replace(/^﻿/, '')
+  const fm = FRONT.exec(body)
+  if (fm) {
+    try {
+      const y = parseYaml(fm[1])
+      if (y && typeof y === 'object' && !Array.isArray(y)) header = y as Record<string, unknown>
+      else warnings.push('the frontmatter is not a key-value map — ignored')
+    } catch (e) {
+      warnings.push(`the frontmatter is not valid YAML — ignored (${(e as Error).message.split('\n')[0]})`)
+    }
+    body = body.slice(fm[0].length)
+  } else {
+    warnings.push('no frontmatter — name and description are taken from the body')
+  }
+  const name = typeof header.name === 'string' ? header.name.trim() : ''
+  const description = typeof header.description === 'string' ? header.description.trim() : ''
+  const { name: _n, description: _d, ...rest } = header
+
+  const lines = body.replace(/\r\n/g, '\n').split('\n')
+  // Хвост нашего экспорта: `---` и строка «Source: …» — это подпись, а не содержимое.
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (/^Source: \[/.test(lines[i])) {
+      let j = i - 1
+      while (j >= 0 && !lines[j].trim()) j--
+      if (lines[j] === '---') lines.splice(j)
+      break
+    }
+  }
+
+  const items: ParsedSkillBlock[] = []
+  let title = ''
+  let section = ''
+  let text: string[] = []
+
+  const flushText = () => {
+    const t = text.join('\n').trim()
+    text = []
+    if (!t) return
+    items.push({ type: 'text', text: t, ...(section ? { section } : {}) })
+  }
+
+  let i = 0
+  let skipAuthorList = false
+  while (i < lines.length) {
+    const line = lines[i]
+
+    if (skipAuthorList) {
+      if (/^- \[.+\]\(.+\)$/.test(line) || !line.trim()) {
+        i++
+        continue
+      }
+      skipAuthorList = false
+    }
+    if (NOISE.some((re) => re.test(line))) {
+      if (/^Files from the author/.test(line)) skipAuthorList = true
+      i++
+      continue
+    }
+
+    const h = HEADING.exec(line)
+    // Заголовок внутри блока кода сюда не доходит: ограждение ниже съедает код целиком.
+    if (h) {
+      flushText()
+      if (h[1].length === 1 && !title) {
+        title = h[2]
+        // Абзац сразу под заголовком, равный описанию, — наш же экспорт его повторяет.
+        let j = i + 1
+        while (j < lines.length && !lines[j].trim()) j++
+        const para: string[] = []
+        while (j < lines.length && lines[j].trim() && !HEADING.test(lines[j])) para.push(lines[j++])
+        if (para.length && description && para.join(' ').replace(/\s+/g, ' ').trim() === description.replace(/\s+/g, ' ')) {
+          i = j
+          continue
+        }
+      } else if (h[1].length === 2 && h[2] === 'Media') {
+        section = ''
+      } else {
+        section = h[2]
+      }
+      i++
+      continue
+    }
+
+    const fence = FENCE.exec(line)
+    if (fence && !fence[1]) {
+      // Код ВНЕ пункта — часть текста как есть.
+      const end = closeFence(lines, i, fence[2])
+      text.push(...lines.slice(i, end + 1))
+      i = end + 1
+      continue
+    }
+
+    const ol = OL.exec(line)
+    const ul = UL.exec(line)
+    const isStep = ol ? true : ul ? stripBold(ul[1]).bold : false
+    if (isStep) {
+      flushText()
+      const head = ol ? ol[2] : ul![1]
+      const marker = ol ? `${ol[1]}. ` : '- '
+      const [block, next] = readStep(lines, i, head, marker.length)
+      items.push({ ...block, ...(section ? { section } : {}) })
+      i = next
+      continue
+    }
+
+    text.push(line)
+    i++
+  }
+  flushText()
+
+  if (!title) title = name || 'Imported skill'
+  if (!name) warnings.push('no name in the frontmatter — the address is taken from the title')
+  if (!description) warnings.push('no description — agents decide by it whether to use the skill; add one')
+  return { name, description, title, header: rest, items, warnings }
+}
+
+function closeFence(lines: string[], from: number, mark: string): number {
+  for (let k = from + 1; k < lines.length; k++) {
+    const f = FENCE.exec(lines[k])
+    if (f && f[2][0] === mark[0] && f[2].length >= mark.length && !f[3]) return k
+  }
+  return lines.length - 1
+}
+
+/** Пункт-шаг: заголовок и всё, что отступлено под ним (или идёт до следующего пункта). */
+function readStep(lines: string[], at: number, head: string, indentWidth: number): [ParsedSkillBlock, number] {
+  const { title: raw, rest } = stripBold(head)
+  const lvl = LEVEL.exec(raw)
+  const block: ParsedSkillBlock = { type: 'step', title: raw.replace(LEVEL, '').trim() }
+  if (lvl) block.level = lvl[1] as ParsedSkillBlock['level']
+
+  const desc: string[] = rest ? [rest] : []
+  let k = at + 1
+  let mode: 'desc' | 'check' | 'see' = 'desc'
+  while (k < lines.length) {
+    const line = lines[k]
+    if (line.trim() && !/^\s/.test(line)) break // следующий пункт, заголовок или текст верхнего уровня
+    const body = line.slice(Math.min(indentWidth, line.length - line.trimStart().length))
+    const t = body.trim()
+    const fence = FENCE.exec(body)
+    if (fence) {
+      const end = closeFence(lines, k, fence[2])
+      const code = lines
+        .slice(k + 1, end)
+        .map((l) => l.slice(Math.min(indentWidth, l.length - l.trimStart().length)))
+        .join('\n')
+      if (!block.command) block.command = code
+      else desc.push('```' + (fence[3] || ''), code, '```')
+      k = end + 1
+      mode = 'desc'
+      continue
+    }
+    if (!t) {
+      if (mode === 'desc') desc.push('')
+      k++
+      continue
+    }
+    const human = HUMAN.exec(t)
+    if (human) {
+      block.needsHuman = true
+      if (human[1]) block.needsHumanAsk = human[1]
+    } else if (DANGER.test(t)) {
+      block.danger = true
+    } else if (/^Why:\s*/.test(t)) {
+      block.why = t.replace(/^Why:\s*/, '')
+    } else if (t === 'Check:') {
+      mode = 'check'
+    } else if (t === 'See:') {
+      mode = 'see'
+    } else if (mode === 'check' && /^- \[[ xX]\]\s+/.test(t)) {
+      ;(block.subtasks ??= []).push(t.replace(/^- \[[ xX]\]\s+/, ''))
+    } else if (mode === 'see' && /^- /.test(t)) {
+      const link = /^- \[(.+?)\]\((.+?)\)$/.exec(t)
+      ;(block.refs ??= []).push(link ? { label: link[1], url: link[2] } : { label: t.slice(2) })
+    } else {
+      mode = 'desc'
+      desc.push(body)
+    }
+    k++
+  }
+  const d = desc.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  if (d) block.desc = d
+  return [block, k]
+}
