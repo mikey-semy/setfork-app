@@ -1431,6 +1431,7 @@
         "tests/shared/auth/api-token-scope.itest.ts",
         "tests/shared/auth/api-token.test.ts",
         "tests/shared/auth/handle.test.ts",
+        "tests/shared/auth/oauth-revoke.itest.ts",
         "tests/shared/auth/oauth-server.itest.ts",
         "tests/shared/auth/oauth.test.ts",
         "tests/shared/auth/totp.test.ts",

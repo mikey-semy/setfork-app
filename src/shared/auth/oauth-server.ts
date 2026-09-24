@@ -181,6 +181,45 @@ export async function refreshTokens(refreshToken: string, clientId: string): Pro
   return issueTokens(row.userId, row.clientId, row.scope === 'write' ? 'write' : 'read')
 }
 
+/**
+ * ОТЗЫВ ТОКЕНА (RFC 7009): клиент при выходе сообщает, что токен ему больше не нужен.
+ *
+ * Принимается и refresh-токен, и токен доступа; подсказка `token_type_hint` только задаёт,
+ * с какого вида начать поиск (§2.1: не нашёлся по подсказке — ищем среди остальных).
+ * Отзывается ВЕСЬ грант: refresh гасится, выданный по нему токен доступа удаляется — в
+ * какую бы сторону ни пришёл запрос. Клиент, выходящий из аккаунта, хочет, чтобы не
+ * осталось ничего; половина гранта, живущая дальше, — это не выход.
+ *
+ * ⚠️ Отзывается только ВЫДАННОЕ ЭТОМУ КЛИЕНТУ (§2.1). Чужой клиент получает отказ. Токен,
+ * созданный человеком в настройках, клиенту OAuth не выдавался вовсе (строки гранта у
+ * него нет) — этот эндпоинт его не трогает: отзывают такие токены там же, где создали.
+ * Незнакомый, уже отозванный или просроченный токен — «успешно» (§2.2: ответ 200 и на
+ * недействительный токен), иначе по ответу можно было бы перебирать живые токены.
+ */
+export async function revokeToken(token: string, clientId: string, hint?: string | null): Promise<{ ok: true } | { error: 'unauthorized_client' }> {
+  const hash = sha256(token)
+  const findRefresh = async () => (await db.select().from(oauthRefreshTokens).where(eq(oauthRefreshTokens.tokenHash, hash)).limit(1))[0]
+  const findByAccess = async () => {
+    const [access] = await db.select({ id: apiTokens.id }).from(apiTokens).where(eq(apiTokens.tokenHash, hash)).limit(1)
+    if (!access) return undefined
+    const [grant] = await db.select().from(oauthRefreshTokens).where(eq(oauthRefreshTokens.accessTokenId, access.id)).limit(1)
+    // Токен доступа без гранта — созданный человеком в настройках: не наш случай.
+    return grant ?? null
+  }
+  const order = hint === 'access_token' ? [findByAccess, findRefresh] : [findRefresh, findByAccess]
+  let grant: Awaited<ReturnType<typeof findRefresh>> | null | undefined
+  for (const find of order) {
+    grant = await find()
+    if (grant !== undefined) break
+  }
+  if (!grant) return { ok: true }
+  if (grant.clientId !== clientId) return { error: 'unauthorized_client' }
+
+  await db.update(oauthRefreshTokens).set({ revokedAt: new Date() }).where(and(eq(oauthRefreshTokens.id, grant.id), isNull(oauthRefreshTokens.revokedAt)))
+  if (grant.accessTokenId) await db.delete(apiTokens).where(eq(apiTokens.id, grant.accessTokenId))
+  return { ok: true }
+}
+
 /** Уборка просроченных кодов — вызывается перед выдачей, чтобы таблица не росла. */
 export async function pruneExpiredCodes(): Promise<void> {
   await db.delete(oauthCodes).where(lt(oauthCodes.expiresAt, new Date(Date.now() - CODE_TTL_MS)))
