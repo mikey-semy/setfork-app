@@ -13,7 +13,7 @@ vi.mock('@/shared/settings/maintenance', () => ({ maintenanceEnabled: async () =
 
 const { middleware } = await import('@/middleware')
 
-const KEY = 'a1b2c3d4-e5f6-7890'
+const KEY = 'not-a-real-key'
 const call = (path: string) => middleware(new NextRequest(new Request(`https://setfork.test${path}`, { headers: { 'accept-language': 'en' } })))
 
 afterEach(() => {
@@ -38,11 +38,18 @@ describe('файл ключа IndexNow', () => {
     expect(await res.text()).toBe(KEY)
   })
 
-  it('другой *.txt и ключ под языковым префиксом — не файл ключа', async () => {
-    vi.stubEnv('INDEXNOW_KEY', KEY)
-    for (const path of ['/other-key-123.txt', `/ru/${KEY}.txt`, `/${KEY}.txt.bak`]) {
+  it('другой *.txt и ключ под языковым префиксом — ровно как без ключа', async () => {
+    // Сравнение с ответом БЕЗ ключа, а не «не ключ»: правка, которая перехватила бы все
+    // `*.txt` (robots.txt, llms.txt), отвечала бы 404 — и «не ключ» осталось бы зелёным.
+    const shape = async (path: string) => {
       const res = await call(path)
-      expect(await res.text(), path).not.toBe(KEY)
+      return { status: res.status, rewrite: res.headers.get('x-middleware-rewrite'), next: res.headers.get('x-middleware-next') }
+    }
+    for (const path of ['/robots.txt', '/llms.txt', '/other-key-123.txt', `/ru/${KEY}.txt`, `/${KEY}.txt.bak`]) {
+      const without = await shape(path)
+      vi.stubEnv('INDEXNOW_KEY', KEY)
+      expect(await shape(path), path).toEqual(without)
+      vi.unstubAllEnvs()
     }
   })
 

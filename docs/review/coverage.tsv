@@ -654,6 +654,8 @@ src/features/library/gnome-task.ts	V1m
 src/features/library/guard.ts	V1m
 src/features/library/health.ts	V1m
 src/features/library/index-content.ts	V1m
+src/features/library/indexnow-jobs.ts	H11
+src/features/library/indexnow.ts	H11
 src/features/library/jobs.ts	V1m
 src/features/library/lineage.ts	V1m
 src/features/library/list-content.ts	V1m
@@ -1073,6 +1075,7 @@ src/shared/i18n/negotiate.ts	H6
 src/shared/i18n/server.ts	H6
 src/shared/i18n/url.ts	H6
 src/shared/i18n/use-page-path.ts	H6
+src/shared/indexnow.ts	H11
 src/shared/jobs/backoff.ts	H10
 src/shared/jobs/error.ts	H10
 src/shared/jobs/queue.ts	H10
@@ -1294,6 +1297,7 @@ tests/app/api/write-allowed-content.test.ts	V12d
 tests/app/cache-policy.itest.ts	V12d
 tests/app/git-transport.itest.ts	V12d
 tests/app/healthz.test.ts	V12d
+tests/app/indexnow-key-file.test.ts	H11,V12d
 tests/app/list-step-print.test.tsx	V12d
 tests/app/llms-and-md.itest.ts	V12d
 tests/app/maintenance-machine-body.test.ts	V12d
@@ -1497,6 +1501,7 @@ tests/features/library/fork-tree.itest.ts	V1d
 tests/features/library/guard.itest.ts	V1d
 tests/features/library/history.test.ts	V1h,V1k
 tests/features/library/hotkeys.test.ts	V1k
+tests/features/library/indexnow.itest.ts	H11
 tests/features/library/keyset-indexes.itest.ts	V1g
 tests/features/library/lineage.itest.ts	V1d
 tests/features/library/list-actions-menu.test.tsx	V1k

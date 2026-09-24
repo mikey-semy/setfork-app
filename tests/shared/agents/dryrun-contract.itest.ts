@@ -16,7 +16,7 @@ import { resetTables } from '../../helpers/reset-db'
 vi.mock('@/shared/ai/provider', () => ({ getAiChatClient: async () => null, isAiAvailable: async () => true }))
 vi.mock('@/shared/email/mailer', () => ({ sendMail: vi.fn(async () => {}) }))
 
-const { agentActions, appSettings, db, templates, users } = await import('@/shared/db')
+const { agentActions, appSettings, db, indexnowSubmissions, templates, users } = await import('@/shared/db')
 const { setLoopDryRun } = await import('@/shared/agents/policy')
 const { runTriplesSweep } = await import('@/features/knowledge/service')
 const { runLinkcheckSweep } = await import('@/features/linkcheck/service')
@@ -31,7 +31,7 @@ const journalFor = async (loop: string) =>
 beforeEach(async () => {
   // Настройки — тоже: петли держат в них тумблеры и отступы, и чужой хвост (например,
   // отступ IndexNow после отказа) подменил бы проверяемую ветку.
-  await resetTables([agentActions, appSettings, templates, users])
+  await resetTables([agentActions, appSettings, indexnowSubmissions, templates, users])
 })
 
 describe('сухой прогон уважает каждая петля', () => {
@@ -77,6 +77,9 @@ describe('сухой прогон уважает каждая петля', () =>
       })
       expect(res.status).toBe('dry-run')
       expect((await journalFor('indexnow'))[0]?.resultStatus).toBe('dry-run')
+      // И ничего не помечено: иначе после снятия сухого прогона корпус числился бы
+      // отправленным и не ушёл бы никогда.
+      expect(await db.select().from(indexnowSubmissions)).toHaveLength(0)
     } finally {
       vi.unstubAllEnvs()
     }

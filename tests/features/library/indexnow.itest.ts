@@ -5,16 +5,24 @@ import { resetTables } from '../../helpers/reset-db'
 /**
  * INDEXNOW — ПРОХОД НА НАСТОЯЩЕЙ БАЗЕ.
  *
- * Подменена только сеть (`send`): до api.indexnow.org тесты не достают. Всё остальное —
- * настоящее: правило индексации, адреса по языкам, пометки отправленного, отступ.
+ * Подменена только сеть: отправка пачки (`send`) и проверка своего файла ключа
+ * (`checkKey`) — до api.indexnow.org и до публичного адреса тесты не достают. Всё
+ * остальное настоящее: правило индексации, адреса по языкам, пометки, отступы, журнал.
  */
 const { db, agentActions, agentLoops, appSettings, indexnowSubmissions, jobs, templates, users } = await import('@/shared/db')
 const { runIndexNowPass, ensureIndexNowScheduled, listUrls, MAX_URLS_PER_REQUEST, INDEXNOW_KEYS } = await import('@/features/library/indexnow')
 type Body = Parameters<Parameters<typeof runIndexNowPass>[0] & object>[0]
+type Send = (b: Body) => Promise<number>
 
 const KEY = 'test-key-1234'
 const ORIGIN = 'https://example.org'
+const url = (path: string) => [`${ORIGIN}/en${path}`, `${ORIGIN}/ru${path}`, `${ORIGIN}${path}`]
 let owner = ''
+
+/** Файл ключа на месте — как у живого сайта с верным APP_URL. */
+const keyOk = async () => true
+/** Проход с проверкой ключа без сети. */
+const pass = (send: Send, now?: Date, checkKey: () => Promise<boolean | null> = keyOk) => runIndexNowPass(send, now, checkKey)
 
 /** Поддельная отправка: помнит тела, отвечает заданным кодом. */
 function fakeSend(status = 200) {
@@ -34,6 +42,7 @@ async function list(slug: string, shape: Shape = {}) {
     .returning({ id: templates.id })
   return t.id
 }
+const journal = () => db.select().from(agentActions).where(eq(agentActions.loop, 'indexnow'))
 
 beforeAll(() => {
   vi.stubEnv('INDEXNOW_KEY', KEY)
@@ -56,7 +65,7 @@ describe('что уходит поисковикам', () => {
     await list('hidden-one', { moderation: 'hidden' })
     await list('pending-one', { moderation: 'pending' })
     const f = fakeSend()
-    await runIndexNowPass(f.send)
+    await pass(f.send)
     const all = f.urls().join('\n')
     expect(all).toContain('/alice/public-one')
     // Адрес раскрывает слаг — поэтому проверяется сам слаг, а не только число адресов.
@@ -66,15 +75,15 @@ describe('что уходит поисковикам', () => {
   it('все языковые адреса и адрес без префикса', async () => {
     await list('deploy')
     const f = fakeSend()
-    await runIndexNowPass(f.send)
-    expect(f.urls().sort()).toEqual([`${ORIGIN}/alice/deploy`, `${ORIGIN}/en/alice/deploy`, `${ORIGIN}/ru/alice/deploy`])
+    await pass(f.send)
+    expect(f.urls().sort()).toEqual(url('/alice/deploy').sort())
     expect(f.urls().sort()).toEqual(listUrls('alice', 'deploy', ORIGIN).sort())
   })
 
   it('хост, адреса и файл ключа — от appOrigin(), не от запроса', async () => {
     await list('deploy')
     const f = fakeSend()
-    await runIndexNowPass(f.send)
+    await pass(f.send)
     expect(f.bodies[0]).toMatchObject({ host: 'example.org', key: KEY, keyLocation: `${ORIGIN}/${KEY}.txt` })
     for (const u of f.urls()) expect(new URL(u).host).toBe('example.org')
   })
@@ -83,43 +92,56 @@ describe('что уходит поисковикам', () => {
 describe('пометки отправленного честные', () => {
   it.each([200, 202])('%i — отмечено: следующий проход не шлёт то же', async (code) => {
     await list('deploy')
-    expect((await runIndexNowPass(fakeSend(code).send)).sentLists).toBe(1)
+    expect((await pass(fakeSend(code).send)).sentLists).toBe(1)
     const again = fakeSend()
-    await runIndexNowPass(again.send)
+    await pass(again.send)
     // Пусто: отправленное не уходит повторно (в том числе из-за микросекунд updated_at).
     expect(again.bodies).toHaveLength(0)
   })
 
-  it.each([429, 500, 503, 0])('%i — не отмечено: следующий проход повторит', async (code) => {
+  it.each([500, 503, 0])('%i — не отмечено, ошибка в журнале, следующий проход повторит', async (code) => {
     await list('deploy')
-    expect(await runIndexNowPass(fakeSend(code).send)).toMatchObject({ status: 'retry', sentLists: 0 })
+    expect(await pass(fakeSend(code).send)).toMatchObject({ status: 'retry', sentLists: 0 })
+    expect(await journal()).toEqual([expect.objectContaining({ action: 'indexnow.submit', resultStatus: 'error' })])
     const again = fakeSend()
-    await runIndexNowPass(again.send)
+    await pass(again.send)
     expect(again.urls()).toContain(`${ORIGIN}/alice/deploy`)
+  })
+
+  it('429 — не отмечено и час тишины: «potential spam» повтором не подтверждаем', async () => {
+    await list('deploy')
+    const now = new Date()
+    expect(await pass(fakeSend(429).send, now)).toMatchObject({ status: 'retry', sentLists: 0 })
+    const soon = fakeSend()
+    expect(await pass(soon.send, new Date(now.getTime() + 15 * 60_000))).toMatchObject({ status: 'backoff' })
+    expect(soon.bodies).toHaveLength(0)
+    const later = fakeSend()
+    await pass(later.send, new Date(now.getTime() + 61 * 60_000))
+    expect(later.urls()).toContain(`${ORIGIN}/alice/deploy`)
   })
 
   it.each([400, 403, 422])('%i — не отмечено, запись в журнал, отступ: приёмник не долбим', async (code) => {
     await list('deploy')
     const now = new Date()
-    expect(await runIndexNowPass(fakeSend(code).send, now)).toMatchObject({ status: 'config-error', sentLists: 0 })
-    const [act] = await db.select().from(agentActions).where(eq(agentActions.loop, 'indexnow'))
-    expect(act).toMatchObject({ action: 'indexnow.submit', resultStatus: 'error' })
-    // Через 15 минут — молчит.
+    expect(await pass(fakeSend(code).send, now)).toMatchObject({ status: 'config-error', sentLists: 0 })
+    expect(await journal()).toEqual([expect.objectContaining({ action: 'indexnow.submit', resultStatus: 'error' })])
     const soon = fakeSend()
-    expect(await runIndexNowPass(soon.send, new Date(now.getTime() + 15 * 60_000))).toMatchObject({ status: 'backoff' })
+    expect(await pass(soon.send, new Date(now.getTime() + 15 * 60_000))).toMatchObject({ status: 'backoff' })
     expect(soon.bodies).toHaveLength(0)
-    // После отступа — повторяет неотмеченное.
     const later = fakeSend()
-    await runIndexNowPass(later.send, new Date(now.getTime() + 7 * 3_600_000))
+    await pass(later.send, new Date(now.getTime() + 7 * 3_600_000))
     expect(later.urls()).toContain(`${ORIGIN}/alice/deploy`)
+    // Отступ хранится в настройках — его видно и можно снять.
+    const [row] = await db.select().from(appSettings).where(eq(appSettings.key, INDEXNOW_KEYS.backoffUntil))
+    expect(row).toBeTruthy()
   })
 
   it('правка после отправки — уходит снова', async () => {
     const id = await list('deploy')
-    await runIndexNowPass(fakeSend().send)
+    await pass(fakeSend().send)
     await db.update(templates).set({ updatedAt: new Date(Date.now() + 1000) }).where(eq(templates.id, id))
     const again = fakeSend()
-    await runIndexNowPass(again.send)
+    await pass(again.send)
     expect(again.urls()).toContain(`${ORIGIN}/alice/deploy`)
   })
 
@@ -127,93 +149,210 @@ describe('пометки отправленного честные', () => {
     // Пометка — `updated_at` на момент чтения, а не время отправки: иначе правка между
     // чтением и ответом поисковика оказалась бы «старше» пометки и не ушла бы никогда.
     const id = await list('deploy')
-    await runIndexNowPass(async () => {
+    await pass(async () => {
       await db.update(templates).set({ updatedAt: new Date() }).where(eq(templates.id, id))
       return 200
     })
     const again = fakeSend()
-    await runIndexNowPass(again.send)
+    await pass(again.send)
     expect(again.urls()).toContain(`${ORIGIN}/alice/deploy`)
   })
+})
 
-  it('стал публичным БЕЗ правки (видимость, одобрение модерации) — тоже уходит', async () => {
-    // Оба пути не двигают updated_at: с одной отметкой по времени правки такие списки
-    // остались бы позади неё навсегда.
+describe('пути, которые не двигают updated_at', () => {
+  it('стал публичным без правки (видимость, одобрение модерации) — уходит', async () => {
     const priv = await list('was-private', { visibility: 'private' })
     const held = await list('was-held', { moderation: 'pending' })
     await list('other')
-    await runIndexNowPass(fakeSend().send)
+    await pass(fakeSend().send)
     const before = await db.select({ updatedAt: templates.updatedAt }).from(templates).where(inArray(templates.id, [priv, held]))
     await db.update(templates).set({ visibility: 'public' }).where(eq(templates.id, priv))
     await db.update(templates).set({ moderation: 'active' }).where(eq(templates.id, held))
     const after = await db.select({ updatedAt: templates.updatedAt }).from(templates).where(inArray(templates.id, [priv, held]))
     expect(after).toEqual(before) // updated_at действительно не сдвинулся
     const again = fakeSend()
-    await runIndexNowPass(again.send)
+    await pass(again.send)
     expect(again.urls()).toEqual(expect.arrayContaining([`${ORIGIN}/alice/was-private`, `${ORIGIN}/alice/was-held`]))
     expect(again.urls().join('\n')).not.toContain('/alice/other')
+  })
+
+  it('смена ника — уходят новые адреса и старые (там теперь 301)', async () => {
+    await list('deploy')
+    await pass(fakeSend().send)
+    await db.update(users).set({ handle: 'alice-new' }).where(eq(users.id, owner))
+    const again = fakeSend()
+    await pass(again.send)
+    expect(again.urls().sort()).toEqual([...url('/alice-new/deploy'), ...url('/alice/deploy')].sort())
+    // И больше не повторяется.
+    const third = fakeSend()
+    await pass(third.send)
+    expect(third.bodies).toHaveLength(0)
+  })
+
+  it('список перешёл к другому владельцу (передача, «призрак» удалённого аккаунта) — уходит', async () => {
+    const id = await list('deploy')
+    await pass(fakeSend().send)
+    const [ghost] = await db.insert(users).values({ handle: 'ghost' }).returning({ id: users.id })
+    await db.update(templates).set({ ownerId: ghost.id }).where(eq(templates.id, id))
+    const again = fakeSend()
+    await pass(again.send)
+    expect(again.urls()).toEqual(expect.arrayContaining(url('/ghost/deploy')))
+  })
+
+  it('появился язык — адреса уходят заново', async () => {
+    const id = await list('deploy')
+    await pass(fakeSend().send)
+    // Отправлено при наборе языков, где был только английский.
+    await db.update(indexnowSubmissions).set({ sentLangs: 'en' }).where(eq(indexnowSubmissions.templateId, id))
+    const again = fakeSend()
+    await pass(again.send)
+    expect(again.urls()).toContain(`${ORIGIN}/ru/alice/deploy`)
+  })
+
+  it('снят с публичности — сообщается (протокол велит сообщать об удалённом); открыт снова — уходит снова', async () => {
+    const id = await list('deploy')
+    await pass(fakeSend().send)
+    await db.update(templates).set({ visibility: 'private' }).where(eq(templates.id, id))
+    const withdraw = fakeSend()
+    expect(await pass(withdraw.send)).toMatchObject({ withdrawnLists: 1, sentLists: 0 })
+    // Те же адреса, что уже были публичными: ничего нового они не раскрывают.
+    expect(withdraw.urls().sort()).toEqual(url('/alice/deploy').sort())
+    expect(await db.select().from(indexnowSubmissions)).toHaveLength(0)
+    // Второй раз о снятии не сообщается.
+    const quiet = fakeSend()
+    await pass(quiet.send)
+    expect(quiet.bodies).toHaveLength(0)
+    // Открыли снова без правки — уходит.
+    await db.update(templates).set({ visibility: 'public' }).where(eq(templates.id, id))
+    const reopened = fakeSend()
+    await pass(reopened.send)
+    expect(reopened.urls()).toContain(`${ORIGIN}/alice/deploy`)
+  })
+
+  it('никогда не отправленный и закрытый — не сообщается вовсе', async () => {
+    await list('secret', { visibility: 'private' })
+    const f = fakeSend()
+    await pass(f.send)
+    expect(f.bodies).toHaveLength(0)
+  })
+})
+
+describe('файл ключа и предохранители', () => {
+  it('свой файл ключа не отдаётся (неверный APP_URL, 301) — не шлём, отступ, ошибка в журнале', async () => {
+    await list('deploy')
+    const f = fakeSend()
+    expect(await pass(f.send, new Date(), async () => false)).toMatchObject({ status: 'config-error' })
+    expect(f.bodies).toHaveLength(0)
+    expect(await journal()).toEqual([expect.objectContaining({ resultStatus: 'error' })])
+  })
+
+  it('проверить свой ключ не удалось (сеть до самих себя) — отправка идёт', async () => {
+    await list('deploy')
+    const f = fakeSend()
+    await pass(f.send, new Date(), async () => null)
+    expect(f.urls()).toContain(`${ORIGIN}/alice/deploy`)
+  })
+
+  it('пять ошибок подряд — предохранитель: шестой проход не шлёт ничего', async () => {
+    await list('deploy')
+    for (let i = 0; i < 5; i++) await pass(fakeSend(500).send)
+    const f = fakeSend()
+    expect(await pass(f.send)).toMatchObject({ status: 'tripped' })
+    expect(f.bodies).toHaveLength(0)
+    const [pol] = await db.select().from(agentLoops).where(eq(agentLoops.type, 'indexnow'))
+    expect(pol?.circuitTrippedAt).toBeTruthy()
+  })
+
+  it('ключ задан, но не по правилам протокола — не молчим: ошибка в журнале', async () => {
+    vi.stubEnv('INDEXNOW_KEY', 'with_underscore_key')
+    try {
+      await list('deploy')
+      const f = fakeSend()
+      expect(await pass(f.send)).toMatchObject({ status: 'off' })
+      expect(f.bodies).toHaveLength(0)
+      expect(await journal()).toEqual([expect.objectContaining({ resultStatus: 'error', error: 'INDEXNOW_KEY is invalid' })])
+    } finally {
+      vi.stubEnv('INDEXNOW_KEY', KEY)
+    }
+  })
+
+  it('ключа нет — проход ничего не делает и в журнал не пишет', async () => {
+    vi.stubEnv('INDEXNOW_KEY', '')
+    try {
+      await list('deploy')
+      const f = fakeSend()
+      expect(await pass(f.send)).toMatchObject({ status: 'off' })
+      expect(f.bodies).toHaveLength(0)
+      expect(await db.select().from(indexnowSubmissions)).toHaveLength(0)
+      expect(await journal()).toHaveLength(0)
+    } finally {
+      vi.stubEnv('INDEXNOW_KEY', KEY)
+    }
   })
 })
 
 describe('журнал петли', () => {
-  it('пустой проход не пишется: на тихом сайте петля не выглядит холостой', async () => {
-    for (let i = 0; i < 3; i++) await runIndexNowPass(fakeSend().send)
-    expect(await db.select().from(agentActions).where(eq(agentActions.loop, 'indexnow'))).toHaveLength(0)
-    const { stallReport } = await import('@/shared/agents/stall')
-    expect((await stallReport('indexnow')).stalled).toBe(false)
+  it('пустой проход не пишется: запись `skipped` каждые 15 минут залила бы окно детектора', async () => {
+    for (let i = 0; i < 3; i++) await pass(fakeSend().send)
+    expect(await journal()).toHaveLength(0)
   })
 
   it('принятая пачка — прогресс петли', async () => {
     await list('deploy')
-    await runIndexNowPass(fakeSend().send)
-    const [act] = await db.select().from(agentActions).where(eq(agentActions.loop, 'indexnow'))
-    expect(act).toMatchObject({ action: 'indexnow.submit', resultStatus: 'ok' })
+    await pass(fakeSend().send)
+    expect(await journal()).toEqual([expect.objectContaining({ action: 'indexnow.submit', resultStatus: 'ok' })])
     const { stallReport } = await import('@/shared/agents/stall')
     expect((await stallReport('indexnow')).progress).toBe(1)
   })
 })
 
 describe('пачки', () => {
-  it('адресов больше потолка протокола — два запроса, каждый не больше потолка', async () => {
+  it('одна пачка за проход, не больше потолка; остаток — следующим проходом', async () => {
     const perList = listUrls('h', 's', ORIGIN).length
     const lists = Math.floor(MAX_URLS_PER_REQUEST / perList) + 1
     await db.insert(templates).values(
       Array.from({ length: lists }, (_, i) => ({ ownerId: owner, slug: `bulk-${i}`, title: { en: `b${i}` }, status: 'published' as const, visibility: 'public' as const, currentVersion: 1 })),
     )
-    const f = fakeSend()
-    const r = await runIndexNowPass(f.send)
     expect(lists * perList).toBeGreaterThan(MAX_URLS_PER_REQUEST)
-    expect(f.bodies).toHaveLength(2)
-    for (const b of f.bodies) expect(b.urlList.length).toBeLessThanOrEqual(MAX_URLS_PER_REQUEST)
-    expect(r.sentLists).toBe(lists)
-    expect(new Set(f.urls()).size).toBe(lists * perList)
+    const first = fakeSend()
+    await pass(first.send)
+    expect(first.bodies).toHaveLength(1)
+    expect(first.bodies[0].urlList.length).toBeLessThanOrEqual(MAX_URLS_PER_REQUEST)
+    const second = fakeSend()
+    await pass(second.send)
+    expect(second.bodies).toHaveLength(1)
+    expect(new Set([...first.urls(), ...second.urls()]).size).toBe(lists * perList)
+    const third = fakeSend()
+    await pass(third.send)
+    expect(third.bodies).toHaveLength(0)
   })
 })
 
-describe('выключено без ключа', () => {
-  it('проход ничего не отправляет и даже не читает списки', async () => {
-    vi.stubEnv('INDEXNOW_KEY', '')
-    try {
-      await list('deploy')
-      const f = fakeSend()
-      expect(await runIndexNowPass(f.send)).toMatchObject({ status: 'off' })
-      expect(f.bodies).toHaveLength(0)
-      expect(await db.select().from(indexnowSubmissions)).toHaveLength(0)
-    } finally {
-      vi.stubEnv('INDEXNOW_KEY', KEY)
-    }
+describe('пачки с переехавшими', () => {
+  it('смена ника у многих списков — у каждого вдвое больше адресов, а пачка всё равно не больше потолка', async () => {
+    // Выборка ограничена числом списков под обычный размер; переехавший несёт ещё и старые
+    // адреса. Потолок держит сборка пачки, а не лимит выборки, — проверяем именно её.
+    const perList = listUrls('h', 's', ORIGIN).length
+    const lists = Math.floor(MAX_URLS_PER_REQUEST / perList) + 1
+    await db.insert(templates).values(
+      Array.from({ length: lists }, (_, i) => ({ ownerId: owner, slug: `bulk-${i}`, title: { en: `b${i}` }, status: 'published' as const, visibility: 'public' as const, currentVersion: 1 })),
+    )
+    await pass(fakeSend().send)
+    await pass(fakeSend().send)
+    await db.update(users).set({ handle: 'alice-new' }).where(eq(users.id, owner))
+    const moved = fakeSend()
+    await pass(moved.send)
+    expect(moved.bodies).toHaveLength(1)
+    expect(moved.bodies[0].urlList.length).toBeLessThanOrEqual(MAX_URLS_PER_REQUEST)
+    // Влезло максимум: следующий переехавший уже не помещается.
+    expect(moved.bodies[0].urlList.length).toBeGreaterThan(MAX_URLS_PER_REQUEST - 2 * perList)
   })
+})
 
+describe('очередь', () => {
   it('задача в очереди одна, повтор планировщика не плодит вторую', async () => {
     await ensureIndexNowScheduled()
     await ensureIndexNowScheduled()
     expect(await db.select().from(jobs).where(eq(jobs.type, 'indexnow'))).toHaveLength(1)
-  })
-
-  it('отступ хранится в настройках', async () => {
-    await list('deploy')
-    await runIndexNowPass(fakeSend(403).send)
-    const [row] = await db.select().from(appSettings).where(eq(appSettings.key, INDEXNOW_KEYS.backoffUntil))
-    expect(new Date(row.value).getTime()).toBeGreaterThan(Date.now())
   })
 })
