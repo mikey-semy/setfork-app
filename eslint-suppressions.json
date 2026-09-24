@@ -313,11 +313,6 @@
       "count": 1
     }
   },
-  "src/features/library/TemplateSection.tsx": {
-    "no-restricted-syntax": {
-      "count": 2
-    }
-  },
   "src/features/library/actions/ai.ts": {
     "boundaries/dependencies": {
       "count": 1
