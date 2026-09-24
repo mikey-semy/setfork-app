@@ -80,12 +80,13 @@ export async function getReleases(
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
 }
 
-/** Тег уже занят? (подсказка в форме до сабмита не нужна — проверка в action). */
-export async function tagTaken(templateId: string, tag: string): Promise<boolean> {
-  const [r] = await db
-    .select({ id: releases.id })
-    .from(releases)
-    .where(and(eq(releases.templateId, templateId), eq(releases.tag, tag)))
-    .limit(1)
-  return !!r
+/**
+ * Номера версий, на которых стоят релизы, — всё, что нужно сборке заметок.
+ *
+ * Сборка брала `getReleases` целиком: с заметками до 50 000 символов и подписью
+ * аватара на каждую строку, — чтобы прочитать из них одно число. На списке с сотнями
+ * релизов это мегабайты ради пары номеров, а через MCP сборку зовут дёшево.
+ */
+export async function getReleaseVersions(templateId: string): Promise<{ version: number }[]> {
+  return db.select({ version: releases.version }).from(releases).where(eq(releases.templateId, templateId))
 }

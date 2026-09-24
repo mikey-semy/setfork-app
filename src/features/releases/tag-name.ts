@@ -13,3 +13,17 @@ export const TAG_RE = /^[A-Za-z0-9._-]{1,40}$/
 export function isReservedTag(tag: string): boolean {
   return /^v\d+$/.test(tag)
 }
+
+/** Пределы полей релиза — одни на форму (maxLength), агента (zod) и запись (обрезка). */
+export const RELEASE_TITLE_MAX = 200
+export const RELEASE_NOTES_MAX = 50000
+
+/**
+ * Имя тега, которое примет ЯДРО. `TAG_RE` задаёт алфавит, а ядро (`valid_tag`,
+ * services/git_core/names.rs) сверх него запрещает то, от чего ломается сам ref:
+ * ведущий «-», завершающую точку и «..». Без этих трёх проверок такое имя проходило
+ * форму и падало в ядре общим «не удалось» — агент читал это как «повтори позже».
+ */
+export function isValidTag(tag: string): boolean {
+  return TAG_RE.test(tag) && !tag.startsWith('-') && !tag.endsWith('.') && !tag.includes('..')
+}
