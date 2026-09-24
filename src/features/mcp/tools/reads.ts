@@ -61,7 +61,9 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
   // уже лежит в скилле, и publish_skill не с чего начинать. Мягко: ядро не ответило —
   // поля нет, список читается как раньше.
   const [refHandle, refSlug] = (detail.movedTo ?? `${handle}/${slug}`).split('/')
-  const authored = await gitCore.authoredFiles({ owner: refHandle, slug: refSlug }, headVersion(tpl)).catch(() => null)
+  // Одно число на ответ: файлы — той же версии, которую ответ называет агенту.
+  const head = headVersion(tpl)
+  const authored = await gitCore.authoredFiles({ owner: refHandle, slug: refSlug }, head).catch(() => null)
   return {
     // Адрес АКТУАЛЬНЫЙ, а не тот, по которому пришли: иначе агент, обратившийся по
     // прежней ссылке, получил бы её же в ответе и продолжил ходить по старому.
@@ -76,7 +78,7 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     // ⚠️ Это ЧИСЛО КОНТРАКТА: агент присылает его обратно в baseVersion, и запись
     // сверяет им же. Правило поэтому общее (`headVersion`), а не выписанное здесь: своя
     // арифметика у одной из сторон означала бы отказ по числу, которое выдала другая.
-    version: headVersion(tpl),
+    version: head,
     ...(authored?.length
       ? { files: authored.map((f) => ({ path: f.path, executable: f.executable || undefined, bytes: f.content.length })) }
       : {}),
