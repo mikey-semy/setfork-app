@@ -41,10 +41,9 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
       setError(t('avatarTypeErr', lang))
       return false
     }
-    if (file.size > AVATAR_MAX_BYTES) {
-      setError(fill('avatarSizeErr', lang, { n: megabytes(AVATAR_MAX_BYTES) }))
-      return false
-    }
+    // Размер исходника НЕ проверяем: в форму уходит только кадр 512px, а фото с
+    // телефона (3–10 МБ) иначе нельзя было поставить аватаром вовсе. Предел держит
+    // результат кадрирования (onCropDone) и сервер.
     setError(null)
     return true
   }
@@ -76,8 +75,13 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
       return null
     })
   const onCropDone = (file: File) => {
-    commitFile(file)
     closeCrop()
+    if (file.size > AVATAR_MAX_BYTES) {
+      setError(fill('avatarSizeErr', lang, { n: megabytes(AVATAR_MAX_BYTES) }))
+      if (inputRef.current) inputRef.current.value = ''
+      return
+    }
+    commitFile(file)
   }
   const onCropCancel = () => {
     closeCrop()
@@ -132,7 +136,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
             {dragOver ? t('dropRelease', lang) : t('dropAvatar', lang)}
           </div>
           <p className="mt-1 text-body-sm text-muted">{fill('avatarHint', lang, { n: megabytes(AVATAR_MAX_BYTES) })}</p>
-          {error && <p className="mt-1 text-body-sm text-danger">{error}</p>}
+          {error && <p role="alert" className="mt-1 text-body-sm text-danger">{error}</p>}
           {preview && (
             <TextButton
               onClick={(e) => {

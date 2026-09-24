@@ -82,6 +82,8 @@ describe('shrinkImage', () => {
     const seen = fakeImageApi({ width: 800, height: 600 })
     await shrinkImage(file(5000, 'image/jpeg', 'a.jpg'))
     expect(seen.decoded).toBe(0)
+    // decode() раскодировал бы пиксели целиком — ровно то, от чего уходили (48 Мп ≈ 190 МБ).
+    expect(HTMLImageElement.prototype.decode).not.toHaveBeenCalled()
     expect(seen.objectUrls.created).toHaveLength(1)
     expect(seen.objectUrls.revoked).toEqual(seen.objectUrls.created)
   })

@@ -24,7 +24,7 @@ export function fitWithin(width: number, height: number, max: number): { width: 
 }
 
 /**
- * Размер картинки БЕЗ отрисовки: декодер <img> знает его из заголовка. По спеке
+ * Размер картинки БЕЗ отрисовки и без раскодирования пикселей: <img> знает его из заголовка. По спеке
  * (WHATWG HTML naturalWidth + CSS `image-orientation: from-image` по умолчанию)
  * размер уже с учётом EXIF-ориентации — портретный снимок iPhone отдаёт 3024×4032.
  */
@@ -32,8 +32,14 @@ async function naturalSize(file: File): Promise<{ width: number; height: number 
   const url = URL.createObjectURL(file)
   try {
     const img = new Image()
-    img.src = url
-    await img.decode()
+    // Событие load, а не img.decode(): decode() обязан раскодировать пиксели целиком
+    // (48 Мп в RGBA — ~190 МБ), а размеры известны уже после загрузки заголовка —
+    // ровно то, от чего уходили, отказавшись от полноразмерного ImageBitmap.
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve()
+      img.onerror = () => reject(new Error('image header not readable'))
+      img.src = url
+    })
     return { width: img.naturalWidth, height: img.naturalHeight }
   } finally {
     URL.revokeObjectURL(url)
