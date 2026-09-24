@@ -2797,12 +2797,21 @@ export const oauthRefreshTokens = pgTable(
     /** Выданный по нему доступный токен — гасим вместе при ротации и отзыве. */
     accessTokenId: uuid('access_token_id').references(() => apiTokens.id, { onDelete: 'set null' }),
     clientId: text('client_id').notNull(),
+    /**
+     * ГРАНТ — одно согласие человека, на всю цепочку ротаций. Каждая ротация создаёт новую
+     * строку, и без общего id отзыв старого refresh (клиент потерял ответ на обновление или
+     * вышел во время фонового обновления) гасил бы только его, а новая пара жила бы ещё
+     * полгода — при ответе «отозвано». Новая строка наследует id прежней; отзыв гасит все
+     * строки гранта (RFC 7009 §2.1: «all access tokens based on the same authorization
+     * grant»). У строк до этой колонки — свой id на каждую: их цепочки уже не восстановить.
+     */
+    grantId: uuid('grant_id').notNull().defaultRandom(),
     scope: text('scope').notNull().default('read'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('oauth_refresh_user_idx').on(t.userId)],
+  (t) => [index('oauth_refresh_user_idx').on(t.userId), index('oauth_refresh_grant_idx').on(t.grantId)],
 )
 
 // ── Audit log (кто что сделал: пуши, удаления, токены, модерация) ────

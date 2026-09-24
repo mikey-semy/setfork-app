@@ -49,3 +49,10 @@ export function normalizeScope(raw: string | null | undefined): OAuthScope {
   // `write` включает чтение — как у статических токенов, где scope одно поле.
   return raw?.split(/\s+/).includes('write') ? 'write' : 'read'
 }
+
+/**
+ * Лимит частоты на выдачу и отзыв токенов, в минуту с одного адреса. Один на оба
+ * эндпоинта: подбор кода, refresh-токена или токена для отзыва — один и тот же способ
+ * угадать секрет, и бюджеты разъехаться не должны.
+ */
+export const OAUTH_RATE_PER_MIN = 30

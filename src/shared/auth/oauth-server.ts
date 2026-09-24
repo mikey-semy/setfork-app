@@ -1,6 +1,6 @@
 import 'server-only'
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
-import { and, eq, isNull, lt } from 'drizzle-orm'
+import { and, eq, gt, inArray, isNull, lt } from 'drizzle-orm'
 import { apiTokens, db, oauthCodes, oauthRefreshTokens } from '@/shared/db'
 import { MCP_RESOURCE, isAllowedRedirect, normalizeScope, type OAuthScope } from './oauth-meta'
 
@@ -12,7 +12,7 @@ import { MCP_RESOURCE, isAllowedRedirect, normalizeScope, type OAuthScope } from
  * выпускает. Единственная библиотека с сервером авторизации внутри Next.js требует
  * перевести всю аутентификацию приложения на неё, а у нас своя сессия, WebAuthn и TOTP.
  * Поэтому — минимальный сервер по официальному примеру Anthropic: `/authorize`,
- * `/token` и два документа well-known.
+ * `/token`, `/revoke` (RFC 7009) и два документа well-known.
  *
  * ⚠️ ДИНАМИЧЕСКОЙ РЕГИСТРАЦИИ (DCR) ЗДЕСЬ НЕТ НАМЕРЕННО. Спецификация от 28.07.2026
  * объявила её устаревшей в пользу Client ID Metadata Documents, и у неё есть
@@ -93,7 +93,7 @@ export async function issueCode(req: AuthorizeRequest, userId: string): Promise<
 
 export type TokenPair = { accessToken: string; refreshToken: string; scope: OAuthScope; expiresIn: number }
 
-async function issueTokens(userId: string, clientId: string, scope: OAuthScope): Promise<TokenPair> {
+async function issueTokens(userId: string, clientId: string, scope: OAuthScope, grantId?: string): Promise<TokenPair> {
   // Доступный токен кладём в ту же таблицу, что и статические: проверка остаётся одна
   // на оба способа, и ключ, вбитый руками, продолжает работать (так же у Sentry).
   const accessToken = `sf_${newSecret()}`
@@ -116,6 +116,8 @@ async function issueTokens(userId: string, clientId: string, scope: OAuthScope):
     userId,
     accessTokenId: row.id,
     clientId,
+    // Ротация наследует грант прежней строки; новое согласие — новый грант.
+    ...(grantId ? { grantId } : {}),
     scope,
     expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
   })
@@ -178,7 +180,80 @@ export async function refreshTokens(refreshToken: string, clientId: string): Pro
   if (!revoked.length) return { error: 'invalid_grant' }
   if (row.accessTokenId) await db.delete(apiTokens).where(eq(apiTokens.id, row.accessTokenId))
 
-  return issueTokens(row.userId, row.clientId, row.scope === 'write' ? 'write' : 'read')
+  return issueTokens(row.userId, row.clientId, row.scope === 'write' ? 'write' : 'read', row.grantId)
+}
+
+/**
+ * Погасить грант целиком: все строки цепочки ротаций и все выданные по ним токены
+ * доступа. Условный UPDATE — повторный и одновременный вызовы безопасны.
+ */
+async function revokeGrant(grantId: string): Promise<void> {
+  const rows = await db.select({ accessTokenId: oauthRefreshTokens.accessTokenId }).from(oauthRefreshTokens).where(eq(oauthRefreshTokens.grantId, grantId))
+  await db.update(oauthRefreshTokens).set({ revokedAt: new Date() }).where(and(eq(oauthRefreshTokens.grantId, grantId), isNull(oauthRefreshTokens.revokedAt)))
+  const access = rows.flatMap((r) => (r.accessTokenId ? [r.accessTokenId] : []))
+  if (access.length) await db.delete(apiTokens).where(inArray(apiTokens.id, access))
+}
+
+/** Жив ли ещё хоть что-то в гранте: непогашенный и непросроченный refresh. */
+async function grantAlive(grantId: string): Promise<boolean> {
+  const [live] = await db
+    .select({ id: oauthRefreshTokens.id })
+    .from(oauthRefreshTokens)
+    .where(and(eq(oauthRefreshTokens.grantId, grantId), isNull(oauthRefreshTokens.revokedAt), gt(oauthRefreshTokens.expiresAt, new Date())))
+    .limit(1)
+  return !!live
+}
+
+/**
+ * ОТЗЫВ ТОКЕНА (RFC 7009): клиент при выходе сообщает, что токен ему больше не нужен.
+ *
+ * Принимается и refresh-токен, и токен доступа; подсказка `token_type_hint` только задаёт,
+ * с какого вида начать поиск (§2.1: не нашёлся по подсказке — ищем среди остальных).
+ * Отзывается ВЕСЬ ГРАНТ — вся цепочка ротаций (`grant_id`), в какую бы сторону и по какому
+ * её звену ни пришёл запрос: и устаревший refresh, чей ответ на обновление клиент потерял,
+ * гасит живую пару. Клиент, выходящий из аккаунта, хочет, чтобы не осталось ничего.
+ *
+ * ⚠️ Отзывается только ВЫДАННОЕ ЭТОМУ КЛИЕНТУ (§2.1): чужой клиент на живой грант получает
+ * отказ. Токен, созданный человеком в настройках, клиенту OAuth не выдавался вовсе (строки
+ * гранта у него нет) — этот эндпоинт его не трогает. Незнакомый, уже погашенный или
+ * просроченный — «успешно» (§2.2: ответ 200 и на недействительный токен), в том числе для
+ * чужого клиента, иначе по ответу можно было бы перебирать живые токены.
+ */
+export async function revokeToken(
+  token: string,
+  clientId: string,
+  hint?: string | null,
+): Promise<{ ok: true; revoked?: { userId: string; clientId: string } } | { error: 'unauthorized_client' }> {
+  const hash = sha256(token)
+  const findRefresh = async () => (await db.select().from(oauthRefreshTokens).where(eq(oauthRefreshTokens.tokenHash, hash)).limit(1))[0]
+  const findByAccess = async () => {
+    const [access] = await db.select({ id: apiTokens.id }).from(apiTokens).where(eq(apiTokens.tokenHash, hash)).limit(1)
+    if (!access) return undefined
+    const [grant] = await db.select().from(oauthRefreshTokens).where(eq(oauthRefreshTokens.accessTokenId, access.id)).limit(1)
+    // Токен доступа без гранта — созданный человеком в настройках: не наш случай.
+    return grant ?? null
+  }
+  const order = hint === 'access_token' ? [findByAccess, findRefresh] : [findRefresh, findByAccess]
+  let row: Awaited<ReturnType<typeof findRefresh>> | null | undefined
+  for (const find of order) {
+    row = await find()
+    if (row !== undefined) break
+  }
+  if (!row) return { ok: true }
+  if (row.clientId !== clientId) return (await grantAlive(row.grantId)) ? { error: 'unauthorized_client' } : { ok: true }
+
+  await revokeGrant(row.grantId)
+  return { ok: true, revoked: { userId: row.userId, clientId: row.clientId } }
+}
+
+/**
+ * Отзыв из настроек OAuth-токена доступа: гасится и его грант. Иначе удалённый в
+ * настройках токен вернулся бы на первом же обновлении — refresh выпустил бы новый.
+ * Токен из настроек (гранта нет) — ничего не делает.
+ */
+export async function revokeGrantOfAccessToken(accessTokenId: string): Promise<void> {
+  const [row] = await db.select({ grantId: oauthRefreshTokens.grantId }).from(oauthRefreshTokens).where(eq(oauthRefreshTokens.accessTokenId, accessTokenId)).limit(1)
+  if (row) await revokeGrant(row.grantId)
 }
 
 /** Уборка просроченных кодов — вызывается перед выдачей, чтобы таблица не росла. */

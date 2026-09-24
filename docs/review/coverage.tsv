@@ -317,6 +317,7 @@ src/app/not-found.tsx	H8
 src/app/notifications/page.tsx	V7b
 src/app/oauth/authorize/actions.ts	V11
 src/app/oauth/authorize/page.tsx	V11
+src/app/oauth/revoke/route.ts	V11
 src/app/oauth/token/route.ts	V11
 src/app/openapi.json/document.ts	H11
 src/app/openapi.json/route.ts	H11
@@ -1729,6 +1730,7 @@ tests/shared/audit-outside-request.itest.ts	V12f
 tests/shared/auth/api-token-scope.itest.ts	V12f
 tests/shared/auth/api-token.test.ts	V12f
 tests/shared/auth/handle.test.ts	V12f
+tests/shared/auth/oauth-revoke.itest.ts	V12f
 tests/shared/auth/oauth-server.itest.ts	V12f
 tests/shared/auth/oauth-single-use.itest.ts	H1
 tests/shared/auth/oauth.test.ts	V12f
