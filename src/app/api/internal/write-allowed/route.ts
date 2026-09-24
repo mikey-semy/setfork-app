@@ -2,6 +2,7 @@
 import { getListMeta } from '@/features/library/queries'
 import { canEditList, editBlockReason } from '@/core'
 import { findDestructiveSteps } from '@/core/domain/destructive-command'
+import { findSecret, findSecretInFile } from '@/core/domain/secret-scan'
 
 /**
  * Внутренний эндпоинт «можно ли писать в этот список» — ядро спрашивает перед
@@ -45,6 +46,14 @@ import { findDestructiveSteps } from '@/core/domain/destructive-command'
  * `git/bundle.rs` + `gate.rs`), разобрав `list.json` пушнутого коммита своим уже
  * существующим парсером (`git/project.rs`, `RawStep.command`). Без `blocks` ответ
  * побайтово прежний — старое ядро и окно выкатки этот вход не ломают.
+ *
+ * # Третий вопрос: НЕТ ЛИ В КОММИТЕ КЛЮЧА ДОСТУПА
+ *
+ * `files` — тексты файлов пушнутого коммита: `list.json` и файлы автора целиком, по
+ * пути. Команд тут мало: ключ утекает из описания шага и из `references/setup.md`
+ * так же, как из команды. Правило — то же, что на фасаде (`secret-scan.ts`), отказ
+ * называет файл и строку, как push protection у GitHub. Старое ядро `files` не шлёт —
+ * тогда проверяются только команды шагов, лучше, чем ничего.
  */
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -54,11 +63,19 @@ interface AskedBlock {
   command?: unknown
 }
 
+/** Файл коммита в вопросе ядра: путь в дереве и текст. */
+interface AskedFile {
+  path: string
+  text: string
+}
+
 type Verdict =
   | { allow: true }
   | { allow: false; reason: 'archived' | 'frozen' | 'not-found' }
   /** Запрещённая команда: причина + МЕСТО (шаг с единицы, код правила, фрагмент). */
   | { allow: false; reason: 'destructive'; step: number; rule: string; fragment: string }
+  /** Ключ доступа: файл и строка (у команды шага — `step`), вид ключа и его НАЧАЛО. */
+  | { allow: false; reason: 'secret'; path: string; step: number; line: number; rule: string; provider: string; fragment: string }
 
 const json = (v: Verdict, status = 200) =>
   new Response(JSON.stringify(v), { status, headers: { 'Content-Type': 'application/json' } })
@@ -88,10 +105,24 @@ function readBlocks(raw: unknown): AskedBlock[] | null | undefined {
   return raw.map((b) => (b && typeof b === 'object' ? (b as AskedBlock) : {}))
 }
 
+/** Файлы из тела: `undefined` — не спрашивали, `null` — форма не та (как у блоков). */
+function readFiles(raw: unknown): AskedFile[] | null | undefined {
+  if (raw === undefined || raw === null) return undefined
+  if (!Array.isArray(raw)) return null
+  const out: AskedFile[] = []
+  for (const f of raw) {
+    if (!f || typeof f !== 'object') return null
+    const { path, text } = f as { path?: unknown; text?: unknown }
+    if (typeof path !== 'string' || typeof text !== 'string') return null
+    out.push({ path, text })
+  }
+  return out
+}
+
 export async function POST(req: Request) {
   if (!channelOk(req)) return new Response('Unauthorized', { status: 401 })
 
-  let body: { owner?: unknown; slug?: unknown; blocks?: unknown }
+  let body: { owner?: unknown; slug?: unknown; blocks?: unknown; files?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -102,6 +133,8 @@ export async function POST(req: Request) {
   if (!owner || !slug) return new Response('Bad request', { status: 400 })
   const blocks = readBlocks(body.blocks)
   if (blocks === null) return new Response('Bad request', { status: 400 })
+  const files = readFiles(body.files)
+  if (files === null) return new Response('Bad request', { status: 400 })
 
   const meta = await getListMeta(owner, slug)
   // Списка нет — писать некуда. Отдаём вердикт, а не 404: для ядра это такой же
@@ -121,6 +154,15 @@ export async function POST(req: Request) {
     if (first) {
       return json({ allow: false, reason: 'destructive', step: first.index + 1, rule: first.match.reason, fragment: first.match.fragment })
     }
+  }
+
+  for (const [i, b] of (blocks ?? []).entries()) {
+    const hit = typeof b.command === 'string' ? findSecret(b.command) : null
+    if (hit) return json({ allow: false, reason: 'secret', path: '', step: i + 1, line: hit.line, rule: hit.rule, provider: hit.provider, fragment: hit.fragment })
+  }
+  for (const f of files ?? []) {
+    const hit = findSecretInFile(f.path, f.text)
+    if (hit) return json({ allow: false, reason: 'secret', path: f.path, step: 0, line: hit.line, rule: hit.rule, provider: hit.provider, fragment: hit.fragment })
   }
 
   return json({ allow: true })

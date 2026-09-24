@@ -11,6 +11,7 @@ import { listQuota } from '@/shared/quota'
 import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, editBlockReason, ListWriteError } from '@/core'
 import { DestructiveCommandError, findDestructiveSteps } from '@/core/domain/destructive-command'
+import { findSecretInContent, SecretFoundError } from '@/core/domain/secret-scan'
 import { parseDraftRef, publishHeldQuery, saveOutcomeQuery, shouldHoldPublish } from '../save-outcome'
 import { isCollaborator } from '@/features/collab/queries'
 // eslint-disable-next-line boundaries/dependencies -- полки принадлежат каталогам; правило «положить на полку» держим ОДНОЙ точкой на все три входа (форма, MCP, пачка MCP), а не копией здесь
@@ -52,6 +53,8 @@ import { ownerHandle } from './shared'
 export type NewListRefusal =
   | { kind: 'slug_taken'; slug: string }
   | { kind: 'blocked'; reason: string; step: number }
+  /** Ключ доступа в содержимом: вид (код правила) и шаг; шаг 0 — название или описание. */
+  | { kind: 'secret'; rule: string; provider: string; step: number }
   | { kind: 'list_quota'; limit: number }
   | { kind: 'no_title' }
 
@@ -100,6 +103,7 @@ export async function createTemplate(_prev: NewListRefusal | null, formData: For
     })
   } catch (e) {
     if (e instanceof DestructiveCommandError) return { kind: 'blocked', reason: e.reason, step: e.stepIndex }
+    if (e instanceof SecretFoundError) return { kind: 'secret', rule: e.match.rule, provider: e.match.provider, step: e.stepIndex }
     // Адрес занят: возвращаем человека в форму с названной причиной, а не роняем в
     // страницу ошибки Next. До 27.08.2026 сюда попадал ЛЮБОЙ отказ ядра и уходил в
     // `throw` — вертикаль «собрать список» показала, что причина, которую ядро честно
@@ -136,6 +140,10 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
   const desc = String(formData.get('desc') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
   const ordered = formData.get('ordered') !== 'unordered'
+  // Мета пишется здесь МИМО фасада, и его страж ключей её не видит. Название публичного
+  // списка видно в ленте и поиске раньше шагов — ключ в нём утекает первым.
+  const leak = findSecretInContent([], undefined, { title, desc, tags })
+  if (leak) redirect(`/${session.handle}/${tpl.slug}/settings?secret=${leak.match.rule}&step=0`)
   await db
     .update(templates)
     .set({
@@ -163,7 +171,7 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
  * успел уйти вперёд, публикация об этом скажет, а не перезапишет чужое молча.
  */
 export async function saveDraft(templateId: string, formData: FormData): Promise<void> {
-  const { tpl, handle, overwrote, destructive } = await upsertDraftFromForm(templateId, formData, 'save')
+  const { tpl, handle, overwrote, destructive, secret } = await upsertDraftFromForm(templateId, formData, 'save')
   revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
   // ⚠️ СОХРАНЯЕМ ВСЕГДА, НО ГОВОРИМ ПРАВДУ О ПОСЛЕДСТВИЯХ.
   //
@@ -176,7 +184,8 @@ export async function saveDraft(templateId: string, formData: FormData): Promise
   //   warn=destructive — в шаге есть запрещённая команда, и публикация откажет. Раньше
   //                 этот отказ приходил ПОЗЖЕ и ДРУГОМУ человеку — владельцу, нажавшему
   //                 «Опубликовать», по шагу, которого он не писал.
-  redirect(`/${handle}/${tpl.slug}/edit?${saveOutcomeQuery({ overwrote, destructiveStep: destructive?.step ?? null })}`)
+  //   warn=secret — в шаге ключ доступа, и публикация откажет по той же причине.
+  redirect(`/${handle}/${tpl.slug}/edit?${saveOutcomeQuery({ overwrote, destructiveStep: destructive?.step ?? null, secret })}`)
 }
 
 /**
@@ -253,7 +262,10 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
   // Страж исполняемых команд — ТОТ ЖЕ, что на обеих ветках MCP. Здесь он не отказывает,
   // а предупреждает: см. комментарий в `saveDraft` про цену отказа в серверной форме.
   const [first] = findDestructiveSteps(items)
-  return { tpl, handle, overwrote, saved, destructive: first ? { step: first.index + 1 } : null }
+  // Ключ доступа — то же самое: черновик видит только автор, а публикация откажет.
+  const leak = findSecretInContent(items)
+  const secret = leak ? { step: leak.step, rule: leak.match.rule } : null
+  return { tpl, handle, overwrote, saved, destructive: first ? { step: first.index + 1 } : null, secret }
 }
 
 /** Убрать черновик и вернуться к опубликованному состоянию. */
@@ -304,6 +316,7 @@ async function publishDraft(templateId: string, expect?: DraftRef): Promise<void
     // Запрещённая команда — показываем автору причину и номер шага, как при
     // обычном сохранении: молчаливый отказ читается как «кнопка не работает».
     if (e instanceof DestructiveCommandError) redirect(`/${handle}/${tpl.slug}/edit?blocked=${e.reason}&step=${e.stepIndex}`)
+    if (e instanceof SecretFoundError) redirect(`/${handle}/${tpl.slug}/edit?secret=${e.match.rule}&step=${e.stepIndex}`)
     throw e
   }
   // Причины РАЗНЫЕ: «нечего публиковать» и «черновик опустел» — разные сообщения,

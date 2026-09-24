@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm'
 import { db, suggestions, users } from '@/shared/db'
 import { captureError } from '@/shared/observability'
 import { findDestructiveSteps } from '@/core/domain/destructive-command'
+import { findSecretInContent } from '@/core/domain/secret-scan'
 import { readSuggestionBlocks } from '../suggestion-blocks'
 import { enqueueReindex } from '../jobs'
 import { withPrDefaults } from '../pr-settings'
@@ -107,6 +108,8 @@ export async function mergeSuggestion(
     const { index, match } = destructive[0]
     return { ok: false, reason: `destructive command in step ${index + 1} (${match.reason})` }
   }
+  const leak = findSecretInContent(incoming.blocks)
+  if (leak) return { ok: false, reason: `an access key for ${leak.match.provider} in step ${leak.step} (${leak.match.rule})` }
 
   // Линейная история: сливаем только когда это fast-forward. Проверяем ДО merge —
   // иначе merge-коммит уже создан, и «запрет» опоздал.

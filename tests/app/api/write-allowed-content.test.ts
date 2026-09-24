@@ -139,3 +139,51 @@ describe('write-allowed: содержимое пуша судится тем ж�
     expect((await ask({ owner: 'alice', slug: 'deploy', blocks: { command: 'rm -rf /' } })).status).toBe(400)
   })
 })
+
+// ТРЕТИЙ ВОПРОС: ключ доступа в коммите. Ключ собирается здесь же из кусков — литерал
+// в репозитории остановил бы наш собственный push (см. tests/core/domain/secret-scan.test.ts).
+const hex64 = Array.from({ length: 64 }, (_, i) => '0123456789abcdef'[(i * 7 + 3) % 16]).join('')
+const OPENROUTER = ['sk', 'or', 'v1', hex64].join('-')
+
+describe('write-allowed: ключ доступа в пушнутом коммите', () => {
+  const files = (list: { path: string; text: string }[]) => ask({ owner: 'alice', slug: 'deploy', files: list })
+
+  it('ключ в файле — отказ с файлом, строкой и НАЧАЛОМ ключа', async () => {
+    const { verdict } = await files([
+      { path: 'list.json', text: '{"steps":[]}' },
+      { path: 'references/setup.md', text: `# Setup\n\nOPENROUTER_API_KEY=${OPENROUTER}\n` },
+    ])
+    expect(verdict).toEqual({
+      allow: false,
+      reason: 'secret',
+      path: 'references/setup.md',
+      step: 0,
+      line: 3,
+      rule: 'openrouter-api-key',
+      provider: 'OpenRouter',
+      fragment: expect.stringMatching(/^sk-or-v1.*…$/),
+    })
+    // Ключ целиком не уходит в ответ: он напечатается человеку в выводе `git push`.
+    expect(JSON.stringify(verdict)).not.toContain(hex64)
+  })
+
+  it('ключ в команде шага (старое ядро, files нет) — отказ с номером шага', async () => {
+    const { verdict } = await push(['npm ci', `curl -H "Authorization: Bearer ${OPENROUTER}" https://openrouter.ai/api/v1/models`])
+    expect(verdict).toMatchObject({ allow: false, reason: 'secret', path: '', step: 2, rule: 'openrouter-api-key' })
+  })
+
+  it('разрушительная команда называется раньше ключа — так же, как на фасаде', async () => {
+    const { verdict } = await ask({ owner: 'alice', slug: 'deploy', blocks: [{ command: 'rm -rf /' }], files: [{ path: 'list.json', text: OPENROUTER + ' ' }] })
+    expect(verdict!.reason).toBe('destructive')
+  })
+
+  it('чистые файлы — можно', async () => {
+    expect((await files([{ path: 'list.json', text: '{"steps":[{"command":"npm ci"}]}' }])).verdict).toEqual({ allow: true })
+  })
+
+  it('files не той формы — расхождение контракта (400), а не «можно»', async () => {
+    expect((await ask({ owner: 'alice', slug: 'deploy', files: 'list.json' })).status).toBe(400)
+    expect((await ask({ owner: 'alice', slug: 'deploy', files: [{ path: 'list.json' }] })).status).toBe(400)
+    expect((await ask({ owner: 'alice', slug: 'deploy', files: [null] })).status).toBe(400)
+  })
+})

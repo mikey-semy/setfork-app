@@ -2,6 +2,7 @@ import 'server-only'
 import { Code, ConnectError, createClient } from '@connectrpc/connect'
 import { coreTransport } from '@/shared/core-transport'
 import { assertNoDestructiveContent } from '@/core/domain/destructive-command'
+import { assertNoSecrets } from '@/core/domain/secret-scan'
 import { AuthoredFilesError, ListWriteError } from '@/core'
 import type { AuthoredFile, Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
 import { coreCapabilities } from '@/shared/core-capabilities'
@@ -255,6 +256,7 @@ const toPbStep = (s: NewVersionInput['steps'][number]) => ({
 export const listWriteRemote = {
   async addVersion(listId: string, input: NewVersionInput): Promise<Version> {
     assertNoDestructiveContent(input.steps, input.authored)
+    assertNoSecrets(input.steps, input.authored, input.meta)
     if (input.authored !== undefined) await assertCoreAcceptsAuthored()
     const res = await callAddVersion({
       listId,
@@ -280,6 +282,7 @@ export const listWriteRemote = {
   },
   async create(input: CreateListInput): Promise<List> {
     assertNoDestructiveContent(input.steps, input.authored)
+    assertNoSecrets(input.steps, input.authored, { title: input.title, desc: input.desc, tags: input.tags })
     if (input.authored !== undefined) await assertCoreAcceptsAuthored()
     const res = await callCreate({
       ownerId: input.ownerId,

@@ -30,7 +30,7 @@ import { SITE_URL, detailByRefOrMoved, toProposed, type McpItemInput } from '../
 import { mcpCreateList, normalizeTags } from './create'
 import { rowsToProposed } from './patch-block'
 import { headVersion } from './base-version'
-import { authoredError, destructiveError, ownedList, writeProposed } from './write'
+import { authoredError, contentError, ownedList, writeProposed } from './write'
 
 export interface McpSkillFileInput {
   path: string
@@ -208,7 +208,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         note: `Created as a draft with its files in version 1 — only you see it. To let agents install it, publish it with publish_lists (confirm:true); moderation may hold a new author's list for review first. After that: ${installLine(res.ref)}`,
       }
     } catch (e) {
-      const refused = destructiveError(e) ?? authoredError(e)
+      const refused = contentError(e) ?? authoredError(e)
       if (refused) return refused
       throw e
     }

@@ -16,6 +16,7 @@ import { BLOCKS_UNREADABLE, readSuggestionBlocks } from '../suggestion-blocks'
 import { applyFieldValue } from '../suggestion-apply'
 import { gitPort, ownerHandle } from './shared'
 import { NOREPLY_DOMAIN } from '@/shared/site'
+import { findSecretInContent } from '@/core/domain/secret-scan'
 
 /**
  * ПУНКТЫ предложения: правка редактором и применение предложенной правки одной
@@ -92,6 +93,9 @@ async function writeSuggestionItems(
   lang: Lang,
   message: string,
 ): Promise<string | null> {
+  // Одна точка на правку предложения и на «применить предложенную правку»: ключ
+  // доступа в ветку чужого списка не пишется ни тем, ни другим путём.
+  if (findSecretInContent(proposed)) return 'secret'
   const tpl = sug.template
   const owner = await ownerHandle(tpl.ownerId)
 

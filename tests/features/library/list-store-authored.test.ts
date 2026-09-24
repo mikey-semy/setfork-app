@@ -101,3 +101,23 @@ describe('адаптер записи: файлы автора', () => {
     expect(l).not.toHaveProperty('authoredApplied')
   })
 })
+
+describe('адаптер записи: ключ доступа', () => {
+  // Ключ собран из кусков: литерал остановил бы наш собственный push (push protection).
+  const KEY = ['sk', 'or', 'v1', Array.from({ length: 64 }, (_, i) => '0123456789abcdef'[(i * 7 + 3) % 16]).join('')].join('-')
+
+  it('в файле, в шаге, в названии — отказ ДО ядра, с местом', async () => {
+    const leak = { path: 'references/setup.md', content: new TextEncoder().encode(`# s\n${KEY}\n`), executable: false }
+    await expect(listWriteRemote.addVersion('l', { note: '', steps: [], authored: [leak] })).rejects.toMatchObject({
+      name: 'SecretFoundError',
+      path: 'references/setup.md',
+    })
+    await expect(listWriteRemote.addVersion('l', { note: '', steps: [{ title: { ru: 'x' }, command: `curl -H "Bearer ${KEY}"` }] as never })).rejects.toMatchObject({
+      stepIndex: 1,
+    })
+    await expect(listWriteRemote.create({ ...LIST, desc: { ru: KEY } })).rejects.toMatchObject({ name: 'SecretFoundError', stepIndex: 0 })
+    await expect(listWriteRemote.addVersion('l', { note: '', steps: [], meta: { title: { ru: KEY } } })).rejects.toMatchObject({ stepIndex: 0 })
+    expect(h.sent).toEqual([])
+  })
+})
+

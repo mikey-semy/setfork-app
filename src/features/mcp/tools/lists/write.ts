@@ -11,6 +11,7 @@ import { db, templates, type ProposedItem } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { AuthoredFilesError, canEditList, ListWriteError, type AuthoredFile } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
+import { SecretFoundError } from '@/core/domain/secret-scan'
 import { listStore } from '@/features/library/list-store'
 // Единый конвертер шагов на запись — тот же, что у веба, садовника и предложений.
 // Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
@@ -18,15 +19,22 @@ import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { resolveListRefOrMoved } from '../shared'
 import { duplicateBid } from './draft-store'
 
-/** Отказ стража разрушительных команд → ответ инструмента. Это не сбой, а
- *  вердикт: агенту нужно назвать причину, а не увидеть стектрейс. Опасное в файле из
- *  `scripts/` называется файлом: «шаг 0» агент не нашёл бы нигде. */
-export const destructiveError = (e: unknown): { error: string } | null =>
-  e instanceof DestructiveCommandError
-    ? e.path
+/** Отказ стража содержимого → ответ инструмента. Это не сбой, а вердикт: агенту нужно
+ *  назвать причину, а не увидеть стектрейс. Место — шаг или файл: «шаг 0» агент не нашёл
+ *  бы нигде. У ключа доступа показывается только начало — сам ключ не повторяется. */
+export const contentError = (e: unknown): { error: string } | null => {
+  if (e instanceof DestructiveCommandError)
+    return e.path
       ? { error: `refused: ${e.path} has a destructive command (${e.reason}): ${e.fragment}` }
       : { error: `refused: step ${e.stepIndex} has a destructive command (${e.reason}): ${e.fragment}` }
-    : null
+  if (e instanceof SecretFoundError) {
+    const where = e.path ? `${e.path}, line ${e.match.line}` : e.stepIndex ? `step ${e.stepIndex}` : 'the list title or description'
+    return {
+      error: `refused: ${where} contains what looks like an access key for ${e.match.provider} (${e.match.rule}): ${e.match.fragment} — remove it; if it was ever shared, revoke it with the provider`,
+    }
+  }
+  return null
+}
 
 /** Отказ по файлам автора → ответ инструмента: набор не прошёл правило дерева (текст ядра
  *  называет файл и предел) или ядро файлов не понимает — тогда повтор сейчас бесполезен. */
@@ -115,7 +123,7 @@ export async function writeProposed(
     // причину. Раньше он превращался в ответ только в ветке правки черновика; когда та
     // ушла, стражевой отказ полетел исключением — то есть агент получал бы стектрейс
     // вместо «отказано, потому что».
-    const refused = destructiveError(e) ?? authoredError(e)
+    const refused = contentError(e) ?? authoredError(e)
     if (refused) return refused
     throw e
   }

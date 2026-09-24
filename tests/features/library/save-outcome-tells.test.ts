@@ -45,6 +45,19 @@ describe('после сохранения человеку сказано, чт�
     // обязан назваться, а не исчезнуть из-за ложной проверки на пустоту.
     expect(saveOutcomeQuery({ overwrote: false, destructiveStep: 1 })).toContain('step=1')
   })
+
+  it('ключ доступа — назван вид ключа и шаг, и он важнее команды', () => {
+    const q = saveOutcomeQuery({ overwrote: false, destructiveStep: 2, secret: { step: 5, rule: 'github-pat' } })
+    expect(q).toContain('warn=secret')
+    expect(q).toContain('step=5')
+    expect(q).toContain('kind=github-pat')
+    // Предупреждение одно: два `step=` в адресе странице не разобрать.
+    expect(q).not.toContain('warn=destructive')
+  })
+
+  it('ключ в названии (шаг 0) — не путается с «ключа нет»', () => {
+    expect(saveOutcomeQuery({ overwrote: false, destructiveStep: null, secret: { step: 0, rule: 'aws-access-token' } })).toContain('warn=secret')
+  })
 })
 
 /**
