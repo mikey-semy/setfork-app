@@ -1,11 +1,11 @@
 {
   "version": 1,
   "skills": {
-    "review-kit": {
-      "source": "mikey-semy/review-kit",
+    "finetooth": {
+      "source": "mikey-semy/finetooth",
       "sourceType": "github",
-      "skillPath": "skills/review-kit/SKILL.md",
-      "computedHash": "a1e5b93aa6299dcb9d52258fb8ac7bc60933d50c5e8f1d30543244662ac91ad7"
+      "skillPath": "skills/finetooth/SKILL.md",
+      "computedHash": "859fcd7fb7941a54da6d5c7a30a6f31c641c3686da7fa69cffc18ee060daf3c4"
     }
   }
 }

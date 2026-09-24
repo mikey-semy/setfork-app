@@ -29,6 +29,6 @@ test-results/
 playwright-report/
 itest-run.log
 
-# байткод Python (scripts/review) — не исходник
+# байткод Python (скилл finetooth) — не исходник
 __pycache__/
 *.pyc
