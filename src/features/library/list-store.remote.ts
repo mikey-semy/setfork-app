@@ -4,7 +4,7 @@ import { coreTransport } from '@/shared/core-transport'
 import { assertNoDestructiveContent } from '@/core/domain/destructive-command'
 import { AuthoredFilesError, ListWriteError } from '@/core'
 import type { AuthoredFile, Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
-import { GitCore } from '@/shared/gen/git_pb'
+import { coreCapabilities } from '@/shared/core-capabilities'
 import {
   ListRead,
   ListWrite,
@@ -21,34 +21,24 @@ import {
 const transport = coreTransport()
 const client = createClient(ListRead, transport)
 const writeClient = createClient(ListWrite, transport)
-const gitClient = createClient(GitCore, transport)
-
 /**
- * ФАЙЛЫ АВТОРА — только ядру, которое их понимает, и с проверкой, что поняло.
+ * ФАЙЛЫ АВТОРА — только ядру, которое их понимает.
  *
  * Незнакомое поле proto3 теряется МОЛЧА (доказано на этом проекте не раз): старое ядро
- * записало бы версию с файлами родителя, ответило бы успехом, и вызывающий считал бы, что
- * положил свои. Поэтому два замка:
- *  • ДО записи — ядро подтверждает возможность. Без кэша, как у ролей пуша
- *    (`features/git/capabilities.ts`): ядро могут откатить назад в любую минуту;
- *  • ПОСЛЕ — эхо `authored_applied` в ответе. Оно ловит откат между проверкой и записью:
- *    версия тогда уже легла, но вызывающий хотя бы узнаёт об этом, а не верит успеху.
+ * записало бы версию с файлами родителя и ответило бы успехом. Поэтому два замка:
+ *  • ДО записи — ядро подтверждает возможность (`shared/core-capabilities`, без кэша);
+ *  • ПОСЛЕ — эхо `authored_applied` уезжает вызывающему в ответе. Не исключением: версия к
+ *    этому моменту уже записана, и исключение отрезало бы барьеры фасада (модерация) от
+ *    записанного. Вызывающий, который слал набор, обязан эхо прочитать и сказать правду.
  */
-const CAP_TIMEOUT_MS = 1000
-
 async function assertCoreAcceptsAuthored(): Promise<void> {
-  const res = await gitClient.getCapabilities({}, { timeoutMs: CAP_TIMEOUT_MS }).catch(() => null)
-  if (res?.acceptsAuthoredFiles !== true) throw new AuthoredFilesError('unsupported')
+  const caps = await coreCapabilities()
+  if (!caps) throw new AuthoredFilesError('unsupported', 'the git core did not answer whether it accepts author files')
+  if (!caps.acceptsAuthoredFiles) throw new AuthoredFilesError('unsupported')
 }
 
 const toPbAuthored = (files: AuthoredFile[] | undefined) =>
   files === undefined ? undefined : { files: files.map((f) => ({ path: f.path, content: f.content, executable: f.executable })) }
-
-function assertApplied(sent: AuthoredFile[] | undefined, applied: boolean): void {
-  if (sent !== undefined && !applied) {
-    throw new AuthoredFilesError('unsupported', 'the core wrote the version without the files — it was replaced by one that does not understand them; the version keeps the previous files')
-  }
-}
 
 /** Отказ ядра по набору файлов — с его текстом: он называет файл и предел. */
 function authoredRefusal(e: unknown): never | void {
@@ -286,8 +276,7 @@ export const listWriteRemote = {
       // Нет поля — ядро переносит файлы из родителя; есть — заменяет набор этим коммитом.
       authored: toPbAuthored(input.authored),
     })
-    assertApplied(input.authored, res.authoredApplied)
-    return toVersion(res)
+    return input.authored === undefined ? toVersion(res) : { ...toVersion(res), authoredApplied: res.authoredApplied }
   },
   async create(input: CreateListInput): Promise<List> {
     assertNoDestructiveContent(input.steps, input.authored)
@@ -311,7 +300,6 @@ export const listWriteRemote = {
       moderation: input.moderation ?? '',
       authored: toPbAuthored(input.authored),
     })
-    assertApplied(input.authored, res.authoredApplied)
-    return toList(res)
+    return input.authored === undefined ? toList(res) : { ...toList(res), authoredApplied: res.authoredApplied }
   },
 }

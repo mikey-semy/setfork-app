@@ -54,9 +54,10 @@ export interface Skill {
 /** Путь авторского файла — ровно `<каталог>/<имя>`, как принимает ядро (ADR-0028). */
 export const AUTHORED_PATH = /^(scripts|references|assets)\/[^/]+$/
 /** Имя файла в заголовке ustar — не длиннее 100 байт (каталоги уходят в поле `prefix`).
- *  Ядро длину имени не ограничивает, а кириллица набирает 100 байт на ~50 символах. */
+ *  Запись ядро с 24.09 держит тем же пределом (`AUTHORED_NAME_MAX_BYTES`); пушем длинное
+ *  имя пройти ещё может — его и отсеивает архив. Кириллица набирает 100 байт на ~50 знаках. */
 const TAR_NAME_MAX_BYTES = 100
-const fitsArchive = (path: string): boolean => new TextEncoder().encode(path.slice(path.lastIndexOf('/') + 1)).length <= TAR_NAME_MAX_BYTES
+export const fitsArchive = (path: string): boolean => new TextEncoder().encode(path.slice(path.lastIndexOf('/') + 1)).length <= TAR_NAME_MAX_BYTES
 
 /**
  * Авторские файлы, которые можно положить в архив.

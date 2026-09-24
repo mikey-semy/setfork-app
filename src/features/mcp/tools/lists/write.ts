@@ -8,6 +8,7 @@
 import 'server-only'
 import { eq } from 'drizzle-orm'
 import { db, templates, type ProposedItem } from '@/shared/db'
+import type { LocaleText } from '@/shared/i18n'
 import { AuthoredFilesError, canEditList, ListWriteError, type AuthoredFile } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { listStore } from '@/features/library/list-store'
@@ -33,7 +34,7 @@ export const authoredError = (e: unknown): { error: string } | null =>
   e instanceof AuthoredFilesError
     ? e.code === 'invalid'
       ? { error: `refused: the files do not fit the skill tree — ${e.detail}` }
-      : { error: `the git core cannot take author files right now${e.detail ? ` (${e.detail})` : ''} — nothing new was written with them; try again after the core is updated` }
+      : { error: `refused before writing: ${e.detail || 'the git core does not accept author files yet'} — nothing was written; the blocks can still be saved without files (update_list / patch_list)` }
     : null
 
 /** Список во владении пользователя (для записи) + его версии.
@@ -69,7 +70,8 @@ export async function writeProposed(
   slug: string,
   proposed: ProposedItem[],
   note: string,
-  meta: { tags: string[]; ordered: boolean },
+  // title/desc — только когда их меняют: патч меты, отсутствующее поле ядро не трогает.
+  meta: { tags: string[]; ordered: boolean; title?: LocaleText; desc?: LocaleText },
   // Версия, от которой собран состав. ОБЯЗАТЕЛЬНА, а не «если знаете»: необязательной
   // она была ровно один вызов, и `update_list` её не передавал — полная замена уезжала
   // в ядро без сверки и молча вытесняла чужую версию, пока патч был защищён.
@@ -117,12 +119,13 @@ export async function writeProposed(
     if (refused) return refused
     throw e
   }
-  // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающий
-  // контент, залитый через MCP, не минует модерацию, и здесь её дублировать не нужно.
+  // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающие
+  // БЛОКИ, залитые через MCP, модерацию не минуют. ⚠️ Тексты файлов автора (references/,
+  // assets/) модерация не читает — ни здесь, ни на push: это открытый вопрос ADR-0028.
   const { enqueueReindex } = await import('@/features/library/jobs')
   await enqueueReindex(tpl.id)
   // Статус отдаём НАСТОЯЩИЙ: он был захардкожен 'published', и черновик, получив версию,
   // отвечал агенту «опубликован» — то есть врал про видимость ровно там, где агент решает,
   // показывать ли ссылку человеку.
-  return { ref: `${handle}/${slug}`, status: tpl.status, version: ver.version }
+  return { ref: `${handle}/${slug}`, status: tpl.status, version: ver.version, authoredApplied: ver.authoredApplied }
 }

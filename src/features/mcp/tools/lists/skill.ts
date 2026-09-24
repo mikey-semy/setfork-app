@@ -4,19 +4,31 @@
 // Раньше скилл собирался в два приёма: текст — `create_list`/`patch_list`, файлы —
 // только `git push`. Между ними жила версия без файлов, и её успевали поставить. Здесь
 // оба приезжают одним коммитом: новый список рождается сразу с файлами, у существующего
-// набор заменяется той же версией, что и блоки.
+// набор меняется той же версией, что и блоки.
 //
-// Правил своих нет: владение, архив, сверка версии, страж исполняемого — в общих путях
-// `create`/`write`; правило дерева (каталоги, текст, число, размер) судит ядро, тем же
-// кодом, что на push. Здесь — только разбор входа и дружелюбный ранний отказ.
+// ⚠️ ФАЙЛЫ — ДОПОЛНЕНИЕМ, А НЕ ЗАМЕНОЙ. Прочитать текущий набор агенту до недавнего было
+// нечем, и «полный набор на входе» стирал всё, чего агент не знал: попросили добавить
+// один скрипт — исчезли три, пришедшие пушем, а «вернуть версию» файлов не возвращает.
+// Поэтому `files` добавляет и заменяет названные, `removeFiles` удаляет названные, а
+// замена целиком — только явным `replaceFiles: true`. Ядру уходит собранный ПОЛНЫЙ набор:
+// его контракт (замена) проще и один на всех, а слияние — забота того, кто знает намерение.
+//
+// Своих правил нет: владение, архив, сверка версии, страж исполняемого — в общих путях
+// `create`/`write`; правило дерева судит ядро, тем же кодом, что на push. Здесь — разбор
+// входа, слияние набора и дружелюбный ранний отказ.
 
 import 'server-only'
-import type { AuthoredFile } from '@/core'
-import { AUTHORED_PATH } from '@/features/library/skill'
-import { detailByRefOrMoved, toProposed, type McpItemInput } from '../shared'
-import { mcpCreateList } from './create'
+import { and, eq } from 'drizzle-orm'
+import { isPubliclyVisible, type AuthoredFile } from '@/core'
+import { db, listDrafts } from '@/shared/db'
+import { detectTextLang } from '@/shared/lib/translit'
+import { AUTHORED_PATH, fitsArchive } from '@/features/library/skill'
+import { assignCatalogByName } from '@/features/catalogs/assign'
+import { gitCore } from '@/features/git/core'
+import { SITE_URL, detailByRefOrMoved, toProposed, type McpItemInput } from '../shared'
+import { mcpCreateList, normalizeTags } from './create'
 import { rowsToProposed } from './patch-block'
-import { headVersion, staleBase } from './base-version'
+import { headVersion } from './base-version'
 import { authoredError, destructiveError, ownedList, writeProposed } from './write'
 
 export interface McpSkillFileInput {
@@ -24,6 +36,7 @@ export interface McpSkillFileInput {
   content: string
   /** 'utf8' (по умолчанию) — текст как есть; 'base64' — точные байты. */
   encoding?: 'utf8' | 'base64'
+  /** Не задано — у существующего файла прежний режим, у нового — обычный. */
   executable?: boolean
 }
 
@@ -38,42 +51,106 @@ export interface McpPublishSkillInput {
   ordered?: boolean
   lang?: string
   catalog?: string
-  /** Блоки. У существующего списка не заданы — остаются текущие, меняются только файлы. */
+  /** Блоки. У существующего списка не заданы — остаются текущие. */
   items?: McpItemInput[]
-  /** ПОЛНЫЙ набор файлов автора: заменяет прежний целиком, `[]` убирает все. */
-  files: McpSkillFileInput[]
+  /** Добавить или заменить эти файлы; прочие остаются. */
+  files?: McpSkillFileInput[]
+  /** Удалить эти файлы (пути). */
+  removeFiles?: string[]
+  /** true — набор файлов ЗАМЕНЯЕТСЯ целиком на `files` (прочие удаляются). */
+  replaceFiles?: boolean
   note?: string
+}
+
+/** Символы, которые ломают отображение имени или распаковку: управляющие, `\` и символы
+ *  направления текста. Правило то же, что у ядра (`input_name_ok`); здесь — ранний отказ. */
+const BAD_NAME_CHAR = /[\p{Cc}\\‎‏‪-‮⁦-⁩]/u
+const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/
+
+function pathProblem(path: string, executable: boolean | undefined): string | null {
+  const name = path.slice(path.lastIndexOf('/') + 1)
+  if (!AUTHORED_PATH.test(path) || path.split('/').includes('..'))
+    return `bad file path "${path}": files live directly in scripts/, references/ or assets/ — one level, no subfolders`
+  if (name.startsWith('.')) return `bad file name "${path}": a name must not start with a dot`
+  if (BAD_NAME_CHAR.test(name)) return `bad file name "${path}": control, backslash or text-direction characters`
+  // Длиннее — лёг бы в дерево, но не в архив скилла: установился бы скилл без файла.
+  if (!fitsArchive(path)) return `file name too long "${path}": at most 100 bytes (about 50 Cyrillic letters)`
+  if (executable && !path.startsWith('scripts/')) return `"${path}" cannot be executable: only files in scripts/ may be`
+  return null
 }
 
 /** Вход → байты с ранним отказом. Число и размер не проверяем: их судит ядро, а вторая
  *  копия пределов здесь однажды разошлась бы с его константами. */
-export function decodeSkillFiles(files: McpSkillFileInput[]): { files: AuthoredFile[] } | { error: string } {
+export function decodeSkillFiles(files: McpSkillFileInput[]): { files: (AuthoredFile & { execGiven: boolean })[] } | { error: string } {
   const seen = new Set<string>()
-  const out: AuthoredFile[] = []
+  const out: (AuthoredFile & { execGiven: boolean })[] = []
   for (const f of files) {
     const path = (f.path ?? '').trim()
-    if (!AUTHORED_PATH.test(path) || path.split('/').includes('..')) {
-      return { error: `bad file path "${path}": files live directly in scripts/, references/ or assets/ — one level, no subfolders` }
-    }
+    const problem = pathProblem(path, f.executable)
+    if (problem) return { error: problem }
     if (seen.has(path)) return { error: `the file "${path}" is listed twice` }
     seen.add(path)
-    const content = f.encoding === 'base64' ? new Uint8Array(Buffer.from(f.content ?? '', 'base64')) : new TextEncoder().encode(f.content ?? '')
+    let content: Uint8Array
+    if (f.encoding === 'base64') {
+      const raw = (f.content ?? '').replace(/\s+/g, '')
+      // Buffer.from молча глотает мусор: текст с ошибочным encoding стал бы «бинарным».
+      if (!BASE64.test(raw) || raw.length % 4 !== 0) return { error: `"${path}" is not valid base64 — send text with encoding "utf8"` }
+      content = new Uint8Array(Buffer.from(raw, 'base64'))
+    } else {
+      content = new TextEncoder().encode(f.content ?? '')
+    }
     // Двоичное дерево скилла не примет (ни с сайта, ни пушем): признак тот же, что у git.
     if (content.includes(0)) return { error: `"${path}" is a binary file — a skill keeps text only` }
-    out.push({ path, content, executable: f.executable === true })
+    out.push({ path, content, executable: f.executable === true, execGiven: f.executable !== undefined })
   }
   return { files: out }
 }
+
+const same = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((x, i) => x === b[i])
+
+/** Текущий набор + правка → полный набор для ядра и отчёт о разнице. */
+export function mergeSkillFiles(
+  current: AuthoredFile[],
+  given: (AuthoredFile & { execGiven: boolean })[],
+  remove: string[],
+  replace: boolean,
+): { files: AuthoredFile[]; added: string[]; changed: string[]; removed: string[]; unknown: string[] } {
+  const byPath = new Map(current.map((f) => [f.path, f]))
+  const next = new Map<string, AuthoredFile>(replace ? [] : current.map((f) => [f.path, f]))
+  const added: string[] = []
+  const changed: string[] = []
+  for (const g of given) {
+    const was = byPath.get(g.path)
+    const executable = g.execGiven ? g.executable : (was?.executable ?? false)
+    next.set(g.path, { path: g.path, content: g.content, executable })
+    if (!was) added.push(g.path)
+    else if (!same(was.content, g.content) || was.executable !== executable) changed.push(g.path)
+  }
+  const unknown: string[] = []
+  for (const p of remove) {
+    if (next.has(p)) next.delete(p)
+    else unknown.push(p)
+  }
+  const removed = current.map((f) => f.path).filter((p) => !next.has(p))
+  return { files: [...next.values()], added, changed, removed, unknown }
+}
+
+const installLine = (ref: string) => `npx skills add ${SITE_URL}/${ref}/skill.tar.gz`
+
+/** Ядро не подтвердило набор после записи: версия уже лежит, но без файлов. Правду — агенту. */
+const notApplied = (what: string) => ({
+  error: `${what} was written WITHOUT the files: the git core was replaced by one that does not take them between the check and the write. Nothing else is wrong — call publish_skill again for the files once the core is updated.`,
+})
 
 /** ОПУБЛИКОВАТЬ СКИЛЛ: блоки + файлы автора одной версией. */
 export async function mcpPublishSkill(userId: string, input: McpPublishSkillInput) {
   const decoded = decodeSkillFiles(input.files ?? [])
   if ('error' in decoded) return decoded
-  const authored = decoded.files
-  const files = authored.map((f) => f.path)
 
   if (!input.list) {
     if (!input.title?.trim()) return { error: 'title is required for a new skill (or pass list to update an existing one)' }
+    if (input.removeFiles?.length) return { error: 'removeFiles makes no sense for a new skill — it has no files yet' }
+    const authored = decoded.files.map(({ path, content, executable }) => ({ path, content, executable }))
     try {
       const res = await mcpCreateList(userId, {
         title: input.title,
@@ -88,11 +165,14 @@ export async function mcpPublishSkill(userId: string, input: McpPublishSkillInpu
         authored: authored.length ? authored : undefined,
       })
       if ('error' in res) return res
+      if (authored.length && res.authoredApplied !== true) return notApplied(`the draft ${res.ref} (version 1)`)
+      const { authoredApplied: _applied, ...rest } = res
       return {
-        ...res,
+        ...rest,
         version: 1,
-        files,
-        note: 'Created as a private draft with its files in version 1. Publish it (publish_lists) and make it public to let agents install it: npx skills add <site>/<ref>/skill.tar.gz',
+        files: { added: authored.map((f) => f.path) },
+        url: `${SITE_URL}/${res.ref}`,
+        note: `Created as a draft with its files in version 1 — only you see it. To let agents install it, publish it with publish_lists (confirm:true); moderation may hold a new author's list for review first. After that: ${installLine(res.ref)}`,
       }
     } catch (e) {
       const refused = destructiveError(e) ?? authoredError(e)
@@ -108,10 +188,43 @@ export async function mcpPublishSkill(userId: string, input: McpPublishSkillInpu
   const { tpl } = found
   if (input.baseVersion === undefined) return { error: 'baseVersion is required to update a list — take it from get_list' }
   const current = headVersion(tpl)
-  if (input.baseVersion !== current) return staleBase(current, input.baseVersion, 'replacement')
+  if (input.baseVersion !== current) {
+    return { error: `list changed: it is at version ${current}, your call is based on ${input.baseVersion} — read it again (get_list) and repeat` }
+  }
+  // Накопленные правки рабочей копии: версия поверх них сделала бы их устаревшими, и
+  // publish_draft потом отказывал бы всегда. Решать, что с ними, — не этому вызову.
+  const [pending] = await db
+    .select({ id: listDrafts.id })
+    .from(listDrafts)
+    .where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, userId)))
+    .limit(1)
+  if (pending) {
+    return { error: 'you have pending edits on this list (get_list shows pendingEdits) — publish them with publish_draft or drop them with discard_draft first' }
+  }
 
-  // Блоки не пришли — остаются текущие ТОЙ ЖЕ доменной формой (переводы, содержимое),
-  // меняются только файлы. Через плоскую форму MCP они потеряли бы переводы.
+  // Текущий набор — из дерева текущей версии: слияние без него стёрло бы то, чего агент
+  // не назвал. Не ответило ядро — не пишем вслепую.
+  const wantsFiles = decoded.files.length > 0 || (input.removeFiles?.length ?? 0) > 0 || input.replaceFiles === true
+  let merged: ReturnType<typeof mergeSkillFiles> | null = null
+  if (wantsFiles) {
+    const have = await gitCore.authoredFiles({ owner: handle, slug }, current).catch(() => null)
+    if (!have) return { error: 'could not read the current files of this list from the git core — nothing was written; try again' }
+    merged = mergeSkillFiles(have, decoded.files, input.removeFiles ?? [], input.replaceFiles === true)
+    if (merged.unknown.length) return { error: `no such files to remove: ${merged.unknown.join(', ')}` }
+  }
+
+  // Мета — патчем: title/desc только если их меняют, на языке входа, прочие переводы целы.
+  const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${input.title ?? ''} ${input.desc ?? ''}`)
+  const title = input.title?.trim() ? { ...(tpl.title as Record<string, string>), [lang]: input.title.trim() } : undefined
+  const desc = input.desc !== undefined ? { ...(tpl.desc as Record<string, string>), [lang]: input.desc.trim() } : undefined
+
+  const filesChanged = merged ? merged.added.length + merged.changed.length + merged.removed.length > 0 : false
+  if (!input.items && !filesChanged && !title && !desc && !input.tags && input.ordered === undefined) {
+    if (input.catalog) await assignCatalogByName(tpl.id, userId, input.catalog)
+    return { ref: `${handle}/${slug}`, version: current, note: 'Nothing to change — the files and blocks are already like this; no version was made.' }
+  }
+
+  // Блоки не пришли — остаются текущие ТОЙ ЖЕ доменной формой (переводы, содержимое).
   let proposed
   if (input.items) {
     proposed = toProposed(input.items)
@@ -125,14 +238,31 @@ export async function mcpPublishSkill(userId: string, input: McpPublishSkillInpu
     handle,
     slug,
     proposed,
-    input.note?.trim() || 'skill files via API',
+    input.note?.trim() || 'skill via API',
     {
-      tags: input.tags ? input.tags.map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8) : tpl.tags,
+      tags: input.tags ? normalizeTags(input.tags) : tpl.tags,
       ordered: input.ordered ?? tpl.ordered,
+      ...(title ? { title } : {}),
+      ...(desc ? { desc } : {}),
     },
     input.baseVersion,
-    authored,
+    // Файлы не трогали — поля нет: ядро перенесёт набор родителя как есть.
+    merged && filesChanged ? merged.files : undefined,
   )
   if ('error' in res) return res
-  return { ...res, files, note: `Version ${res.version} carries the blocks and exactly these files — the previous file set was replaced.` }
+  if (merged && filesChanged && res.authoredApplied !== true) return notApplied(`version ${res.version}`)
+  const filed = input.catalog ? await assignCatalogByName(tpl.id, userId, input.catalog) : undefined
+  const { authoredApplied: _applied, ...rest } = res
+  return {
+    ...rest,
+    url: `${SITE_URL}/${handle}/${slug}`,
+    files: merged ? { added: merged.added, changed: merged.changed, removed: merged.removed, total: merged.files.length } : { unchanged: true },
+    catalog: input.catalog ? (filed ? input.catalog : `not found among your catalogs: ${input.catalog}`) : undefined,
+    note:
+      isPubliclyVisible(tpl)
+        ? `Version ${res.version} carries the blocks and files. Install: ${installLine(`${handle}/${slug}`)}`
+        : tpl.status === 'draft'
+          ? `Version ${res.version} carries the blocks and files; the list is still a draft — publish it with publish_lists to make it installable.`
+          : `Version ${res.version} carries the blocks and files; the list is not public (private or under moderation), so agents cannot install it without signing in.`,
+  }
 }
