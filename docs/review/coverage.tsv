@@ -426,6 +426,7 @@ src/features/changelog/seed.ts	V1i
 src/features/changelog/service.ts	V1i
 src/features/collab-store/adapter.ts	V4
 src/features/collab-store/store.ts	V4
+src/features/collab/AddCollaboratorForm.tsx	V4
 src/features/collab/CollaboratorsSection.tsx	V4
 src/features/collab/CommentActions.tsx	V4
 src/features/collab/CommentCard.tsx	V4
@@ -761,7 +762,9 @@ src/features/linkcheck/jobs.ts	V4
 src/features/linkcheck/probe.ts	V4
 src/features/linkcheck/service.ts	V4
 src/features/mcp/ApiTokensSection.tsx	H4b
+src/features/mcp/McpSettingsForm.tsx	H4b
 src/features/mcp/actions.ts	H4b
+src/features/mcp/admin-actions.ts	H4b
 src/features/mcp/council.ts	H4b
 src/features/mcp/gnome.ts	H4b
 src/features/mcp/patch.ts	H4
@@ -780,6 +783,7 @@ src/features/mcp/registry/runs.ts	H4b
 src/features/mcp/registry/server-info.ts	H4
 src/features/mcp/registry/sources.ts	H4b
 src/features/mcp/registry/suggestions.ts	H4b
+src/features/mcp/tools/commitics.ts	H4
 src/features/mcp/tools/index.ts	H4
 src/features/mcp/tools/issues.ts	H4b
 src/features/mcp/tools/lists/base-version.ts	H4
@@ -870,6 +874,7 @@ src/features/releases/ReleaseNotesGen.tsx	V1i
 src/features/releases/VersionSelect.tsx	V1i
 src/features/releases/actions.ts	V1i
 src/features/releases/changelog.ts	V1i
+src/features/releases/core.ts	V1i
 src/features/releases/queries.ts	V1i
 src/features/releases/tag-name.ts	V1i
 src/features/reports/ReportButton.tsx	V2
@@ -1013,6 +1018,7 @@ src/shared/auth/admin-handle.ts	H1
 src/shared/auth/admin.ts	H1
 src/shared/auth/api-token.ts	H1
 src/shared/auth/app-origin.ts	H1
+src/shared/auth/handle-input.ts	H1
 src/shared/auth/handle.ts	H1
 src/shared/auth/identities.ts	H1
 src/shared/auth/oauth-meta.ts	H1
@@ -1105,6 +1111,7 @@ src/shared/media/imgproxy.ts	V10
 src/shared/media/index.ts	V10
 src/shared/media/limits.ts	V10
 src/shared/media/s3.ts	V10
+src/shared/media/shrink-image.ts	V10
 src/shared/media/upload.ts	V10
 src/shared/moderation/publication-state.ts	V9b
 src/shared/nav/explore-section.ts	V12
@@ -1133,6 +1140,7 @@ src/shared/settings/kv.ts	V9
 src/shared/settings/landing.ts	V9
 src/shared/settings/linkcheck.ts	V9
 src/shared/settings/maintenance.ts	V9
+src/shared/settings/mcp.ts	V9
 src/shared/settings/media.ts	V9
 src/shared/settings/monetization.ts	V9
 src/shared/settings/search.ts	V9
@@ -1314,6 +1322,7 @@ tests/architecture/gate-reason-codes.test.ts	H12
 tests/architecture/gnomes-coupling.test.ts	H12
 tests/architecture/handle-check-one-canon.test.ts	H12
 tests/architecture/hint-dot-one-view.test.ts	H12
+tests/architecture/image-limit-vs-action-body.test.ts	H12
 tests/architecture/index-nulls-order.test.ts	H12
 tests/architecture/issue-write-one-path.test.ts	H12
 tests/architecture/jsonld-paths-follow-url-lang.test.ts	H12
@@ -1369,6 +1378,7 @@ tests/features/backoffice/ai-watch.itest.ts	V9d
 tests/features/backoffice/loops.itest.ts	V9d
 tests/features/badges/svg.test.ts	V7
 tests/features/changelog/journal.itest.ts	V1i
+tests/features/collab/add-collaborator-notify.itest.ts	V4
 tests/features/collab/issues-suggestions-paging.itest.ts	V4
 tests/features/collab/threads-keyset.itest.ts	V4
 tests/features/comments/anchor.test.ts	V3
@@ -1414,6 +1424,8 @@ tests/features/generation/chat-failed.test.tsx	V8c
 tests/features/generation/drafts-idempotent.itest.ts	V8c
 tests/features/generation/failure-note.test.tsx	V8c
 tests/features/generation/prompt-examples.test.ts	V8c
+tests/features/git/authored-files-read.mutants.json	H2
+tests/features/git/authored-files-read.test.ts	H2
 tests/features/git/branch-label.test.ts	H2
 tests/features/git/clone-dropdown.test.tsx	H2
 tests/features/git/core-capability.test.ts	H2
@@ -1457,6 +1469,7 @@ tests/features/library/catover-write-parity.itest.ts	V1d
 tests/features/library/change-summary.test.ts	V1k
 tests/features/library/closing-refs.test.ts	V1,V1k
 tests/features/library/commits-keyset.itest.ts	V1g
+tests/features/library/cover-section.test.tsx	V1k
 tests/features/library/create-reason.test.ts	V1k,V1d
 tests/features/library/create-refusal-keeps-input.test.ts	V1k,V1d
 tests/features/library/create-wire.test.ts	V1k,V1d
@@ -1522,6 +1535,7 @@ tests/features/library/search-ranking.itest.ts	V1g
 tests/features/library/selfgen-outcome.test.ts	V1h,V1k
 tests/features/library/semantic-order.itest.ts	V1g
 tests/features/library/set-verification-level.itest.ts	V1h
+tests/features/library/skill-load.test.ts	V1k
 tests/features/library/skill.test.ts	V1k
 tests/features/library/slug.test.ts	V1k
 tests/features/library/suggest-refusal-keeps-edit.test.ts	V1k
@@ -1606,6 +1620,7 @@ tests/features/settings/set-password.itest.ts	V11
 tests/features/tags/array-params.itest.ts	V5
 tests/features/watch/watch-visibility.itest.ts	V7b
 tests/features/watch/watcher-delivery.itest.ts	V7b
+tests/helpers/fake-image-api.ts	H12
 tests/helpers/reset-db.itest.ts	H12
 tests/helpers/reset-db.ts	H12
 tests/helpers/walk-src.ts	H12
@@ -1776,6 +1791,7 @@ tests/shared/ui/tab-nav.test.tsx	H7c
 tests/shared/ui/text-ops.test.ts	H7c
 tests/shared/ui/tooltip-touch.test.tsx	H7c
 tests/shared/ui/use-viewport-bottom.test.ts	H7c
+tests/shared/ui/user-handle-input.test.tsx	H7c
 tests/shared/version.test.ts	V12f
 tests/shared/voice.test.ts	V12f
 tests/shared/wiki-links.test.ts	V12f

@@ -948,6 +948,8 @@ export const JOB_TYPES = [
   // нельзя — пак уже принят, и всё дальнейшее является доставкой, а не записью
   // (карточка ревью git/008).
   'git_push',
+  // IndexNow: периодический проход, сообщающий поисковикам о новых версиях публичных списков.
+  'indexnow',
 ] as const
 export type JobType = (typeof JOB_TYPES)[number]
 
@@ -2531,6 +2533,29 @@ export const linkChecks = pgTable(
     index('link_checks_verdict_idx').on(t.verdict),
   ],
 )
+
+/**
+ * INDEXNOW: что уже сообщено поисковикам — по строке на список.
+ *
+ * Не одна отметка «когда был прошлый проход», а факт отправки по КАЖДОМУ списку. Список
+ * становится публичным не только правкой: смена видимости и одобрение модерации
+ * `updated_at` не двигают. С отметкой по времени правки такой список остался бы позади
+ * неё навсегда — ровно корень «забыли один путь», от которого проход и заведён. Здесь
+ * проход берёт индексируемые списки, которых нет в таблице или которые правились после
+ * отправки, — каким бы путём они ни стали публичными.
+ *
+ * `sentUpdatedAt` — `updated_at` СПИСКА на момент отправки, а не время отправки: правка,
+ * пришедшая между чтением и ответом поисковика, оставит `updated_at` новее — и список
+ * уйдёт ещё раз. Пишется из текстовой формы с полной точностью: JS-`Date` режет
+ * микросекунды, и сравнение «правился после отправки» было бы истинным всегда.
+ */
+export const indexnowSubmissions = pgTable('indexnow_submissions', {
+  templateId: uuid('template_id')
+    .primaryKey()
+    .references(() => templates.id, { onDelete: 'cascade' }),
+  sentUpdatedAt: timestamp('sent_updated_at', { withTimezone: true }).notNull(),
+  sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+})
 
 // Вхождение URL в контент списка. Пересобирается delete+insert per template
 // при харвесте (полная материализация — как suggestions.items).

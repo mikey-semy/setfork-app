@@ -16,19 +16,22 @@ import { resetTables } from '../../helpers/reset-db'
 vi.mock('@/shared/ai/provider', () => ({ getAiChatClient: async () => null, isAiAvailable: async () => true }))
 vi.mock('@/shared/email/mailer', () => ({ sendMail: vi.fn(async () => {}) }))
 
-const { agentActions, db, templates, users } = await import('@/shared/db')
+const { agentActions, appSettings, db, templates, users } = await import('@/shared/db')
 const { setLoopDryRun } = await import('@/shared/agents/policy')
 const { runTriplesSweep } = await import('@/features/knowledge/service')
 const { runLinkcheckSweep } = await import('@/features/linkcheck/service')
 const { runWeeklyDigestSweep } = await import('@/features/digest/service')
 const { refreshChangelog } = await import('@/features/changelog/service')
+const { runIndexNowPass } = await import('@/features/library/indexnow')
 const { saveSettings } = await import('@/shared/settings/kv')
 
 const journalFor = async (loop: string) =>
   (await db.select().from(agentActions)).filter((a) => a.loop === loop)
 
 beforeEach(async () => {
-  await resetTables([agentActions, templates, users])
+  // Настройки — тоже: петли держат в них тумблеры и отступы, и чужой хвост (например,
+  // отступ IndexNow после отказа) подменил бы проверяемую ветку.
+  await resetTables([agentActions, appSettings, templates, users])
 })
 
 describe('сухой прогон уважает каждая петля', () => {
@@ -61,6 +64,24 @@ describe('сухой прогон уважает каждая петля', () =>
     expect((await journalFor('digest'))[0]?.resultStatus).toBe('dry-run')
   })
 
+  it('IndexNow: включён сухой прогон → поисковикам ничего не уходит', async () => {
+    // Ключ задан и есть что отправить — иначе проверялся бы выключенный проход, а не
+    // сухой прогон. Отправка падает, если её позовут.
+    vi.stubEnv('INDEXNOW_KEY', 'dry-run-key-1')
+    try {
+      const [u] = await db.insert(users).values({ handle: 'dryrun' }).returning({ id: users.id })
+      await db.insert(templates).values({ ownerId: u.id, slug: 'public-one', title: { en: 'p' }, status: 'published', visibility: 'public', currentVersion: 1 })
+      await setLoopDryRun('indexnow', true)
+      const res = await runIndexNowPass(async () => {
+        throw new Error('отправка вызвана при сухом прогоне')
+      })
+      expect(res.status).toBe('dry-run')
+      expect((await journalFor('indexnow'))[0]?.resultStatus).toBe('dry-run')
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('changelog: включён сухой прогон → в сеть не идём', async () => {
     // Петля включается настройками, иначе проверялся бы выключенный тумблер, а не
     // сухой прогон (находка A1 линзы 06 — эта петля политику не читала вовсе).
@@ -89,7 +110,7 @@ describe('сухой прогон уважает каждая петля', () =>
  * предметной проверки. Долг при этом виден списком, а не растворён в умолчании.
  */
 describe('покрытие контракта', () => {
-  const COVERED = new Set(['triples', 'linkcheck', 'digest', 'changelog'])
+  const COVERED = new Set(['triples', 'linkcheck', 'digest', 'changelog', 'indexnow'])
   // Долг на 13.08.2026: у этих петель сухой прогон читается (проверено grep по
   // loopPolicy/dryRun), но предметного теста нет. Список можно только СОКРАЩАТЬ.
   const DEBT = new Set(['gardener', 'selfgen', 'feedpull', 'finance', 'chronicle', 'aiwatch', 'partners'])
