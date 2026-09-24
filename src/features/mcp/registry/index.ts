@@ -7,6 +7,7 @@ import { registerChecks } from './checks'
 import { registerSources } from './sources'
 import { registerRuns } from './runs'
 import { registerIssues } from './issues'
+import { registerReleases } from './releases'
 import { registerPrompts } from './prompts'
 import { registerResources } from './resources'
 
@@ -34,6 +35,7 @@ export function registerTools(server: Parameters<typeof toolKit>[0]) {
   registerSources(kit)
   registerRuns(kit)
   registerIssues(kit)
+  registerReleases(kit)
 }
 
 /**

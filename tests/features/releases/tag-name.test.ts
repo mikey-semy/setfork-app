@@ -39,3 +39,11 @@ describe('TAG_RE (форма имени)', () => {
     expect(isReservedTag('v20')).toBe(true)
   })
 })
+
+describe('isValidTag (что примет ядро)', () => {
+  it('алфавит TAG_RE плюс три запрета ядра: ведущий «-», завершающая точка, «..»', async () => {
+    const { isValidTag } = await import('@/features/releases/tag-name')
+    for (const ok of ['v1.2.0', '1.0', 'v2-beta', 'release_1']) expect(isValidTag(ok), ok).toBe(true)
+    for (const bad of ['-rc1', '1.2.', 'a..b', '', 'с пробелом']) expect(isValidTag(bad), bad).toBe(false)
+  })
+})

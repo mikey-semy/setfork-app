@@ -5,6 +5,7 @@ import { Sparkles } from 'lucide-react'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import type { Lang } from '@/shared/i18n'
 import { generateReleaseNotes } from './actions'
+import { RELEASE_NOTES_MAX } from './tag-name'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Spinner } from '@/shared/ui/Spinner'
 
@@ -71,7 +72,7 @@ export function ReleaseNotesGen({
         defaultValue={notes}
         rows={8}
         placeholder={labels.placeholder}
-        maxLength={50000}
+        maxLength={RELEASE_NOTES_MAX}
         lang={lang}
         refScope={{ owner, slug }}
       />

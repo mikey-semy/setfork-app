@@ -64,6 +64,8 @@ const EXPECTED = [
   'register_source', 'list_sources', 'start_run', 'check_step', 'report_run',
   // задачи: заметил и сказал, не берясь чинить
   'search_issues', 'get_issue', 'create_issue', 'add_issue_comment', 'close_issue', 'reopen_issue',
+  // релизы: человеческое имя версии с заметками
+  'list_releases', 'create_release',
 ]
 
 describe('реестр MCP: сценарии и ресурсы', () => {
@@ -127,6 +129,7 @@ const READ_ONLY = [
   'list_gnomes', 'get_council_draft',
   'pending_suggestions', 'list_sources',
   'search_issues', 'get_issue',
+  'list_releases',
   // «что у меня лежит неопубликованным» и «какие у меня полки» — чтение: ничего не
   // меняют и денег не тратят
   'my_catalogs', 'my_drafts',

@@ -15,17 +15,19 @@ import type { ReleaseRefusal } from '@/features/releases/actions'
 import { NewReleaseForm } from '@/features/releases/NewReleaseForm'
 import { VersionSelect } from '@/features/releases/VersionSelect'
 import { ReleaseNotesGen } from '@/features/releases/ReleaseNotesGen'
+import { RELEASE_TITLE_MAX } from '@/features/releases/tag-name'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { Checkbox } from '@/shared/ui/checkbox'
 
 // Код отказа → ключ словаря. Отказ приходит ЗНАЧЕНИЕМ из действия, а не адресом `?e=`:
 // переход стирал форму вместе с заметками релиза, которые человек мог только что
-// сгенерировать (вызов ИИ — деньги и минуты). Тот же корень, что у формы списка (#832).
+// набрать или собрать и поправить. Тот же корень, что у формы списка (#832).
 const ERR: Record<ReleaseRefusal, TKey> = {
   badtag: 'release.errBadtag',
   badversion: 'release.errBadversion',
   tagtaken: 'release.errTagtaken',
   vreserved: 'release.errVreserved',
+  readonly: 'release.errReadonly',
   tagfail: 'release.errTagfail',
 }
 
@@ -84,7 +86,7 @@ export default async function NewReleasePage({
           </div>
           <label className="flex flex-col gap-1.5">
             <span className="text-body-sm font-semibold text-ink">{ru ? 'Заголовок' : 'Title'}</span>
-            <Input name="title" maxLength={200} placeholder={ru ? 'Что вошло в релиз' : 'What’s in this release'} />
+            <Input name="title" maxLength={RELEASE_TITLE_MAX} placeholder={ru ? 'Что вошло в релиз' : 'What’s in this release'} />
           </label>
           <ReleaseNotesGen
             templateId={meta.id}

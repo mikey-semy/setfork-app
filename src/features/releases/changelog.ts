@@ -4,7 +4,7 @@ import { t, type Lang } from '@/shared/i18n'
 // тот же кросс-фич-паттерн, что у gardener/generation (в baseline-suppressions).
 // eslint-disable-next-line boundaries/dependencies -- версии/шаги списка из library
 import { getVersions, getVersionSteps } from '@/features/library/queries'
-import { getReleases } from '@/features/releases/queries'
+import { getReleaseVersions } from '@/features/releases/queries'
 // eslint-disable-next-line boundaries/dependencies -- дифф шагов версий из library
 import { blockLabel, diffSteps, rowsToCmp, type DiffStatus } from '@/features/library/diff'
 
@@ -24,7 +24,7 @@ const SECTIONS: { status: DiffStatus; key: 'diffAdded' | 'diffChanged' | 'diffRe
  * Пусто, если сравнивать не с чем или изменений нет.
  */
 export async function buildReleaseChangelog(templateId: string, toVersion: number, lang: Lang): Promise<string> {
-  const [rels, versions] = await Promise.all([getReleases(templateId), getVersions(templateId)])
+  const [rels, versions] = await Promise.all([getReleaseVersions(templateId), getVersions(templateId)])
   const belowNums = versions.map((v) => v.version).filter((n) => n < toVersion).sort((a, b) => a - b)
   const prevRel = rels.filter((r) => r.version < toVersion).sort((a, b) => b.version - a.version)[0]
   const fromN = prevRel?.version ?? (belowNums.length ? belowNums[belowNums.length - 1] : null)

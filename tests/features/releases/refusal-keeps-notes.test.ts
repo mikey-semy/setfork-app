@@ -19,7 +19,7 @@ vi.mock('next/navigation', () => ({
 }))
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 vi.mock('@/shared/auth/session', () => ({ requireSession: async () => ({ userId: 'u1', handle: 'user' }) }))
-vi.mock('@/features/library/collab', () => ({ isCollaborator: async () => false }))
+vi.mock('@/features/collab/queries', () => ({ isCollaborator: async () => false }))
 vi.mock('@/shared/db', () => ({
   db: {
     query: { templates: { findFirst: async () => h.tpl } },
