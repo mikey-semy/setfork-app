@@ -22,7 +22,19 @@ const TAB_ORDER: TabKey[] = ['clone', 'run', 'embed']
  *  по своим пунктам, а здесь содержимое — поля, вкладки и ссылки. С меню всё это
  *  было недостижимо с клавиатуры, то есть ЕДИНСТВЕННЫЙ вход в /raw, data.json и
  *  MCP открывался только мышью. */
-export function CloneDropdown({ base, slug, lang }: { base: string; slug: string; lang: Lang }) {
+export function CloneDropdown({
+  base,
+  slug,
+  lang,
+  publiclyVisible,
+}: {
+  base: string
+  slug: string
+  lang: Lang
+  /** Список виден анониму (публичный, опубликован, не снят модерацией). `npx skills` ходит
+   *  без входа: на остальных списках команда получит 404, и показывать её незачем. */
+  publiclyVisible: boolean
+}) {
   const [origin, setOrigin] = useState('')
   const [tab, setTab] = useState<TabKey>('clone')
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -167,8 +179,15 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
                   найти можно было только из llms.txt. Дальше данные json'ом (код), MCP
                   (агент по токену) и iframe (сайт). */}
               {heading(<Bot size={12} />, t('skillHeading', lang))}
-              {copyField(skillCommand, t('skillHeading', lang))}
-              <p className="mt-1 text-body-sm text-ink-2">{t('skillHint', lang)}</p>
+              {publiclyVisible ? (
+                <>
+                  {copyField(skillCommand, t('skillHeading', lang))}
+                  <p className="mt-1 text-body-sm text-ink-2">{t('skillHint', lang)}</p>
+                </>
+              ) : (
+                // Ссылки ниже остаются: в браузере они идут под входом и работают.
+                <p className="text-body-sm text-ink-2">{t('skillNotPublicHint', lang)}</p>
+              )}
               <MenuItem href={`${base}/SKILL.md`} className="mt-1">
                 <FileCode size={14} className="text-muted" /> {t('openSkillMd', lang)}
               </MenuItem>
