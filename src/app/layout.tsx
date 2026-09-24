@@ -241,6 +241,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <body>
+        {/* ПОИСК ИЗ АДРЕСНОЙ СТРОКИ (OpenSearch 1.1): браузер находит описание по этой
+            ссылке. React 19 поднимает `<link>` в `<head>` сам — отдельный `<head>` в
+            макете не нужен, а метаданные Next `rel="search"` не умеют. */}
+        {/* ui-parity-ok: title у link rel="search" — имя поисковика для браузера по OpenSearch, а не всплывающая подсказка */}
+        <link rel="search" type="application/opensearchdescription+xml" title="SetFork" href="/opensearch.xml" />
         {/* РАЗМЕТКА САЙТА — на каждой странице, потому что описывает не страницу, а сайт:
             кто за ним стоит (Organization), как по нему искать (WebSite + SearchAction),
             что это за продукт и сколько стоит (SoftwareApplication).

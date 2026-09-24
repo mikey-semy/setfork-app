@@ -310,7 +310,6 @@ src/app/page.tsx	V12
 src/app/privacy/page.tsx	V12
 src/app/register/page.tsx	V11
 src/app/reset-password/page.tsx	V11
-src/app/robots.ts	H11
 src/app/runs/[id]/page.tsx	H10
 src/app/runs/page.tsx	H10
 src/app/search/loading.tsx	V6
