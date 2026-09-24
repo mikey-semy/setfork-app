@@ -141,6 +141,23 @@ export function openApiDocument() {
       '/{handle}/{slug}/skill.tar.gz': {
         get: { summary: 'The list as an Agent Skill folder', parameters: LIST_PARAMS, responses: { ...ok('Archive', 'application/gzip', { type: 'string', format: 'binary' }), ...NOT_FOUND } },
       },
+      '/{handle}/{slug}/blob': {
+        get: {
+          summary: 'One file of an Agent Skill (scripts/, references/, assets/) as plain text',
+          description:
+            'Served as `text/plain` with `nosniff` and a sandbox CSP whatever the file is: the list author writes it. A 503 with Problem Details (`core_unavailable`) means the files could not be read right now; retry.',
+          parameters: [
+            ...LIST_PARAMS,
+            { name: 'path', in: 'query', required: true, description: 'File path in the skill, e.g. `scripts/run.sh`', schema: { type: 'string' } },
+            { name: 'v', in: 'query', required: false, description: 'List version; the current one by default', schema: { type: 'integer', minimum: 1 } },
+          ],
+          responses: {
+            ...ok('File', 'text/plain'),
+            '400': problem('No `path` given'),
+            '404': problem('No such list (or not visible to you), or no such file in that version'),
+          },
+        },
+      },
       '/{handle}/{slug}/releases.atom': {
         get: { summary: 'Release notes as an Atom feed', parameters: LIST_PARAMS, responses: { ...ok('Feed', 'application/atom+xml'), ...NOT_FOUND } },
       },
