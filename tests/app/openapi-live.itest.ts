@@ -8,6 +8,18 @@ import { resetTables } from '../helpers/reset-db'
  */
 vi.mock('@/shared/auth/session', () => ({ getSession: async () => null }))
 vi.mock('@/shared/i18n/server', () => ({ getLang: async () => 'en' }))
+// Файлы скилла лежат в дереве ядра, а список здесь заведён только в базе: подменяем ОДНО
+// чтение файлов (внешний край), остальное ядро — настоящее.
+vi.mock('@/features/git/core', async (orig) => {
+  const real = await orig<typeof import('@/features/git/core')>()
+  return {
+    ...real,
+    gitCore: {
+      ...real.gitCore,
+      authoredFiles: async () => [{ path: 'scripts/run.sh', content: new TextEncoder().encode('echo ok\n'), executable: true }],
+    },
+  }
+})
 
 const { db, steps, templateVersions, templates, users } = await import('@/shared/db')
 const { openApiDocument } = await import('@/app/openapi.json/document')
@@ -26,7 +38,11 @@ const HANDLERS: Record<string, () => Promise<{ GET: unknown }>> = {
   '/{handle}/{slug}/repo.bundle': () => import('@/app/[handle]/[slug]/repo.bundle/route'),
   '/{handle}/{slug}/badge/{kind}': () => import('@/app/[handle]/[slug]/badge/[kind]/route'),
   '/{handle}/{slug}/embed': () => import('@/app/[handle]/[slug]/embed/route'),
+  '/{handle}/{slug}/blob': () => import('@/app/[handle]/[slug]/blob/route'),
 }
+
+/** Обязательные параметры запроса — у путей, которым без них отвечать нечего. */
+const QUERY: Record<string, string> = { '/{handle}/{slug}/blob': '?path=scripts/run.sh' }
 
 const OWNER = 'oa-owner'
 const doc = openApiDocument()
@@ -45,7 +61,7 @@ beforeAll(async () => {
 async function call(path: string, slug: string) {
   const GET = (await HANDLERS[path]()).GET as Handler
   const params: Record<string, string> = { handle: OWNER, slug, kind: 'stars.svg' }
-  const url = `https://setfork.test${path.replace('{handle}', OWNER).replace('{slug}', slug).replace('{kind}', 'stars.svg')}`
+  const url = `https://setfork.test${path.replace('{handle}', OWNER).replace('{slug}', slug).replace('{kind}', 'stars.svg')}${QUERY[path] ?? ''}`
   return GET(new Request(url), { params: Promise.resolve(params) })
 }
 
