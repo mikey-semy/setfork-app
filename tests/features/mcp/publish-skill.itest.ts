@@ -172,6 +172,33 @@ description('publish_skill', () => {
     expect(res).toEqual({ error: expect.stringContaining(words) })
   })
 
+  it('SKILL.md целиком: шаги и текст из тела, название и описание из шапки, непринятое названо', async () => {
+    const md = [
+      '---',
+      'name: pdf-tools',
+      'description: Fill and merge PDFs. Use when the user asks to work with a PDF.',
+      'license: MIT',
+      '---',
+      '# PDF tools',
+      '',
+      'Works through pypdf.',
+      '',
+      '1. **Install** it once',
+      '',
+      '   ```bash',
+      '   pip install pypdf',
+      '   ```',
+    ].join('\n')
+    const res = await mcpPublishSkill(ownerId, { skillMd: md })
+    expect(res).toMatchObject({ ref: `${HANDLE}/pdf-tools`, parseNotes: [expect.stringContaining('license')] })
+    const read = (await mcpGetList(ownerId, HANDLE, 'pdf-tools')) as { title: string; desc: string; steps: { type?: string; title?: string; command?: string; text?: string }[] }
+    expect(read.title).toBe('PDF tools')
+    expect(read.desc).toBe('Fill and merge PDFs. Use when the user asks to work with a PDF.')
+    expect(read.steps.map((b) => b.title ?? b.text)).toEqual(['Works through pypdf.', 'Install'])
+    expect(read.steps[1]).toMatchObject({ command: 'pip install pypdf' })
+    expect(await mcpPublishSkill(ownerId, { skillMd: md, items: [{ title: 'x' }] })).toEqual({ error: expect.stringContaining('either skillMd or items') })
+  })
+
   it('файл дважды — отказ', async () => {
     const res = await mcpPublishSkill(ownerId, { title: 'Twice', items: [{ title: 'x' }], files: [GUIDE, GUIDE] })
     expect(res).toEqual({ error: expect.stringContaining('listed twice') })

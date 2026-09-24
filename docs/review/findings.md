@@ -3,7 +3,7 @@
 > Файл СГЕНЕРИРОВАН из `findings.jsonl` командой `npm run review -- findings`.
 > Не редактируй его руками — правь jsonl и перегенерируй.
 
-Открыто: **62** из 77 записей.
+Открыто: **69** из 85 записей.
 
 ## high (5 открыто / 8)
 
@@ -18,7 +18,7 @@
 | H5-011 | H5 | open | `src/shared/quota.ts:119` | Пол остатка OpenRouter применяется при ЛЮБОМ активном провайдере: пустой счёт OpenRouter останавливает ИИ, работающий на Яндексе/Selectel/GigaChat |
 | H5-019 | H5 | open | `src/shared/ai/credits.ts:33` | Ответ 200 с неожиданным телом даёт remaining=0, кладётся в кеш как валидный и глушит ИИ на всём инстансе — fail-closed там, где quota.ts:117 обещает best-effort |
 
-## medium (28 открыто / 36)
+## medium (30 открыто / 38)
 
 | id | блок | статус | место | что не так |
 |---|---|---|---|---|
@@ -35,6 +35,8 @@
 | H2-005 | H2 | fixed | `src/features/git/list-content.ts:45` | toWireContent не шлёт danger/imageKey/needsHuman, а ядро переносит их только по block_id из ТЕКУЩЕЙ версии — у блока, которого там нет, пометки теряются молча |
 | H2-007 | H2 | open | `src/app/[handle]/[slug]/load.ts:65` | listBranches().catch(() => []) делает пустой список веток неотличимым от отказа ядра, и адрес ветки показывает содержимое main |
 | H2-009 | H2 | fixed | `tests/architecture/version-base-declared.test.ts:78` | сторож правила #938 сканирует только вызовы listStore.addVersion и по построению не видит три маршрута, создающих версию в ядре (mergeBranch, mergeResolved, проекция receivePack) |
+| H3-001 | H3 | open | `src/shared/db/index.ts:38` | В production drizzle-клиент не кэшируется нигде и строится заново на каждое чтение свойства db — кэш поставлен только в ветке NODE_ENV !== 'production' |
+| H3-008 | H3 | open | `src/features/transfer/actions.ts:98` | Смена владельца списка не оставляет записи в list_redirects, поэтому прежний адрес /owner/slug умирает — в отличие от переименования, которое его сохраняет |
 | H5-001 | H5 | open | `src/shared/quota.ts:51` | freeGenQuota считает строки generations без фильтра по статусу — сорвавшаяся генерация съедает слот месячного лимита Free |
 | H5-003 | H5 | duplicate | `src/shared/ai/credits.ts:29` | При сбое эндпоинта кредитов возвращается кэш любого возраста, и fresh:true этого не пробивает — пол остатка тихо перестаёт быть защитой |
 | H5-004 | H5 | open | `src/features/generation/service.ts:37` | Месячный лимит совета дебетуется по refId=generationId, а считается count(distinct refId) — все витки одной генерации списывают один слот |
@@ -59,7 +61,7 @@
 | V1d-012 | V1d | open | `src/features/library/actions/ai.ts:243` | Перевод списка — четвёртый рукописный конвертер шагов: он переносит blockId, type, content и «нужен человек» с комментариями, а danger не переносит, и тристейт в toStepInput подменяет решение автора мнением детектора |
 | V1d-013 | V1d | open | `src/features/library/draft.ts:30` | Замок рабочей копии сериализует только MCP против MCP: сохранение из редактора идёт мимо lockList и не сверяет rev, поэтому гонка «патч и сохранение человеком», названная в комментарии к замку, открыта |
 
-## low (29 открыто / 33)
+## low (34 открыто / 39)
 
 | id | блок | статус | место | что не так |
 |---|---|---|---|---|
@@ -84,6 +86,12 @@
 | H2-010 | H2 | open | `src/features/git/ConflictResolver.tsx:144` | подпись под кнопкой обещает merge-коммит, а экшен шлёт mode из настроек списка и на squash ядро делает коммит с одним родителем |
 | H2-011 | H2 | open | `src/features/git/README.md:22` | README блока говорит «Write: owner only», хотя с Ф5 пишут владелец, соавтор и любой с write-токеном на открытом списке; там же «git binary at runtime» противоречит тексту ниже |
 | H2-013 | H2 | fixed | `tests/architecture/version-base-declared.test.ts:40` | докблок сторожа обещает ловить «появление девятого маршрута мимо решения», хотя признак у него один — вызов фасада; границу надо назвать прямо, иначе зелёный сторож примут за доказательство |
+| H3-002 | H3 | open | `src/shared/db/schema.ts:1578` | content_edits и reactions не чистятся при удалении списка, хотя комментарии схемы утверждают, что это делает каскад владельца |
+| H3-003 | H3 | open | `package.json:27` | db:migrate и db:generate остались рабочими скриптами и ведут в журнал миграций, не обновлявшийся с 20.07.2026, при том что схема накатывается только push |
+| H3-004 | H3 | open | `src/shared/db/index.ts:32` | DB_POOL_MAX/DB_POOL_MIN читаются сырым Number(...)\|\|d с клампом: заданное значение может молча не подействовать, а мусор неотличим от «не задано» |
+| H3-005 | H3 | open | `src/features/mcp/tools/resources.ts:70` | Keyset-лента MCP resources/list по (templates.created_at, id) не имеет индекса ни одной из нужных форм |
+| H3-006 | H3 | open | `src/shared/db/resolve-list.ts:33` | Ник сравнивается регистрозависимым eq в resolveListBySlug и getListMeta, а через lower() — в соседней resolveUserByHandle; ники при этом хранятся в нижнем регистре |
+| H3-007 | H3 | rejected | `src/shared/db/schema.ts:498` | Отвергнуто: комментарий templates_owner_updated_idx называет feed.ts и profile-lists.ts, и оба названных потребителя сортируют desc(updatedAt), asc(id) — ровно как индекс |
 | H5-007 | H5 | open | `src/shared/quota.ts:40` | Снятие лимитов админу читает ник из JWT, тогда как админский гейт сознательно перечитывает его из БД — снятые лимиты живут до 30 дней после смены ника |
 | H5-008 | H5 | open | `tests/features/money/budget-window.itest.ts:20` | Тест окна дневного капа ни разу не кладёт расход за границу окна — подмена суток месяцем или годом остаётся зелёной |
 | H5-009 | H5 | open | `src/shared/ai/generate.ts:434` | Упавший вызов перевода не пишется в ai_usage — единственная точка вызова модели, освобождённая от правила «каждый физический вызов в журнал» |
