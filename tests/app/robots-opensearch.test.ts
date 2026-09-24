@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { JSDOM } from 'jsdom'
 import { resolveRobots } from 'next/dist/build/webpack/loaders/metadata/resolve-route-data'
 import robots from '@/app/robots'
 import { GET as opensearch } from '@/app/opensearch.xml/route'
@@ -39,7 +39,7 @@ describe('robots.txt', () => {
 })
 
 describe('OpenSearch', () => {
-  const doc = async () => new JSDOM(await opensearch().text(), { contentType: 'application/xml' }).window.document
+  const doc = async () => new DOMParser().parseFromString(await opensearch().text(), 'application/xml')
   const NS = 'http://a9.com/-/spec/opensearch/1.1/'
 
   it('корректный XML описания 1.1 с обязательными элементами', async () => {
