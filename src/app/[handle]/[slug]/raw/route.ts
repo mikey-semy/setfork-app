@@ -1,4 +1,5 @@
 import { getLang } from '@/shared/i18n/server'
+import { problem, wantsProblem } from '@/shared/http/problem'
 import { requireViewableDetail, requireViewableDetailFor } from '@/features/library/guard'
 import { scriptRefusal, toRunnableScript, toExportList } from '@/features/library/export'
 import {
@@ -62,6 +63,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const u = new URL(req.url)
   const dialect = normalizeDialect(u.searchParams.get('lang'))
   const mime = dialectMime(dialect)
+  /**
+   * Отказ — по умолчанию СКРИПТОМ (см. `refuse`): этот адрес запускают через `| sh`, и
+   * тело ошибки уходит прямо в интерпретатор. Problem Details (RFC 9457) — только тому,
+   * кто сам попросил его в `Accept`: такой клиент тело разбирает, а не исполняет. Причина
+   * одна и та же в обоих видах — полем `error` и заголовком `SF-Reason`.
+   */
+  const deny = (status: number, reason: string, message: string[], extraHeaders: Record<string, string> = {}) =>
+    wantsProblem(req)
+      ? problem(status, reason, { detail: message.join(' '), headers: { 'SF-Reason': reason, ...extraHeaders } })
+      : refuse(dialect, status, reason, message, extraHeaders)
 
   // Частотный лимит по IP: транспорт публичный, без аутентификации, и его дёргают в цикле.
   // Тот же бюджет, что у близнеца — один контракт на обе машинные поверхности.
@@ -69,8 +80,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // а текст, который интерпретатор попытается исполнить.
   const rate = await rateLimit(`list-raw:${clientIp(req)}`, 120, 60_000)
   if (!rate.ok) {
-    return refuse(
-      dialect,
+    return deny(
       429,
       'rate_limited',
       [`SetFork: too many requests for ${handle}/${slug}.`, `Retry after ${rate.retryAfter} seconds.`],
@@ -84,7 +94,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // а владелец приватного списка не мог забрать собственный скрипт ничем, кроме браузера.
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
   const auth = bearer ? await verifyApiToken(bearer) : null
-  if (bearer && !auth) return refuse(dialect, 401, 'invalid_token', ['SetFork: the API token was rejected.'])
+  if (bearer && !auth) return deny(401, 'invalid_token', ['SetFork: the API token was rejected.'])
 
   const [lang, detail] = await Promise.all([
     getLang(),
@@ -93,7 +103,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // Приватный список без прав неотличим от несуществующего — та же политика, что у близнеца.
   // Поэтому в теле НЕТ ни адреса, ни слага: иначе два отказа отличались бы друг от друга
   // и по разнице было бы видно, существует список или нет.
-  if (!detail) return refuse(dialect, 404, 'not_found', ['SetFork: no such list, or it is not visible to you.'])
+  if (!detail) return deny(404, 'not_found', ['SetFork: no such list, or it is not visible to you.'])
 
   // Происхождение и команда повторного запуска — из КОНФИГУРАЦИИ, а не из адреса запроса.
   // На проде `req.url` строится из адреса привязки сервера, и скрипт называл своим
@@ -110,7 +120,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const known = new Set(list.steps.flatMap((s) => (s.bid ? [s.bid] : [])))
   const unknown = only.filter((b) => !known.has(b))
   if (unknown.length) {
-    return refuse(dialect, 404, 'unknown_block', [`SetFork: no such block in ${handle}/${slug}: ${unknown.join(', ')}.`])
+    return deny(404, 'unknown_block', [`SetFork: no such block in ${handle}/${slug}: ${unknown.join(', ')}.`])
   }
 
   // ДИАЛЕКТ НЕ ПЕРЕВОДИТ КОМАНДЫ. `?lang=py` меняет только обёртку — shebang,
@@ -133,7 +143,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
       if (k !== 'lang') shellQuery.append(k, v)
     })
     const qs = shellQuery.toString()
-    return refuse(dialect, 406, refusal, [
+    return deny(406, refusal, [
       `SetFork: no ${dialect} script for ${handle}/${slug}.`,
       'Its steps carry shell commands, and this endpoint does not translate commands',
       'between languages — that would hand you code meaning something else.',

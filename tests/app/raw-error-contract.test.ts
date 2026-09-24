@@ -73,35 +73,35 @@ function expectRefusalBody(body: string, dialect: ScriptDialect) {
 }
 
 /** Каждый отказ поверхности: как его вызвать и какую причину он обязан назвать. */
-const REFUSALS: { name: string; status: number; reason: string; make: (d: ScriptDialect) => Promise<Response> }[] = [
+const REFUSALS: { name: string; status: number; reason: string; make: (d: ScriptDialect, headers?: Record<string, string>) => Promise<Response> }[] = [
   {
     name: 'нет такого списка',
     status: 404,
     reason: 'not_found',
-    make: async (d) => {
+    make: async (d, headers = {}) => {
       h.detail = null
-      return call(`?lang=${d}`)
+      return call(`?lang=${d}`, { headers })
     },
   },
   {
     name: 'нет такого пункта',
     status: 404,
     reason: 'unknown_block',
-    make: (d) => call(`?lang=${d}&bid=no-such-block`),
+    make: (d, headers = {}) => call(`?lang=${d}&bid=no-such-block`, { headers }),
   },
   {
     name: 'отклонённый токен',
     status: 401,
     reason: 'invalid_token',
-    make: (d) => call(`?lang=${d}`, { headers: { authorization: 'Bearer sf_revoked' } }),
+    make: (d, headers = {}) => call(`?lang=${d}`, { headers: { authorization: 'Bearer sf_revoked', ...headers } }),
   },
   {
     name: 'превышена частота',
     status: 429,
     reason: 'rate_limited',
-    make: async (d) => {
+    make: async (d, headers = {}) => {
       h.rate = { ok: false, retryAfter: 42 }
-      return call(`?lang=${d}`)
+      return call(`?lang=${d}`, { headers })
     },
   },
 ]
@@ -137,5 +137,33 @@ describe('ни один отказ /raw не выглядит успешным �
     h.detail = null
     const priv = await (await call()).text()
     expect(priv).toBe(missing)
+  })
+})
+
+/**
+ * RFC 9457 — тем, кто ПОПРОСИЛ. Клиент, приславший `Accept: application/problem+json`,
+ * тело разбирает, а не исполняет: ему отказ приходит Problem Details с той же причиной.
+ * Без заголовка — по-прежнему скрипт (контракт выше не меняется).
+ */
+describe('Problem Details по Accept', () => {
+  const PROBLEM = { accept: 'application/problem+json' }
+
+  for (const r of REFUSALS) {
+    it(`${r.name}: problem+json с error=${r.reason}`, async () => {
+      const res = await r.make('sh', PROBLEM)
+      expect(res.status).toBe(r.status)
+      expect(res.headers.get('Content-Type')).toBe('application/problem+json; charset=utf-8')
+      expect(res.headers.get('SF-Reason')).toBe(r.reason)
+      const body = await res.json()
+      expect(body).toMatchObject({ type: 'about:blank', status: r.status, error: r.reason })
+      expect(typeof body.title).toBe('string')
+      expect(typeof body.detail).toBe('string')
+    })
+  }
+
+  it('без Accept — скрипт, как раньше', async () => {
+    h.detail = null
+    const res = await call()
+    expect(res.headers.get('Content-Type')).not.toContain('problem')
   })
 })

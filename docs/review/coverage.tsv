@@ -323,6 +323,7 @@ src/app/page.tsx	V12
 src/app/privacy/page.tsx	V12
 src/app/register/page.tsx	V11
 src/app/reset-password/page.tsx	V11
+src/app/robots.ts	H11
 src/app/runs/[id]/page.tsx	H10
 src/app/runs/page.tsx	H10
 src/app/search/loading.tsx	V6
@@ -809,6 +810,7 @@ src/features/mcp/tools/lists/edit.ts	H4
 src/features/mcp/tools/lists/index.ts	H4
 src/features/mcp/tools/lists/patch-block.ts	H4
 src/features/mcp/tools/lists/publish.ts	H4
+src/features/mcp/tools/lists/skill.ts	H4
 src/features/mcp/tools/lists/write.ts	H4
 src/features/mcp/tools/reads.ts	H4
 src/features/mcp/tools/resources.ts	H4
@@ -1522,6 +1524,7 @@ tests/features/library/keyset-indexes.itest.ts	V1g
 tests/features/library/lineage.itest.ts	V1d
 tests/features/library/list-actions-menu.test.tsx	V1k
 tests/features/library/list-editor/block-uploads.test.tsx	V1k
+tests/features/library/list-store-authored.test.ts	V1k
 tests/features/library/localized-content.test.ts	V1k
 tests/features/library/maintainer-parity.itest.ts	V1
 tests/features/library/merge-not-projected.test.ts	V1d,V1k

@@ -456,6 +456,7 @@
         "src/app/api/go",
         "src/app/llms-full.txt/**",
         "src/app/llms.txt/**",
+        "src/app/openapi.json/**",
         "src/app/opensearch.xml/**",
         "src/app/robots.ts",
         "src/app/sitemap.ts",
@@ -473,6 +474,9 @@
         "tests/app/robots-opensearch.test.ts",
         "tests/app/profile-og-image.itest.ts",
         "tests/app/web-manifest.test.ts",
+        "tests/app/openapi.test.ts",
+        "tests/app/openapi-live.itest.ts",
+        "tests/app/problem-details.itest.ts",
         "tests/app/indexnow-key-file.test.ts",
         "tests/features/library/indexnow.itest.ts"
       ],

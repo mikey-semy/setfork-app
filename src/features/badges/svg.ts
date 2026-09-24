@@ -63,6 +63,9 @@ export function badgeFor(kind: BadgeKind, meta: { starsCount: number; forksCount
   return shield(cfg.label, value, cfg.color)
 }
 
+/** Виды бейджа — одним перечнем: по нему проверяется адрес и строится описание API. */
+export const BADGE_KINDS: readonly BadgeKind[] = ['stars', 'forks', 'runs', 'version']
+
 export function isBadgeKind(s: string): s is BadgeKind {
-  return s === 'stars' || s === 'forks' || s === 'runs' || s === 'version'
+  return (BADGE_KINDS as readonly string[]).includes(s)
 }
