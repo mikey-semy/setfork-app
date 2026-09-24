@@ -82,6 +82,7 @@ export async function GET() {
     `- [Search](${SITE_ORIGIN}/search): full-text and qualifier search (\`by:\`, \`tag:\`, \`type:\`)`,
     '- Any list is available as markdown: append `.md` to its address',
     '- Any public list installs as an Agent Skill: `npx skills add <list address>/SKILL.md` (or `/skill.tar.gz` for the full folder)',
+    `- [OpenAPI](${SITE_ORIGIN}/openapi.json): the list's machine surfaces (data.json, raw script, export, skill, releases feed, bundle, badge, embed); errors are RFC 9457 Problem Details`,
     '- MCP server at `/api/mcp`: read and write lists, publish an Agent Skill with its files (`publish_skill`) and releases (`create_release`), propose edits, open issues, record run reports',
     '',
     '## Lists',

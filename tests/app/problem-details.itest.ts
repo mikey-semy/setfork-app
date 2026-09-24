@@ -23,6 +23,9 @@ const { GET: dataGet } = await import('@/app/[handle]/[slug]/data.json/route')
 const { GET: exportGet } = await import('@/app/[handle]/[slug]/export/route')
 const { GET: skillMdGet } = await import('@/app/[handle]/[slug]/SKILL.md/route')
 const { GET: skillTarGet } = await import('@/app/[handle]/[slug]/skill.tar.gz/route')
+const { GET: badgeGet } = await import('@/app/[handle]/[slug]/badge/[kind]/route')
+const { GET: atomGet } = await import('@/app/[handle]/[slug]/releases.atom/route')
+const { GET: bundleGet } = await import('@/app/[handle]/[slug]/repo.bundle/route')
 
 const OWNER = 'pd-owner'
 let tplId = ''
@@ -34,6 +37,9 @@ const SURFACES = {
   export: (slug: string) => exportGet(req(`${slug}/export`), params(slug)),
   'SKILL.md': (slug: string) => skillMdGet(req(`${slug}/SKILL.md`), params(slug)),
   'skill.tar.gz': (slug: string) => skillTarGet(req(`${slug}/skill.tar.gz`), params(slug)),
+  badge: (slug: string) => badgeGet(req(`${slug}/badge/stars.svg`), { params: Promise.resolve({ handle: OWNER, slug, kind: 'stars.svg' }) }),
+  'releases.atom': (slug: string) => atomGet(req(`${slug}/releases.atom`), params(slug)),
+  'repo.bundle': (slug: string) => bundleGet(req(`${slug}/repo.bundle`), params(slug)),
 }
 
 beforeAll(async () => {
@@ -75,6 +81,15 @@ describe('нет списка — Problem Details на каждом публич
     const missing = await (await get('no-such-list')).text()
     const hidden = await (await get('secret')).text()
     expect(hidden).toBe(missing)
+  })
+})
+
+describe('бейдж: неизвестный вид', () => {
+  it('404 unknown_badge; detail называет виды, а не повторяет присланное', async () => {
+    const res = await badgeGet(req('secret/badge/<script>.svg'), { params: Promise.resolve({ handle: OWNER, slug: 'secret', kind: '<script>.svg' }) })
+    const body = await expectProblem(res, 404, 'unknown_badge')
+    expect(body.detail).toContain('stars')
+    expect(body.detail).not.toContain('<script>')
   })
 })
 

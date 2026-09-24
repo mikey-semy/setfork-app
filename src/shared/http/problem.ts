@@ -28,19 +28,21 @@ export interface ProblemOptions {
 }
 
 export function problem(status: number, error: string, opts: ProblemOptions = {}): Response {
+  // Поля стандарта и `error` — ПОСЛЕ расширений: расширение не может подменить тип,
+  // статус или машинный код.
   const body = {
+    ...opts.extra,
     type: 'about:blank',
     title: STATUS_CODES[status] ?? 'Error',
     status,
     ...(opts.detail ? { detail: opts.detail } : {}),
     error,
-    ...opts.extra,
   }
   // Отказ не кешируется: созданный позже список иначе какое-то время отвечал бы
-  // «не найдено» из чужого прокси.
+  // «не найдено» из чужого прокси. `no-store` — последним: чужой заголовок его не снимет.
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': `${PROBLEM_JSON}; charset=utf-8`, ...noStoreHeaders(), ...opts.headers },
+    headers: { ...opts.headers, 'Content-Type': `${PROBLEM_JSON}; charset=utf-8`, ...noStoreHeaders() },
   })
 }
 

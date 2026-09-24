@@ -19,8 +19,14 @@ const EXCLUDED: Record<string, string> = {
   '[...git]': 'git smart HTTP — описан протоколом git, а не OpenAPI',
 }
 
+/**
+ * Адреса без своего маршрута — их переписывает middleware на другой маршрут. Для них
+ * проверяется, что маршрут-цель существует.
+ */
+const REWRITES: Record<string, string> = { '/{handle}/{slug}.md': '/{handle}/{slug}/export' }
+
 /** `/{handle}/{slug}/badge/{kind}` → `src/app/[handle]/[slug]/badge/[kind]/route.ts`. */
-const fileOf = (p: string) => join('src/app', p.replace(/\{([^}]+)\}/g, '[$1]'), 'route.ts')
+const fileOf = (p: string) => join('src/app', (REWRITES[p] ?? p).replace(/\{([^}]+)\}/g, '[$1]'), 'route.ts')
 
 /** Все route.ts под каталогом списка — относительными путями каталогов. */
 function listRoutes(dir = LIST_DIR, rel = ''): string[] {
@@ -33,9 +39,9 @@ function listRoutes(dir = LIST_DIR, rel = ''): string[] {
 }
 
 describe('openapi.json', () => {
-  it('OpenAPI 3.1, сервер — публичный адрес сайта', () => {
+  it('OpenAPI 3.1, сервер — относительный: хост тот, с которого документ взят', () => {
     expect(doc.openapi).toBe('3.1.0')
-    expect(doc.servers[0].url).toMatch(/^https?:\/\//)
+    expect(doc.servers).toEqual([{ url: '/' }])
   })
 
   it('каждый путь документа — существующий маршрут', () => {
@@ -54,6 +60,13 @@ describe('openapi.json', () => {
       const names = [...p.matchAll(/\{([^}]+)\}/g)].map((m) => m[1])
       const declared = (item.get.parameters as { name: string; in: string }[]).filter((x) => x.in === 'path').map((x) => x.name)
       expect(declared.sort(), p).toEqual(names.sort())
+    }
+  })
+
+  it('параметры — только допустимых мест, у каждого пути есть ответ ремонта 503', () => {
+    for (const [p, item] of Object.entries(doc.paths)) {
+      for (const prm of item.get.parameters as { in: string; name: string }[]) expect(['path', 'query', 'header', 'cookie'], `${p}: ${prm.name}`).toContain(prm.in)
+      expect(item.get.responses, p).toHaveProperty('503')
     }
   })
 

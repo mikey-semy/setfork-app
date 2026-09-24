@@ -1,4 +1,3 @@
-import { SITE_ORIGIN } from '@/shared/site'
 import { LOCALES } from '@/shared/i18n'
 import { SCRIPT_DIALECTS, dialectMime } from '@/core/domain/script-dialect'
 import { BADGE_KINDS } from '@/features/badges/svg'
@@ -38,6 +37,21 @@ const rawRefusal = (description: string) => ({
 })
 const ok = (description: string, mime: string, schema: object = { type: 'string' }) => ({ '200': { description, content: { [mime]: { schema } } } })
 
+/**
+ * Режим ремонта отвечает 503 ДО обработчика (middleware), поэтому у каждого пути — один и
+ * тот же ответ, дописанный при сборке, а не копией в каждом. Тело — не Problem Details:
+ * скриптам и архивам — текст, остальным — страница (см. `middleware.ts`).
+ */
+const MAINTENANCE = {
+  description: 'Maintenance mode: answered before the endpoint, retry after Retry-After',
+  headers: { 'Retry-After': { description: 'Seconds to wait', schema: { type: 'integer' } } },
+  content: { 'text/plain': { schema: { type: 'string' } }, 'text/html': { schema: { type: 'string' } } },
+}
+
+type Paths = Record<string, { get: { responses: Record<string, unknown> } & Record<string, unknown> }>
+const withMaintenance = (paths: Paths): Paths =>
+  Object.fromEntries(Object.entries(paths).map(([p, item]) => [p, { get: { ...item.get, responses: { ...item.get.responses, '503': MAINTENANCE } } }]))
+
 export function openApiDocument() {
   return {
     openapi: '3.1.0',
@@ -45,9 +59,11 @@ export function openApiDocument() {
       title: 'SetFork public list API',
       version: '1',
       description:
-        'Machine-readable surfaces of a SetFork list. Errors are RFC 9457 Problem Details (`application/problem+json`) with the previous machine code kept in the `error` field. The MCP server (`/api/mcp`) and git smart HTTP are described by their own protocols.',
+        'Machine-readable surfaces of a SetFork list. Errors from these endpoints are RFC 9457 Problem Details (`application/problem+json`) with a stable machine code in the `error` field (`raw` and `embed` differ, see them). While the site is in maintenance mode, every endpoint answers 503 before reaching the handler: plain text for scripts and archives, an HTML page otherwise; retry after `Retry-After`. The MCP server (`/api/mcp`) and git smart HTTP are described by their own protocols.',
     },
-    servers: [{ url: SITE_ORIGIN }],
+    // Относительный адрес: документ отдаётся статически, и адрес, вшитый при сборке, на
+    // стенде без своего build-arg указывал бы на прод. `/` — тот хост, с которого документ взят.
+    servers: [{ url: '/' }],
     components: {
       securitySchemes: { bearer: { type: 'http', scheme: 'bearer', description: 'SetFork API token (the same one MCP uses); read scope is enough' } },
       schemas: {
@@ -66,7 +82,7 @@ export function openApiDocument() {
         },
       },
     },
-    paths: {
+    paths: withMaintenance({
       '/{handle}/{slug}/data.json': {
         get: {
           summary: 'The list as data',
@@ -82,7 +98,15 @@ export function openApiDocument() {
             'Refusals come as a script in the requested dialect by default (the body is piped into an interpreter). Send `Accept: application/problem+json` to get Problem Details instead; the reason is also in the `SF-Reason` header.',
           parameters: [
             ...LIST_PARAMS,
-            { name: 'lang', in: 'query', required: false, description: 'Script dialect', schema: { type: 'string', enum: SCRIPT_DIALECTS } },
+            {
+              name: 'lang',
+              in: 'query',
+              required: false,
+              // Перечня нет намеренно: адрес принимает и псевдонимы (`powershell`, `pwsh`, `python`),
+              // а незнакомое значение — как `sh`. Строгий клиент с enum отвергал бы рабочие адреса.
+              description: `Script dialect: ${SCRIPT_DIALECTS.join(', ')} (aliases: powershell, pwsh → ps1; python → py). Anything else means sh.`,
+              schema: { type: 'string', default: 'sh' },
+            },
             { name: 'bid', in: 'query', required: false, description: 'Only these blocks (repeatable)', schema: { type: 'array', items: { type: 'string' } }, style: 'form', explode: true },
             { name: 'bids', in: 'query', required: false, description: 'Only these blocks, comma-separated', schema: { type: 'string' } },
           ],
@@ -102,6 +126,13 @@ export function openApiDocument() {
           summary: 'Download the list as Markdown or HTML',
           parameters: [...LIST_PARAMS, { name: 'format', in: 'query', required: false, schema: { type: 'string', enum: ['md', 'html'], default: 'md' } }],
           responses: { '200': { description: 'Document', content: { 'text/markdown': { schema: { type: 'string' } }, 'text/html': { schema: { type: 'string' } } } }, ...NOT_FOUND },
+        },
+      },
+      '/{handle}/{slug}.md': {
+        get: {
+          summary: 'The list as Markdown (same as export?format=md)',
+          parameters: LIST_PARAMS,
+          responses: { ...ok('Markdown', 'text/markdown'), ...NOT_FOUND },
         },
       },
       '/{handle}/{slug}/SKILL.md': {
@@ -135,6 +166,6 @@ export function openApiDocument() {
           responses: { ...ok('Page', 'text/html'), '304': { description: 'Not modified (ETag)' }, '404': { description: 'No such public list', content: { 'text/html': { schema: { type: 'string' } } } } },
         },
       },
-    },
+    }),
   }
 }

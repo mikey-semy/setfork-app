@@ -71,7 +71,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
    */
   const deny = (status: number, reason: string, message: string[], extraHeaders: Record<string, string> = {}) =>
     wantsProblem(req)
-      ? problem(status, reason, { detail: message.join(' '), headers: { 'SF-Reason': reason, ...extraHeaders } })
+      ? problem(status, reason, {
+          detail: message.join(' '),
+          headers: { 'SF-Reason': reason, ...extraHeaders },
+          // 429 — с тем же полем `retryAfter`, что у близнеца `data.json` (`problemTooMany`).
+          ...(extraHeaders['Retry-After'] ? { extra: { retryAfter: Number(extraHeaders['Retry-After']) } } : {}),
+        })
       : refuse(dialect, status, reason, message, extraHeaders)
 
   // Частотный лимит по IP: транспорт публичный, без аутентификации, и его дёргают в цикле.

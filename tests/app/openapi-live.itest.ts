@@ -18,6 +18,8 @@ const HANDLERS: Record<string, () => Promise<{ GET: unknown }>> = {
   '/{handle}/{slug}/data.json': () => import('@/app/[handle]/[slug]/data.json/route'),
   '/{handle}/{slug}/raw': () => import('@/app/[handle]/[slug]/raw/route'),
   '/{handle}/{slug}/export': () => import('@/app/[handle]/[slug]/export/route'),
+  // Переписывается middleware на экспорт — зовём тот же обработчик.
+  '/{handle}/{slug}.md': () => import('@/app/[handle]/[slug]/export/route'),
   '/{handle}/{slug}/SKILL.md': () => import('@/app/[handle]/[slug]/SKILL.md/route'),
   '/{handle}/{slug}/skill.tar.gz': () => import('@/app/[handle]/[slug]/skill.tar.gz/route'),
   '/{handle}/{slug}/releases.atom': () => import('@/app/[handle]/[slug]/releases.atom/route'),
@@ -54,9 +56,11 @@ describe('каждый путь из openapi.json отвечает объявл�
 
   it.each(Object.keys(HANDLERS))('%s — на публичном списке', async (path) => {
     const res = await call(path, 'deploy')
-    const declared = Object.keys((doc.paths as Record<string, { get: { responses: Record<string, unknown> } }>)[path].get.responses)
-    expect(declared, `ответ ${res.status} не объявлен`).toContain(String(res.status))
     expect(res.status).toBe(200)
+    // Тип тела — из объявленных для 200.
+    const types = Object.keys(((doc.paths as Record<string, { get: { responses: Record<string, { content?: Record<string, unknown> }> } }>)[path].get.responses['200'].content ?? {}))
+    const got = (res.headers.get('content-type') ?? '').split(';')[0].trim()
+    expect(types, `${path}: ${got} не объявлен для 200`).toContain(got)
   })
 
   it.each(Object.keys(HANDLERS))('%s — несуществующий список: объявленный 404 объявленного вида', async (path) => {

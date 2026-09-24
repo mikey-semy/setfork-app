@@ -161,6 +161,21 @@ describe('Problem Details по Accept', () => {
     })
   }
 
+  it('чужой диалект (406): problem+json с той же причиной', async () => {
+    const res = await call('?lang=py', { headers: PROBLEM })
+    expect(res.status).toBe(406)
+    expect(res.headers.get('Content-Type')).toBe('application/problem+json; charset=utf-8')
+    const body = await res.json()
+    expect(body.error).toBe(res.headers.get('SF-Reason'))
+    expect(body.error).toBeTruthy()
+  })
+
+  it('429: retryAfter в теле — как у близнеца data.json', async () => {
+    h.rate = { ok: false, retryAfter: 42 }
+    const body = await (await call('', { headers: PROBLEM })).json()
+    expect(body.retryAfter).toBe(42)
+  })
+
   it('без Accept — скрипт, как раньше', async () => {
     h.detail = null
     const res = await call()

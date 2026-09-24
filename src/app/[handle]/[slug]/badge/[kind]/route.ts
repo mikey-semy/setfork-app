@@ -2,7 +2,7 @@
 import { getListMeta } from '@/features/library/queries'
 import { problem, problemListNotFound } from '@/shared/http/problem'
 import { isPubliclyVisible } from '@/core'
-import { badgeFor, isBadgeKind } from '@/features/badges/svg'
+import { BADGE_KINDS, badgeFor, isBadgeKind } from '@/features/badges/svg'
 import { cacheHeaders, noStoreHeaders, notModified } from '@/shared/http/cache'
 
 // GET /{handle}/{slug}/badge/{stars|forks|runs|version}.svg — SVG-шилд для README.
@@ -12,7 +12,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const kind = raw.replace(/\.svg$/, '')
   // Отказ хранить нельзя: добавленный позже вид бейджа и опубликованный позже список
   // иначе какое-то время остаются отрицательно закешированными у чужого прокси.
-  if (!isBadgeKind(kind)) return problem(404, 'unknown_badge', { detail: `Unknown badge kind: ${kind}.` })
+  if (!isBadgeKind(kind)) return problem(404, 'unknown_badge', { detail: `Unknown badge kind. Known kinds: ${BADGE_KINDS.join(', ')}.` })
   const meta = await getListMeta(handle, slug)
   // Публичный + опубликованный + не снят модерацией: иначе бейдж выдавал счётчики
   // (и факт существования) черновика/flagged/hidden списка анониму.
