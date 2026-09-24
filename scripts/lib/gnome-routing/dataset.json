@@ -529,7 +529,7 @@
    "n": 8,
    "kind": "text",
    "section": null,
-   "text": "Чего делать нельзя. docker compose up вручную в /opt/setfork/src — сносит прод-контейнер и поднимает вторую Postgres на тот же том; выкатка только через CI. docker volume prune — на сервере живут чужие проекты, снесёт чужие данные. Выключать Swarm — сеть dokploy-network overlay, в ней 31 контейнер.",
+   "text": "Чего делать нельзя. docker compose up вручную в /opt/setfork/src — сносит прод-контейнер и поднимает вторую Postgres на тот же том; выкатка только через CI. docker volume prune — на сервере живут чужие проекты, снесёт чужие данные. Выключать Swarm — `swarm leave` ломает DNS контейнеров: сайты отвечают 200 и врут.",
    "gold": "devops",
    "ok": [],
    "why": "эксплуатация"
