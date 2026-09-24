@@ -3,6 +3,7 @@ import { startRun } from '@/features/runs/actions'
 import { useTemplate } from '@/features/library/actions'
 import { BranchPicker } from '@/features/git/BranchPicker'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
+import { isPubliclyVisible } from '@/core'
 import { CommitBar } from '@/features/library/CommitBar'
 import { ListActionsMenu } from '@/features/library/ListActionsMenu'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -83,7 +84,7 @@ export function ListToolbar({
               </Tooltip>
             </form>
           )}
-          <CloneDropdown base={base} slug={slug} lang={lang} />
+          <CloneDropdown base={base} slug={slug} lang={lang} publiclyVisible={isPubliclyVisible(tpl)} />
           {/* Вторичное (правка/перевод/публикация черновика) — одним «...»-меню,
               а не россыпью разновысоких иконок (эталон: секции настроек). Ряд на
               390px и так занят «Получить» и прогоном: ещё одна кнопка его распирает,

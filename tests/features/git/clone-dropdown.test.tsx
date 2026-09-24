@@ -19,10 +19,10 @@ import { AUTHORED_DIALECT, dialectSpec, scriptFilename } from '@/core/domain/scr
  *  - длинные команды и iframe не должны раздувать поповер многострочным кодом;
  *  - отказ буфера обмена не имел состояния — кнопка молчала.
  */
-const open = () => {
+const open = (publiclyVisible = true) => {
   render(
     <TooltipProvider>
-      <CloneDropdown base="/alice/deploy" slug="deploy" lang="en" />
+      <CloneDropdown base="/alice/deploy" slug="deploy" lang="en" publiclyVisible={publiclyVisible} />
     </TooltipProvider>,
   )
   fireEvent.click(screen.getByRole('button', { name: /get|получить/i }))
@@ -92,6 +92,25 @@ describe('меню «Получить»: доступность и содерж�
     // `/raw?lang=ps1` на списке с командами теперь отвечает 406, поэтому предлагать
     // эту форму — значит класть человеку в буфер заведомо нерабочую команду.
     expect(document.body.textContent).not.toMatch(/lang=ps1|\| iex/)
+  })
+
+  it('скилл: команда установки ставит АРХИВ — в нём и SKILL.md, и файлы автора', () => {
+    open()
+    fireEvent.click(screen.getByRole('tab', { name: /embed/i }))
+    expect(screen.getByRole('textbox', { name: /skill/i })).toHaveValue(
+      `npx skills add ${window.location.origin}/alice/deploy/skill.tar.gz`,
+    )
+    expect(screen.getByRole('link', { name: /SKILL\.md/ }).getAttribute('href')).toBe('/alice/deploy/SKILL.md')
+  })
+
+  it('скилл на непубличном списке: команды нет — агент без входа получил бы 404', () => {
+    open(false)
+    fireEvent.click(screen.getByRole('tab', { name: /embed/i }))
+    expect(screen.queryByRole('textbox', { name: /skill/i })).toBeNull()
+    expect(document.body.textContent).not.toContain('npx skills add')
+    expect(screen.getByText(/published public list/i)).toBeTruthy()
+    // В браузере по входу SKILL.md открывается — ссылку не прячем.
+    expect(screen.getByRole('link', { name: /SKILL\.md/ })).toBeTruthy()
   })
 
   it('во вкладке клонирования сказано, как быть с приватным списком', () => {
