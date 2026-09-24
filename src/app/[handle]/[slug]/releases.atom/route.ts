@@ -1,5 +1,6 @@
 // eslint-disable-next-line no-restricted-imports -- анонимный Atom-фид: гейт isPubliclyVisible (строже canViewList), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
+import { problemListNotFound } from '@/shared/http/problem'
 import { getReleases } from '@/features/releases/queries'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 import { isPubliclyVisible } from '@/core'
@@ -19,7 +20,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const meta = await getListMeta(handle, slug)
   // Публичный + опубликованный + не снят модерацией. Раньше проверялась только
   // видимость → release notes flagged/hidden/pending и публичных черновиков утекали.
-  if (!meta || !isPubliclyVisible(meta)) return new Response('Not found', { status: 404 })
+  if (!meta || !isPubliclyVisible(meta)) return problemListNotFound()
 
   // Публичный адрес, а не bind-origin запроса (за прокси req.url = 0.0.0.0:3000) — но
   // ТОЛЬКО если он задан явно. `NEXT_PUBLIC_*` вшиваются при сборке, а демо-стенд подаёт

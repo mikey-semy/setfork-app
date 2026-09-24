@@ -318,11 +318,14 @@ src/app/notifications/page.tsx	V7b
 src/app/oauth/authorize/actions.ts	V11
 src/app/oauth/authorize/page.tsx	V11
 src/app/oauth/token/route.ts	V11
+src/app/openapi.json/document.ts	H11
+src/app/openapi.json/route.ts	H11
 src/app/opensearch.xml/route.ts	H11
 src/app/page.tsx	V12
 src/app/privacy/page.tsx	V12
 src/app/register/page.tsx	V11
 src/app/reset-password/page.tsx	V11
+src/app/robots.ts	H11
 src/app/runs/[id]/page.tsx	H10
 src/app/runs/page.tsx	H10
 src/app/search/loading.tsx	V6
@@ -809,6 +812,7 @@ src/features/mcp/tools/lists/edit.ts	H4
 src/features/mcp/tools/lists/index.ts	H4
 src/features/mcp/tools/lists/patch-block.ts	H4
 src/features/mcp/tools/lists/publish.ts	H4
+src/features/mcp/tools/lists/skill.ts	H4
 src/features/mcp/tools/lists/write.ts	H4
 src/features/mcp/tools/reads.ts	H4
 src/features/mcp/tools/resources.ts	H4
@@ -1079,6 +1083,7 @@ src/shared/fonts/manrope-cyrillic-wght-normal.woff2	V10
 src/shared/fonts/manrope-latin-wght-normal.woff2	V10
 src/shared/geo.ts	V12
 src/shared/http/cache.ts	H8
+src/shared/http/problem.ts	H8
 src/shared/i18n/detect-text-lang.ts	H6
 src/shared/i18n/dict/en.ts	H6
 src/shared/i18n/dict/ru.ts	H6
@@ -1316,6 +1321,9 @@ tests/app/llms-and-md.itest.ts	V12d
 tests/app/maintenance-machine-body.test.ts	V12d
 tests/app/middleware-lang-prefix.test.ts	V12d
 tests/app/og-image.itest.ts	V12d
+tests/app/openapi-live.itest.ts	H11,V12d
+tests/app/openapi.test.ts	H11,V12d
+tests/app/problem-details.itest.ts	H11,V12d
 tests/app/profile-og-image.itest.ts	H11,V12d
 tests/app/raw-dialect.test.ts	V12d
 tests/app/raw-error-contract.test.ts	V12d
@@ -1522,6 +1530,7 @@ tests/features/library/keyset-indexes.itest.ts	V1g
 tests/features/library/lineage.itest.ts	V1d
 tests/features/library/list-actions-menu.test.tsx	V1k
 tests/features/library/list-editor/block-uploads.test.tsx	V1k
+tests/features/library/list-store-authored.test.ts	V1k
 tests/features/library/localized-content.test.ts	V1k
 tests/features/library/maintainer-parity.itest.ts	V1
 tests/features/library/merge-not-projected.test.ts	V1d,V1k
