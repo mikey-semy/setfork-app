@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpPublishSkill, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
+import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpPublishSkill, mcpRenameList, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
 import { itemShape, itemShapeLean } from './block-schema'
 import { json, err, type ToolKit } from './kit'
 
@@ -92,6 +92,26 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
       // данных, а это ровно то, ради чего экономии не делают.
       const items = z.array(itemShape).parse(args.items)
       const res = await mcpCreateList(userId, { ...args, items })
+      return 'error' in res ? err(res.error as string) : json(res)
+    },
+  )
+
+  writeTool(
+    'rename_list',
+    {
+      title: 'Change the address of a list',
+      // Ничего не стирает: прежний адрес остаётся вести сюда же навсегда, и вернуться к нему
+      // можно тем же вызовом. Поэтому не разрушающий — но и не идемпотентный: повтор с тем
+      // же адресом отвечает «уже так».
+      description:
+        'Change the address (slug) of a list you own: handle/old-slug becomes handle/new-slug. The title is not touched (change it with update_list, patch_list or publish_skill). The old address keeps redirecting to the list forever — the page, git clone/push and skill downloads — and you can switch back to it later. Letters are lower-cased and spaces become hyphens; if the address is taken the refusal suggests a free one.',
+      inputSchema: {
+        list: z.string().describe('Your list: "handle/slug" (an old address works too)'),
+        slug: z.string().describe('The new address, e.g. "finetooth"'),
+      },
+    },
+    async (userId, args) => {
+      const res = await mcpRenameList(userId, args)
       return 'error' in res ? err(res.error as string) : json(res)
     },
   )

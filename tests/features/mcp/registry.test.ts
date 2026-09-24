@@ -55,7 +55,7 @@ const EXPECTED = [
   // гномы и совет
   'list_gnomes', 'ask_gnome', 'gnome_review', 'get_council_draft', 'council_draft',
   // списки
-  'create_list', 'update_list', 'patch_list', 'publish_draft', 'discard_draft', 'delete_list', 'bulk_create_lists', 'publish_skill',
+  'create_list', 'update_list', 'patch_list', 'publish_draft', 'discard_draft', 'delete_list', 'bulk_create_lists', 'publish_skill', 'rename_list',
   // полки и разбор черновиков: чем владелец раскладывает библиотеку
   'my_catalogs', 'my_drafts', 'publish_lists',
   // предложения и проверки
