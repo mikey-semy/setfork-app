@@ -99,6 +99,9 @@ services:
       SETFORK_CORE_TOKEN: ${SETFORK_CORE_TOKEN:-}
       NEXT_PUBLIC_SITE_URL: ${DEMO_SITE_URL:-https://demo.sethub.ru}
       APP_URL: ${DEMO_SITE_URL:-https://demo.sethub.ru}
+      # IndexNow на демо выключен НАМЕРЕННО: `.env` общий с продом, и ключ прода иначе
+      # сообщал бы поисковикам адреса демо-стенда (файл ключа демо отдаёт тот же).
+      INDEXNOW_KEY: ''
     depends_on:
       setfork-demo-db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
