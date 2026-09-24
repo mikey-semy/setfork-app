@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Braces, ChevronDown, Code2, FileCode, FileDown, GitBranch, Printer, Sparkles, Terminal } from 'lucide-react'
+import { Bot, Braces, ChevronDown, Code2, FileCode, FileDown, GitBranch, Printer, Sparkles, Terminal } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { CopyRow } from '@/shared/ui/CopyRow'
 import { buttonClass } from '@/shared/ui/button-style'
@@ -15,7 +15,7 @@ type TabKey = 'clone' | 'run' | 'embed'
 const TAB_ORDER: TabKey[] = ['clone', 'run', 'embed']
 
 /** Кнопка «Use»: КАК использовать список — clone/bundle, run-скрипт + экспорт,
- *  MCP для агентов + embed. Разбито на три вкладки, чтобы меню было компактным.
+ *  скилл и MCP для агентов + embed. Разбито на три вкладки, чтобы меню было компактным.
  *  Start run живёт ОТДЕЛЬНОЙ кнопкой рядом (см. list page), не здесь.
  *
  *  Поповер, а не DropdownMenu: меню Radix перехватывает Tab и водит фокус только
@@ -32,6 +32,9 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
   const mcpUrl = `${origin}/api/mcp`
   // Список как ДАННЫЕ — близнец /raw: тот отдаёт скрипт, этот json со строками и версией.
   const dataUrl = `${origin}${base}/data.json`
+  // Список как Agent Skill: архив несёт и SKILL.md, и файлы автора из дерева, поэтому
+  // команда ставит именно его, а не голый SKILL.md.
+  const skillCommand = `npx skills add ${origin}${base}/skill.tar.gz`
   const embedCode = `<iframe src="${origin}${base}/embed" width="100%" height="480" style="border:1px solid #ddd;border-radius:8px" loading="lazy"></iframe>`
   const runCommand = dialectSpec(AUTHORED_DIALECT).run(`${origin}${base}/raw`, scriptFilename(slug, AUTHORED_DIALECT))
 
@@ -159,14 +162,28 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
 
           {tab === 'embed' && (
             <div role="tabpanel" id="use-panel-embed" aria-labelledby="use-tab-embed">
-              {/* Данные идут ПЕРВЫМИ: это самый частый программный сценарий — забрать список
-                  json'ом. MCP ниже нужен агенту, iframe — сайту. */}
-              {heading(<Braces size={12} />, t('dataHeading', lang))}
-              {copyField(dataUrl, t('dataHeading', lang))}
-              <p className="mt-1 text-body-sm text-ink-2">{t('dataHint', lang)}</p>
-              <MenuItem href={`${base}/data.json`} className="mt-1">
-                <Braces size={14} className="text-muted" /> {t('openData', lang)}
+              {/* Скилл — ПЕРВЫМ: одна команда, и список у агента целиком, с файлами автора.
+                  Раньше адреса SKILL.md и архива были, а в интерфейсе их не было нигде —
+                  найти можно было только из llms.txt. Дальше данные json'ом (код), MCP
+                  (агент по токену) и iframe (сайт). */}
+              {heading(<Bot size={12} />, t('skillHeading', lang))}
+              {copyField(skillCommand, t('skillHeading', lang))}
+              <p className="mt-1 text-body-sm text-ink-2">{t('skillHint', lang)}</p>
+              <MenuItem href={`${base}/SKILL.md`} className="mt-1">
+                <FileCode size={14} className="text-muted" /> {t('openSkillMd', lang)}
               </MenuItem>
+              <MenuItem href={`${base}/skill.tar.gz`}>
+                <FileDown size={14} className="text-muted" /> {t('downloadSkill', lang)}
+              </MenuItem>
+
+              <div className="mt-2.5 border-t border-border pt-2">
+                {heading(<Braces size={12} />, t('dataHeading', lang))}
+                {copyField(dataUrl, t('dataHeading', lang))}
+                <p className="mt-1 text-body-sm text-ink-2">{t('dataHint', lang)}</p>
+                <MenuItem href={`${base}/data.json`} className="mt-1">
+                  <Braces size={14} className="text-muted" /> {t('openData', lang)}
+                </MenuItem>
+              </div>
 
               <div className="mt-2.5 border-t border-border pt-2">
                 {heading(<Sparkles size={12} />, t('mcpHeading', lang))}
