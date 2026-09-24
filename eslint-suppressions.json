@@ -458,11 +458,6 @@
       "count": 15
     }
   },
-  "src/features/releases/actions.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
   "src/features/runs/RunView.tsx": {
     "jsx-a11y/no-autofocus": {
       "count": 1
