@@ -1,11 +1,24 @@
 {
   "name": "@setfork/cli",
-  "version": "0.1.0",
-  "description": "Minimal SetFork CLI — clone, run-script, open lists from the terminal.",
+  "version": "0.2.0",
+  "description": "SetFork CLI in the spirit of gh — lists, Agent Skills and releases from the terminal.",
   "type": "module",
-  "bin": { "sf": "./sf.mjs" },
-  "scripts": { "test": "node --test" },
-  "engines": { "node": ">=18" },
-  "files": ["sf.mjs", "lib.mjs", "README.md"],
+  "bin": {
+    "sf": "./sf.mjs"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.3"
+  },
+  "files": [
+    "sf.mjs",
+    "lib.mjs",
+    "auth.mjs",
+    "mcp.mjs",
+    "skill.mjs",
+    "README.md"
+  ],
   "license": "MIT"
 }
