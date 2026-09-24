@@ -213,4 +213,18 @@ description('publish_skill', () => {
     expect(res).toEqual({ error: expect.stringContaining('scripts/clean.sh has a destructive command') })
     expect(await row('dangerous-skill')).toBeUndefined()
   })
+
+  it('ключ доступа в references/ — отказ с файлом и строкой, ключ целиком не повторяется, списка нет', async () => {
+    // Собран из кусков: литерал остановил бы наш собственный push (push protection).
+    const tail = Array.from({ length: 64 }, (_, i) => '0123456789abcdef'[(i * 7 + 3) % 16]).join('')
+    const key = ['sk', 'or', 'v1', tail].join('-')
+    const res = await mcpPublishSkill(ownerId, {
+      title: 'Leaky skill',
+      items: [{ title: 'Configure' }],
+      files: [{ path: 'references/setup.md', content: `# Setup\n\nOPENROUTER_API_KEY=${key}\n` }],
+    })
+    expect(res).toEqual({ error: expect.stringContaining('references/setup.md, line 3 contains what looks like an access key for OpenRouter') })
+    expect(JSON.stringify(res)).not.toContain(tail)
+    expect(await row('leaky-skill')).toBeUndefined()
+  })
 })

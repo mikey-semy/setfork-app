@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { TagInput } from '@/shared/ui/TagInput'
 import { Input } from '@/shared/ui/input'
@@ -18,7 +19,10 @@ export function GeneralSection({
   tags,
   ordered,
   lang,
+  refusal,
 }: {
+  /** Отказ прошлого сохранения — над полями, которые его вызвали. */
+  refusal?: ReactNode
   templateId: string
   title: LocaleText
   desc: LocaleText
@@ -31,6 +35,7 @@ export function GeneralSection({
   return (
     <SettingsSection title={t('generalTitle', lang)}>
       <form action={save} className="flex flex-col gap-4">
+        {refusal}
         <Field label={t('listTitle', lang)}>
           <Input name="title" defaultValue={tr(title, lang)} required maxLength={140} />
         </Field>

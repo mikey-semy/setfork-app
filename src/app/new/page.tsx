@@ -42,6 +42,10 @@ export default async function NewListPage() {
     blockedReasons: Object.fromEntries(
       DESTRUCTIVE_REASONS.map((r) => [r, t(`destructive.${r}` as Parameters<typeof t>[0], lang)]),
     ),
+    secretTitle: t('secretBlockedTitle', lang),
+    secretBody: t('secretBlockedBody', lang),
+    secretWhereStep: t('secretWhereStep', lang),
+    secretWhereMeta: t('secretWhereMeta', lang),
     quotaReached: t('listQuotaReached', lang),
     noTitle: t('listTitleRequired', lang),
   }

@@ -17,6 +17,7 @@ import { isCollaborator } from '@/features/collab/queries'
 // eslint-disable-next-line boundaries/dependencies -- уведомление владельцу: тот же кросс-фич-паттерн, что в actions.ts
 import { notify } from '@/features/notifications/notify'
 import { SUGGESTION_NOTE_MAX } from './limits'
+import { findSecretInContent } from '@/core/domain/secret-scan'
 
 /**
  * ЯДРО СОЗДАНИЯ предложения — без сессии и без редиректа.
@@ -47,7 +48,15 @@ export async function createSuggestion(
   if (!(await rateLimit(`suggest:${actorUserId}`, 10, 10 * 60_000)).ok) return { ok: false, reason: 'rate limited' }
 
   const note = input.note.trim().slice(0, SUGGESTION_NOTE_MAX)
-  const created = await collabStore.createSuggestion(tpl.id, actorUserId, note, toStepInput(input.items as never))
+  const steps = toStepInput(input.items as never)
+  // Ключ доступа в предложении увидит владелец ЧУЖОГО списка, а ветка останется в его
+  // репозитории — отказываем до записи, а не на слиянии, где проверка стоит тоже.
+  const leak = findSecretInContent(steps, undefined, { note })
+  if (leak) {
+    const where = leak.step ? `step ${leak.step}` : 'the note'
+    return { ok: false, reason: `${where} contains what looks like an access key for ${leak.match.provider} (${leak.match.rule}) — remove it; if it was ever shared, revoke it` }
+  }
+  const created = await collabStore.createSuggestion(tpl.id, actorUserId, note, steps)
   await curationStore.ensureWatch(tpl.id, actorUserId) // автор правки следит за списком
   await notify({ recipientId: tpl.ownerId, actorId: actorUserId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
 

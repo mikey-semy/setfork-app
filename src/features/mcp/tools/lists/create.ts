@@ -21,6 +21,7 @@ import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { toProposed, type McpItemInput } from '../shared'
 import type { AuthoredFile } from '@/core'
+import { contentError } from './write'
 
 export interface McpCreateInput {
   title: string
@@ -57,20 +58,29 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
   const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
 
-  const list = await listStore.create({
-    ownerId: userId,
-    slug,
-    title: { [lang]: title },
-    desc: cleanText(input.desc) ? { [lang]: cleanText(input.desc) } : {},
-    tags,
-    ordered: input.ordered ?? true,
-    visibility: 'public',
-    status: 'draft',
-    origin: 'authored',
-    note: 'created via API',
-    steps: stepInput(proposed),
-    authored: input.authored,
-  })
+  // Отказ стража содержимого — ответ с местом, а не исключение: иначе агент видел код
+  // `destructive_command:rm_rf` без шага, а пачка (`bulk_create_lists`) падала целиком.
+  let list
+  try {
+    list = await listStore.create({
+      ownerId: userId,
+      slug,
+      title: { [lang]: title },
+      desc: cleanText(input.desc) ? { [lang]: cleanText(input.desc) } : {},
+      tags,
+      ordered: input.ordered ?? true,
+      visibility: 'public',
+      status: 'draft',
+      origin: 'authored',
+      note: 'created via API',
+      steps: stepInput(proposed),
+      authored: input.authored,
+    })
+  } catch (e) {
+    const refused = contentError(e)
+    if (refused) return refused
+    throw e
+  }
 
   // Полка — тем же правилом, что и в форме сайта (features/catalogs/assign): своя,
   // под замком, и молчаливо ничего не выдумывает. Отчёт называет исход: имя, которого

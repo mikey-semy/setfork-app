@@ -17,6 +17,7 @@ import { parseEditorItems, toProposedItems } from '../editor'
 import { mergeSuggestion } from '../suggestion-core'
 import { ownerHandle } from './shared'
 import { withPrDefaults } from '../pr-settings'
+import { findSecretInContent } from '@/core/domain/secret-scan'
 
 /**
  * Судьба предложения целиком: подать, принять, отклонить, переименовать.
@@ -39,7 +40,7 @@ import { withPrDefaults } from '../pr-settings'
  * `unavailable` — общий ответ на «списка нет» и «список тебе не виден»: различать их
  * наружу нельзя, иначе ответ становится оракулом существования приватных списков.
  */
-export type SuggestRefusal = 'unavailable' | 'frozen' | 'archived' | 'suggest-closed' | 'ratelimited'
+export type SuggestRefusal = 'unavailable' | 'frozen' | 'archived' | 'suggest-closed' | 'ratelimited' | 'secret'
 
 export async function submitSuggestion(
   templateId: string,
@@ -66,7 +67,11 @@ export async function submitSuggestion(
   const note = String(formData.get('note') ?? '').trim()
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
-  const created = await collabStore.createSuggestion(tpl.id, session.userId, note, toStepInput(proposed))
+  const steps = toStepInput(proposed)
+  // Ключ доступа увидит владелец ЧУЖОГО списка, а ветка останется в его репозитории:
+  // тот же отказ, что у `suggest_edit` через MCP (suggestion-core/create).
+  if (findSecretInContent(steps, undefined, { note })) return 'secret'
+  const created = await collabStore.createSuggestion(tpl.id, session.userId, note, steps)
   await ensureWatch(tpl.id) // автор правки следит за списком
   await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
   await notifyMentions({ text: note, actorId: session.userId, templateId: tpl.id })

@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { t, type Lang, type TKey } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
+import { ContentRefusalAlert } from '@/features/library/ContentRefusalAlert'
 import { Alert } from '@/shared/ui/Alert'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { branchLabel } from '@/features/git/branch-label'
@@ -12,7 +13,7 @@ type Loaded = Awaited<ReturnType<typeof loadSuggestionPage>>
  * исчезла ли ветка под ним. Одна причина менять — что мы сообщаем о СУДЬБЕ правки.
  */
 export function SuggestionNotices({ owner, slug, lang, data }: { owner: string; slug: string; lang: Lang; data: Loaded }) {
-  const { sug, canMerge, branchMissing, mergeErr, destructiveBlock } = data
+  const { sug, canMerge, branchMissing, mergeErr, contentRefusal } = data
   return (
     <>
       {sug.status !== 'open' && (
@@ -65,16 +66,7 @@ export function SuggestionNotices({ owner, slug, lang, data }: { owner: string; 
           </Link>
         </Alert>
       ) : null}
-      {destructiveBlock && (
-        <Alert variant="danger" className="mb-3">
-          <span className="block font-semibold">{t('destructiveBlockedTitle', lang)}</span>
-          <span className="block">
-            {t('destructiveBlockedBody', lang)
-              .replace('{n}', destructiveBlock.step)
-              .replace('{reason}', t(`destructive.${destructiveBlock.reason}` as TKey, lang))}
-          </span>
-        </Alert>
-      )}
+      {contentRefusal && <ContentRefusalAlert refusal={contentRefusal} lang={lang} className="mb-3" />}
       {mergeErr && (
         <Alert variant="danger" className="mb-3">
           {t(mergeErr, lang)}

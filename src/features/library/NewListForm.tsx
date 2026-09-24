@@ -42,6 +42,12 @@ export function NewListForm({
     blockedBody: string
     /** Причины стража исполняемых команд: код → слова. */
     blockedReasons: Record<string, string>
+    secretTitle: string
+    /** `{where}` — шаг или мета, `{provider}` — чей ключ. */
+    secretBody: string
+    /** `{n}` — номер шага. */
+    secretWhereStep: string
+    secretWhereMeta: string
     /** `{n}` — предел числа списков. */
     quotaReached: string
     noTitle: string
@@ -86,6 +92,17 @@ export function NewListForm({
             {texts.blockedBody
               .replace('{n}', String(refusal.step))
               .replace('{reason}', texts.blockedReasons[refusal.reason] ?? refusal.reason)}
+          </span>
+        </Alert>
+      )}
+
+      {refusal?.kind === 'secret' && (
+        <Alert variant="danger" className="mb-5">
+          <span className="block font-semibold">{texts.secretTitle}</span>
+          <span className="block">
+            {texts.secretBody
+              .replace('{where}', refusal.step ? texts.secretWhereStep.replace('{n}', String(refusal.step)) : texts.secretWhereMeta)
+              .replace('{provider}', refusal.provider)}
           </span>
         </Alert>
       )}

@@ -46,6 +46,7 @@ export default async function SuggestPage({
     archived: t('archivedOn', lang),
     'suggest-closed': t('suggestClosedRefusal', lang),
     ratelimited: t('rateLimited', lang),
+    secret: t('secretSuggestRefusal', lang),
   }
 
   return (
