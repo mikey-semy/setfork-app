@@ -8,6 +8,8 @@ export interface ParsedQuery {
   tags: string[] // tag:/topic:
   type?: 'ordered' | 'unordered' // type:ordered
   minStars?: number // stars:>N
+  /** is:skill / is:template — род списка. Других значений `is:` нет (см. ниже). */
+  is?: ('skill' | 'template')[]
 }
 
 // ⚠️ `is` УБРАН ИЗ КЛЮЧЕЙ, а не просто лишён обработчика. Пока он оставался здесь без
@@ -22,7 +24,12 @@ export interface ParsedQuery {
 // Почему `is:verified` снят вообще: публичный отбор «только проверенные» — тот же знак,
 // что запрещён решением 0006, только фильтром. Он обещает вторую проверку сверх
 // видимости, а её нет. Флаг остаётся внутренним инструментом модерации.
-const KEY_RE = /^(by|owner|author|tag|topic|type|stars):(.*)$/i
+//
+// Вернулся `is:` 24.09.2026 — но только с двумя значениями, у которых есть ПРЕДМЕТ: `skill`
+// и `template` (метки, которые ставит автор, как «Public template» у GitHub). Любое другое
+// значение, включая `is:verified`, уходит в свободный текст ЦЕЛИКОМ — не проглатывается.
+const KEY_RE = /^(by|owner|author|tag|topic|type|stars|is):(.*)$/i
+const IS_VALUES = ['skill', 'template'] as const
 
 export function parseSearchQuery(raw: string): ParsedQuery {
   const out: ParsedQuery = { text: '', tags: [] }
@@ -49,6 +56,14 @@ export function parseSearchQuery(raw: string): ParsedQuery {
       case 'type':
         if (val === 'ordered' || val === 'unordered') out.type = val
         break
+      case 'is': {
+        const v = val.toLowerCase()
+        if ((IS_VALUES as readonly string[]).includes(v)) {
+          const is = (out.is ??= [])
+          if (!is.includes(v as 'skill' | 'template')) is.push(v as 'skill' | 'template')
+        } else words.push(tok)
+        break
+      }
       case 'stars': {
         const n = parseInt(val.replace(/^[>=<]+/, ''), 10)
         if (Number.isFinite(n)) out.minStars = n
@@ -71,5 +86,6 @@ export function buildSearchQuery(p: ParsedQuery): string {
   for (const tag of p.tags) parts.push(`tag:${tag}`)
   if (p.type) parts.push(`type:${p.type}`)
   if (p.minStars != null) parts.push(`stars:>${p.minStars}`)
+  for (const v of p.is ?? []) parts.push(`is:${v}`)
   return parts.join(' ')
 }

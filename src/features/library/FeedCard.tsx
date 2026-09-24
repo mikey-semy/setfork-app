@@ -9,6 +9,7 @@ import { buttonClass } from '@/shared/ui/button-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { ListCardMeta } from './ListCardMeta'
 import { ListStateBadge } from './ListStateBadge'
+import { ListKindBadges } from './ListKindBadges'
 import type { ListDensity } from '@/shared/lib/list-density'
 
 function fmt(n: number): string {
@@ -63,6 +64,7 @@ export function FeedCard({
               {/* Состояние — у ИМЕНИ, как бейдж Private у GitHub: при беглом просмотре
                   видно там же, где имя, а не среди чисел ниже. */}
               <ListStateBadge item={item} lang={lang} />
+              <ListKindBadges item={item} lang={lang} />
             </div>
             <Link
               href={base}

@@ -11,6 +11,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Alert } from '@/shared/ui/Alert'
 import { PinButton } from '@/features/library/PinButton'
+import { ListKindBadges } from '@/features/library/ListKindBadges'
 import { StarSplit } from './StarSplit'
 import { SplitButton } from '@/shared/ui/SplitButton'
 import { splitSegment } from '@/shared/ui/split-segment'
@@ -96,6 +97,8 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             <h1 className="min-w-0 text-page font-bold text-ink [overflow-wrap:anywhere] sm:truncate">{tr(meta.title, lang)}</h1>
             {/* Версию у заголовка НЕ показываем: она живёт в сайдбаре Releases (как у GitHub —
                 номер версии/релиза только в блоке Releases, а не рядом с именем). Убран дубль. */}
+            {/* Род списка — у имени, как «Public template» у GitHub. */}
+            <ListKindBadges item={meta} lang={lang} />
             {/* Ограниченные состояния остаются рядом с названием (архив строже заморозки). */}
             {meta.archivedAt != null ? (
               <Badge variant="warn" className="shrink-0">

@@ -48,6 +48,8 @@ export const FEED_COLS = {
   starsCount: templates.starsCount,
   visibility: templates.visibility,
   verified: templates.verified,
+  isSkill: templates.isSkill,
+  isTemplate: templates.isTemplate,
   updatedAt: templates.updatedAt,
   // Уровень проверки ТЕКУЩЕЙ версии и дата проверки (решение 0018). Подзапросом, а не
   // join'ом: join по версии размножил бы строки ленты при любой невнимательности в
@@ -188,11 +190,15 @@ export function extraFilters(opts: {
   by?: string
   tags?: string[]
   minStars?: number
+  isSkill?: boolean
+  isTemplate?: boolean
 }): SQL[] {
   const f: SQL[] = []
   if (opts.ordered !== undefined) f.push(eq(templates.ordered, opts.ordered))
   if (opts.by) f.push(eq(users.handle, opts.by)) // users приджойнен в обоих режимах
   if (opts.minStars != null) f.push(gte(templates.starsCount, opts.minStars))
+  if (opts.isSkill) f.push(eq(templates.isSkill, true))
+  if (opts.isTemplate) f.push(eq(templates.isTemplate, true))
   for (const tag of opts.tags ?? []) f.push(tagFilter(tag))
   return f
 }

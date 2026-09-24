@@ -19,6 +19,7 @@ import { ListAbout } from './ListAbout'
 import { ListAdNotices } from './ListAdNotices'
 import { ListAside } from './ListAside'
 import { ListBlocks } from './ListBlocks'
+import { SkillFiles } from '@/features/library/SkillFiles'
 import { ListDraftNotices } from './ListDraftNotices'
 import { ListToolbar } from './ListToolbar'
 import { ListViewBanner } from './ListViewBanner'
@@ -214,6 +215,9 @@ export default async function ListPage({
             )}
 
             <ListBlocks {...loaded} lang={lang} />
+
+            {/* Файлы автора (ADR-0028) — приложением к списку, проводником в одном блоке. */}
+            <SkillFiles files={loaded.skillFiles} base={base} version={loaded.shownVersion} lang={lang} />
 
             {/* Связанные списки (Д6): и человеку — куда идти дальше, и обходчику —
                 по чему обходить корпус. Карточки те же, что в ленте: своей

@@ -53,6 +53,8 @@ export async function getFeed(
     by?: string
     tags?: string[]
     minStars?: number
+    isSkill?: boolean
+    isTemplate?: boolean
   } = {},
   viewerId?: string,
   viewerLang?: Lang,
@@ -150,6 +152,8 @@ export async function countLists(
     by?: string
     tags?: string[]
     minStars?: number
+    isSkill?: boolean
+    isTemplate?: boolean
   } = {},
   viewerId?: string,
 ): Promise<number> {
