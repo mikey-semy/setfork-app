@@ -2,6 +2,7 @@
   "review_id": "setfork-frontend-2026-09",
   "project": "SetFork",
   "cli": "npm run review --",
+  "lang": "ru",
   "readable_lines": 6000,
   "gates": [
     "npm run lint",
@@ -457,14 +458,19 @@
         "src/app/llms.txt/**",
         "src/app/robots.ts",
         "src/app/sitemap.ts",
+        "src/features/library/indexnow-jobs.ts",
+        "src/features/library/indexnow.ts",
         "src/shared/docs.ts",
+        "src/shared/indexnow.ts",
         "src/shared/seo/**",
         "src/shared/site.ts",
         "tests/shared/seo/page-meta-image.test.ts",
         "tests/shared/seo/site-jsonld.test.ts",
         "tests/shared/seo/page-meta-lang.test.ts",
         "tests/shared/seo/localize-metadata.test.ts",
-        "tests/shared/seo/howto-eligible.test.ts"
+        "tests/shared/seo/howto-eligible.test.ts",
+        "tests/app/indexnow-key-file.test.ts",
+        "tests/features/library/indexnow.itest.ts"
       ],
       "ref_paths": []
     },
@@ -552,7 +558,7 @@
       "role": "reviewer",
       "goal": "Проверить инструменты, которые СУДЯТ о коде: оснастка сплошного ревью, узда шкалы контролов, проверки покрытия — и то, что они не зеленеют на пустом месте.",
       "paths": [
-        ".claude/skills/review-kit/**",
+        ".claude/skills/finetooth/**",
         "scripts/mutate.mjs",
         "scripts/ui-parity.mjs"
       ],
@@ -1332,7 +1338,7 @@
         "README.md",
         "SECURITY.md",
         ".claude/**",
-        ":(exclude).claude/skills/review-kit/**",
+        ":(exclude).claude/skills/finetooth/**",
         ":(glob)docs/*.md"
       ],
       "ref_paths": []

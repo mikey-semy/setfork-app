@@ -66,4 +66,8 @@ export const LOOP_WIRING: Record<LoopName, LoopWiring> = {
     handler: () => import('@/features/changelog/jobs').then((m) => m.runChangelogJob),
     schedule: () => import('@/features/changelog/service').then((m) => m.ensureChangelogScheduled()),
   },
+  indexnow: {
+    handler: () => import('@/features/library/indexnow-jobs').then((m) => m.runIndexNowJob),
+    schedule: () => import('@/features/library/indexnow').then((m) => m.ensureIndexNowScheduled()),
+  },
 }

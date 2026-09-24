@@ -34,10 +34,10 @@
     "itest:env": "tsx scripts/itest-env.ts",
     "audit:git-parity": "tsx --conditions=react-server scripts/git-parity-audit.ts",
     "itest:local": "tsx scripts/itest-env.ts env",
-    "review": "python3 .claude/skills/review-kit/scripts/review.py",
-    "review:status": "python3 .claude/skills/review-kit/scripts/review.py status",
-    "review:coverage": "python3 .claude/skills/review-kit/scripts/review.py coverage",
-    "review:check": "python3 .claude/skills/review-kit/scripts/review.py check",
+    "review": "python3 .claude/skills/finetooth/scripts/review.py",
+    "review:status": "python3 .claude/skills/finetooth/scripts/review.py status",
+    "review:coverage": "python3 .claude/skills/finetooth/scripts/review.py coverage",
+    "review:check": "python3 .claude/skills/finetooth/scripts/review.py check",
     "mutate": "node scripts/mutate.mjs"
   },
   "dependencies": {

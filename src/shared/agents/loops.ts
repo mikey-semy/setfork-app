@@ -188,6 +188,19 @@ export const LOOPS: LoopSpec[] = [
     progress: ['changelog.refresh'],
     what: { en: 'keeps the public changelog fresh from GitHub', ru: 'держит публичный changelog свежим из GitHub' },
   },
+  {
+    name: 'indexnow',
+    jobType: 'indexnow',
+    jobsModule: '@/features/library/indexnow-jobs',
+    handler: 'runIndexNowJob',
+    serviceModule: '@/features/library/indexnow',
+    ensure: 'ensureIndexNowScheduled',
+    paid: false,
+    // Прогресс — принятая поисковиком пачка (`ok`). Отказ пишется как `error`, а пустой
+    // проход не пишется вовсе: иначе тихий сайт через три часа выглядел бы холостым.
+    progress: ['indexnow.submit'],
+    what: { en: 'tells search engines about new versions of public lists (IndexNow)', ru: 'сообщает поисковикам о новых версиях публичных списков (IndexNow)' },
+  },
 ]
 
 /** Быстрый доступ по имени — админке и рунбукам. */

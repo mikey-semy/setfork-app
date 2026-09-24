@@ -21,7 +21,7 @@ npm run review -- prompt H1 --role hunter   # готовый промпт аге
 | `blocks/<ID>-<слаг>.md` | манифест блока: зачем, что находка, гипотезы, критерий приёмки |
 | `findings.jsonl` | реестр находок, по строке на находку |
 | `coverage.tsv` | карта покрытия, пересобирается |
-| `prompts/<роль>.md` | **необязательно.** Своя версия шаблона роли — берётся вместо скилловой. Сейчас своих нет: три роли (охотник, проверяющий, исполнитель) идут из скилла `.claude/skills/review-kit/references/` |
+| `prompts/<роль>.md` | **необязательно.** Своя версия шаблона роли — берётся вместо скилловой. Сейчас своих нет: четыре роли (охотник, проверяющий, исполнитель, ревьюер починки) идут из скилла `.claude/skills/finetooth/references/` (русские шаблоны `*.ru.md`, выбор по `lang` в `blocks.json`) |
 
 ## Порядок работы над блоком
 
@@ -56,11 +56,11 @@ npm run review -- prompt H1 --role hunter   # готовый промпт аге
 `CONTRIBUTING.md` и `AGENTS.md`, решения — в HQ, проверки — в тесты и узды CI. Каталог ревью
 — это леса вокруг стройки, а не часть здания.
 
-Инструмент и шаблоны ролей — скилл **review-kit** по стандарту Agent Skills
-([github.com/mikey-semy/review-kit](https://github.com/mikey-semy/review-kit)); основоположник
+Инструмент и шаблоны ролей — скилл **finetooth** по стандарту Agent Skills
+([github.com/mikey-semy/finetooth](https://github.com/mikey-semy/finetooth)); основоположник
 метода — [Георгий Худобандаев](https://github.com/Georgiy-Khudobandaev). Копия в
-`.claude/skills/review-kit/` закоммичена намеренно — она закрепляет версию, источник записан в
-`skills-lock.json`. Обновление: `npx skills add mikey-semy/review-kit -a claude-code --copy`,
+`.claude/skills/finetooth/` закоммичена намеренно — она закрепляет версию, источник записан в
+`skills-lock.json`. Обновление: `npx skills add mikey-semy/finetooth -a claude-code --copy`,
 затем `npm run review:check` — новые проверки находят старые ошибки реестра.
 
 ## Сколько это стоит

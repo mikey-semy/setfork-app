@@ -7,6 +7,7 @@ import { maintenanceEnabled } from '@/shared/settings/maintenance'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
 import { LANG_HEADER, langHref, splitLangPath } from '@/shared/i18n/url'
 import { dialectMime, errorScript, normalizeDialect } from '@/core/domain/script-dialect'
+import { indexNowKey, indexNowKeyPath } from '@/shared/indexnow'
 
 // Режим «сайт на ремонте»: включается админом из /admin (флаг в БД, кэш 5с)
 // либо аварийно env SETFORK_MAINTENANCE=1. Всё отвечает 503 + Retry-After,
@@ -190,6 +191,17 @@ function markdownSuffixTarget(pathname: string): string | null {
 const PROBE_PATHS = new Set(['/api/health', '/api/ready', '/healthz'])
 
 export async function middleware(req: NextRequest) {
+  // ФАЙЛ КЛЮЧА INDEXNOW — первым делом, по ПОЛНОМУ пути. Он обязан лежать в корне
+  // (`/<key>.txt`): ключ в подкаталоге подтверждал бы только адреса под ним, а языковой
+  // префикс превратил бы `/ru/<key>.txt` в такой подкаталог. Корень занят профилями
+  // (`/[handle]`), поэтому отвечаем здесь, без базы и без ремонта: поисковик проверяет
+  // ключ, пока сайт на обслуживании, и отказ там стоил бы отказа всей пачки (403).
+  // Любой другой `*.txt` идёт дальше как раньше.
+  const key = indexNowKey()
+  if (key && req.nextUrl.pathname === indexNowKeyPath(key)) {
+    return new NextResponse(key, { headers: { 'content-type': 'text/plain; charset=utf-8' } })
+  }
+
   // Путь без языкового префикса — на нём держатся ВСЕ правила ниже; язык адреса
   // возвращается в ответ на выходе (`proceed`).
   const { lang: urlLang, rest: pathname } = splitLangPath(req.nextUrl.pathname)
