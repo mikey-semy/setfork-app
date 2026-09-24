@@ -65,4 +65,11 @@ describe('склонение по правилам CLDR (Intl.PluralRules)', () 
   it('английский: единица — одна форма, всё остальное — другая, дробные тоже', () => {
     expect([1, 0, 2, 1.5, -1].map((n) => plural(n, 'versions', 'en'))).toEqual(['version', 'versions', 'versions', 'versions', 'version'])
   })
+
+  it('правила — своего языка, даже когда до него склоняли по-русски', () => {
+    // Числа, где русский и английский расходятся (21, 101: по-русски «одна»). Кэш правил,
+    // общий на все языки, склонял бы английский экран по-русски — «21 comment».
+    plural(21, 'comments', 'ru')
+    expect([21, 101, 3].map((n) => plural(n, 'comments', 'en'))).toEqual(['comments', 'comments', 'comments'])
+  })
 })
