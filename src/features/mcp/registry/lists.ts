@@ -1,11 +1,56 @@
 import { z } from 'zod'
-import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
+import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpPublishSkill, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
 import { itemShape, itemShapeLean } from './block-schema'
 import { json, err, type ToolKit } from './kit'
 
 /** Списки: создание, замена, точечная правка, публикация черновика, удаление. */
 export function registerLists({ readTool, writeTool }: ToolKit) {
   // ── WRITE-инструменты (userId + write-scope, вшито в writeTool) ────
+  writeTool(
+    'publish_skill',
+    {
+      title: 'Publish an Agent Skill',
+      // Набор файлов ЗАМЕНЯЕТСЯ целиком: файл, которого нет во входе, исчезает из версии —
+      // для агента это разрушающая операция, клиент вправе спросить человека.
+      annotations: { destructiveHint: true },
+      description:
+        'Publish an Agent Skill as a SetFork list: the blocks AND the author files (scripts/, references/, assets/) land in ONE version, so nobody can install a half-published skill. Without list — creates a new private draft whose version 1 already carries the files (publish it with publish_lists). With list + baseVersion — writes a new version of your list; items omitted keeps the current blocks and changes only the files. files is the COMPLETE set: it replaces the previous one, and [] removes all files. Rules are the same as for git push: files directly in scripts/, references/ or assets/ (no subfolders), text only, a limited number and total size (the refusal names the file and the limit); scripts go through the same destructive-command check as steps. Every published public list installs with: npx skills add <site>/<handle>/<slug>/skill.tar.gz',
+      inputSchema: {
+        list: z.string().optional().describe('Your list "handle/slug" to update; omit to create a new skill'),
+        baseVersion: z.number().int().optional().describe('Required with list: the "version" from get_list — the write is rejected if the list moved on'),
+        title: z.string().optional().describe('Title — required for a new skill'),
+        desc: z
+          .string()
+          .optional()
+          .describe('Description — agents decide whether to use the skill by it: say what it does AND when to use it'),
+        tags: z.array(z.string()).optional(),
+        ordered: z.boolean().optional(),
+        lang: z.enum(['ru', 'en']).optional().describe('Content language of a new skill (default: detected)'),
+        catalog: z.string().optional().describe('Your catalog to file a new skill into'),
+        items: z
+          .array(itemShapeLean)
+          .optional()
+          .describe('Blocks (as in create_list). Required for a new skill; omit when updating to keep the current blocks'),
+        files: z
+          .array(
+            z.object({
+              path: z.string().describe('"scripts/run.sh", "references/guide.md", "assets/template.json"'),
+              content: z.string().describe('File text (or base64 with encoding:"base64")'),
+              encoding: z.enum(['utf8', 'base64']).optional(),
+              executable: z.boolean().optional().describe('Keep it executable (mode 755) in the installed skill'),
+            }),
+          )
+          .describe('The COMPLETE set of author files for this version — replaces the previous set; [] removes all'),
+        note: z.string().optional().describe('Change note of the new version'),
+      },
+    },
+    async (userId, args) => {
+      // Полная форма блоков — по той же причине, что в create_list.
+      const res = await mcpPublishSkill(userId, { ...args, items: args.items ? z.array(itemShape).parse(args.items) : undefined })
+      return 'error' in res ? err(res.error as string) : json(res)
+    },
+  )
+
   writeTool(
     'create_list',
     {

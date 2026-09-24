@@ -52,7 +52,7 @@ export interface Skill {
 }
 
 /** Путь авторского файла — ровно `<каталог>/<имя>`, как принимает ядро (ADR-0028). */
-const AUTHORED_PATH = /^(scripts|references|assets)\/[^/]+$/
+export const AUTHORED_PATH = /^(scripts|references|assets)\/[^/]+$/
 /** Имя файла в заголовке ustar — не длиннее 100 байт (каталоги уходят в поле `prefix`).
  *  Ядро длину имени не ограничивает, а кириллица набирает 100 байт на ~50 символах. */
 const TAR_NAME_MAX_BYTES = 100

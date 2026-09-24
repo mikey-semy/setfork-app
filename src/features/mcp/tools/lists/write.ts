@@ -8,7 +8,7 @@
 import 'server-only'
 import { eq } from 'drizzle-orm'
 import { db, templates, type ProposedItem } from '@/shared/db'
-import { canEditList, ListWriteError } from '@/core'
+import { AuthoredFilesError, canEditList, ListWriteError, type AuthoredFile } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { listStore } from '@/features/library/list-store'
 // Единый конвертер шагов на запись — тот же, что у веба, садовника и предложений.
@@ -18,10 +18,22 @@ import { resolveListRefOrMoved } from '../shared'
 import { duplicateBid } from './draft-store'
 
 /** Отказ стража разрушительных команд → ответ инструмента. Это не сбой, а
- *  вердикт: агенту нужно назвать причину, а не увидеть стектрейс. */
+ *  вердикт: агенту нужно назвать причину, а не увидеть стектрейс. Опасное в файле из
+ *  `scripts/` называется файлом: «шаг 0» агент не нашёл бы нигде. */
 export const destructiveError = (e: unknown): { error: string } | null =>
   e instanceof DestructiveCommandError
-    ? { error: `refused: step ${e.stepIndex} has a destructive command (${e.reason}): ${e.fragment}` }
+    ? e.path
+      ? { error: `refused: ${e.path} has a destructive command (${e.reason}): ${e.fragment}` }
+      : { error: `refused: step ${e.stepIndex} has a destructive command (${e.reason}): ${e.fragment}` }
+    : null
+
+/** Отказ по файлам автора → ответ инструмента: набор не прошёл правило дерева (текст ядра
+ *  называет файл и предел) или ядро файлов не понимает — тогда повтор сейчас бесполезен. */
+export const authoredError = (e: unknown): { error: string } | null =>
+  e instanceof AuthoredFilesError
+    ? e.code === 'invalid'
+      ? { error: `refused: the files do not fit the skill tree — ${e.detail}` }
+      : { error: `the git core cannot take author files right now${e.detail ? ` (${e.detail})` : ''} — nothing new was written with them; try again after the core is updated` }
     : null
 
 /** Список во владении пользователя (для записи) + его версии.
@@ -62,6 +74,8 @@ export async function writeProposed(
   // она была ровно один вызов, и `update_list` её не передавал — полная замена уезжала
   // в ядро без сверки и молча вытесняла чужую версию, пока патч был защищён.
   expectedVersion: number,
+  // Файлы автора тем же коммитом (ADR-0028). Не задано — ядро переносит их из родителя.
+  authored?: AuthoredFile[],
 ) {
   if (!proposed.length) return { error: 'at least one item with a title is required' }
   const dup = duplicateBid(proposed)
@@ -83,7 +97,7 @@ export async function writeProposed(
   // замком строки, иначе между ними успевает лечь чужая версия.
   let ver
   try {
-    ver = await listStore.addVersion(tpl.id, { note, steps: stepInput(proposed), meta, expectedVersion })
+    ver = await listStore.addVersion(tpl.id, { note, steps: stepInput(proposed), meta, expectedVersion, authored })
   } catch (e) {
     // Отказ ядра по устаревшей версии — не сбой, а нормальный исход гонки: пока
     // правку готовили, список ушёл вперёд. Агент перечитывает и накладывает заново.
@@ -99,7 +113,7 @@ export async function writeProposed(
     // причину. Раньше он превращался в ответ только в ветке правки черновика; когда та
     // ушла, стражевой отказ полетел исключением — то есть агент получал бы стектрейс
     // вместо «отказано, потому что».
-    const refused = destructiveError(e)
+    const refused = destructiveError(e) ?? authoredError(e)
     if (refused) return refused
     throw e
   }

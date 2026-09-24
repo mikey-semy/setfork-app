@@ -20,6 +20,7 @@ import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 // Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { toProposed, type McpItemInput } from '../shared'
+import type { AuthoredFile } from '@/core'
 
 export interface McpCreateInput {
   title: string
@@ -31,6 +32,8 @@ export interface McpCreateInput {
   lang?: string
   /** Имя полки владельца, на которую положить список. Нет такой — список остаётся без полки. */
   catalog?: string
+  /** Файлы автора в первую версию (ADR-0028) — тем же коммитом, что и блоки. */
+  authored?: AuthoredFile[]
 }
 
 /** Создать список от имени пользователя. Всегда как ЧЕРНОВИК — публикует потом владелец на сайте. */
@@ -61,6 +64,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
     origin: 'authored',
     note: 'created via API',
     steps: stepInput(proposed),
+    authored: input.authored,
   })
 
   // Полка — тем же правилом, что и в форме сайта (features/catalogs/assign): своя,

@@ -1,9 +1,10 @@
 import 'server-only'
 import { Code, ConnectError, createClient } from '@connectrpc/connect'
 import { coreTransport } from '@/shared/core-transport'
-import { assertNoDestructiveSteps } from '@/core/domain/destructive-command'
-import { ListWriteError } from '@/core'
-import type { Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
+import { assertNoDestructiveContent } from '@/core/domain/destructive-command'
+import { AuthoredFilesError, ListWriteError } from '@/core'
+import type { AuthoredFile, Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
+import { GitCore } from '@/shared/gen/git_pb'
 import {
   ListRead,
   ListWrite,
@@ -20,6 +21,41 @@ import {
 const transport = coreTransport()
 const client = createClient(ListRead, transport)
 const writeClient = createClient(ListWrite, transport)
+const gitClient = createClient(GitCore, transport)
+
+/**
+ * ФАЙЛЫ АВТОРА — только ядру, которое их понимает, и с проверкой, что поняло.
+ *
+ * Незнакомое поле proto3 теряется МОЛЧА (доказано на этом проекте не раз): старое ядро
+ * записало бы версию с файлами родителя, ответило бы успехом, и вызывающий считал бы, что
+ * положил свои. Поэтому два замка:
+ *  • ДО записи — ядро подтверждает возможность. Без кэша, как у ролей пуша
+ *    (`features/git/capabilities.ts`): ядро могут откатить назад в любую минуту;
+ *  • ПОСЛЕ — эхо `authored_applied` в ответе. Оно ловит откат между проверкой и записью:
+ *    версия тогда уже легла, но вызывающий хотя бы узнаёт об этом, а не верит успеху.
+ */
+const CAP_TIMEOUT_MS = 1000
+
+async function assertCoreAcceptsAuthored(): Promise<void> {
+  const res = await gitClient.getCapabilities({}, { timeoutMs: CAP_TIMEOUT_MS }).catch(() => null)
+  if (res?.acceptsAuthoredFiles !== true) throw new AuthoredFilesError('unsupported')
+}
+
+const toPbAuthored = (files: AuthoredFile[] | undefined) =>
+  files === undefined ? undefined : { files: files.map((f) => ({ path: f.path, content: f.content, executable: f.executable })) }
+
+function assertApplied(sent: AuthoredFile[] | undefined, applied: boolean): void {
+  if (sent !== undefined && !applied) {
+    throw new AuthoredFilesError('unsupported', 'the core wrote the version without the files — it was replaced by one that does not understand them; the version keeps the previous files')
+  }
+}
+
+/** Отказ ядра по набору файлов — с его текстом: он называет файл и предел. */
+function authoredRefusal(e: unknown): never | void {
+  if (e instanceof ConnectError && e.metadata.get('sf-reason') === 'AUTHORED_INVALID') {
+    throw new AuthoredFilesError('invalid', e.rawMessage)
+  }
+}
 
 /** Вызов create с переводом отказа в доменную ошибку.
  *
@@ -41,6 +77,7 @@ async function callCreate(req: Parameters<typeof writeClient.create>[0]): Promis
   try {
     return await writeClient.create(req)
   } catch (e) {
+    authoredRefusal(e)
     if (e instanceof ConnectError && e.metadata.get('sf-reason') === 'EXISTS') {
       throw new ListWriteError('exists')
     }
@@ -57,6 +94,7 @@ async function callAddVersion(req: Parameters<typeof writeClient.addVersion>[0])
   try {
     return await writeClient.addVersion(req)
   } catch (e) {
+    authoredRefusal(e)
     if (e instanceof ConnectError && (e.metadata.get('sf-reason') === 'STALE' || e.code === Code.Aborted)) {
       throw new ListWriteError('stale')
     }
@@ -226,7 +264,8 @@ const toPbStep = (s: NewVersionInput['steps'][number]) => ({
 
 export const listWriteRemote = {
   async addVersion(listId: string, input: NewVersionInput): Promise<Version> {
-    assertNoDestructiveSteps(input.steps)
+    assertNoDestructiveContent(input.steps, input.authored)
+    if (input.authored !== undefined) await assertCoreAcceptsAuthored()
     const res = await callAddVersion({
       listId,
       note: input.note,
@@ -244,11 +283,15 @@ export const listWriteRemote = {
       // Версия, на которой основана правка: сверку делает ЯДРО в той же транзакции,
       // где строка списка уже заблокирована, — снаружи такой гарантии нет.
       expectedVersion: input.expectedVersion,
+      // Нет поля — ядро переносит файлы из родителя; есть — заменяет набор этим коммитом.
+      authored: toPbAuthored(input.authored),
     })
+    assertApplied(input.authored, res.authoredApplied)
     return toVersion(res)
   },
   async create(input: CreateListInput): Promise<List> {
-    assertNoDestructiveSteps(input.steps)
+    assertNoDestructiveContent(input.steps, input.authored)
+    if (input.authored !== undefined) await assertCoreAcceptsAuthored()
     const res = await callCreate({
       ownerId: input.ownerId,
       slug: input.slug,
@@ -266,7 +309,9 @@ export const listWriteRemote = {
       // рождается pending, а не становится им догоняющим апдейтом (окно между
       // insert в ядре и update в БД — это время, когда он публичен). '' = active.
       moderation: input.moderation ?? '',
+      authored: toPbAuthored(input.authored),
     })
+    assertApplied(input.authored, res.authoredApplied)
     return toList(res)
   },
 }
