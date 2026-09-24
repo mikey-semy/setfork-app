@@ -5,13 +5,11 @@ import { Crop, ImageUp, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { AvatarCropper } from '@/shared/ui/AvatarCropper'
 import { Field } from '@/shared/ui/Field'
-import { t, type Lang } from '@/shared/i18n'
+import { fill, t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { TextButton } from '@/shared/ui/TextButton'
-import { IMAGE_ACCEPT, IMAGE_TYPES } from '@/shared/media/limits'
-
-const MAX_BYTES = 2 * 1024 * 1024
+import { asImageType, AVATAR_MAX_BYTES, IMAGE_ACCEPT, megabytes } from '@/shared/media/limits'
 
 /** Аватар с drag-and-drop: перетащить или кликнуть. Выбранный файл кладётся в
  *  скрытый input[name=avatar], чтобы уйти в форму updateProfile обычным сабмитом. */
@@ -39,12 +37,12 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
   )
 
   const accept = (file: File): boolean => {
-    if (!(IMAGE_TYPES as readonly string[]).includes(file.type)) {
+    if (!asImageType(file.type)) {
       setError(t('avatarTypeErr', lang))
       return false
     }
-    if (file.size > MAX_BYTES) {
-      setError(t('avatarSizeErr', lang))
+    if (file.size > AVATAR_MAX_BYTES) {
+      setError(fill('avatarSizeErr', lang, { n: megabytes(AVATAR_MAX_BYTES) }))
       return false
     }
     setError(null)
@@ -133,7 +131,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
             <ImageUp size={16} className="text-ink-2" />
             {dragOver ? t('dropRelease', lang) : t('dropAvatar', lang)}
           </div>
-          <p className="mt-1 text-body-sm text-muted">{t('avatarHint', lang)}</p>
+          <p className="mt-1 text-body-sm text-muted">{fill('avatarHint', lang, { n: megabytes(AVATAR_MAX_BYTES) })}</p>
           {error && <p className="mt-1 text-body-sm text-danger">{error}</p>}
           {preview && (
             <TextButton
