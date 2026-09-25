@@ -4,6 +4,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { getTemplateDetail } from '@/features/library/queries'
 import { isPubliclyVisible } from '@/core'
 import { embedHtml, toExportList } from '@/features/library/export'
+import { REPRESENTATION } from '@/features/library/data-envelope'
 import { cacheHeaders, noStoreHeaders, notModified } from '@/shared/http/cache'
 import { appOrigin } from '@/shared/auth/app-origin'
 
@@ -37,7 +38,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // англоязычному сайту. Язык входит и в ETag: ревалидация не выдаст чужое тело.
   const version = detail.currentVersion?.version ?? detail.tpl.currentVersion
   const updatedAt = detail.tpl.updatedAt ?? new Date(0)
-  const etag = `W/"v${version}-${updatedAt.getTime()}-${lang}"`
+  // Поколение формы — как у data.json: смена разметки обязана пройти мимо 304.
+  const etag = `W/"${REPRESENTATION}-v${version}-${updatedAt.getTime()}-${lang}"`
   const headers: Record<string, string> = {
     'Content-Type': 'text/html; charset=utf-8',
     'Content-Security-Policy': 'frame-ancestors *', // разрешаем вставку на любые сайты

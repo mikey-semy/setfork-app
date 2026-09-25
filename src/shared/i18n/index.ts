@@ -41,22 +41,8 @@ export function isLang(v: unknown): v is Lang {
  *  дать английский. С `??` пустая строка не nullish и глушила фолбэк — пункт
  *  рендерился как голое «1.» без текста (видно было в диффе версий). */
 export function tr(text: LocaleText | null | undefined, lang: Lang): string {
-  return trWithLang(text, lang).text
-}
-
-/** То же чтение, но с ЯЗЫКОМ, которым текст на самом деле взят: `null` — текста нет.
- *
- *  Нужен всем, кто объявляет язык отданного наружу: запрошенный язык не равен языку
- *  текста, когда перевода нет. `data.json` русского списка объявлял `lang: "en"` —
- *  потому что так попросили, хотя отдан был русский оригинал (fe#968). Порядок
- *  подстановки один с `tr`, и живёт он только здесь. */
-export function trWithLang(text: LocaleText | null | undefined, lang: Lang): { text: string; lang: string | null } {
-  if (!text) return { text: '', lang: null }
-  for (const key of [lang, 'en', ...Object.keys(text)]) {
-    const v = text[key]
-    if (v) return { text: v, lang: key }
-  }
-  return { text: '', lang: null }
+  if (!text) return ''
+  return text[lang] || text.en || Object.values(text).find(Boolean) || ''
 }
 
 /** То же чтение, но терпимое к ЗНАЧЕНИЮ БЕЗ ЯЗЫКА — простой строке.

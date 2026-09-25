@@ -1,5 +1,5 @@
 // Экспорт списка в Markdown / автономный HTML (для скачивания и печати).
-import { tr, trWithLang, type Lang, type LocaleText } from '@/shared/i18n'
+import { tr, trKey, type Lang, type LocaleText } from '@/shared/i18n'
 import { blockIdentity } from '@/core'
 import type { StepLevel } from '@/shared/db'
 import { safeHref } from '@/shared/lib/safe-url'
@@ -218,11 +218,13 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
 
 /**
  * Язык, на котором ОТДАН текст списка: запрошенный, если есть перевод, иначе оригинал.
- * Метка `lang` в разметке обязана говорить о тексте, а не о просьбе: русский список без
- * перевода с `lang="en"` читался бы экранным диктором английским голосом (fe#968).
+ * Метка `lang` наружу обязана говорить о тексте, а не о просьбе: `data.json` русского
+ * списка без перевода объявлял `en`, а разметка с `lang="en"` читалась бы экранным
+ * диктором английским голосом (fe#968). Язык названия — через `trKey`, у которого
+ * порядок подстановки один с `tr`.
  */
-function servedLang(list: ExportList, lang: Lang): string {
-  return trWithLang(list.title, lang).lang ?? lang
+export function servedLang(list: Pick<ExportList, 'title'>, lang: Lang): string {
+  return trKey(list.title, lang) ?? lang
 }
 
 /** Компактный embed-виджет: авто light/dark, фикс-высота с внутренним скроллом,
@@ -328,7 +330,7 @@ export function toHtml(list: ExportList, lang: Lang): string {
       return `<div class="step">
   <div class="step-head"><span class="n">${marker}</span><h2>${esc(tr(s.title, lang))}</h2>${badge}</div>
   ${d ? `<p class="d">${d}</p>` : ''}
-  ${why ? `<p class="why"><b>Why:</b> ${why}</p>` : ''}
+  ${why ? `<p class="why"><b lang="en">Why:</b> ${why}</p>` : ''}
   ${cmd}
   ${subs ? `<ul class="subs">${subs}</ul>` : ''}
   ${refs ? `<ul class="refs">${refs}</ul>` : ''}

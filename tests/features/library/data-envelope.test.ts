@@ -72,6 +72,8 @@ describe('dataEtag: кеш меняется ровно при изменении
     expect(dataEtag(7, new Date(AT.getTime() + 1000), 'ru')).not.toBe(base)
     // Один и тот же список на двух языках — разные тела, значит и метки разные.
     expect(dataEtag(7, AT, 'en')).not.toBe(base)
+    // Форма ответа сменилась при том же списке (fe#968) — клиент с кешем обязан получить новое тело.
+    expect(base).not.toBe(`W/"v7-${AT.getTime()}-ru"`)
   })
 })
 

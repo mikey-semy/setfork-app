@@ -1335,6 +1335,7 @@ tests/app/api/ready.itest.ts	V12d
 tests/app/api/user-search-order.itest.ts	V12d
 tests/app/api/write-allowed-content.test.ts	V12d
 tests/app/cache-policy.itest.ts	V12d
+tests/app/canonical-origin.itest.ts	V12d
 tests/app/git-transport.itest.ts	V12d
 tests/app/healthz.test.ts	V12d
 tests/app/indexnow-key-file.test.ts	H11,V12d
@@ -1791,7 +1792,6 @@ tests/shared/http/cache.test.ts	V12f
 tests/shared/i18n/lang-url.test.ts	H6
 tests/shared/i18n/negotiate.test.ts	V12f
 tests/shared/i18n/plural-forms.test.ts	V12f
-tests/shared/i18n/tr-with-lang.test.ts	V12f
 tests/shared/jobs/backoff.test.ts	V12f
 tests/shared/jobs/error-for-job.test.ts	V12f
 tests/shared/jobs/finalizer.test.ts	V12f
