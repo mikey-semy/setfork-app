@@ -19,6 +19,7 @@ import { assignCatalogByName } from '@/features/catalogs/assign'
 import { registerTags } from '@/features/tags/service'
 import { ensureWatch } from '@/features/watch/actions'
 import { parseEditorItems, toProposedItems } from '../editor'
+import { fileRefusalWarning, parseEditorFiles } from '../editor-files'
 import { carryField } from '../translation-carry'
 import { getDraft, getVersionSteps } from '../queries'
 import { publishOwnedDraft } from '../publish-draft'
@@ -171,7 +172,7 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
  * успел уйти вперёд, публикация об этом скажет, а не перезапишет чужое молча.
  */
 export async function saveDraft(templateId: string, formData: FormData): Promise<void> {
-  const { tpl, handle, overwrote, destructive, secret } = await upsertDraftFromForm(templateId, formData, 'save')
+  const { tpl, handle, overwrote, destructive, secret, file } = await upsertDraftFromForm(templateId, formData, 'save')
   revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
   // ⚠️ СОХРАНЯЕМ ВСЕГДА, НО ГОВОРИМ ПРАВДУ О ПОСЛЕДСТВИЯХ.
   //
@@ -185,7 +186,7 @@ export async function saveDraft(templateId: string, formData: FormData): Promise
   //                 этот отказ приходил ПОЗЖЕ и ДРУГОМУ человеку — владельцу, нажавшему
   //                 «Опубликовать», по шагу, которого он не писал.
   //   warn=secret — в шаге ключ доступа, и публикация откажет по той же причине.
-  redirect(`/${handle}/${tpl.slug}/edit?${saveOutcomeQuery({ overwrote, destructiveStep: destructive?.step ?? null, secret })}`)
+  redirect(`/${handle}/${tpl.slug}/edit?${saveOutcomeQuery({ overwrote, destructiveStep: destructive?.step ?? null, secret, file })}`)
 }
 
 /**
@@ -232,6 +233,10 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
   }
   const note = String(formData.get('note') ?? '').trim()
   const handle = await ownerHandle(tpl.ownerId)
+  // Файлы автора — полным набором, если их трогали; не трогали — поля нет, и черновик
+  // держит то, что в нём было (см. `parseEditorFiles`).
+  const authored = parseEditorFiles(formData.get('authored'))
+  if (authored === 'bad') redirect(`/${handle}/${tpl.slug}/edit?e=files-bad`)
   // Какой черновик видел автор: разбирается ЗДЕСЬ, до любых действий. Раньше разбор
   // стоял ниже, и ранняя ветка «состав опустел» успевала удалить черновик, ни с чем
   // его не сверив, — самое необратимое действие оказывалось единственным без проверки.
@@ -249,7 +254,7 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
   // осознанный отказ от правок (discardDraft), а не автосохранение.
   // Какой черновик видел автор: форма несёт строку и её номер, чтобы запись могла
   // понять, не подменили ли черновик, пока редактор был открыт.
-  const saved = await upsertDraft(tpl, session.userId, { items, meta, note }, { expected })
+  const saved = await upsertDraft(tpl, session.userId, { items, meta, note, authored }, { expected })
   const overwrote = saved.overwrote
   // ⚠️ Публикация поверх обнаруженного затирания НЕ ИДЁТ. Отказ здесь безопасен, в
   // отличие от «Сохранить»: черновик уже записан строкой выше, набранное не теряется.
@@ -265,7 +270,9 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
   // Ключ доступа — то же самое: черновик видит только автор, а публикация откажет.
   const leak = findSecretInContent(items)
   const secret = leak ? { step: leak.step, rule: leak.match.rule } : null
-  return { tpl, handle, overwrote, saved, destructive: first ? { step: first.index + 1 } : null, secret }
+  // Файлы — те же стражи: скрипт судится по языку, ключ ищется во всех.
+  const file = authored ? fileRefusalWarning(authored) : null
+  return { tpl, handle, overwrote, saved, destructive: first ? { step: first.index + 1 } : null, secret, file }
 }
 
 /** Убрать черновик и вернуться к опубликованному состоянию. */
@@ -287,6 +294,18 @@ export async function discardDraft(templateId: string, formData?: FormData): Pro
   const handle = await ownerHandle(tpl.ownerId)
   revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
   redirect(`/${handle}/${tpl.slug}`)
+}
+
+/** Отказ публикации → причина в адресе редактора. Одна таблица, а не лесенка тернарников:
+ *  новая причина без строки здесь не соберётся (`Record` по всем кодам). */
+const PUBLISH_REASON: Record<Extract<PublishResult, { error: string }>['error'], string> = {
+  stale: 'stale',
+  empty: 'empty',
+  'out-of-sync': 'outofsync',
+  moved: 'moved',
+  'no draft': 'nodraft',
+  'files-invalid': 'files-invalid',
+  'files-unsupported': 'files-unsupported',
 }
 
 /**
@@ -315,8 +334,10 @@ async function publishDraft(templateId: string, expect?: DraftRef): Promise<void
   } catch (e) {
     // Запрещённая команда — показываем автору причину и номер шага, как при
     // обычном сохранении: молчаливый отказ читается как «кнопка не работает».
-    if (e instanceof DestructiveCommandError) redirect(`/${handle}/${tpl.slug}/edit?blocked=${e.reason}&step=${e.stepIndex}`)
-    if (e instanceof SecretFoundError) redirect(`/${handle}/${tpl.slug}/edit?secret=${e.match.rule}&step=${e.stepIndex}`)
+    // Место — шаг либо файл автора: «шаг 0» человек не нашёл бы нигде.
+    const file = (path?: string) => (path ? `&file=${encodeURIComponent(path)}` : '')
+    if (e instanceof DestructiveCommandError) redirect(`/${handle}/${tpl.slug}/edit?blocked=${e.reason}&step=${e.stepIndex}${file(e.path)}`)
+    if (e instanceof SecretFoundError) redirect(`/${handle}/${tpl.slug}/edit?secret=${e.match.rule}&step=${e.stepIndex}${file(e.path)}`)
     throw e
   }
   // Причины РАЗНЫЕ: «нечего публиковать» и «черновик опустел» — разные сообщения,
@@ -325,23 +346,18 @@ async function publishDraft(templateId: string, expect?: DraftRef): Promise<void
     // `moved` — черновик подменили между сохранением и публикацией. Причина своя:
     // «нечего публиковать» и «опубликовали бы не то, что вы видели» — разные вещи,
     // и второе требует посмотреть состав, а не нажать ещё раз наугад.
-    const reason =
-      res.error === 'stale'
-        ? 'stale'
-        : res.error === 'empty'
-          ? 'empty'
-          : res.error === 'out-of-sync'
-            ? 'outofsync'
-            : res.error === 'moved'
-              ? 'moved'
-              : 'nodraft'
-    redirect(`/${handle}/${tpl.slug}/edit?e=${reason}`)
+    const reason = PUBLISH_REASON[res.error]
+    // Отказ ядра по файлам называет файл и предел — его текст едет на страницу.
+    const detail = res.detail ? `&fd=${encodeURIComponent(res.detail)}` : ''
+    redirect(`/${handle}/${tpl.slug}/edit?e=${reason}${detail}`)
   }
-
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
   revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
-  redirect(`/${handle}/${tpl.slug}`)
+  // Версия вышла (наблюдатели о ней узнали), а набор файлов ядро не подтвердило: правка
+  // файлов осталась в черновике поверх новой версии. Вернуть в редактор и сказать — иначе
+  // человек уйдёт, решив, что файлы опубликованы.
+  redirect(res.filesNotApplied ? `/${handle}/${tpl.slug}/edit?e=files-not-applied` : `/${handle}/${tpl.slug}`)
 }
 
 // ── Возврат к прошлой версии ──────────────────────────────────────────

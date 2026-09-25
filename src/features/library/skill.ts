@@ -11,6 +11,7 @@ import { stepDanger } from '@/core/domain/destructive-command'
 import { blockText } from './blocks'
 import { isStepBlk, toRunnableScript, type ExportList, type ExportStep } from './export'
 import { TEXT_CLOSE, TEXT_OPEN, textNeedsFence } from './skill-parse'
+import { AUTHORED_PATH, fitsArchive } from '@/core/domain/authored-path'
 
 /** Пределы стандарта для шапки `SKILL.md`. */
 export const SKILL_NAME_MAX = 64
@@ -50,14 +51,6 @@ export interface Skill {
    *  журнал: пропуск не должен быть молчаливым. */
   skipped: string[]
 }
-
-/** Путь авторского файла — ровно `<каталог>/<имя>`, как принимает ядро (ADR-0028). */
-export const AUTHORED_PATH = /^(scripts|references|assets)\/[^/]+$/
-/** Имя файла в заголовке ustar — не длиннее 100 байт (каталоги уходят в поле `prefix`).
- *  Запись ядро с 24.09 держит тем же пределом (`AUTHORED_NAME_MAX_BYTES`); пушем длинное
- *  имя пройти ещё может — его и отсеивает архив. Кириллица набирает 100 байт на ~50 знаках. */
-const TAR_NAME_MAX_BYTES = 100
-export const fitsArchive = (path: string): boolean => new TextEncoder().encode(path.slice(path.lastIndexOf('/') + 1)).length <= TAR_NAME_MAX_BYTES
 
 /**
  * Авторские файлы, которые можно положить в архив.

@@ -33,6 +33,7 @@ import {
 import type { Lang, LocaleText } from '../i18n'
 import type { WatchEvents } from '../../core/ports'
 import type { SkillHeader } from '../../core/domain/skill-header'
+import type { AuthoredText } from '../../core/domain/authored-path'
 
 // ── Enums ────────────────────────────────────────────────────────────
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
@@ -1168,6 +1169,13 @@ export const listDrafts = pgTable(
     meta: jsonb('meta').notNull().default({}).$type<{ tags?: string[]; ordered?: boolean; gated?: boolean }>(),
     /** Заметка к будущей версии — чтобы не набирать её заново при публикации. */
     note: text('note').notNull().default(''),
+    /**
+     * Файлы автора (`scripts/`, `references/`, `assets/`) ПОЛНЫМ набором — или `null`:
+     * «файлы не трогали», и публикация оставит их ядру перенести из родителя. Отличать
+     * «не трогали» от «убрали все» обязательно: пустой массив стирает набор.
+     * Пишет только редактор сайта; правки через агента (`patch_list`) колонку не трогают.
+     */
+    authored: jsonb('authored').$type<AuthoredText[] | null>(),
     /**
      * Счётчик правок черновика. Публикация удаляет ИМЕННО ту ревизию, которую
      * опубликовала: пока идёт вызов ядра, другой вход мог сохранить новые правки, и

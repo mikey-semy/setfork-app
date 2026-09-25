@@ -293,6 +293,8 @@ export async function mcpPublishDraft(userId: string, handle: string, slug: stri
       // своя арифметика здесь врала бы агенту в предпросмотре.
       wouldBeVersion: headVersion(tpl) + 1,
       blocks: draft.items.length,
+      // Правка файлов из редактора сайта едет той же версией — агент должен её видеть.
+      ...(draft.authored ? { files: draft.authored.map((f) => f.path) } : {}),
       note: (note ?? draft.note).trim() || 'edit',
       updatedAt: draft.updatedAt.toISOString(),
       hint: 'nothing published yet — these edits include everything pending on this list (yours and whatever was left in the editor); call again with confirm:true to publish them as one version',
@@ -304,7 +306,17 @@ export async function mcpPublishDraft(userId: string, handle: string, slug: stri
     // Наблюдатели узнают о версии так же, как при сохранении из редактора.
     const { notifyWatchersNewVersion } = await import('@/features/library/suggestion-side-effects')
     await notifyWatchersNewVersion(tpl.id, userId).catch(() => {})
-    return { ref: `${handle}/${slug}`, status: 'published' as const, version: res.version, blocks: res.blocks }
+    return {
+      ref: `${handle}/${slug}`,
+      status: 'published' as const,
+      version: res.version,
+      blocks: res.blocks,
+      ...(res.files !== undefined ? { files: res.files } : {}),
+      // Блоки вышли, набор файлов ядро не подтвердило: правка файлов лежит в черновике.
+      ...(res.filesNotApplied
+        ? { warning: 'the blocks are published but the git core did not confirm the files — the file edits stay pending; call publish_draft again' }
+        : {}),
+    }
   } catch (e) {
     const refused = contentError(e)
     if (refused) return refused
