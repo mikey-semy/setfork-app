@@ -421,10 +421,16 @@
       "goal": "Найти слабые места входа и транспорта: сессии, CSRF, заголовки безопасности, API-токены, анти-инъекция.",
       "paths": [
         "next.config.mjs",
+        "src/app/api/csp-report/route.ts",
+        "src/features/security/csp-reports.ts",
         "src/shared/ai/spotlight.ts",
         "src/shared/csrf.ts",
         "src/shared/request-ip.ts",
-        "src/shared/request-path.ts"
+        "src/shared/request-path.ts",
+        "src/shared/security/csp.ts",
+        "tests/features/security/csp-reports.itest.ts",
+        "tests/features/security/csp-reports.test.ts",
+        "tests/shared/security/csp.test.ts"
       ],
       "ref_paths": [
         "src/shared/auth/**",

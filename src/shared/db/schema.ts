@@ -2576,6 +2576,30 @@ export const indexnowSubmissions = pgTable('indexnow_submissions', {
   sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+/**
+ * СВОДКА НАРУШЕНИЙ CSP — отчёты браузеров, пока политика скриптов в режиме отчётов
+ * (shared/security/csp.ts).
+ *
+ * Не журнал, а СВОДКА: одна строка на пару «что заблокировано откуда», со счётчиком.
+ * Отчёт шлёт каждый браузер на каждой странице, и журнал за неделю вырос бы в миллионы
+ * одинаковых строк, а вопрос у недели один — есть ли среди нарушений НАШИ скрипты.
+ * `key` — хеш директивы, заблокированного адреса и файла-источника; адреса хранятся
+ * без query и фрагмента (там бывают токены). Пример страницы — последний увиденный.
+ */
+export const cspReports = pgTable('csp_reports', {
+  key: text('key').primaryKey(),
+  directive: text('directive').notNull(),
+  /** Адрес заблокированного скрипта либо ключевое слово: `inline`, `eval`. */
+  blocked: text('blocked').notNull(),
+  /** Файл, где случилось нарушение; пусто, если браузер его не назвал. */
+  source: text('source').notNull(),
+  samplePath: text('sample_path').notNull(),
+  sampleLine: integer('sample_line'),
+  count: integer('count').notNull().default(1),
+  firstSeen: timestamp('first_seen', { withTimezone: true }).notNull().defaultNow(),
+  lastSeen: timestamp('last_seen', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // Вхождение URL в контент списка. Пересобирается delete+insert per template
 // при харвесте (полная материализация — как suggestions.items).
 export const linkOccurrences = pgTable(

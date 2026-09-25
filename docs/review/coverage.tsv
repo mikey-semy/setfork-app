@@ -275,6 +275,7 @@ src/app/api/auth/vk/callback/route.ts	H1
 src/app/api/auth/vk/route.ts	H1
 src/app/api/auth/yandex/callback/route.ts	H1
 src/app/api/auth/yandex/route.ts	H1
+src/app/api/csp-report/route.ts	H9
 src/app/api/generate/[id]/live/route.ts	V8
 src/app/api/go/[step]/[ref]/route.ts	H11
 src/app/api/health/route.ts	H13e
@@ -363,6 +364,7 @@ src/core/domain/quiz-fingerprint.ts	H15
 src/core/domain/quiz.ts	H15
 src/core/domain/script-dialect.ts	H15
 src/core/domain/secret-scan.ts	H15
+src/core/domain/skill-header.ts	H15
 src/core/index.ts	H15
 src/core/ports.ts	H15
 src/features/admin/AchievementsAdmin.tsx	V9c
@@ -916,6 +918,7 @@ src/features/runs/RunView.tsx	H10
 src/features/runs/actions.ts	H10
 src/features/runs/queries.ts	H10
 src/features/search/adapter.ts	V6
+src/features/security/csp-reports.ts	H9
 src/features/sessions/SessionsList.tsx	H1
 src/features/sessions/actions.ts	H1
 src/features/sessions/queries.ts	H1
@@ -1095,6 +1098,7 @@ src/shared/fonts/manrope-latin-wght-normal.woff2	V10
 src/shared/geo.ts	V12
 src/shared/http/cache.ts	H8
 src/shared/http/problem.ts	H8
+src/shared/http/read-body.ts	H8
 src/shared/i18n/detect-text-lang.ts	H6
 src/shared/i18n/dict/en.ts	H6
 src/shared/i18n/dict/ru.ts	H6
@@ -1158,6 +1162,7 @@ src/shared/rate-limit.ts	H5
 src/shared/redis.ts	V12
 src/shared/request-ip.ts	H9
 src/shared/request-path.ts	H9
+src/shared/security/csp.ts	H9
 src/shared/sentry.ts	H8
 src/shared/seo/howto-eligible.ts	H11
 src/shared/seo/jsonld.tsx	H11
@@ -1321,6 +1326,7 @@ src/widgets/explore/ExploreNav.tsx	V12
 src/widgets/explore/TrendControls.tsx	V12
 src/widgets/sidebar-context.tsx	V12
 tests/app/api/auth/provider-gate-both-ends.test.ts	V12d
+tests/app/api/csp-report.test.ts	V12d
 tests/app/api/landing-route.itest.ts	V12,V12d
 tests/app/api/ready.itest.ts	V12d
 tests/app/api/user-search-order.itest.ts	V12d
@@ -1332,6 +1338,7 @@ tests/app/indexnow-key-file.test.ts	H11,V12d
 tests/app/list-step-print.test.tsx	V12d
 tests/app/llms-and-md.itest.ts	V12d
 tests/app/maintenance-machine-body.test.ts	V12d
+tests/app/middleware-csp.test.ts	V12d
 tests/app/middleware-lang-prefix.test.ts	V12d
 tests/app/og-image.itest.ts	V12d
 tests/app/openapi-live.itest.ts	H11,V12d
@@ -1380,6 +1387,7 @@ tests/architecture/refs-follow-carries-refs.test.ts	H12
 tests/architecture/reports-append-only.test.ts	H12
 tests/architecture/review-gates-single-set.test.ts	H12
 tests/architecture/rsc-client-boundary.test.ts	H12
+tests/architecture/script-tags-carry-nonce.test.ts	H12
 tests/architecture/security-headers.test.ts	H12
 tests/architecture/sidebar-search-server.test.ts	H12
 tests/architecture/stacked-touch.test.ts	H12
@@ -1399,6 +1407,7 @@ tests/core/domain/links.test.ts	V12d
 tests/core/domain/list-state.test.ts	V12d
 tests/core/domain/secret-scan.mutants.json	V12d
 tests/core/domain/secret-scan.test.ts	V12d
+tests/core/domain/skill-header.test.ts	V12d
 tests/core/edit-block-reason.test.ts	V12d
 tests/email-layout.test.ts	V12d
 tests/empty.ts	V12d
@@ -1665,6 +1674,8 @@ tests/features/releases/tag-name.test.ts	V1i
 tests/features/reports/validate.test.ts	V2
 tests/features/runs/paging.itest.ts	H10
 tests/features/runs/report-blocked.itest.ts	H10
+tests/features/security/csp-reports.itest.ts	H9
+tests/features/security/csp-reports.test.ts	H9
 tests/features/settings/handle-change-keeps-foreign-hold.itest.ts	V11
 tests/features/settings/handle-change-sessions.itest.ts	V11
 tests/features/settings/set-password.itest.ts	V11
@@ -1806,6 +1817,7 @@ tests/shared/rate-limit-store.redis.test.ts	V12f
 tests/shared/rate-limit.test.ts	V12f
 tests/shared/retired-domain.test.ts	V12f
 tests/shared/rrf.test.ts	V12f
+tests/shared/security/csp.test.ts	H9
 tests/shared/sentry.test.ts	V12f
 tests/shared/seo/howto-eligible.test.ts	H11
 tests/shared/seo/localize-metadata.test.ts	H11
