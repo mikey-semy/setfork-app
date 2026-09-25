@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { t, type Lang } from '@/shared/i18n'
-import { ContentRefusalAlert } from '@/features/library/ContentRefusalAlert'
+import { ContentRefusalAlert } from '@/shared/ui/ContentRefusalAlert'
 import { Alert } from '@/shared/ui/Alert'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { branchLabel } from '@/features/git/branch-label'

@@ -1,9 +1,9 @@
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { Alert } from '@/shared/ui/Alert'
 import { secretProvider } from '@/core/domain/secret-scan'
+import type { ContentRefusal } from '@/core/domain/content-refusal'
 
-/** Что принёс адрес страницы после отказа записи: вид отказа, его код и шаг. */
-export type ContentRefusal = { kind: 'destructive'; reason: string; step: string } | { kind: 'secret'; rule: string; step: string }
+export type { ContentRefusal }
 
 /** Отказ из параметров адреса (`?blocked=…&step=…` или `?secret=…&step=…`); нет ни того, ни другого — `null`. */
 export function contentRefusalFrom(sp: { blocked?: string; secret?: string; step?: string }): ContentRefusal | null {

@@ -30,7 +30,7 @@ import { getListLabels, getOpenIssuesForPicker } from '@/features/issues/queries
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import { MERGE_ERR } from './merge-err'
-import { contentRefusalFrom } from '@/features/library/ContentRefusalAlert'
+import { contentRefusalFrom } from '@/shared/ui/ContentRefusalAlert'
 
 /**
  * Всё, что странице предложения нужно знать, прежде чем что-то показать: доступ,

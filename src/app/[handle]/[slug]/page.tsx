@@ -24,6 +24,7 @@ import { ListDraftNotices } from './ListDraftNotices'
 import { ListToolbar } from './ListToolbar'
 import { ListViewBanner } from './ListViewBanner'
 import { loadListPage } from './load'
+import { Alert } from '@/shared/ui/Alert'
 
 /**
  * Мета страницы списка.
@@ -93,7 +94,7 @@ export default async function ListPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ find?: string; ref?: string; v?: string }>
+  searchParams: Promise<{ find?: string; ref?: string; v?: string; e?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, at] = await Promise.all([params, searchParams, getLang(), urlLangAt()])
   const loaded = await loadListPage({ owner, slug, sp, lang })
@@ -198,6 +199,10 @@ export default async function ListPage({
               <ListAbout {...loaded} lang={lang} layout="row" />
             </div>
 
+            {/* Копия «из шаблона» не создалась: в этом списке то, что сейчас не принимается
+                (опасная команда или ключ доступа, лёгшие до проверки). Причина — здесь,
+                откуда нажали, а не безымянной страницей ошибки. */}
+            {sp.e === 'copy-refused' ? <Alert variant="danger">{t('copyContentRefused', lang)}</Alert> : null}
             <ListDraftNotices {...loaded} lang={lang} />
             <ListAdNotices {...loaded} lang={lang} />
             <ListToolbar {...loaded} lang={lang} />
