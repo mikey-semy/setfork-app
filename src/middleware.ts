@@ -71,6 +71,9 @@ async function isAdminRequest(req: NextRequest): Promise<boolean> {
 function withCsp(headers: Headers): (res: NextResponse) => NextResponse {
   const nonce = cspNonce()
   const policy = cspPolicy(nonce)
+  // Next берёт nonce из `Content-Security-Policy` ПРЕЖДЕ `…-Report-Only`: присланный
+  // клиентом боевой заголовок выбирал бы nonce для скриптов Next поверх нашего.
+  headers.delete('content-security-policy')
   headers.set(NONCE_HEADER, nonce)
   headers.set(CSP_HEADER, policy)
   return (res) => {

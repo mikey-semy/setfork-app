@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_REPORTS_PER_BODY, parseCspReports } from '@/features/security/csp-reports'
+import { DOCUMENT, MAX_REPORTS_PER_BODY, parseCspReports } from '@/features/security/csp-reports'
 
 /**
- * РАЗБОР ОТЧЁТОВ: оба формата браузеров приходят к одной записи.
+ * РАЗБОР ОТЧЁТОВ: оба формата приходят к одной записи.
  *
- * Тела ниже — формы из спецификаций: `report-uri` (CSP2, §4.4 «violation reports»,
- * так шлют Firefox и Safari) и Reporting API (`csp-violation`, так шлёт Chromium).
+ * Тела ниже — формы из спецификаций: `report-uri` (CSP2, §4.4 «violation reports»;
+ * на него шлют все браузеры) и Reporting API (`csp-violation`, задел на `report-to`).
  */
 const legacy = (over: Record<string, unknown> = {}) => ({
   'csp-report': {
@@ -27,10 +27,32 @@ describe('разбор отчётов CSP', () => {
         directive: 'script-src-elem',
         blocked: 'https://cdn.example/lib.js',
         source: 'https://setfork.com/_next/static/chunks/app.js',
-        path: '/miki/list',
+        path: '/miki/*',
         line: 12,
       },
     ])
+  })
+
+  it('⚠️ встроенный скрипт: браузер называет источником САМУ страницу — это метка, а не строка на страницу', () => {
+    // Форма из живого прогона в Chromium 149: source-file = адрес документа без query.
+    const page = (path: string) =>
+      parseCspReports(legacy({ 'document-uri': `https://setfork.com${path}?x=1`, 'blocked-uri': 'inline', 'source-file': `https://setfork.com${path}` }))[0]
+    const a = page('/alice/tajnyj-spisok')
+    const b = page('/bob/drugoj')
+    expect(a.source).toBe(DOCUMENT)
+    expect({ ...a, path: '' }).toEqual({ ...b, path: '' })
+  })
+
+  it('заблокированный адрес НАШЕГО сайта вне /_next/ — тоже метка: ник и слаг не оседают', () => {
+    const [v] = parseCspReports(legacy({ 'blocked-uri': 'https://setfork.com/alice/list/raw' }))
+    expect(v.blocked).toBe(DOCUMENT)
+  })
+
+  it('путь страницы — только первый сегмент, языковой префикс сохраняется', () => {
+    const path = (p: string) => parseCspReports(legacy({ 'document-uri': `https://setfork.com${p}` }))[0].path
+    expect(path('/alice/tajnyj-spisok/edit')).toBe('/alice/*/*')
+    expect(path('/ru/alice/tajnyj-spisok')).toBe('/ru/alice/*')
+    expect(path('/explore')).toBe('/explore')
   })
 
   it('старый формат без effective-directive: берётся первое слово violated-directive', () => {

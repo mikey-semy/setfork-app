@@ -6,7 +6,7 @@ import { resetTables } from '../../helpers/reset-db'
  * новые виды не пишутся, известные — считаются дальше.
  */
 const { db, cspReports } = await import('@/shared/db')
-const { recordCspViolation, MAX_DISTINCT } = await import('@/features/security/csp-reports')
+const { recordCspViolation, insertCspKind, MAX_DISTINCT } = await import('@/features/security/csp-reports')
 type V = Parameters<typeof recordCspViolation>[0]
 
 const v = (blocked: string, path = '/a', line: number | null = 1): V => ({ directive: 'script-src-elem', blocked, source: '', path, line })
@@ -22,6 +22,25 @@ describe('сводка нарушений CSP', () => {
     const rows = await db.select().from(cspReports)
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({ count: 2, samplePath: '/b', sampleLine: 7 })
+  })
+
+  it('вставка уже существующего вида (гонка двух первых отчётов) — повтор, а не ошибка', async () => {
+    await insertCspKind(v('eval'))
+    await insertCspKind(v('eval'))
+    const rows = await db.select().from(cspReports)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].count).toBe(2)
+  })
+
+  it('лимит новых видов отказал — строки нет, а известный вид считается без спроса', async () => {
+    const deny = async () => false
+    await recordCspViolation(v('eval'), deny)
+    expect(await db.select().from(cspReports)).toHaveLength(0)
+    await recordCspViolation(v('inline'))
+    await recordCspViolation(v('inline'), deny)
+    const rows = await db.select().from(cspReports)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].count).toBe(2)
   })
 
   it('⚠️ на потолке новый вид не пишется, известный — считается', async () => {

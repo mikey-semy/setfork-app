@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { CSP_HEADER, CSP_REPORT_PATH, cspNonce, cspPolicy } from '@/shared/security/csp'
 
@@ -45,6 +46,10 @@ describe('политика', () => {
   it('⚠️ отчёты — только report-uri: при report-to Chromium игнорирует report-uri и молчит', () => {
     expect(p).toContain(`report-uri ${CSP_REPORT_PATH}`)
     expect(p).not.toContain('report-to')
+  })
+
+  it('⚠️ адрес приёмника — настоящий маршрут: иначе 404 и «чистая» неделя без единого отчёта', () => {
+    expect(existsSync(`src/app${CSP_REPORT_PATH}/route.ts`)).toBe(true)
   })
 
   it('⚠️ пока — только отчёты: боевой заголовок включается после недели наблюдения', () => {

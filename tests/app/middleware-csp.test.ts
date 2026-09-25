@@ -32,6 +32,12 @@ describe('политика скриптов в middleware', () => {
     expect(a).not.toBe(b)
   })
 
+  it('⚠️ боевой CSP, присланный клиентом, до рендера не доходит: Next взял бы nonce из него', async () => {
+    const res = await call('/miki/list', { 'content-security-policy': "script-src 'nonce-attacker'" })
+    const passed = res.headers.get('x-middleware-override-headers')?.split(',') ?? []
+    expect(passed).not.toContain('content-security-policy')
+  })
+
   it('⚠️ nonce, присланный клиентом, не доходит до рендера', async () => {
     const res = await call('/miki/list', { [NONCE_HEADER]: 'attacker', [CSP_HEADER]: "script-src 'nonce-attacker'" })
     expect(toRender(res, NONCE_HEADER)).not.toBe('attacker')
