@@ -1,6 +1,6 @@
 'use client'
 
-import { usePagePath } from '@/shared/i18n/use-page-path'
+import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 /**
@@ -10,7 +10,7 @@ import type { ReactNode } from 'react'
  * Шапка живёт в персистентном layout, поэтому фильтруем клиентски по пути.
  */
 export function ShowOnListRoot({ base, children }: { base: string; children: ReactNode }) {
-  const pathname = usePagePath()
+  const pathname = usePathname()
   // Корень = ровно /handle/slug (query ?ref=/?find= путь не меняют).
   if (pathname !== base) return null
   return <>{children}</>

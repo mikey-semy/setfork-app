@@ -216,6 +216,7 @@ src/app/[handle]/[slug]/issues/new/page.tsx	V1c,V3
 src/app/[handle]/[slug]/issues/page.tsx	V1c,V3
 src/app/[handle]/[slug]/layout.tsx	V1cb
 src/app/[handle]/[slug]/leaderboard/page.tsx	V6
+src/app/[handle]/[slug]/list-jsonld.ts	V1c
 src/app/[handle]/[slug]/load.ts	V1cb
 src/app/[handle]/[slug]/milestones/page.tsx	V1cb
 src/app/[handle]/[slug]/opengraph-image.tsx	V10
@@ -355,6 +356,7 @@ src/core/README.md	H15
 src/core/domain/access.ts	H15
 src/core/domain/affiliate.ts	H15
 src/core/domain/block-identity.ts	H15
+src/core/domain/content-refusal.ts	H15
 src/core/domain/destructive-command.ts	H15
 src/core/domain/entities.ts	H15
 src/core/domain/links.ts	H15
@@ -1108,7 +1110,6 @@ src/shared/i18n/index.ts	H6
 src/shared/i18n/negotiate.ts	H6
 src/shared/i18n/server.ts	H6
 src/shared/i18n/url.ts	H6
-src/shared/i18n/use-page-path.ts	H6
 src/shared/indexnow.ts	H11
 src/shared/jobs/backoff.ts	H10
 src/shared/jobs/error.ts	H10
@@ -1169,10 +1170,8 @@ src/shared/sentry.ts	H8
 src/shared/seo/howto-eligible.ts	H11
 src/shared/seo/jsonld.tsx	H11
 src/shared/seo/llms.ts	H11
-src/shared/seo/localize.ts	H11
 src/shared/seo/page-meta.ts	H11
 src/shared/seo/search-url.ts	H11
-src/shared/seo/with-lang.ts	H11
 src/shared/settings/ai.ts	V9
 src/shared/settings/changelog.ts	V9
 src/shared/settings/email.ts	V9
@@ -1343,7 +1342,7 @@ tests/app/list-step-print.test.tsx	V12d
 tests/app/llms-and-md.itest.ts	V12d
 tests/app/maintenance-machine-body.test.ts	V12d
 tests/app/middleware-csp.test.ts	V12d
-tests/app/middleware-lang-prefix.test.ts	V12d
+tests/app/middleware-no-lang-in-url.test.ts	V12d
 tests/app/og-image.itest.ts	V12d
 tests/app/openapi-live.itest.ts	H11,V12d
 tests/app/openapi.test.ts	H11,V12d
@@ -1364,7 +1363,6 @@ tests/architecture/block-fields-reach-the-wire.mutants.json	H12
 tests/architecture/block-fields-reach-the-wire.test.ts	H12
 tests/architecture/build-offline-fonts.test.ts	H12
 tests/architecture/button-class-merge.test.ts	H12
-tests/architecture/canonical-follows-url-lang.test.ts	H12
 tests/architecture/command-one-view.test.ts	H12
 tests/architecture/day-sensitive-list.test.ts	H12
 tests/architecture/editor-floating-actions.test.ts	H12
@@ -1378,13 +1376,12 @@ tests/architecture/hint-dot-one-view.test.ts	H12
 tests/architecture/image-limit-vs-action-body.test.ts	H12
 tests/architecture/index-nulls-order.test.ts	H12
 tests/architecture/issue-write-one-path.test.ts	H12
-tests/architecture/jsonld-paths-follow-url-lang.test.ts	H12
 tests/architecture/like-escaping.test.ts	H12
 tests/architecture/login-return.test.ts	H12
 tests/architecture/migration-entrypoint.test.ts	H12
+tests/architecture/no-lang-alternates.test.ts	H12
 tests/architecture/page-card.test.ts	H12
 tests/architecture/page-has-heading.test.ts	H12
-tests/architecture/page-path-without-lang.test.ts	H12
 tests/architecture/paging-discipline.test.ts	H12
 tests/architecture/plural-agreement.test.ts	H12
 tests/architecture/public-url-not-from-request.test.ts	H12
@@ -1789,6 +1786,7 @@ tests/shared/geo.test.ts	V12f
 tests/shared/gh-handle-privesc.itest.ts	V12f
 tests/shared/handle.test.ts	V12f
 tests/shared/http/cache.test.ts	V12f
+tests/shared/i18n/lang-cookie.test.ts	V12f
 tests/shared/i18n/lang-url.test.ts	H6
 tests/shared/i18n/negotiate.test.ts	V12f
 tests/shared/i18n/plural-forms.test.ts	V12f
@@ -1827,7 +1825,8 @@ tests/shared/rrf.test.ts	V12f
 tests/shared/security/csp.test.ts	H9
 tests/shared/sentry.test.ts	V12f
 tests/shared/seo/howto-eligible.test.ts	H11
-tests/shared/seo/localize-metadata.test.ts	H11
+tests/shared/seo/jsonld-in-language.test.ts	H11
+tests/shared/seo/list-content-lang.test.tsx	H11
 tests/shared/seo/page-meta-image.test.ts	H11
 tests/shared/seo/page-meta-lang.test.ts	H11
 tests/shared/seo/site-jsonld.test.ts	H11

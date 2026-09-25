@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import sitemap from '@/app/sitemap'
 import { db, templates, templateVersions, users } from '@/shared/db'
 import { SITE_ORIGIN } from '@/shared/site'
-import { LOCALES } from '@/shared/i18n'
+import { splitLangPath } from '@/shared/i18n/url'
 
 /**
  * Карта сайта — это ПУБЛИКАЦИЯ адресов: всё, что сюда попало, мы сами отдали
@@ -25,21 +25,11 @@ const ctx: Record<string, string> = {}
 const url = (path: string) => `${SITE_ORIGIN}${path}`
 
 /**
- * ⚠️ Адреса в карте теперь с ЯЗЫКОВЫМ ПРЕФИКСОМ, и каждый адрес есть на обоих языках.
- *
- * Языки разведены по адресам 22.09.2026: до этого русская версия отдавалась по тому же
- * адресу через `Accept-Language`, YandexBot его не шлёт, и русского сайта в индексе не
- * существовало вовсе. Карта сайта — главный способ сказать поисковику «вот все мои
- * страницы», и молчать в ней про половину сайта значит не иметь этой половины в индексе.
- *
- * Поэтому проверка «страница в карте» стала проверкой «страница в карте НА ОБОИХ
- * языках»: если правка когда-нибудь уронит один из языков, тест обязан это заметить, а
- * не радоваться тому, что английский на месте.
+ * Адрес страницы один на все языки (ADR-0029): в карте — ровно он, без языкового префикса.
+ * С 22 по 25.09 карта отдавала каждую страницу на обоих языках со взаимными `alternates`;
+ * языка в адресе больше нет, и такие адреса отвечают 308.
  */
-const bothLangs = (urls: string[], path: string) => {
-  const missing = LOCALES.filter((code) => !urls.includes(url(`/${code}${path}`)))
-  return { missing, ok: missing.length === 0 }
-}
+const has = (urls: string[], path: string) => urls.includes(url(path))
 
 beforeEach(async () => {
   for (const handle of [OWNER, GHOST]) await db.delete(users).where(eq(users.handle, handle))
@@ -84,7 +74,7 @@ describe('карта сайта', () => {
       .innerJoin(templates, eq(templates.id, templateVersions.templateId))
       .where(eq(templates.slug, 'sm-public'))
     expect(row.lvl, 'фикстура обязана быть «породой», иначе проверка ничего не значит').toBe('rock')
-    expect(bothLangs(urls, `/${OWNER}/sm-public`), 'список обязан быть в карте на обоих языках').toMatchObject({ ok: true })
+    expect(has(urls, `/${OWNER}/sm-public`), 'публичного списка нет в карте').toBe(true)
   })
 
   it('карта не пустеет: списки, профили и теги на месте', async () => {
@@ -93,55 +83,47 @@ describe('карта сайта', () => {
     // страниц — это ровно «все три группы исчезли разом».
     const urls = (await sitemap()).map((e) => e.url)
     expect(urls.some((u) => u.includes(`/${OWNER}/sm-public`)), 'ни одного списка').toBe(true)
-    expect(bothLangs(urls, `/${OWNER}`), 'профиль обязан быть на обоих языках').toMatchObject({ ok: true })
+    expect(has(urls, `/${OWNER}`), 'нет профиля').toBe(true)
     expect(urls.some((u) => u.includes('/tags/')), 'ни одного тега').toBe(true)
   })
 
   it('публичный список попадает, черновик/приватный/на модерации — нет', async () => {
     const urls = (await sitemap()).map((e) => e.url)
 
-    expect(bothLangs(urls, `/${OWNER}/sm-public`), 'список обязан быть в карте на обоих языках').toMatchObject({ ok: true })
-    // Скрытого не должно быть НИ НА ОДНОМ языке: префикс не повод попасть в карту.
-    for (const code of LOCALES) {
-      expect(urls).not.toContain(url(`/${code}/${OWNER}/sm-draft`))
-      expect(urls).not.toContain(url(`/${code}/${OWNER}/sm-private`))
-      expect(urls).not.toContain(url(`/${code}/${OWNER}/sm-pending`))
-    }
+    expect(has(urls, `/${OWNER}/sm-public`), 'публичного списка нет в карте').toBe(true)
+    for (const hidden of ['sm-draft', 'sm-private', 'sm-pending']) expect(urls).not.toContain(url(`/${OWNER}/${hidden}`))
   })
 
   it('тег виден только по видимым спискам — иначе страница тега в индексе пуста', async () => {
     const urls = (await sitemap()).map((e) => e.url)
 
-    expect(bothLangs(urls, '/tags/sm-tag-public'), 'тег обязан быть на обоих языках').toMatchObject({ ok: true })
-    for (const hidden of ['sm-tag-draft', 'sm-tag-private', 'sm-tag-pending']) {
-      for (const code of LOCALES) expect(urls).not.toContain(url(`/${code}/tags/${hidden}`))
-    }
+    expect(has(urls, '/tags/sm-tag-public'), 'тега видимого списка нет в карте').toBe(true)
+    for (const hidden of ['sm-tag-draft', 'sm-tag-private', 'sm-tag-pending']) expect(urls).not.toContain(url(`/tags/${hidden}`))
   })
 
   it('профиль попадает только у автора с публичными списками', async () => {
     const urls = (await sitemap()).map((e) => e.url)
 
-    expect(bothLangs(urls, `/${OWNER}`), 'профиль обязан быть на обоих языках').toMatchObject({ ok: true })
+    expect(has(urls, `/${OWNER}`), 'нет профиля').toBe(true)
     expect(urls).not.toContain(url(`/${GHOST}`))
   })
 
   it('у списка проставлена дата правки — по ней обходчик решает, перечитывать ли', async () => {
-    // Дата обязана уцелеть на КАЖДОМ языке: адреса теперь два, и потерять её на одном
-    // из них значит заставить обходчика перечитывать половину сайта вслепую.
-    for (const code of LOCALES) {
-      const entry = (await sitemap()).find((e) => e.url === url(`/${code}/${OWNER}/sm-public`))
-      expect(entry?.lastModified, `дата правки потеряна на языке ${code}`).toBeInstanceOf(Date)
-    }
+    const entry = (await sitemap()).find((e) => e.url === url(`/${OWNER}/sm-public`))
+    expect(entry?.lastModified, 'дата правки потеряна').toBeInstanceOf(Date)
   })
 
   it('статические разделы на месте и без дублей', async () => {
     const urls = (await sitemap()).map((e) => e.url)
 
-    for (const path of ['/', '/explore', '/trending', '/tags', '/collections']) {
-      // Корень на языке — это `/ru`, а не `/ru/`: хвостовой слэш Next нормализует
-      // редиректом, и два адреса на одну страницу в карте были бы прямым дублем.
-      expect(bothLangs(urls, path === '/' ? '' : path), `раздел ${path} не на обоих языках`).toMatchObject({ ok: true })
-    }
+    for (const path of ['/', '/explore', '/trending', '/tags', '/collections']) expect(has(urls, path), `нет раздела ${path}`).toBe(true)
     expect(new Set(urls).size).toBe(urls.length)
+  })
+
+  it('⚠️ языка в адресах нет: ни префикса, ни ссылок на языковые версии (ADR-0029)', async () => {
+    const entries = await sitemap()
+    const prefixed = entries.filter((e) => splitLangPath(new URL(e.url).pathname).lang)
+    expect(prefixed.map((e) => e.url)).toEqual([])
+    expect(entries.filter((e) => e.alternates?.languages).map((e) => e.url)).toEqual([])
   })
 })

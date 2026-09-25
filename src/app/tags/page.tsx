@@ -11,7 +11,7 @@ import { pageMeta } from '@/shared/seo/page-meta'
 
 export async function generateMetadata() {
   const lang = await getLang()
-  return pageMeta({ title: t('tags', lang), description: t('tags.browseListsByTag', lang), path: '/tags', lang })
+  return pageMeta({ title: t('tags', lang), description: t('tags.browseListsByTag', lang), path: '/tags' })
 }
 
 // Популярные теги считаются по реально видимым публичным спискам. Реестр тегов

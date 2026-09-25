@@ -1,6 +1,6 @@
 import type { Lang } from '@/shared/i18n'
-import { tr } from '@/shared/i18n'
-import { servedLang, type ExportList } from './export'
+import { servedLang, tr } from '@/shared/i18n'
+import type { ExportList } from './export'
 
 /**
  * КОНВЕРТ ДАННЫХ СПИСКА — то, что видит чужой код.
@@ -77,7 +77,7 @@ export function toDataEnvelope(list: ExportList, lang: Lang, url: string, update
     version: list.version,
     updatedAt: updatedAt.toISOString(),
     ordered: list.ordered,
-    lang: servedLang(list, lang),
+    lang: servedLang(list.title, lang),
     requestedLang: lang,
     // Один проход: блоки (текст, картинка, опрос) — оформление страницы, а не данные, в
     // конверт идут только шаги. Иначе потребителю пришлось бы фильтровать наши типы у себя.

@@ -4,8 +4,6 @@ import { db, templates, users } from '@/shared/db'
 import { indexableFilter } from '@/features/library/queries/shared'
 import { getCollections } from '@/features/collections/queries'
 import { SITE_ORIGIN } from '@/shared/site'
-import { LOCALES } from '@/shared/i18n'
-import { langHref } from '@/shared/i18n/url'
 
 /**
  * Карта сайта — `/sitemap.xml` по конвенции Next (файл `app/sitemap.ts`).
@@ -124,23 +122,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ]
 
-  // ⚠️ КАЖДЫЙ адрес — на обоих языках, со взаимными `alternates`.
-  //
-  // До 22.09.2026 русских адресов в карте не было вовсе: языки жили по одному адресу и
-  // выбирались заголовком `Accept-Language`, которого YandexBot не шлёт. Карта сайта —
-  // главный способ сказать поисковику «вот все мои страницы», и молчать в ней про
-  // половину сайта значит не иметь этой половины в индексе.
-  //
-  // `alternates.languages` в карте Next превращается в `xhtml:link` рядом с каждым `loc`:
-  // это вторая, независимая от разметки страницы, декларация связи языков — Google
-  // рекомендует давать её хотя бы одним из способов, а мы даём обоими.
-  return entries.flatMap((e) => {
-    const path = e.url.slice(SITE_ORIGIN.length) || '/'
-    const languages = Object.fromEntries(LOCALES.map((code) => [code, at(langHref(path, code))]))
-    return LOCALES.map((code) => ({
-      ...e,
-      url: at(langHref(path, code)),
-      alternates: { languages: { ...languages, 'x-default': e.url } },
-    }))
-  })
+  // Адрес страницы один на все языки (ADR-0029): по одному `loc` на страницу, без
+  // `alternates.languages` — они описывают разные адреса одной страницы, а адрес один.
+  return entries
 }
