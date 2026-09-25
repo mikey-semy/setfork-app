@@ -1,6 +1,6 @@
 import type { Lang } from '@/shared/i18n'
 import { tr } from '@/shared/i18n'
-import type { ExportList } from './export'
+import { servedLang, type ExportList } from './export'
 
 /**
  * КОНВЕРТ ДАННЫХ СПИСКА — то, что видит чужой код.
@@ -48,8 +48,17 @@ export interface ListDataEnvelope {
   updatedAt: string
   /** Порядок шагов значим (чек-лист) или нет (набор). */
   ordered: boolean
-  /** Язык, на котором отданы тексты. */
-  lang: Lang
+  /**
+   * Язык, на котором ОТДАНЫ тексты (BCP 47), — язык названия списка. Не равен
+   * запрошенному, когда перевода нет: тогда отдаётся оригинал, и метка говорит правду
+   * о нём (fe#968: русский список объявлял `en`, потому что так попросили).
+   * ⚠️ Это язык НАЗВАНИЯ. Шаг, дописанный после перевода, остаётся на языке автора, а
+   * кнопка перевода пропадает, как только у названия есть нужный ключ, — так что в
+   * переведённом списке отдельные шаги на другом языке бывают постоянно, а не изредка.
+   */
+  lang: string
+  /** Язык, который запросили (`?lang=`, кука, Accept-Language). Расходится с `lang` — перевода нет. */
+  requestedLang: Lang
   steps: ListDataStep[]
 }
 
@@ -68,7 +77,8 @@ export function toDataEnvelope(list: ExportList, lang: Lang, url: string, update
     version: list.version,
     updatedAt: updatedAt.toISOString(),
     ordered: list.ordered,
-    lang,
+    lang: servedLang(list, lang),
+    requestedLang: lang,
     // Один проход: блоки (текст, картинка, опрос) — оформление страницы, а не данные, в
     // конверт идут только шаги. Иначе потребителю пришлось бы фильтровать наши типы у себя.
     steps: list.steps.reduce<ListDataStep[]>((acc, s) => {
@@ -91,7 +101,16 @@ export function toDataEnvelope(list: ExportList, lang: Lang, url: string, update
   }
 }
 
-/** Слабый ETag: меняется ровно тогда, когда меняется содержимое (версия + отметка правки). */
+/**
+ * ПОКОЛЕНИЕ ПРЕДСТАВЛЕНИЯ — часть ETag, которая меняется, когда меняется ФОРМА ответа при
+ * том же содержимом списка. Без неё клиент с кешем после выкатки получал бы 304 и держал
+ * старое тело, пока автор не поправит список: так ссылка на `0.0.0.0:3000` жила бы во
+ * встраивании на чужих сайтах и после починки (fe#968, ревью по линзам). Меняешь форму
+ * конверта или разметку встраивания — увеличь.
+ */
+export const REPRESENTATION = 'r2'
+
+/** Слабый ETag: меняется ровно тогда, когда меняется содержимое (версия + отметка правки) или форма ответа. */
 export function dataEtag(version: number, updatedAt: Date, lang: Lang): string {
-  return `W/"v${version}-${updatedAt.getTime()}-${lang}"`
+  return `W/"${REPRESENTATION}-v${version}-${updatedAt.getTime()}-${lang}"`
 }
