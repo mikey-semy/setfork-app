@@ -776,6 +776,85 @@ jobs:
           DEP_ID: ${{ steps.dep.outputs.id }}
           JOB_STATUS: ${{ job.status }}
 
+  # РЕЕСТР MCP: новая версия записи `com.setfork/setfork` — после выкатки, если её там ещё нет.
+  #
+  # Запись опубликовали руками 07.07 и больше не трогали: сервер с тех пор получил десятки
+  # инструментов, сценарии и ресурсы, а реестр показывал июльский. Версия записи — своя
+  # (`server.json` → version, решение владельца 25.09), а слепок поверхности в ней сверяет с
+  # кодом тест `server-json`. Что делать — решает `scripts/mcp-registry-plan.py`:
+  # нет версии → публикуем; есть и поверхность та же → ничего; есть, а поверхность другая →
+  # красный: поверхность меняли, а версию не подняли (версии в реестре неизменяемы).
+  #
+  # Отдельной джобой, а не шагом выкатки: сбой реестра не должен красить деплой и будить
+  # тревогу «деплой упал». Публикуется С ПРОДА: там лежит ключ подписи реестра
+  # (`/root/setfork-mcp-registry.key`, DNS-подтверждение домена), и он не покидает сервер.
+  mcp-registry:
+    if: >-
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [deploy]
+    runs-on: [self-hosted, setfork]
+    concurrency:
+      group: mcp-registry
+      queue: max
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    env:
+      DEPLOY: root@159.195.151.41
+      # Публикатор — закреплённый релиз и его контрольная сумма из официального
+      # registry_1.8.1_checksums.txt: бинарь запускается рядом с ключом подписи.
+      PUBLISHER_VERSION: v1.8.1
+      PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: План — публиковать ли эту версию
+        id: plan
+        run: |
+          V=$(python3 -c "import json; print(json.load(open('server.json'))['version'])")
+          CODE=$(curl -s -m 30 -o /tmp/mcp-published.json -w '%{http_code}' \
+            "https://registry.modelcontextprotocol.io/v0/servers/com.setfork%2Fsetfork/versions/$V")
+          case "$CODE" in
+            200) ;;
+            404) rm -f /tmp/mcp-published.json ;;
+            *) echo "::error::реестр ответил $CODE — повторит следующая выкатка"; exit 1 ;;
+          esac
+          ACTION=$(python3 scripts/mcp-registry-plan.py server.json /tmp/mcp-published.json)
+          echo "::notice::реестр MCP, версия $V: $ACTION"
+          echo "action=$ACTION" >> "$GITHUB_OUTPUT"
+
+      - name: Ключ деплоя (ro-mount раннера)
+        if: steps.plan.outputs.action == 'publish'
+        run: |
+          test -f /ssh/setfork || { echo "::error::нет /ssh/setfork — подними раннер из setfork-ci-runner/docker-compose.yml"; exit 1; }
+          install -m 600 /ssh/setfork /tmp/deploy_key_mcp
+
+      - name: Публикация с прода
+        if: steps.plan.outputs.action == 'publish'
+        run: |
+          SSH="ssh -i /tmp/deploy_key_mcp -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
+          $SSH "cat > /tmp/setfork-server.json" < server.json
+          # Зерно ключа (32 байта ed25519, hex) извлекается НА СЕРВЕРЕ и туда же подаётся:
+          # в лог раннера и на раннер ключ не попадает.
+          $SSH "PV=$PUBLISHER_VERSION PS=$PUBLISHER_SHA256 bash -s" <<'REMOTE'
+          set -euo pipefail
+          d=$(mktemp -d); trap 'rm -rf "$d" /tmp/setfork-server.json' EXIT
+          curl -fsSL -m 120 -o "$d/p.tgz" "https://github.com/modelcontextprotocol/registry/releases/download/$PV/mcp-publisher_linux_amd64.tar.gz"
+          echo "$PS  $d/p.tgz" | sha256sum -c --quiet -
+          tar -xzf "$d/p.tgz" -C "$d" mcp-publisher
+          cd "$d"
+          SEED=$(openssl pkey -in /root/setfork-mcp-registry.key -outform DER | tail -c 32 | od -An -tx1 | tr -d ' \n')
+          HOME="$d" ./mcp-publisher login dns -algorithm ed25519 -domain setfork.com -private-key "$SEED" >/dev/null
+          HOME="$d" ./mcp-publisher publish /tmp/setfork-server.json
+          REMOTE
+
+      - name: Очистка ключа деплоя
+        if: always()
+        run: shred -u /tmp/deploy_key_mcp 2>/dev/null || rm -f /tmp/deploy_key_mcp
+
   # Красный CI = выкатки не будет, и это надо отметить — но НЕ тревогой-issue.
   #
   # Тревога отвечает на вопрос «прод отстаёт?», то есть про СОСТОЯНИЕ, и живёт

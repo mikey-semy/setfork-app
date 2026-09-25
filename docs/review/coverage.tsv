@@ -163,6 +163,7 @@ scripts/lib/row-touch.mjs	H13c
 scripts/lib/stacked-hit.mjs	H13c
 scripts/lib/ui-scan.mjs	H13c
 scripts/mcp-import-ops.ts	H13f
+scripts/mcp-registry-plan.py	H4
 scripts/migrate-drops.ts	H13c
 scripts/migrate-push-run.ts	H13c
 scripts/migrate-push.ts	H13c
@@ -177,6 +178,7 @@ scripts/ui-drift.mjs	H13f
 scripts/ui-parity.mjs	H13d
 scripts/ui-sizes.mjs	H13f
 scripts/verify-council-chat.ts	H13f
+server.json	H13
 skills-lock.json	H13
 src/app/.well-known/oauth-authorization-server/route.ts	H11
 src/app/.well-known/oauth-protected-resource/api/mcp/route.ts	H11
@@ -1629,6 +1631,7 @@ tests/features/mcp/registry.test.ts	H4
 tests/features/mcp/report-check.itest.ts	H4b
 tests/features/mcp/report-run.itest.ts	H4b
 tests/features/mcp/runs.itest.ts	H4b
+tests/features/mcp/server-json.test.ts	H4
 tests/features/mcp/sources.itest.ts	H4b
 tests/features/mcp/stale-refusal-texts.test.ts	H4
 tests/features/mcp/suggestion-base-visible.test.ts	H4
@@ -1669,6 +1672,7 @@ tests/features/tags/array-params.itest.ts	V5
 tests/features/watch/watch-visibility.itest.ts	V7b
 tests/features/watch/watcher-delivery.itest.ts	V7b
 tests/helpers/fake-image-api.ts	H12
+tests/helpers/mcp-surface.ts	H12
 tests/helpers/reset-db.itest.ts	H12
 tests/helpers/reset-db.ts	H12
 tests/helpers/walk-src.ts	H12
