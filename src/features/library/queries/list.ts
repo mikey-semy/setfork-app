@@ -372,6 +372,10 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       pinned: templates.pinned,
       isTemplate: templates.isTemplate,
       isSkill: templates.isSkill,
+      // Импорт чужого скилла: источник, лицензия и можно ли быть публичным (шапка и настройки).
+      sourceUrl: templates.sourceUrl,
+      sourceLicense: templates.sourceLicense,
+      sourceLicenseOpen: templates.sourceLicenseOpen,
       living: templates.living, // лента: свежесть вместо полноты, рост вместо полировки
       repositoryId: templates.repositoryId,
       visibility: templates.visibility,

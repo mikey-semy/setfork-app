@@ -27,6 +27,8 @@ Agent Skills:
                                          assets/) as ONE version; without owner/slug creates a
                                          new draft. The folder is the truth: files missing from it
                                          are removed from the list.  [--base N]
+  sf skill import <github-url>           someone else's skill from GitHub → a new draft of yours;
+                                         open license → can be published, none/closed → private
   sf skill install <owner/slug>          npx skills add <site>/<owner>/<slug>/skill.tar.gz
 
 Releases:
@@ -199,6 +201,16 @@ async function skill(sub, args) {
       if (r.note) console.log(r.note)
       break
     }
+    case 'import': {
+      if (!args[0]) die('usage: sf skill import <github-url>')
+      const r = await call('import_skill', { url: args[0] })
+      console.log(`✓ ${r.ref} — ${r.privateOnly ? 'PRIVATE draft' : 'draft'}, license: ${r.license?.id ?? 'none'}`)
+      console.log(`  source: ${r.sourceUrl}`)
+      for (const s of r.skipped ?? []) console.log(`  skipped: ${s.path} — ${s.why}`)
+      for (const n of r.parseNotes ?? []) console.log(`  note: ${n}`)
+      if (r.note) console.log(r.note)
+      break
+    }
     case 'install': {
       if (!args[0]) die('usage: sf skill install <owner/slug>')
       const { list: l } = refOf(args[0])
@@ -208,7 +220,7 @@ async function skill(sub, args) {
       break
     }
     default:
-      die('usage: sf skill publish|install …')
+      die('usage: sf skill publish|import|install …')
   }
 }
 

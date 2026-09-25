@@ -23,6 +23,15 @@ const answer = (name, args, token) => {
   if (name === 'my_catalogs') return { content: [{ type: 'text', text: '[]' }] }
   if (name === 'get_list') return { content: [{ type: 'text', text: JSON.stringify({ ref: 'miki/kit', title: 'Kit', version: 7, steps: [{}], files: [{ path: 'scripts/run.sh', executable: true, bytes: 3 }] }) }] }
   if (name === 'publish_skill') return { content: [{ type: 'text', text: JSON.stringify({ ref: args.list ?? 'miki/new', version: 8, files: { added: [], changed: ['scripts/run.sh'], removed: ['assets/old.txt'], total: 2 } }) }] }
+  if (name === 'import_skill')
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ ref: 'miki/pdf', privateOnly: true, license: { id: null, open: false }, sourceUrl: 'https://github.com/a/b/tree/abc/pdf', skipped: [{ path: 'assets/x.png', why: 'binary' }], note: 'private' }),
+        },
+      ],
+    }
   if (name === 'create_release')
     return { content: [{ type: 'text', text: JSON.stringify(args.confirm ? { tag: args.tag, version: 7, url: 'u', note: 'n' } : { wouldPublish: { tag: args.tag } }) }] }
   if (name === 'boom') return { content: [{ type: 'text', text: 'refused: because' }], isError: true }
@@ -160,3 +169,14 @@ test('SETFORK_TOKEN главнее сохранённого', async () => {
   assert.equal(r.code, 1)
   assert.match(r.out, /SETFORK_TOKEN — does NOT work/)
 })
+
+test('skill import: адрес уходит в import_skill, приватность и пропуски названы', async () => {
+  calls.length = 0
+  const r = await sf(['skill', 'import', 'github.com/a/b/tree/main/pdf'])
+  assert.equal(r.code, 0, r.err)
+  assert.deepEqual(calls.map((c) => c.name), ['import_skill'])
+  assert.deepEqual(calls[0].arguments, { url: 'github.com/a/b/tree/main/pdf' })
+  assert.match(r.out, /PRIVATE draft, license: none/)
+  assert.match(r.out, /skipped: assets\/x\.png — binary/)
+})
+

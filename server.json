@@ -3,7 +3,7 @@
   "name": "com.setfork/setfork",
   "title": "SetFork",
   "description": "Runnable, versioned lists for agents: tools, prompts and lists as resources. Git under the hood.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "websiteUrl": "https://setfork.com",
   "remotes": [
     {
@@ -33,6 +33,7 @@
           "get_run",
           "get_script",
           "gnome_review",
+          "import_skill",
           "list_gnomes",
           "list_releases",
           "list_sources",

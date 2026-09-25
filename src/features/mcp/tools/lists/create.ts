@@ -38,6 +38,9 @@ export interface McpCreateInput {
   authored?: AuthoredFile[]
   /** Шапка исходного SKILL.md — в первую версию, как и файлы. */
   skillHeader?: SkillHeader | null
+  /** Видимость черновика; не задана — публичный (решает публикация). Импорт чужого скилла
+   *  без открытой лицензии задаёт 'private' — такой список публичным не станет. */
+  visibility?: 'public' | 'private'
 }
 
 /** Теги с MCP — в той же форме, что с сайта: нижний регистр, без пунктуации, не больше 8.
@@ -72,7 +75,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
       desc: cleanText(input.desc) ? { [lang]: cleanText(input.desc) } : {},
       tags,
       ordered: input.ordered ?? true,
-      visibility: 'public',
+      visibility: input.visibility ?? 'public',
       status: 'draft',
       origin: 'authored',
       note: 'created via API',

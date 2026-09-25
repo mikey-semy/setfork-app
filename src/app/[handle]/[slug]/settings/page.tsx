@@ -22,6 +22,7 @@ import { LivingSection } from '@/features/library/LivingSection'
 import { PrSettingsSection } from '@/features/library/PrSettingsSection'
 import { withPrDefaults } from '@/features/library/pr-settings'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
+import { canBePublic } from '@/core/domain/skill-license'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -183,6 +184,7 @@ export default async function ListSettingsPage({
           frozen={meta.frozenAt != null}
           mirrored={!!meta.mirrorUrl}
           pendingTransfer={pendingTransfer}
+          publicLocked={!canBePublic(meta)}
           lang={lang}
         />
       ),
