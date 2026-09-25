@@ -54,7 +54,10 @@ describe('узда: <script> с nonce', () => {
       .filter((t) => !t.ok)
       .map((t) => `${t.file}:${t.line} <${t.name}>`)
     expect(bad).toEqual([])
-  })
+    // Разбор КАЖДОГО .tsx компилятором TypeScript: локально ~1 с, а под замером покрытия
+    // (coverage в CI) и рядом с сотнями файлов — дольше 5 с по умолчанию. Дважды подряд
+    // на master (25.09): это время обхода, а не «flaky».
+  }, 30_000)
 
   it('узда видит теги: в корневом layout — тема, её провайдер и аналитика', () => {
     const names = scriptTags('src/app/layout.tsx').map((t) => t.name)
