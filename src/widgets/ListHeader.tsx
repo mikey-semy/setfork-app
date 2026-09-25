@@ -29,6 +29,7 @@ import { ListTabs } from './ListTabs'
 import { ShowOnListRoot } from './ShowOnListRoot'
 import { PAGE_X } from '@/shared/ui/control'
 import { TextButton } from '@/shared/ui/TextButton'
+import { ListSourceLine } from './ListSourceLine'
 
 /** Общая шапка страницы списка (= «репозиторий»): owner/name, действия, вкладки.
  *  Живёт в персистентном [handle]/[slug]/layout.tsx — не перемонтируется между
@@ -110,6 +111,10 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               </span>
             ) : null}
           </div>
+          {/* Откуда пришёл импортированный скилл — как «forked from» у GitHub: под именем,
+              ссылкой на закреплённый коммит источника, с лицензией. Без открытой лицензии —
+              сказать, почему список только приватный, а не прятать причину. */}
+          {meta.sourceUrl ? <ListSourceLine meta={meta} lang={lang} /> : null}
           </ShowOnListRoot>
 
           {/* Действия репозитория — только на корне «Список» (как GitHub: на

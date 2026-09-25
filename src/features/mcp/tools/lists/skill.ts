@@ -46,6 +46,8 @@ export interface McpSkillFileInput {
 export interface McpPublishSkillInput {
   /** Существующий список «handle/slug» — обновить; не задан — создать новый. */
   list?: string
+  /** Видимость НОВОГО списка (внутренний вход импорта — через инструмент не выставляется). */
+  visibility?: 'public' | 'private'
   /** Для существующего — версия, от которой собрана правка (get_list). Обязательна. */
   baseVersion?: number
   title?: string
@@ -204,6 +206,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         // незачем, а старое ядро на нём отказало бы скиллу, которому файлы и не нужны.
         authored: authored.length ? authored : undefined,
         skillHeader: picked?.header,
+        visibility: input.visibility,
       })
       if ('error' in res) return res
       await markSkill(and(eq(templates.ownerId, userId), eq(templates.slug, res.ref.split('/')[1]))!, picked)

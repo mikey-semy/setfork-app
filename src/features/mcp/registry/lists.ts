@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpPublishSkill, mcpRenameList, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
+import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpImportSkill, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpPublishSkill, mcpRenameList, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
 import { itemShape, itemShapeLean } from './block-schema'
 import { json, err, type ToolKit } from './kit'
 
@@ -57,6 +57,22 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
     async (userId, args) => {
       // Полная форма блоков — по той же причине, что в create_list.
       const res = await mcpPublishSkill(userId, { ...args, items: args.items ? z.array(itemShape).parse(args.items) : undefined })
+      return 'error' in res ? err(res.error as string) : json(res)
+    },
+  )
+
+  writeTool(
+    'import_skill',
+    {
+      title: 'Import an Agent Skill from GitHub',
+      description:
+        'Bring someone else\'s Agent Skill from GitHub into SetFork as a new DRAFT of yours: the SKILL.md becomes blocks, its header is kept, and scripts/, references/, assets/ come as files — all from one pinned commit, with the source credited. The URL is what `npx skills add` takes: github.com/<owner>/<repo>, …/tree/<ref>/<folder>, …/blob/<ref>/<folder>/SKILL.md or owner/repo. VISIBILITY FOLLOWS THE LICENSE: an open license (MIT, Apache-2.0, BSD, GPL, CC-BY…) lets the list be public once you publish it; no license, a proprietary or non-commercial one makes it PRIVATE for good — only you see it and it cannot be made public. Files in subfolders, binary or over 1 MB are skipped and named. At most 10 imports an hour.',
+      inputSchema: {
+        url: z.string().describe('GitHub address of the skill: repository, its folder, or its SKILL.md'),
+      },
+    },
+    async (userId, args) => {
+      const res = await mcpImportSkill(userId, args)
       return 'error' in res ? err(res.error as string) : json(res)
     },
   )

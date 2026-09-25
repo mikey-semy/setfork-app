@@ -409,6 +409,13 @@ export const templates = pgTable(
     // ⚠️ json, а НЕ jsonb: jsonb пересортировывает ключи, и `metadata` автора выходила бы
     // из экспорта не в его порядке (находка ревью ядра).
     skillHeader: json('skill_header').$type<SkillHeader>(),
+    // ИМПОРТ ЧУЖОГО СКИЛЛА (решение владельца 25.09.2026): откуда взят (адрес папки на
+    // закреплённом коммите), какая лицензия и разрешает ли она публиковать. null в
+    // `sourceLicenseOpen` — список не импортирован. false — только приватно: публичным его
+    // не сделать ни настройками, ни копией (шаблон и форк наследуют запрет).
+    sourceUrl: text('source_url'),
+    sourceLicense: text('source_license'),
+    sourceLicenseOpen: boolean('source_license_open'),
     coverImage: text('cover_image'), // storage_key обложки-баннера (витрина/og); null → авто-баннер
     accent: text('accent'), // hex акцента карточки/авто-баннера ('' / null = дефолт)
     // Тип списка (ADR-0010): переносится из generations при принятии кандидата,

@@ -12,6 +12,7 @@ import { notify } from '@/features/notifications/notify'
 import { curationStore } from '@/features/curation/store'
 import { gateListPublication } from '@/features/moderation/moderate-list'
 import { canViewList } from '@/core'
+import { canBePublic } from '@/core/domain/skill-license'
 
 
 // ── Видимость списка (public/private) и удаление ─────────────────────
@@ -19,6 +20,9 @@ export async function setListVisibility(templateId: string, visibility: 'public'
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl || tpl.ownerId !== session.userId) return
+  // Импорт без открытой лицензии публичным не становится (решение владельца 25.09.2026).
+  // Интерфейс такую кнопку не показывает; отказ здесь — для запроса мимо него.
+  if (visibility === 'public' && !canBePublic(tpl)) return
   if (visibility === 'private') {
     // приватному гейт не нужен — сбрасываем ТОЛЬКО pending; flagged/hidden не
     // «отмываются» toggle'ом видимости — админский takedown снимает только админ.

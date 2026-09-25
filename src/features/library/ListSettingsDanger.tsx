@@ -32,6 +32,7 @@ export function ListSettingsDanger({
   frozen,
   mirrored,
   pendingTransfer,
+  publicLocked = false,
   lang,
 }: {
   templateId: string
@@ -49,6 +50,8 @@ export function ListSettingsDanger({
    *  внешнюю копию мы не можем, и умолчать об этом — обещать больше, чем делаем. */
   mirrored: boolean
   pendingTransfer: { id: string; toHandle: string } | null
+  /** Импорт скилла без открытой лицензии: публичным не сделать — кнопки нет, есть причина. */
+  publicLocked?: boolean
   lang: Lang
 }) {
   const [pending, start] = useTransition()
@@ -97,9 +100,13 @@ export function ListSettingsDanger({
               : `${t('visibilityCurrent', lang)} ${t(isPublic ? 'publicLabel' : 'privateLabel', lang).toLowerCase()}.`
           }
         >
-          <Button variant="danger" size="md" onClick={() => setDialog('visibility')} className="border border-danger/40">
-            {isPublic ? <Lock size={14} /> : <Globe size={14} />} {t(isPublic ? 'makePrivate' : 'makePublic', lang)}
-          </Button>
+          {publicLocked && !isPublic ? (
+            <span className="max-w-xs text-caption text-ink-2">{t('importVisibilityLocked', lang)}</span>
+          ) : (
+            <Button variant="danger" size="md" onClick={() => setDialog('visibility')} className="border border-danger/40">
+              {isPublic ? <Lock size={14} /> : <Globe size={14} />} {t(isPublic ? 'makePrivate' : 'makePublic', lang)}
+            </Button>
+          )}
         </ActionRow>
 
         {/* Заморозка правок (защита) */}

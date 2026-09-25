@@ -16,6 +16,7 @@ import { slugify } from '../slug'
 import { enqueueReindex } from '../jobs'
 import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from '../pr-settings'
 import { authoredFilesOf, ownerHandle } from './shared'
+import { canBePublic } from '@/core/domain/skill-license'
 
 /**
  * Копии чужого списка: форк (со связью с оригиналом) и «использовать как шаблон»
@@ -106,7 +107,9 @@ export async function useTemplate(templateId: string): Promise<void> {
     desc: src.desc,
     tags: src.tags,
     ordered: src.ordered,
-    visibility: 'public',
+    // Копия импорта без открытой лицензии — тоже только приватная: иначе запрет обходился
+    // бы «использовать как шаблон» своего же приватного списка.
+    visibility: canBePublic(src) ? 'public' : 'private',
     status: 'published',
     origin: 'authored', // шаблон — стартовая точка, не fork-связь
     forkedFromId: null,
@@ -123,6 +126,14 @@ export async function useTemplate(templateId: string): Promise<void> {
     skillHeader: src.skillHeader,
   })
   if (src.isSkill) await db.update(templates).set({ isSkill: true, skillHeader: src.skillHeader }).where(eq(templates.id, created.id))
+  // Источник и лицензия импорта — наследуются: копия чужого скилла остаётся с указанием
+  // автора, а запрет на публичность не теряется на следующей смене видимости.
+  if (src.sourceUrl) {
+    await db
+      .update(templates)
+      .set({ sourceUrl: src.sourceUrl, sourceLicense: src.sourceLicense, sourceLicenseOpen: src.sourceLicenseOpen })
+      .where(eq(templates.id, created.id))
+  }
   // Копия публикуется — но состояние публикации ей задал фасад create, до записи.
   revalidatePath('/', 'layout')
   redirect(`/${session.handle}/${slug}`)
@@ -259,6 +270,14 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
   // Форк скилла — скилл: метка и шапка — про содержимое, не про владельца. Шапка уже
   // приехала созданием (в канон v1); запись здесь — на окно выкатки, пока ядро поля не знает.
   if (src.isSkill) await db.update(templates).set({ isSkill: true, skillHeader: src.skillHeader }).where(eq(templates.id, forked.id))
+  // Источник и лицензия импорта — наследуются: копия чужого скилла остаётся с указанием
+  // автора, а запрет на публичность не теряется на следующей смене видимости.
+  if (src.sourceUrl) {
+    await db
+      .update(templates)
+      .set({ sourceUrl: src.sourceUrl, sourceLicense: src.sourceLicense, sourceLicenseOpen: src.sourceLicenseOpen })
+      .where(eq(templates.id, forked.id))
+  }
 
   await db
     .update(templates)
