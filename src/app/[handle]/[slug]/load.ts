@@ -1,4 +1,5 @@
 import 'server-only'
+import { getLatestRelease } from '@/features/releases/queries'
 import { latestReport } from '@/features/library/verification-report'
 import { notFound } from 'next/navigation'
 import { and as andOp, eq } from 'drizzle-orm'
@@ -286,9 +287,14 @@ export async function loadListPage({
           executable: f.executable,
           bytes: f.content.length,
         }))
+  // Версия СКИЛЛА — его последний релиз (v0.7.0), а не номер правки списка (v6): так
+  // скилл видят снаружи — в архиве, в чужих агентах, в заметках к выпуску. Как npm у
+  // пакета и «Latest» у GitHub. У обычного списка номер правки и есть версия.
+  const latestRelease = tpl.isSkill ? await getLatestRelease(tpl.id) : null
   return {
     related,
     skillFiles,
+    latestRelease,
     shownVersion,
     owner,
     slug,
