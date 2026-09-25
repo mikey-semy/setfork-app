@@ -1,4 +1,3 @@
-import { Bot, LayoutTemplate } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Badge } from '@/shared/ui/badge'
 
@@ -11,6 +10,10 @@ import { Badge } from '@/shared/ui/badge'
  *
  * Метки ставит автор (настройки списка), а не догадка по содержимому: чек-лист со
  * скриптом ещё не обязательно скилл.
+ *
+ * Без значков — одним словом, как «Public template» у GitHub: значок робота у «Скилла»
+ * тянул глаз сильнее самого названия (замечание владельца 25.09), а плашки рода должны
+ * читаться одинаково.
  */
 export function ListKindBadges({
   item,
@@ -26,13 +29,11 @@ export function ListKindBadges({
     <>
       {item.isSkill ? (
         <Badge shape="pill" className={className ? `shrink-0 ${className}` : 'shrink-0'}>
-          <Bot size={11} />
           {t('badgeSkill', lang)}
         </Badge>
       ) : null}
       {item.isTemplate ? (
         <Badge shape="pill" className={className ? `shrink-0 ${className}` : 'shrink-0'}>
-          <LayoutTemplate size={11} />
           {t('badgeTemplate', lang)}
         </Badge>
       ) : null}

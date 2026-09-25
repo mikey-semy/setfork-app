@@ -81,12 +81,36 @@ export function badgeClass({
   )
 }
 
+/**
+ * ⚠️ ТЕКСТ ЦЕНТРИРУЕТСЯ ПО БУКВАМ, А НЕ ПО СТРОКЕ. У шрифта запас над буквами и под
+ * ними разный, и строка из line-height ставила текст выше середины пилюли (замер 25.09:
+ * Hanken Grotesk −0.83 CSS px в Chromium, на iPhone владелец видел заметно больше).
+ * Подогнать отступ под один шрифт нельзя — шрифт выбирается в настройках (Hanken,
+ * Inter, Manrope).
+ *
+ * Стандарт на это — `text-box` (CSS Inline Layout 3): строка обрезается до верха
+ * заглавных и базовой линии, и по центру встаёт сама буква. Обрезка работает на
+ * строчном боксе, а не на flex-контейнере пилюли, — поэтому текстовые дети
+ * заворачиваются в span. Отрезанное возвращается отступом `(1lh − 1cap) / 2` с каждой
+ * стороны: высота пилюли прежняя при любом шрифте, меняется только положение букв.
+ * Нет поддержки (Firefox) — прежний вид целиком.
+ */
+const TRIM_TEXT =
+  'supports-[text-box:trim-both_cap_alphabetic]:[text-box:trim-both_cap_alphabetic] supports-[text-box:trim-both_cap_alphabetic]:py-[calc((1lh_-_1cap)/2)]'
+
 export function Badge({
   variant = 'outline',
   size = 'sm',
   shape = 'pill',
   className,
+  children,
   ...props
 }: React.HTMLAttributes<HTMLSpanElement> & { variant?: BadgeVariant; size?: BadgeSize; shape?: BadgeShape }) {
-  return <span className={badgeClass({ variant, size, shape, className })} {...props} />
+  return (
+    <span className={badgeClass({ variant, size, shape, className })} {...props}>
+      {React.Children.map(children, (child) =>
+        typeof child === 'string' || typeof child === 'number' ? <span className={TRIM_TEXT}>{child}</span> : child,
+      )}
+    </span>
+  )
 }
