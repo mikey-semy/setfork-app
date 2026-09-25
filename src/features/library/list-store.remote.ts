@@ -282,7 +282,7 @@ export const listWriteRemote = {
   },
   async create(input: CreateListInput): Promise<List> {
     assertNoDestructiveContent(input.steps, input.authored)
-    assertNoSecrets(input.steps, input.authored, { title: input.title, desc: input.desc, tags: input.tags })
+    assertNoSecrets(input.steps, input.authored, { title: input.title, desc: input.desc, tags: input.tags, skillHeader: input.skillHeader })
     if (input.authored !== undefined) await assertCoreAcceptsAuthored()
     const res = await callCreate({
       ownerId: input.ownerId,
@@ -301,6 +301,7 @@ export const listWriteRemote = {
       // рождается pending, а не становится им догоняющим апдейтом (окно между
       // insert в ядре и update в БД — это время, когда он публичен). '' = active.
       moderation: input.moderation ?? '',
+      skillHeaderJson: input.skillHeader ? JSON.stringify(input.skillHeader) : '',
       authored: toPbAuthored(input.authored),
     })
     return input.authored === undefined ? toList(res) : { ...toList(res), authoredApplied: res.authoredApplied }

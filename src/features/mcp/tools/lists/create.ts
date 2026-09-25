@@ -21,6 +21,7 @@ import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { toProposed, type McpItemInput } from '../shared'
 import type { AuthoredFile } from '@/core'
+import type { SkillHeader } from '@/core/domain/skill-header'
 import { contentError } from './write'
 
 export interface McpCreateInput {
@@ -35,6 +36,8 @@ export interface McpCreateInput {
   catalog?: string
   /** Файлы автора в первую версию (ADR-0028) — тем же коммитом, что и блоки. */
   authored?: AuthoredFile[]
+  /** Шапка исходного SKILL.md — в первую версию, как и файлы. */
+  skillHeader?: SkillHeader | null
 }
 
 /** Теги с MCP — в той же форме, что с сайта: нижний регистр, без пунктуации, не больше 8.
@@ -75,6 +78,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
       note: 'created via API',
       steps: stepInput(proposed),
       authored: input.authored,
+      skillHeader: input.skillHeader,
     })
   } catch (e) {
     const refused = contentError(e)

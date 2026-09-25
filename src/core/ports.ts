@@ -5,6 +5,7 @@
 // Это КОНТРАКТ, а не финальный API: методы добавляются по мере того, как
 // features/* мигрируют на порты (мягко, послойно).
 
+import type { SkillHeader } from './domain/skill-header'
 import type {
   Contributor,
   Id,
@@ -81,6 +82,8 @@ export interface CreateListInput {
   /** Файлы автора в ПЕРВУЮ версию: список рождается сразу с репозиторием и файлами в
    *  дереве, одной версией. Не задано — как раньше, файлов нет. */
   authored?: AuthoredFile[]
+  /** Шапка исходного SKILL.md — в строку списка и в канон первой версии. */
+  skillHeader?: SkillHeader | null
 }
 
 export interface ListStore {

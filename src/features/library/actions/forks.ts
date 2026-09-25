@@ -119,6 +119,8 @@ export async function useTemplate(templateId: string): Promise<void> {
     // путь копирует поля сам, один из них однажды забудет очередное.
     steps: toStepInput(srcSteps as unknown as ProposedItem[]),
     authored: await copiedFiles(src, srcCurrent?.version),
+    // Шапка — в создание, а не догоняющим апдейтом: у git-first рождения v1 уже коммит.
+    skillHeader: src.skillHeader,
   })
   if (src.isSkill) await db.update(templates).set({ isSkill: true, skillHeader: src.skillHeader }).where(eq(templates.id, created.id))
   // Копия публикуется — но состояние публикации ей задал фасад create, до записи.
@@ -237,6 +239,8 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
     // равно не доложили `danger`.
     steps: toStepInput(srcSteps as unknown as ProposedItem[]),
     authored: await copiedFiles(src, srcCurrent?.version),
+    // Шапка — в создание, а не догоняющим апдейтом: у git-first рождения v1 уже коммит.
+    skillHeader: src.skillHeader,
   })
 
   // Гонку проиграли: параллельный запрос уже создал форк этого источника, и уникальный
@@ -252,7 +256,8 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
     return { error: t('forkFailed', await getLang()) }
   }
   const forked = created
-  // Форк скилла — скилл: метка и шапка (лицензия автора!) — про содержимое, не про владельца.
+  // Форк скилла — скилл: метка и шапка — про содержимое, не про владельца. Шапка уже
+  // приехала созданием (в канон v1); запись здесь — на окно выкатки, пока ядро поля не знает.
   if (src.isSkill) await db.update(templates).set({ isSkill: true, skillHeader: src.skillHeader }).where(eq(templates.id, forked.id))
 
   await db

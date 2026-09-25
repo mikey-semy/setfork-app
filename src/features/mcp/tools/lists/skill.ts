@@ -203,6 +203,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         // У нового списка «без файлов» — это просто без файлов: слать пустой набор ядру
         // незачем, а старое ядро на нём отказало бы скиллу, которому файлы и не нужны.
         authored: authored.length ? authored : undefined,
+        skillHeader: picked?.header,
       })
       if ('error' in res) return res
       await markSkill(and(eq(templates.ownerId, userId), eq(templates.slug, res.ref.split('/')[1]))!, picked)

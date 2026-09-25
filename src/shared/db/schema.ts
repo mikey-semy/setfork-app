@@ -28,6 +28,7 @@ import {
   uniqueIndex,
   uuid,
   vector,
+  json,
 } from 'drizzle-orm/pg-core'
 import type { Lang, LocaleText } from '../i18n'
 import type { WatchEvents } from '../../core/ports'
@@ -405,7 +406,9 @@ export const templates = pgTable(
     isSkill: boolean('is_skill').notNull().default(false),
     // Шапка исходного SKILL.md (license, compatibility, allowed-tools, metadata) — чтобы
     // экспорт отдал скилл тем, чем он пришёл («экспорт верный», 24.09.2026). null — нет.
-    skillHeader: jsonb('skill_header').$type<SkillHeader>(),
+    // ⚠️ json, а НЕ jsonb: jsonb пересортировывает ключи, и `metadata` автора выходила бы
+    // из экспорта не в его порядке (находка ревью ядра).
+    skillHeader: json('skill_header').$type<SkillHeader>(),
     coverImage: text('cover_image'), // storage_key обложки-баннера (витрина/og); null → авто-баннер
     accent: text('accent'), // hex акцента карточки/авто-баннера ('' / null = дефолт)
     // Тип списка (ADR-0010): переносится из generations при принятии кандидата,
