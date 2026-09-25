@@ -7,32 +7,18 @@ import { getAiSettings } from '@/shared/settings/ai'
 import { getAiChatClient } from '@/shared/ai/provider'
 import { pickChatModel } from '@/shared/ai/credits'
 import { extractUsage, outcomeOf, recordUsage } from '@/shared/ai/usage'
-import { imageUrl, uploadImageFile } from '@/shared/media'
-import { saveLandingContent, type LandingContent } from '@/shared/settings/landing'
+import { saveLandingOverrides } from '@/shared/settings/landing'
 
 type Res = { ok: true } | { error: string }
 
-/** Сохранить контент лендинга (админ). Лендинг подхватит через ISR /api/landing. */
-export async function saveLanding(content: LandingContent): Promise<Res> {
+/** Сохранить правки лендинга (админ). Лендинг подхватит через ISR /api/landing.
+ *  Вход разбирается заново на сервере: форма — не граница доверия. */
+export async function saveLanding(content: unknown): Promise<Res> {
   await requireAdmin()
   try {
-    await saveLandingContent(content)
+    await saveLandingOverrides(content)
     revalidatePath('/admin/landing')
     return { ok: true }
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : 'fail' }
-  }
-}
-
-/** Загрузка картинки лендинга (DnD/файл) — в тот же медиа-пайплайн (S3/imgproxy).
- *  Возвращает storage_key (хранить в контенте) + подписанный URL (превью). */
-export async function uploadLandingImage(formData: FormData): Promise<{ ok: true; ref: string; url: string } | { error: string }> {
-  await requireAdmin()
-  const file = formData.get('file')
-  if (!(file instanceof File) || file.size === 0) return { error: 'nofile' }
-  try {
-    const ref = await uploadImageFile('landing', file)
-    return { ok: true, ref, url: (await imageUrl(ref, 'rs:fit:1536:0')) ?? '' }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'fail' }
   }

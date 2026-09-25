@@ -2,8 +2,7 @@ import { Megaphone } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { imageUrl } from '@/shared/media'
-import { getLandingContent } from '@/shared/settings/landing'
+import { getLandingOverrides, LANDING_KEYS } from '@/shared/settings/landing'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { LandingEditor } from '@/features/admin/LandingEditor'
 
@@ -12,22 +11,16 @@ export async function generateMetadata() {
   return { title: t('adminLanding', lang) }
 }
 
-// Редактор маркетинг-лендинга (setfork-about): тексты (лимиты + AI-подсказки),
-// плитки-статы, картинка hero (DnD). Лендинг подхватывает через ISR /api/landing.
+// Правки маркетинг-лендинга (setfork-about): строки словаря и полоса доверия с источниками.
+// Лендинг подхватывает их через ISR /api/landing; пустое поле — работает его словарь.
 export default async function AdminLandingPage() {
   await requireAdmin()
-  // Независимые запросы — параллельно (react-doctor).
-  const [lang, content] = await Promise.all([getLang(), getLandingContent()])
-  const heroPreview = content.heroImage ? ((await imageUrl(content.heroImage, 'rs:fit:640:0')) ?? undefined) : undefined
+  const [lang, overrides] = await Promise.all([getLang(), getLandingOverrides()])
 
   return (
     <div className="min-w-0">
-      <PageHeader
-        icon={<Megaphone size={18} />}
-        title={t('admin.landing', lang)}
-        subtitle={t('admin.editableCopyStatsHero', lang)}
-      />
-      <LandingEditor initial={content} heroPreview={heroPreview} lang={lang} />
+      <PageHeader icon={<Megaphone size={18} />} title={t('admin.landing', lang)} subtitle={t('admin.editableCopyStatsHero', lang)} />
+      <LandingEditor initial={overrides} keys={LANDING_KEYS} lang={lang} />
     </div>
   )
 }

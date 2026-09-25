@@ -1,54 +1,44 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ImageUp, Sparkles, X } from 'lucide-react'
-import { cn } from '@/shared/lib/cn'
+import { Check, Plus, Sparkles, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
-import type { LandingContent, LandingCopy } from '@/shared/settings/landing'
-import { saveLanding, suggestSlogan, uploadLandingImage } from './landing-actions'
+import type { LandingKey, LandingLang, LandingOverrides, LandingStat } from '@/shared/settings/landing'
+import { saveLanding, suggestSlogan } from './landing-actions'
 import { t } from '@/shared/i18n'
-import { cardClass } from '@/shared/ui/card-style'
 import { Spinner } from '@/shared/ui/Spinner'
-import { SmartImage } from '@/shared/ui/SmartImage'
 import { TextButton } from '@/shared/ui/TextButton'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
-import { IMAGE_ACCEPT } from '@/shared/media/limits'
 
-type FieldKey = keyof Omit<LandingCopy, 'stats'>
-type Field = { key: FieldKey; label: string; max: number; area?: boolean; ai?: boolean }
+/**
+ * ПРАВКИ ЛЕНДИНГА: поле на каждый строковый ключ словаря лендинга (`LANDING_KEYS`).
+ *
+ * Пустое поле — не «пустой текст», а «работает словарь лендинга»: сохраняется только то,
+ * что заполнено. Ключи — техническими именами: это перекрытие конкретной строки словаря,
+ * и имя однозначно говорит, какой.
+ *
+ * Плитки полосы доверия — с источником: без него плитка не сохранится (ADR-0005).
+ */
+const LONG = /Sub$|Description$|Blurb$|Prompt$/
 
-// Поля копирайта: лимит символов + где нужна AI-кнопка (слоганы). Порядок = как на странице.
-const FIELDS: Field[] = [
-  { key: 'eyebrow', label: 'Плашка (eyebrow)', max: 30 },
-  { key: 'heroTitle', label: 'Заголовок hero', max: 40, ai: true },
-  { key: 'heroTitleAccent', label: 'Заголовок — акцент', max: 30, ai: true },
-  { key: 'heroSub', label: 'Подзаголовок hero', max: 220, area: true, ai: true },
-  { key: 'ctaTitle', label: 'CTA — заголовок', max: 60, ai: true },
-  { key: 'ctaSub', label: 'CTA — подпись', max: 160, area: true, ai: true },
-  { key: 'ctaPrimary', label: 'CTA — кнопка 1', max: 30 },
-  { key: 'ctaSecondary', label: 'CTA — кнопка 2', max: 30 },
-  { key: 'footerBlurb', label: 'Футер — описание', max: 140, area: true },
-  { key: 'footerNote', label: 'Футер — слоган', max: 40 },
-]
-
-export function LandingEditor({ initial, heroPreview, lang }: { initial: LandingContent; heroPreview?: string; lang: Lang }) {
+export function LandingEditor({ initial, keys, lang }: { initial: LandingOverrides; keys: readonly LandingKey[]; lang: Lang }) {
   const router = useRouter()
-  const [c, setC] = useState<LandingContent>(initial)
-  const [tab, setTab] = useState<'ru' | 'en'>('ru')
+  const [c, setC] = useState<LandingOverrides>(initial)
+  const [tab, setTab] = useState<LandingLang>('en')
   const [pending, start] = useTransition()
   const [saved, setSaved] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  const copy = c[tab]
-  const setField = (key: FieldKey, val: string) => setC((p) => ({ ...p, [tab]: { ...p[tab], [key]: val } }))
-  const setStat = (i: number, k: 'num' | 'label', val: string) =>
-    setC((p) => ({ ...p, [tab]: { ...p[tab], stats: p[tab].stats.map((s, j) => (j === i ? { ...s, [k]: val } : s)) } }))
+  const cur = c[tab]
+  const setText = (key: LandingKey, val: string) => setC((p) => ({ ...p, [tab]: { ...p[tab], texts: { ...p[tab].texts, [key]: val } } }))
+  const setStats = (stats: LandingStat[]) => setC((p) => ({ ...p, [tab]: { ...p[tab], stats } }))
+  const setStat = (i: number, k: keyof LandingStat, val: string) => setStats(cur.stats.map((s, j) => (j === i ? { ...s, [k]: val } : s)))
 
   function save() {
     setErr(null)
@@ -65,46 +55,50 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Язык контента */}
       <SegmentedControl label={t('admin.contentLang', lang)}>
-        {(['ru', 'en'] as const).map((l) => (
+        {(['en', 'ru'] as const).map((l) => (
           <Segment key={l} active={tab === l} onClick={() => setTab(l)} className="uppercase">
             {l}
           </Segment>
         ))}
       </SegmentedControl>
 
-      {/* Картинка hero — drag-and-drop (переиспользуем медиа-пайплайн) */}
-      <HeroImage initial={heroPreview} lang={lang} onRef={(ref) => setC((p) => ({ ...p, heroImage: ref }))} />
+      <p className="text-body-sm text-ink-2">{t('admin.landingKeysHint', lang)}</p>
 
-      {/* Текстовые поля с лимитом + AI-кнопкой */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {FIELDS.map((f) => (
-          <LimitedField
-            key={f.key}
-            field={f}
-            value={copy[f.key]}
-            onChange={(v) => setField(f.key, v)}
-            onSuggest={f.ai ? () => suggestSlogan(tab, f.key, copy[f.key]) : undefined}
-            className={f.area ? 'sm:col-span-2' : ''}
+        {keys.map((key) => (
+          <TextField
+            key={`${tab}:${key}`}
+            name={key}
+            area={LONG.test(key)}
+            value={cur.texts[key] ?? ''}
+            placeholder={t('admin.landingDefault', lang)}
+            onChange={(v) => setText(key, v)}
+            onSuggest={() => suggestSlogan(tab, key, cur.texts[key] ?? '')}
           />
         ))}
       </div>
 
-      {/* Числа-статы (4 плитки) */}
       <div>
-        <div className="mb-1.5 text-body-sm font-semibold text-ink-2">{t('admin.trustStats4', lang)}</div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-          {copy.stats.map((s, i) => (
-            // Обводка-группировка без фона: рамка тут разделяет пары полей, а не
-            // выделяет блок содержимого, поэтому это не карточка.
-            // eslint-disable-next-line no-restricted-syntax -- см. комментарий выше
-            <div key={i} className="flex flex-col gap-1.5 rounded-md border border-border p-2">
-              <Input value={s.num} maxLength={8} onChange={(e) => setStat(i, 'num', e.target.value)} placeholder="12k+" size="sm" />
-              <Input value={s.label} maxLength={30} onChange={(e) => setStat(i, 'label', e.target.value)} placeholder={t('admin.label', lang)} size="sm" />
+        <div className="mb-1 text-body-sm font-semibold text-ink-2">{t('admin.landingStats', lang)}</div>
+        <p className="mb-2 text-body-sm text-muted">{t('admin.landingStatsHint', lang)}</p>
+        <div className="flex flex-col gap-2">
+          {cur.stats.map((s, i) => (
+            <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-[8rem_1fr_1fr_auto]">
+              <Input value={s.num} maxLength={12} onChange={(e) => setStat(i, 'num', e.target.value)} placeholder={t('admin.statNum', lang)} size="sm" />
+              <Input value={s.label} maxLength={40} onChange={(e) => setStat(i, 'label', e.target.value)} placeholder={t('admin.statLabel', lang)} size="sm" />
+              <Input value={s.source} maxLength={200} onChange={(e) => setStat(i, 'source', e.target.value)} placeholder={t('admin.statSource', lang)} size="sm" />
+              <IconButton size="sm" variant="ghost" label={t('admin.statRemove', lang)} onClick={() => setStats(cur.stats.filter((_, j) => j !== i))}>
+                <X size={14} />
+              </IconButton>
             </div>
           ))}
         </div>
+        {cur.stats.length < 4 && (
+          <TextButton onClick={() => setStats([...cur.stats, { num: '', label: '', source: '' }])} className="mt-2">
+            <Plus size={12} /> {t('admin.statAdd', lang)}
+          </TextButton>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
@@ -118,129 +112,50 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
   )
 }
 
-// ── Поле с лимитом символов и опциональной AI-кнопкой ──
-function LimitedField({
-  field,
+// ── Поле строки словаря с AI-подсказкой ──
+function TextField({
+  name,
+  area,
   value,
+  placeholder,
   onChange,
   onSuggest,
-  className,
 }: {
-  field: Field
+  name: string
+  area: boolean
   value: string
+  placeholder: string
   onChange: (v: string) => void
-  onSuggest?: () => Promise<{ text: string } | { error: string }>
-  className?: string
+  onSuggest: () => Promise<{ text: string } | { error: string }>
 }) {
   const [busy, setBusy] = useState(false)
-  const left = field.max - (value?.length ?? 0)
 
   const suggest = async () => {
-    if (!onSuggest) return
     setBusy(true)
     const r = await onSuggest()
     setBusy(false)
-    if ('text' in r && r.text) onChange(r.text.slice(0, field.max))
+    if ('text' in r && r.text) onChange(r.text)
   }
 
-  const aiBtn = onSuggest && (
+  const aiBtn = (
     <Tooltip label="AI">
-      <IconButton
-        size="xs"
-        variant="ghost"
-        label="AI"
-        onClick={suggest}
-        disabled={busy}
-        className="text-accent hover:bg-accent-soft"
-      >
+      <IconButton size="xs" variant="ghost" label="AI" onClick={suggest} disabled={busy} className="text-accent hover:bg-accent-soft">
         {busy ? <Spinner size="sm" /> : <Sparkles size={13} />}
       </IconButton>
     </Tooltip>
   )
 
   return (
-    <label className={cn('flex flex-col gap-1', className)}>
-      <span className="flex items-center justify-between text-body-sm font-semibold text-ink-2">
-        {field.label}
-        <span className={cn('font-mono text-caption', left < 0 ? 'text-danger' : 'text-muted')}>{left}</span>
-      </span>
-      {field.area ? (
-        <div className="relative">
-          <Textarea value={value} maxLength={field.max} rows={3} onChange={(e) => onChange(e.target.value)} className="pr-9" />
-          {onSuggest && <div className="absolute right-1.5 top-1.5">{aiBtn}</div>}
-        </div>
-      ) : (
-        <div className="relative">
-          <Input value={value} maxLength={field.max} onChange={(e) => onChange(e.target.value)} className={onSuggest ? 'pr-9' : ''} />
-          {onSuggest && <div className="absolute right-1.5 top-1/2 -translate-y-1/2">{aiBtn}</div>}
-        </div>
-      )}
-    </label>
-  )
-}
-
-// ── Hero-картинка: drag-and-drop → медиа-пайплайн (uploadLandingImage) ──
-function HeroImage({ initial, onRef, lang }: { initial?: string; onRef: (ref: string) => void; lang: Lang }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [preview, setPreview] = useState<string | null>(initial ?? null)
-  const [drag, setDrag] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-
-  const upload = async (file: File) => {
-    if (!file.type.startsWith('image/')) return setErr(t('admin.imageOnly', lang))
-    setErr(null)
-    setBusy(true)
-    const fd = new FormData()
-    fd.set('file', file)
-    const r = await uploadLandingImage(fd)
-    setBusy(false)
-    if ('error' in r) setErr(r.error)
-    else {
-      setPreview(r.url)
-      onRef(r.ref)
-    }
-  }
-
-  return (
-    <div>
-      <div className="mb-1.5 text-body-sm font-semibold text-ink-2">{t('admin.heroImage', lang)}</div>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
-        onDragLeave={() => setDrag(false)}
-        onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files?.[0]; if (f) void upload(f) }}
-        className={cn(
-          cardClass({ dashed: true, className: 'flex cursor-pointer items-center gap-4 transition-colors' }),
-          drag ? 'border-accent bg-accent-soft' : 'border-border-strong hover:border-accent hover:bg-surface-2',
-        )}
-      >
-        {preview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <SmartImage src={preview} alt="" className="h-16 w-27.5 shrink-0 rounded-md border border-border object-cover" />
+    <label className={area ? 'flex flex-col gap-1 sm:col-span-2' : 'flex flex-col gap-1'}>
+      <span className="font-mono text-body-sm text-ink-2">{name}</span>
+      <div className="relative">
+        {area ? (
+          <Textarea value={value} maxLength={400} rows={3} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="pr-9" />
         ) : (
-          <div className="grid h-16 w-27.5 shrink-0 place-items-center rounded-md bg-surface-2 text-muted">
-            <ImageUp size={20} />
-          </div>
+          <Input value={value} maxLength={200} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="pr-9" />
         )}
-        <div className="min-w-0 text-body">
-          <div className="flex items-center gap-1.5 font-medium text-ink">
-            {busy ? <Spinner size="md" /> : <ImageUp size={15} className="text-ink-2" />}
-            {drag ? t('admin.dropUpload', lang) : t('admin.dragImageClick', lang)}
-          </div>
-          <p className="mt-1 text-body-sm text-muted">{t('admin.pNGJpgWebpReplaces', lang)}</p>
-          {preview && (
-            <TextButton tone="danger" onClick={(e) => { e.stopPropagation(); setPreview(null); onRef('') }} className="mt-1">
-              <X size={12} /> {t('admin.resetDefault', lang)}
-            </TextButton>
-          )}
-          {err && <p className="mt-1 text-body-sm text-danger">{err}</p>}
-        </div>
+        <div className={area ? 'absolute right-1.5 top-1.5' : 'absolute right-1.5 top-1/2 -translate-y-1/2'}>{aiBtn}</div>
       </div>
-      <input ref={inputRef} type="file" accept={IMAGE_ACCEPT} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f) }} className="hidden" />
-    </div>
+    </label>
   )
 }
