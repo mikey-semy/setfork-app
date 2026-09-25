@@ -137,6 +137,7 @@ scripts/audit-github-handles.ts	H13f
 scripts/audit-migrate-deps.mjs	H13c
 scripts/audit-prod-deps.mjs	H13c
 scripts/backfill-block-ids.ts	H13f
+scripts/backfill-list-lang.ts	H13f
 scripts/backup.sh	H13f
 scripts/build-version.mjs	H13f
 scripts/ci-local.sh	H13f
@@ -1108,6 +1109,7 @@ src/shared/i18n/dict/en.ts	H6
 src/shared/i18n/dict/ru.ts	H6
 src/shared/i18n/index.ts	H6
 src/shared/i18n/negotiate.ts	H6
+src/shared/i18n/page-source-lang.ts	H6
 src/shared/i18n/server.ts	H6
 src/shared/i18n/url.ts	H6
 src/shared/indexnow.ts	H11
@@ -1786,6 +1788,7 @@ tests/shared/geo.test.ts	V12f
 tests/shared/gh-handle-privesc.itest.ts	V12f
 tests/shared/handle.test.ts	V12f
 tests/shared/http/cache.test.ts	V12f
+tests/shared/i18n/lang-by-page.itest.ts	H6
 tests/shared/i18n/lang-cookie.test.ts	V12f
 tests/shared/i18n/lang-url.test.ts	H6
 tests/shared/i18n/negotiate.test.ts	V12f
