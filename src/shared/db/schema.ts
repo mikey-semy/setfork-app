@@ -368,6 +368,12 @@ export const templates = pgTable(
     slug: text('slug').notNull(),
     title: jsonb('title').notNull().$type<LocaleText>(),
     desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
+    /**
+     * Язык ОРИГИНАЛА списка (ISO 639-1: `ru`, `be`, `de`…), ADR-0030. Пусто — неизвестен
+     * (списки до 25.09, пока их не заполнили): тогда язык угадывается по алфавиту текста.
+     * Языков контента столько, сколько кодов, — они не ограничены языками интерфейса.
+     */
+    lang: text('lang'),
     topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'set null' }),
     tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
     currentVersion: integer('current_version').notNull().default(1),

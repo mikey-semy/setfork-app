@@ -71,6 +71,11 @@ describe('адрес с языковым префиксом', () => {
     expect(raw).toMatch(/SameSite=lax/i)
   })
 
+  it('зритель своего языка не назвал (робот) — кука ставится всегда: иначе страница выбрала бы язык по содержимому', async () => {
+    const res = await middleware(new NextRequest(new Request('https://setfork.test/en/explore')))
+    expect(langCookie(res)).toBe('en')
+  })
+
   it('совпадает с выбранным — куку не пишем', async () => {
     expect(langCookie(await call('/ru/explore', { cookie: 'lang=ru' }))).toBeNull()
     expect(langCookie(await call('/en/explore', { 'accept-language': 'en' }))).toBeNull()

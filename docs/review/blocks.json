@@ -239,6 +239,7 @@
       "goal": "Найти текст мимо словаря, расхождения ru/en, нарушения словаря продукта: «PR» вместо «Предложение», slug на виду, слово «гном» в тексте.",
       "paths": [
         "src/shared/i18n/**",
+        "tests/shared/i18n/lang-by-page.itest.ts",
         "tests/shared/i18n/lang-url.test.ts"
       ],
       "ref_paths": [
@@ -592,6 +593,7 @@
         "scripts/ablation-eval.ts",
         "scripts/audit-github-handles.ts",
         "scripts/backfill-block-ids.ts",
+        "scripts/backfill-list-lang.ts",
         "scripts/backup.sh",
         "scripts/build-version.mjs",
         "scripts/ci-local.sh",
@@ -1466,6 +1468,7 @@
         "tests/shared/http/cache.test.ts",
         "tests/shared/i18n/negotiate.test.ts",
         "tests/shared/i18n/lang-cookie.test.ts",
+        "tests/shared/i18n/list-source-lang.test.ts",
         "tests/shared/i18n/plural-forms.test.ts",
         "tests/shared/i18n/tr-with-lang.test.ts",
         "tests/shared/jobs/backoff.test.ts",
