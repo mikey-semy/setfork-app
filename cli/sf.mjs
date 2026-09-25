@@ -26,7 +26,7 @@ Agent Skills:
   sf skill publish <dir> [owner/slug]    publish a skill folder (SKILL.md + scripts/, references/,
                                          assets/) as ONE version; without owner/slug creates a
                                          new draft. The folder is the truth: files missing from it
-                                         are removed from the list.  [--base N]
+                                         are removed from the list.  [--base N] [--json]
   sf skill import <github-url>           someone else's skill from GitHub → a new draft of yours;
                                          open license → can be published, none/closed → private
   sf skill install <owner/slug>          npx skills add <site>/<owner>/<slug>/skill.tar.gz
@@ -34,7 +34,7 @@ Agent Skills:
 Releases:
   sf release list   <owner/slug>
   sf release create <owner/slug> <tag>   [--title T] [--notes-file F|-] [--version N]
-                                         [--prerelease] [--generate-notes] [--yes]
+                                         [--prerelease] [--generate-notes] [--yes] [--json]
                                          without --yes only reports what would be published
 
 Account and anything else:
@@ -173,9 +173,9 @@ async function list(sub, args) {
 async function skill(sub, args) {
   switch (sub) {
     case 'publish': {
-      const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { base: { type: 'string' } } })
+      const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { base: { type: 'string' }, json: { type: 'boolean' } } })
       const [dir, ref] = positionals
-      if (!dir) die('usage: sf skill publish <dir> [owner/slug] [--base N]')
+      if (!dir) die('usage: sf skill publish <dir> [owner/slug] [--base N] [--json]')
       const { skillMd, files, skipped } = readSkillDir(dir)
       for (const s of skipped) console.error(`skipped: ${s}`)
       // Папка — правда: файлы, которых в ней нет, из списка уходят (replaceFiles).
@@ -188,6 +188,11 @@ async function skill(sub, args) {
         input.baseVersion = values.base ? Number(values.base) : (await call('get_list', { handle: owner, slug })).version
       }
       const r = await call('publish_skill', input)
+      // --json — ответ как есть: его читают скрипты (GitHub Action), а не глаза.
+      if (values.json) {
+        print(r)
+        break
+      }
       console.log(`✓ ${r.ref} — version ${r.version}`)
       if (r.files) {
         const f = r.files
@@ -244,6 +249,7 @@ async function release(sub, args) {
           prerelease: { type: 'boolean' },
           'generate-notes': { type: 'boolean' },
           yes: { type: 'boolean', short: 'y' },
+          json: { type: 'boolean' },
         },
       })
       const [ref, tag] = positionals
@@ -260,8 +266,9 @@ async function release(sub, args) {
         generateNotes: values['generate-notes'],
         confirm: values.yes === true,
       })
-      if (r.wouldPublish) {
+      if (r.wouldPublish || values.json) {
         print(r)
+        if (!r.wouldPublish) break
         console.error('\nnothing was published — repeat with --yes to publish')
       } else console.log(`✓ ${r.tag} → v${r.version}  ${r.url}\n${r.note}`)
       break
