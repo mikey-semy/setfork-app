@@ -15,6 +15,7 @@ import { listStore } from '../list-store'
 import { slugify } from '../slug'
 import { enqueueReindex } from '../jobs'
 import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from '../pr-settings'
+import { authoredFilesOf, ownerHandle } from './shared'
 
 /**
  * Копии чужого списка: форк (со связью с оригиналом) и «использовать как шаблон»
@@ -117,10 +118,24 @@ export async function useTemplate(templateId: string): Promise<void> {
     // Соседний форк в этом же файле чинили дважды и всё равно не дочинили: пока каждый
     // путь копирует поля сам, один из них однажды забудет очередное.
     steps: toStepInput(srcSteps as unknown as ProposedItem[]),
+    authored: await copiedFiles(src, srcCurrent?.version),
   })
+  if (src.isSkill) await db.update(templates).set({ isSkill: true }).where(eq(templates.id, created.id))
   // Копия публикуется — но состояние публикации ей задал фасад create, до записи.
   revalidatePath('/', 'layout')
   redirect(`/${session.handle}/${slug}`)
+}
+
+/**
+ * Файлы автора источника — в копию (форк, «из шаблона»), чтобы скилл копировался целиком,
+ * а не одними блоками. Пустой набор — `undefined`: ядру незачем набор, которого нет.
+ * Сбой чтения не глушится: ядро, не отдавшее файлы, не записало бы и саму копию, а
+ * копия скилла без `scripts/` — тихая потеря.
+ */
+async function copiedFiles(src: { ownerId: string; slug: string }, version: number | undefined) {
+  if (!version) return undefined
+  const files = await authoredFilesOf(await ownerHandle(src.ownerId), src.slug, version)
+  return files?.length ? files : undefined
 }
 
 export type ForkResult = { error?: string }
@@ -221,6 +236,7 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
     // ведёт сам. Прежний здешний маппинг дважды доучивали (needsHuman, blockId) и всё
     // равно не доложили `danger`.
     steps: toStepInput(srcSteps as unknown as ProposedItem[]),
+    authored: await copiedFiles(src, srcCurrent?.version),
   })
 
   // Гонку проиграли: параллельный запрос уже создал форк этого источника, и уникальный
@@ -236,6 +252,8 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
     return { error: t('forkFailed', await getLang()) }
   }
   const forked = created
+  // Форк скилла — скилл: метка про содержимое, а не про владельца.
+  if (src.isSkill) await db.update(templates).set({ isSkill: true }).where(eq(templates.id, forked.id))
 
   await db
     .update(templates)

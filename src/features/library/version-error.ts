@@ -24,4 +24,8 @@ export const VERSION_ERR: Record<string, TKey> = {
   // сделанных до перехода на коды как есть: пустая страница вместо причины —
   // ровно та беда, которую этот модуль и чинит.
   outofsync: 'versionRestoreOutOfSync',
+  // Файлы той версии не прочитались: откатывать блоки при чужих файлах нельзя.
+  'files-unreadable': 'versionRestoreFilesUnreadable',
+  // В той версии то, что сейчас не принимается (опасная команда, ключ доступа).
+  'content-refused': 'versionRestoreContentRefused',
 }

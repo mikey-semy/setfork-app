@@ -1571,6 +1571,8 @@ export const en = {
   prMergeErrNothing: 'The branch has no new commits over main.',
   versionRestoreOutOfSync:
     'This list’s repository disagrees with its history, so the version could not be restored. Nothing was changed — retrying will not help until it is repaired.',
+  versionRestoreFilesUnreadable: 'The files of this version could not be read right now — nothing was restored, so the steps do not come back with other files. Try again shortly.',
+  versionRestoreContentRefused: 'This version holds something no longer accepted — a destructive command or an access key. Nothing was restored: fix the current version by hand instead.',
   prMergeErrOutOfSync:
     'This list’s repository disagrees with its history, so merging is paused until it is repaired. Retrying will not help — we already know about it.',
   prMergeErrNotLinear: 'This list requires linear history: only fast-forward merges are allowed. Update the branch from main and retry.',

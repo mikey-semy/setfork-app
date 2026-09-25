@@ -380,7 +380,7 @@ function scriptVariables(steps: ExportStep[]): string[] {
 export interface ScriptSkip {
   n: number
   bid?: string | null
-  /** Ключ причины из детектора (RISKY) или 'danger' — пометка автора. */
+  /** Ключ причины из детектора (RISKY), 'danger' — пометка автора, 'needs_human' — решает человек. */
   reason: string
 }
 
@@ -523,6 +523,16 @@ export function buildScript(
       out.push(d.echo(`==> ${n}. ${st} — skipped (destructive)`))
       out.push(hashComment(cmd))
       skipped.push({ n, bid: s.bid, reason: danger })
+    } else if (cmd && s.needsHuman) {
+      // «ЗДЕСЬ НУЖЕН ЧЕЛОВЕК» — решение за человеком, а не за скриптом: автор пометил,
+      // что дальше без его выбора (платёж, пароль, «проверь, что это твой сервер») идти
+      // нельзя. Команда остаётся на месте, но закомментированной, с вопросом автора, —
+      // так же, как у разрушительного пункта, и так же, как её показывает SKILL.md.
+      const ask = flatten(tr(s.needsHumanAsk, lang))
+      out.push(hashComment(`🧑 A human decides here${ask ? `: ${ask}` : ''} — skipped. Run it yourself once decided.`))
+      out.push(d.echo(`==> ${n}. ${st} — skipped (needs a human)`))
+      out.push(hashComment(cmd))
+      skipped.push({ n, bid: s.bid, reason: 'needs_human' })
     } else {
       out.push(d.echo(`==> ${n}. ${st}`))
       if (cmd) out.push(cmd)
