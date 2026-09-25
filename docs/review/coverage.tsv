@@ -365,6 +365,7 @@ src/core/domain/quiz.ts	H15
 src/core/domain/script-dialect.ts	H15
 src/core/domain/secret-scan.ts	H15
 src/core/domain/skill-header.ts	H15
+src/core/domain/skill-license.ts	H15
 src/core/index.ts	H15
 src/core/ports.ts	H15
 src/features/admin/AchievementsAdmin.tsx	V9c
@@ -821,6 +822,7 @@ src/features/mcp/tools/lists/create.ts	H4
 src/features/mcp/tools/lists/delete.ts	H4
 src/features/mcp/tools/lists/draft-store.ts	H4
 src/features/mcp/tools/lists/edit.ts	H4
+src/features/mcp/tools/lists/import.ts	H4
 src/features/mcp/tools/lists/index.ts	H4
 src/features/mcp/tools/lists/patch-block.ts	H4
 src/features/mcp/tools/lists/publish.ts	H4
@@ -1309,6 +1311,7 @@ src/widgets/Dashboard.tsx	V12
 src/widgets/Footer.tsx	V12
 src/widgets/HistoryNav.tsx	V12
 src/widgets/ListHeader.tsx	V12
+src/widgets/ListSourceLine.tsx	V12
 src/widgets/ListSwitcher.tsx	V12
 src/widgets/ListTabs.tsx	V12
 src/widgets/ListsPanel.tsx	V12
@@ -1383,6 +1386,7 @@ tests/architecture/page-has-heading.test.ts	H12
 tests/architecture/page-path-without-lang.test.ts	H12
 tests/architecture/paging-discipline.test.ts	H12
 tests/architecture/plural-agreement.test.ts	H12
+tests/architecture/public-url-not-from-request.test.ts	H12
 tests/architecture/refs-follow-carries-refs.test.ts	H12
 tests/architecture/reports-append-only.test.ts	H12
 tests/architecture/review-gates-single-set.test.ts	H12
@@ -1408,6 +1412,7 @@ tests/core/domain/list-state.test.ts	V12d
 tests/core/domain/secret-scan.mutants.json	V12d
 tests/core/domain/secret-scan.test.ts	V12d
 tests/core/domain/skill-header.test.ts	V12d
+tests/core/domain/skill-license.test.ts	V12d
 tests/core/edit-block-reason.test.ts	V12d
 tests/email-layout.test.ts	V12d
 tests/empty.ts	V12d
@@ -1591,6 +1596,7 @@ tests/features/library/selfgen-outcome.test.ts	V1h,V1k
 tests/features/library/semantic-order.itest.ts	V1g
 tests/features/library/set-verification-level.itest.ts	V1h
 tests/features/library/skill-files.test.tsx	V1k
+tests/features/library/skill-import/github-url.test.ts	V1k
 tests/features/library/skill-load.test.ts	V1k
 tests/features/library/skill-parse.test.ts	V1k
 tests/features/library/skill.test.ts	V1k
@@ -1785,6 +1791,7 @@ tests/shared/http/cache.test.ts	V12f
 tests/shared/i18n/lang-url.test.ts	H6
 tests/shared/i18n/negotiate.test.ts	V12f
 tests/shared/i18n/plural-forms.test.ts	V12f
+tests/shared/i18n/tr-with-lang.test.ts	V12f
 tests/shared/jobs/backoff.test.ts	V12f
 tests/shared/jobs/error-for-job.test.ts	V12f
 tests/shared/jobs/finalizer.test.ts	V12f

@@ -18,7 +18,7 @@ import { PROBLEM_JSON } from '@/shared/http/problem'
 
 const path = (name: string, description: string) => ({ name, in: 'path', required: true, description, schema: { type: 'string' } })
 const LIST_PARAMS = [path('handle', 'Owner handle'), path('slug', 'List slug')]
-const langQuery = { name: 'lang', in: 'query', required: false, description: 'Content language; without it — the viewer cookie and Accept-Language', schema: { type: 'string', enum: [...LOCALES] } }
+const langQuery = { name: 'lang', in: 'query', required: false, description: 'Requested content language; without it — the viewer cookie and Accept-Language. Without a translation the original is served, and the envelope `lang` names the language actually served (`requestedLang` — the one asked for)', schema: { type: 'string', enum: [...LOCALES] } }
 
 const problem = (description: string) => ({ description, content: { [PROBLEM_JSON]: { schema: { $ref: '#/components/schemas/Problem' } } } })
 const NOT_FOUND = { '404': problem('No such list, or it is not visible to you — the same answer for both') }

@@ -1,5 +1,5 @@
 // Экспорт списка в Markdown / автономный HTML (для скачивания и печати).
-import { tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { tr, trWithLang, type Lang, type LocaleText } from '@/shared/i18n'
 import { blockIdentity } from '@/core'
 import type { StepLevel } from '@/shared/db'
 import { safeHref } from '@/shared/lib/safe-url'
@@ -216,10 +216,21 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
   return out.join('\n')
 }
 
+/**
+ * Язык, на котором ОТДАН текст списка: запрошенный, если есть перевод, иначе оригинал.
+ * Метка `lang` в разметке обязана говорить о тексте, а не о просьбе: русский список без
+ * перевода с `lang="en"` читался бы экранным диктором английским голосом (fe#968).
+ */
+function servedLang(list: ExportList, lang: Lang): string {
+  return trWithLang(list.title, lang).lang ?? lang
+}
+
 /** Компактный embed-виджет: авто light/dark, фикс-высота с внутренним скроллом,
  *  футер-ссылка назад. Для вставки в <iframe> на внешних сайтах. */
 export function embedHtml(list: ExportList, lang: Lang, backUrl: string): string {
   const title = esc(tr(list.title, lang))
+  // Рамка (число пунктов, «Открыть на SetFork») — на языке зрителя, текст списка — на своём.
+  const textLang = esc(servedLang(list, lang))
   const count = list.steps.filter(isStepBlk).length
   const itemsWord = lang === 'ru' ? 'пунктов' : 'items'
   const openWord = lang === 'ru' ? 'Открыть на SetFork' : 'Open on SetFork'
@@ -273,10 +284,10 @@ export function embedHtml(list: ExportList, lang: Lang, backUrl: string): string
 <body>
 <div class="wrap">
   <header>
-    <div class="title">${title}</div>
+    <div class="title" lang="${textLang}">${title}</div>
     <div class="sub">${esc(list.ownerHandle)}/${esc(list.slug)} · v${list.version} · ${count} ${itemsWord}</div>
   </header>
-  <ol class="steps">${steps}</ol>
+  <ol class="steps" lang="${textLang}">${steps}</ol>
   <footer><span>${count} ${itemsWord}</span><a href="${esc(backUrl)}" target="_blank" rel="noopener">↗ ${openWord}</a></footer>
 </div>
 </body>
@@ -326,7 +337,7 @@ export function toHtml(list: ExportList, lang: Lang): string {
     .join('\n')
 
   return `<!doctype html>
-<html lang="${lang}">
+<html lang="${esc(servedLang(list, lang))}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

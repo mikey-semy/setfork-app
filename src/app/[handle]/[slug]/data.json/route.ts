@@ -8,6 +8,7 @@ import { verifyApiToken } from '@/shared/auth/api-token'
 import { clientIp, rateLimit } from '@/shared/rate-limit'
 import { cacheHeaders, notModified } from '@/shared/http/cache'
 import { problem, problemListNotFound, problemTooMany } from '@/shared/http/problem'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 /**
  * GET /{handle}/{slug}/data.json — СПИСОК КАК ДАННЫЕ.
@@ -81,6 +82,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const cached = notModified(req, etag, headers)
   if (cached) return cached
 
-  const envelope = toDataEnvelope(toExportList(detail), lang, `${u.origin}/${handle}/${slug}`, updatedAt)
+  // Адрес — из конфигурации, а не из запроса: за прокси `req.url` собран из адреса
+  // привязки контейнера, и чужой код получал `https://0.0.0.0:3000/…` (fe#968, корень K15).
+  const envelope = toDataEnvelope(toExportList(detail), lang, `${appOrigin()}/${handle}/${slug}`, updatedAt)
   return json(JSON.stringify(envelope, null, 2), 200, headers)
 }

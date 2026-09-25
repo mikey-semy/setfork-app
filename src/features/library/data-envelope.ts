@@ -1,5 +1,5 @@
 import type { Lang } from '@/shared/i18n'
-import { tr } from '@/shared/i18n'
+import { tr, trWithLang } from '@/shared/i18n'
 import type { ExportList } from './export'
 
 /**
@@ -48,8 +48,16 @@ export interface ListDataEnvelope {
   updatedAt: string
   /** Порядок шагов значим (чек-лист) или нет (набор). */
   ordered: boolean
-  /** Язык, на котором отданы тексты. */
-  lang: Lang
+  /**
+   * Язык, на котором ОТДАНЫ тексты (BCP 47), — язык названия списка. Не равен
+   * запрошенному, когда перевода нет: тогда отдаётся оригинал, и метка говорит правду
+   * о нём (fe#968: русский список объявлял `en`, потому что так попросили).
+   * Отдельные шаги частично переведённого списка могут быть на другом языке — перевод
+   * идёт списком целиком, поэтому это редкость, а не норма.
+   */
+  lang: string
+  /** Язык, который запросили (`?lang=`, кука, Accept-Language). Расходится с `lang` — перевода нет. */
+  requestedLang: Lang
   steps: ListDataStep[]
 }
 
@@ -58,17 +66,19 @@ export interface ListDataEnvelope {
  * наша внутренняя мультиязычная структура — иначе каждый потребитель напишет свой `tr()`.
  */
 export function toDataEnvelope(list: ExportList, lang: Lang, url: string, updatedAt: Date): ListDataEnvelope {
+  const title = trWithLang(list.title, lang)
   return {
     kind: DATA_KIND,
     ref: `${list.ownerHandle}/${list.slug}`,
     url,
-    title: tr(list.title, lang),
+    title: title.text,
     desc: tr(list.desc, lang),
     tags: list.tags,
     version: list.version,
     updatedAt: updatedAt.toISOString(),
     ordered: list.ordered,
-    lang,
+    lang: title.lang ?? lang,
+    requestedLang: lang,
     // Один проход: блоки (текст, картинка, опрос) — оформление страницы, а не данные, в
     // конверт идут только шаги. Иначе потребителю пришлось бы фильтровать наши типы у себя.
     steps: list.steps.reduce<ListDataStep[]>((acc, s) => {
