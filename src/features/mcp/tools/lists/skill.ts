@@ -22,7 +22,7 @@ import { and, eq } from 'drizzle-orm'
 import { isPubliclyVisible, type AuthoredFile } from '@/core'
 import { db, listDrafts, templates } from '@/shared/db'
 import { detectTextLang } from '@/shared/lib/translit'
-import { AUTHORED_PATH, fitsArchive } from '@/features/library/skill'
+import { AUTHORED_NAME_MAX_BYTES, authoredPathProblem } from '@/core/domain/authored-path'
 import { parseSkillMd } from '@/features/library/skill-parse'
 import { assignCatalogByName } from '@/features/catalogs/assign'
 import { gitCore } from '@/features/git/core'
@@ -70,21 +70,24 @@ export interface McpPublishSkillInput {
   note?: string
 }
 
-/** Символы, которые ломают отображение имени или распаковку: управляющие, `\` и символы
- *  направления текста. Правило то же, что у ядра (`input_name_ok`); здесь — ранний отказ. */
-const BAD_NAME_CHAR = /[\p{Cc}\\‎‏‪-‮⁦-⁩]/u
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/
 
+/** Причина отказа по пути — текстом для агента; правило одно с редактором сайта. */
 function pathProblem(path: string, executable: boolean | undefined): string | null {
-  const name = path.slice(path.lastIndexOf('/') + 1)
-  if (!AUTHORED_PATH.test(path) || path.split('/').includes('..'))
-    return `bad file path "${path}": files live directly in scripts/, references/ or assets/ — one level, no subfolders`
-  if (name.startsWith('.')) return `bad file name "${path}": a name must not start with a dot`
-  if (BAD_NAME_CHAR.test(name)) return `bad file name "${path}": control, backslash or text-direction characters`
-  // Длиннее — лёг бы в дерево, но не в архив скилла: установился бы скилл без файла.
-  if (!fitsArchive(path)) return `file name too long "${path}": at most 100 bytes (about 50 Cyrillic letters)`
-  if (executable && !path.startsWith('scripts/')) return `"${path}" cannot be executable: only files in scripts/ may be`
-  return null
+  switch (authoredPathProblem(path, executable)) {
+    case 'path':
+      return `bad file path "${path}": files live directly in scripts/, references/ or assets/ — one level, no subfolders`
+    case 'dot':
+      return `bad file name "${path}": a name must not start with a dot`
+    case 'chars':
+      return `bad file name "${path}": control, backslash or text-direction characters`
+    case 'long':
+      return `file name too long "${path}": at most ${AUTHORED_NAME_MAX_BYTES} bytes (about ${AUTHORED_NAME_MAX_BYTES / 2} Cyrillic letters)`
+    case 'exec':
+      return `"${path}" cannot be executable: only files in scripts/ may be`
+    case null:
+      return null
+  }
 }
 
 /** Вход → байты с ранним отказом. Число и размер не проверяем: их судит ядро, а вторая

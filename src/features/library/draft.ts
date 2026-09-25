@@ -1,7 +1,8 @@
 import 'server-only'
 import { and, eq, sql } from 'drizzle-orm'
 import { db, listDrafts, templates, type ProposedItem } from '@/shared/db'
-import { ListWriteError } from '@/core/ports'
+import { AuthoredFilesError, ListWriteError, type AuthoredFile } from '@/core/ports'
+import type { AuthoredText } from '@/core/domain/authored-path'
 import { listStore } from './list-store'
 import { toStepInput } from '@/shared/lib/step-input'
 import { getDraft } from './queries'
@@ -76,7 +77,7 @@ export function draftMoved(
 export async function upsertDraft(
   tpl: ListRow,
   authorId: string,
-  data: { items: ProposedItem[]; meta: DraftMeta; note: string },
+  data: { items: ProposedItem[]; meta: DraftMeta; note: string; authored?: AuthoredText[] | null },
   opts: { expected?: DraftRef } = {},
 ): Promise<{ id: string; rev: number; listVersion: number; overwrote: boolean }> {
   // ⚠️ ПОД ЗАМКОМ СПИСКА — тем же, что берут правки через MCP. Черновик у автора один
@@ -97,10 +98,19 @@ export async function upsertDraft(
 
     const [row] = await tx
       .insert(listDrafts)
-      .values({ templateId: tpl.id, authorId, baseVersion: tpl.currentVersion, items: data.items, meta: data.meta, note: data.note })
+      .values({ templateId: tpl.id, authorId, baseVersion: tpl.currentVersion, items: data.items, meta: data.meta, note: data.note, authored: data.authored ?? null })
       .onConflictDoUpdate({
         target: [listDrafts.templateId, listDrafts.authorId],
-        set: { items: data.items, meta: data.meta, note: data.note, rev: sql`${listDrafts.rev} + 1`, updatedAt: new Date() },
+        // Файлы — только когда их прислали: `undefined` значит «эта запись о файлах не
+        // говорит», и правка, лёгшая в черновик раньше, остаётся.
+        set: {
+          items: data.items,
+          meta: data.meta,
+          note: data.note,
+          ...(data.authored !== undefined ? { authored: data.authored } : {}),
+          rev: sql`${listDrafts.rev} + 1`,
+          updatedAt: new Date(),
+        },
       })
       .returning({ id: listDrafts.id, rev: listDrafts.rev })
     return { id: row.id, rev: row.rev, listVersion: tpl.currentVersion, overwrote }
@@ -159,8 +169,19 @@ export function registerTagsRegistrar(fn: TagsRegistrar): void {
 }
 
 export type PublishResult =
-  | { version: number; blocks: number }
-  | { error: 'no draft' | 'stale' | 'empty' | 'out-of-sync' | 'moved'; message: string; currentVersion?: number; baseVersion?: number }
+  | { version: number; blocks: number; files?: number; filesNotApplied?: true }
+  | {
+      error: 'no draft' | 'stale' | 'empty' | 'out-of-sync' | 'moved' | 'files-invalid' | 'files-unsupported'
+      message: string
+      currentVersion?: number
+      baseVersion?: number
+      /** Текст ядра об отказе по файлам: он называет файл и предел. */
+      detail?: string
+    }
+
+/** Файлы черновика → вход записи. Текст кодируется здесь: ядро держит байты. */
+const toAuthoredFiles = (files: AuthoredText[]): AuthoredFile[] =>
+  files.map((f) => ({ path: f.path, content: new TextEncoder().encode(f.text), executable: f.executable }))
 
 /**
  * Опубликовать черновик автора ОДНОЙ версией. Запись идёт обычным путём
@@ -213,7 +234,7 @@ export async function publishDraftFor(
   // Границу слоёв держим инверсией, как уже сделано для модерации и индекса: порт
   // регистрирует composition root (instrumentation), фича его не импортирует.
   if (draft.meta.tags?.length) await tagsRegistrar?.(draft.meta.tags)
-  let created: { version: number }
+  let created: { version: number; authoredApplied?: boolean }
   try {
     created = await listStore.addVersion(tpl.id, {
       note: (note ?? draft.note).trim() || 'edit',
@@ -221,8 +242,16 @@ export async function publishDraftFor(
       authorId,
       meta: { tags, ordered },
       expectedVersion: draft.baseVersion,
+      // Файлы не трогали — поля нет, ядро перенесёт набор родителя. Трогали — набор целиком.
+      ...(draft.authored ? { authored: toAuthoredFiles(draft.authored) } : {}),
     })
   } catch (e) {
+    // Файлы не приняты ДО записи — версии нет, черновик цел.
+    if (e instanceof AuthoredFilesError) {
+      return e.code === 'invalid'
+        ? { error: 'files-invalid', message: `the git core refused the files: ${e.detail}`, detail: e.detail }
+        : { error: 'files-unsupported', message: 'the git core does not accept author files yet — publish without file edits or try later' }
+    }
     if (e instanceof ListWriteError && e.code === 'stale') {
       return { error: 'stale', message: 'the list changed while publishing — read it again (get_list) and redo the edits' }
     }
@@ -237,14 +266,23 @@ export async function publishDraftFor(
   await db.update(templates).set({ gated: draft.meta.gated ?? tpl.gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
   // Удаляем ИМЕННО опубликованную ревизию: пока шёл вызов ядра, соседний вход мог
   // сохранить новые правки, и безусловное удаление стёрло бы их.
-  await db
-    .delete(listDrafts)
-    .where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, authorId), eq(listDrafts.rev, draft.rev)))
+  const thisRev = and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, authorId), eq(listDrafts.rev, draft.rev))
+  // Версия записана, а набор файлов ядро НЕ подтвердило (откатили между проверкой и
+  // записью): блоки уже в версии, а правка файлов — нет. Её не выбрасываем: черновик
+  // остаётся с одними файлами поверх новой версии, и следующая публикация их донесёт.
+  const filesNotApplied = !!draft.authored && created.authoredApplied !== true
+  if (filesNotApplied) await db.update(listDrafts).set({ baseVersion: created.version, updatedAt: new Date() }).where(thisRev)
+  else await db.delete(listDrafts).where(thisRev)
   // Поиск обязан увидеть новую версию: без переиндексации он отдавал бы прошлую,
   // пока список не сохранят ещё раз. Оба входа (редактор и API) идут здесь.
   const { enqueueReindex } = await import('./jobs')
   await enqueueReindex(tpl.id)
   // Номер версии берём У ЯДРА, а не считаем: считать значит верить, что проекция
   // и нумерация никогда не расходятся.
-  return { version: created.version, blocks: draft.items.length }
+  return {
+    version: created.version,
+    blocks: draft.items.length,
+    ...(draft.authored ? { files: draft.authored.length } : {}),
+    ...(filesNotApplied ? { filesNotApplied: true as const } : {}),
+  }
 }
