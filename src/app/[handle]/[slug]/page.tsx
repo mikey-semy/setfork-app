@@ -3,15 +3,14 @@
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
 import type { Metadata } from 'next'
-import { withLang } from '@/shared/seo/with-lang'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { DigChatHost } from '@/features/dig/DigChat'
 import { requireViewableMeta } from '@/features/library/guard'
 import { FeedList } from '@/features/library/FeedList'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { getLang } from '@/shared/i18n/server'
-import { urlLangAt } from '@/shared/seo/with-lang'
 import { howToEligible } from '@/shared/seo/howto-eligible'
+import { servedLang } from '@/features/library/export'
 import { t, tr } from '@/shared/i18n'
 import { breadcrumbList, creativeWork, howTo, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { PAGE, STACK } from '@/shared/ui/control'
@@ -38,7 +37,7 @@ import { Alert } from '@/shared/ui/Alert'
  * показывалось название САЙТА, а не название списка (замер 28.08). То же и с
  * `description`: свой заголовок был, описание приезжало общесайтовое.
  */
-async function baseMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }): Promise<Metadata> {
   const { handle, slug } = await params
   // Вкладка браузера = человеческий title, а не slug (title гейтит requireViewableMeta).
   const [meta, lang] = await Promise.all([requireViewableMeta(handle, slug), getLang()])
@@ -61,13 +60,6 @@ async function baseMetadata({ params }: { params: Promise<{ handle: string; slug
     twitter: { card: 'summary_large_image', title, description },
   }
 }
-
-// Канон и `og:url` — на языке адреса, плюс `hreflang` (см. `withLang`): страница собирает
-// метаданные сама, мимо `pageMeta`, и без обёртки назвала бы каноном версию без языка.
-export async function generateMetadata(props: Parameters<typeof baseMetadata>[0]): Promise<Metadata> {
-  return withLang(await baseMetadata(props))
-}
-
 
 /** Описание для поисковика: своё, если автор его написал, иначе честная замена.
  *  Режем по границе слова — обрезка на середине слова читается как поломка. */
@@ -96,19 +88,18 @@ export default async function ListPage({
   params: Promise<{ handle: string; slug: string }>
   searchParams: Promise<{ find?: string; ref?: string; v?: string; e?: string }>
 }) {
-  const [{ handle: owner, slug }, sp, lang, at] = await Promise.all([params, searchParams, getLang(), urlLangAt()])
+  const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const loaded = await loadListPage({ owner, slug, sp, lang })
   const { tpl, currentVersion, steps, related, viewer, isOwner, readOnlyView, mon, digGnomes, quizBids, quizPassed, completion, base, isStepBlock, find, firstLockedIdx } = loaded
 
   // Структурные данные — только у публично видимой страницы: у черновика их быть
   // не должно ровно потому же, почему его нет в карте сайта.
   const indexable = tpl.status === 'published' && tpl.visibility === 'public' && tpl.moderation === 'active'
-  // ⚠️ Адреса в разметке — НА ЯЗЫКЕ АДРЕСА. Страница, открытая по `/ru/…`, описывает
-  // русский текст; назвать его адресом без языка значит приписать его версии, которую
-  // поисковик считает другой страницей (находка авто-ревью к SEO-2). Касается всех
-  // адресов разметки сразу — самого списка, автора и крошек; `at` взят выше, вместе с
-  // параметрами запроса.
-  const path = at(`/${owner}/${slug}`)
+  const path = `/${owner}/${slug}`
+  // Язык ТЕКСТА списка — для поисковика и экранного диктора. Языка в адресе нет
+  // (ADR-0029), и русский список обязан объявлять себя русским при любом языке интерфейса:
+  // робот без `Accept-Language` видит английскую обвязку, но текст — русский.
+  const textLang = servedLang(tpl, lang)
 
   return (
     <>
@@ -120,16 +111,17 @@ export default async function ListPage({
               description: tr(tpl.desc, lang) || undefined,
               path,
               authorName: tpl.owner.name || owner,
-              authorPath: at(`/${owner}`),
+              authorPath: `/${owner}`,
               datePublished: tpl.createdAt,
               dateModified: tpl.updatedAt,
               tags: tpl.tags,
               // Как ниже в печатной шапке: показанная версия может быть не текущей,
               // а на некоторых путях её нет вовсе.
               version: currentVersion?.version ?? tpl.currentVersion,
+              inLanguage: textLang,
             })}
           />
-          <JsonLd data={breadcrumbList([{ name: owner, path: at(`/${owner}`) }, { name: tr(tpl.title, lang) || slug, path }])} />
+          <JsonLd data={breadcrumbList([{ name: owner, path: `/${owner}` }, { name: tr(tpl.title, lang) || slug, path }])} />
           {/* Шаги отдаём списком: это то, ЧТО здесь исполняется, и единственная
               часть страницы, ради которой машина сюда приходит. Потолок в 25 —
               чтобы разметка не раздувалась на курсах в сотню уроков. */}
@@ -137,6 +129,7 @@ export default async function ListPage({
             data={itemList(
               tr(tpl.title, lang) || slug,
               steps.slice(0, 25).map((s) => ({ name: tr(s.title, lang) || `${s.n}` })),
+              textLang,
             )}
           />
           {/* `HowTo` — только там, где страница действительно инструкция: условия и
@@ -154,6 +147,7 @@ export default async function ListPage({
                 name: tr(tpl.title, lang) || slug,
                 description: tr(tpl.desc, lang) || undefined,
                 path,
+                inLanguage: textLang,
                 // ⚠️ ТОЛЬКО блоки-шаги. В списке бывают текст, картинка, опрос и тест —
                 // страница их шагами не считает (`isStepBlock`, и `ListBlocks` их
                 // нумерацию пропускает). Объявить их шагами инструкции значит соврать
@@ -186,7 +180,7 @@ export default async function ListPage({
           <main className={`min-w-0 flex-1 ${STACK}`}>
             {/* Заголовок только для печати (в экране он в шапке) */}
             <div className="hidden print:block">
-              <h1 className="text-heading font-bold text-ink">{tr(tpl.title, lang)}</h1>
+              <h1 lang={textLang} className="text-heading font-bold text-ink">{tr(tpl.title, lang)}</h1>
               {tr(tpl.desc, lang) && <p className="mt-1 text-body text-ink-2">{tr(tpl.desc, lang)}</p>}
               <p className="mt-1 font-mono text-caption text-muted">
                 {owner}/{slug} · v{currentVersion?.version ?? tpl.currentVersion}
@@ -219,7 +213,10 @@ export default async function ListPage({
               />
             )}
 
-            <ListBlocks {...loaded} lang={lang} />
+            {/* `contents` — без своей коробки: раскладка та же, а у текста — его язык. */}
+            <div lang={textLang} className="contents">
+              <ListBlocks {...loaded} lang={lang} />
+            </div>
 
             {/* Файлы автора (ADR-0028) — приложением к списку, проводником в одном блоке. */}
             <SkillFiles files={loaded.skillFiles} base={base} version={loaded.shownVersion} lang={lang} />

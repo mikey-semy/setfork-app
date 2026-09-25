@@ -1,7 +1,6 @@
 'use client'
 
 import { useTheme } from 'next-themes'
-import { langHref, splitLangPath } from '@/shared/i18n/url'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Monitor, Moon, Sun } from 'lucide-react'
@@ -14,21 +13,8 @@ export function LangSwitch({ lang }: { lang: Lang }) {
   const router = useRouter()
   function set(next: Lang) {
     if (next === lang) return
-    // Кука — чтобы выбор пережил переходы на страницы БЕЗ префикса.
     document.cookie = `lang=${next}; path=/; max-age=${60 * 60 * 24 * 365}`
-    // ⚠️ Но одной куки мало: с 22.09.2026 язык ИЗ АДРЕСА главнее её. На `/ru/explore`
-    // кнопка EN ставила куку, делала `refresh()` — и страница оставалась русской, потому
-    // что адрес по-прежнему говорил «ru». Переключатель молча не работал бы ровно там,
-    // где язык виден в строке браузера (находка авто-ревью).
-    const path = window.location.pathname
-    const target = langHref(path, next) + window.location.search + window.location.hash
-    // ⚠️ ПОЛНАЯ загрузка, а не `router.push`. Клиентский переход в App Router НЕ
-    // перерисовывает корневой макет — а в нём и `<html lang>`, и шапка с меню. Проверено
-    // живьём: адрес менялся на `/en/explore`, а `lang` у документа оставался `ru`, и
-    // вся обвязка страницы продолжала говорить по-русски. Смена языка — редкое действие,
-    // и лишняя перезагрузка тут дешевле половины страницы на чужом языке.
-    if (splitLangPath(path).lang) window.location.assign(target)
-    else router.refresh()
+    router.refresh()
   }
   return (
     <SegmentedControl label={t('language', lang)} size="xs" shape="pill">

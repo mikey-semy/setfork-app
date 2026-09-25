@@ -5,7 +5,7 @@ import { negotiateLang } from '@/shared/i18n/negotiate'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { maintenanceEnabled } from '@/shared/settings/maintenance'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
-import { LANG_HEADER, langHref, splitLangPath } from '@/shared/i18n/url'
+import { splitLangPath } from '@/shared/i18n/url'
 import { dialectMime, errorScript, normalizeDialect } from '@/core/domain/script-dialect'
 import { indexNowKey, indexNowKeyPath } from '@/shared/indexnow'
 import { CSP_HEADER, NONCE_HEADER, cspNonce, cspPolicy } from '@/shared/security/csp'
@@ -93,11 +93,6 @@ function withCsp(headers: Headers): (res: NextResponse) => NextResponse {
  */
 function pass(req: NextRequest): NextResponse {
   const headers = new Headers(req.headers)
-  // ⚠️ Язык адреса — только от нас. Здесь префикса нет, значит и языка адреса нет, а
-  // одноимённый заголовок мог прислать сам клиент: `x-setfork-lang: ru` на `/miki/list`
-  // менял бы язык страницы и объявлял каноном `/ru/miki/list` — адрес, которого не
-  // запрашивали (находка авто-ревью).
-  headers.delete(LANG_HEADER)
   // Путь ВМЕСТЕ с query: перенаправление обязано сохранить и то и другое.
   headers.set(REQUEST_PATH_HEADER, req.nextUrl.pathname + req.nextUrl.search)
   const csp = withCsp(headers)
@@ -105,69 +100,38 @@ function pass(req: NextRequest): NextResponse {
 }
 
 /**
- * ЯЗЫК ИЗ АДРЕСА: `/ru/explore` рисуется тем же маршрутом, что `/explore`, но по-русски.
- *
- * Зачем: до сентября 2026 языки жили по ОДНОМУ адресу, а выбирал `Accept-Language`.
- * YandexBot его не шлёт и всегда получал английскую страницу — русского SetFork в
- * индексе не существовало вовсе (аудит 22.09.2026, работа 1).
- *
- * Почему переписыванием, а не каталогом `app/[lang]/`: маршрутов и страниц под сотню,
- * и физический перенос — это огромная правка ради одного сегмента адреса. Переписывание
- * даёт ровно то, что нужно поисковику (свой адрес у каждого языка), не трогая структуру.
- *
- * ⚠️ ПРЕФИКС СНИМАЕТСЯ В НАЧАЛЕ, А ЯЗЫК ВОССТАНАВЛИВАЕТСЯ НА ВЫХОДЕ — одной функцией на
- * все ветки. Первая редакция снимала префикс и сразу возвращала ответ, и всё, что
- * middleware делает ниже, для `/ru/…` не происходило: `.md` к адресу списка давал 404,
- * старые адреса «открытия» не перенаправлялись, а режим ремонта не включался вовсе —
- * страница отдавалась и ходила в базу (две находки авто-ревью, третья — по их следу).
- * Теперь правила смотрят на путь без префикса, как на любой другой, а этот выход
- * только собирает ответ.
- *
- * Язык едет рендеру ДВУМЯ путями, и оба нужны:
- *  • заголовком запроса — для ЭТОГО ответа: кука, поставленная ответом, текущий рендер
- *    уже не видит;
- *  • кукой — для СЛЕДУЮЩИХ переходов. Внутренние ссылки идут без префикса
- *    (`/explore`), а корневой layout при клиентском переходе не перерисовывается. Без
- *    куки гость, пришедший по `/ru/…`, первым же кликом получал страницу на языке
- *    своего `Accept-Language`, а шапка оставалась русской — две половины экрана на
- *    разных языках (находка авто-ревью к SEO-1).
- *
- * Куку ставим, как next-intl: только когда язык адреса РАСХОДИТСЯ с тем, что и так
- * выбралось бы (кука, иначе `Accept-Language`). Совпадает — писать нечего. Атрибуты те
- * же, что у переключателя языка в шапке: это тот же выбор, сделанный переходом по ссылке.
- * Роботу кука ничего не меняет — он её не хранит и каждый адрес получает по префиксу.
+ * Переписать запрос на другой маршрут, сообщив рендеру ИСХОДНЫЙ путь (см. `pass`): сверка
+ * переехавших адресов и канон считают от того, что человек открыл, а не от цели переписывания.
  */
-function proceed(req: NextRequest, lang: Lang | null, rest: string, target?: string): NextResponse {
-  if (!lang && !target) return pass(req)
+function rewrite(req: NextRequest, target: string): NextResponse {
   const headers = new Headers(req.headers)
-  // Язык адреса — только из адреса: без префикса одноимённый заголовок, присланный
-  // клиентом, снимается и здесь, а не только в `pass` (переписывание `.md` идёт мимо него).
-  if (lang) headers.set(LANG_HEADER, lang)
-  else headers.delete(LANG_HEADER)
-  // ⚠️ Путь БЕЗ префикса. Его читает сверка переехавших адресов (`moved-list.ts`), а она
-  // сравнивает с адресом, записанным при переезде, — там префикса нет и быть не может.
-  // С префиксом сравнение не совпадало НИКОГДА, и старая ссылка вида `/ru/old/list`
-  // уводила не туда, куда переехал список (находка авто-ревью).
-  //
-  // Язык при этом не теряется: он приезжает отдельным заголовком выше, и метаданные
-  // собирают из этой пары и адрес своего языка, и `hreflang`.
-  headers.set(REQUEST_PATH_HEADER, rest + req.nextUrl.search)
-  let url: URL
-  if (target) url = new URL(target, req.url)
-  else {
-    url = req.nextUrl.clone()
-    url.pathname = rest
-  }
+  headers.set(REQUEST_PATH_HEADER, req.nextUrl.pathname + req.nextUrl.search)
   // Заголовки запроса дописываются ДО того, как Next их заберёт.
   const csp = withCsp(headers)
-  const res = csp(NextResponse.rewrite(url, { request: { headers } }))
-  if (lang) {
-    const cookie = req.cookies.get(LANG_COOKIE)?.value
-    const current = isLang(cookie) ? cookie : negotiateLang(req.headers.get('accept-language'))
-    if (current !== lang) {
-      res.cookies.set(LANG_COOKIE, lang, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' })
-    }
-  }
+  return csp(NextResponse.rewrite(new URL(target, req.url), { request: { headers } }))
+}
+
+/**
+ * АДРЕСА С ЯЗЫКОВЫМ ПРЕФИКСОМ — ПОСТОЯННЫЙ ПЕРЕХОД НА АДРЕС БЕЗ НЕГО.
+ *
+ * Языка в адресе нет (ADR-0029, 25.09.2026): адрес страницы один на все языки. С 22 по
+ * 25.09 были адреса `/ru/…` и `/en/…` (#950, #959) — они в индексе и во внешних ссылках,
+ * поэтому перенаправляем, а не отдаём 404.
+ *
+ * ⚠️ 308, а не 301: оба постоянные, но 308 сохраняет метод. Вкладка, открытая до выкатки
+ * по `/ru/…`, шлёт серверное действие POST-ом на этот же адрес — 301 превратил бы его в GET,
+ * и действие молча не выполнилось бы.
+ *
+ * Язык прежнего адреса не теряется: человеку ставится кука, как у переключателя в шапке, —
+ * иначе пришедший по русской ссылке увидел бы интерфейс на языке своего браузера. Ставим
+ * только когда язык адреса расходится с тем, что выбралось бы и так (кука, иначе
+ * `Accept-Language`): совпадает — писать нечего. Роботу кука ничего не меняет.
+ */
+function dropLangPrefix(req: NextRequest, lang: Lang, rest: string): NextResponse {
+  const res = NextResponse.redirect(new URL(rest + req.nextUrl.search, req.url), 308)
+  const cookie = req.cookies.get(LANG_COOKIE)?.value
+  const current = isLang(cookie) ? cookie : negotiateLang(req.headers.get('accept-language'))
+  if (current !== lang) res.cookies.set(LANG_COOKIE, lang, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' })
   return res
 }
 
@@ -229,13 +193,13 @@ export async function middleware(req: NextRequest) {
     return new NextResponse(key, { headers: { 'content-type': 'text/plain; charset=utf-8' } })
   }
 
-  // Путь без языкового префикса — на нём держатся ВСЕ правила ниже; язык адреса
-  // возвращается в ответ на выходе (`proceed`).
-  const { lang: urlLang, rest: pathname } = splitLangPath(req.nextUrl.pathname)
-  const go = (target?: string) => proceed(req, urlLang, pathname, target)
+  const { lang: urlLang, rest } = splitLangPath(req.nextUrl.pathname)
+  if (urlLang) return dropLangPrefix(req, urlLang, rest)
+  const pathname = req.nextUrl.pathname
+  const go = (target?: string) => (target ? rewrite(req, target) : pass(req))
 
   const legacy = legacyExploreTarget(pathname, req.nextUrl.searchParams)
-  if (legacy) return NextResponse.redirect(new URL(urlLang ? langHref(legacy, urlLang) : legacy, req.url), 308)
+  if (legacy) return NextResponse.redirect(new URL(legacy, req.url), 308)
 
   // ПРОБЫ ПРОПУСКАЕМ ДО обращения к БД. `maintenanceEnabled()` ходит в ту же
   // базу и своего потолка ожидания не имеет: при исчерпанном пуле или зависшем
@@ -319,9 +283,8 @@ export async function middleware(req: NextRequest) {
     })
   }
 
-  // Заглушка — на языке адреса, если он есть: человек пришёл по `/ru/…`.
   const raw = req.cookies.get(LANG_COOKIE)?.value ?? ''
-  const lang = urlLang ?? (isLang(raw) ? raw : DEFAULT_LANG)
+  const lang = isLang(raw) ? raw : DEFAULT_LANG
   return new NextResponse(maintenanceHtml(lang), {
     status: 503,
     headers: { 'Retry-After': RETRY_AFTER_SEC, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },

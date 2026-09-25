@@ -477,7 +477,7 @@
         "tests/shared/seo/page-meta-image.test.ts",
         "tests/shared/seo/site-jsonld.test.ts",
         "tests/shared/seo/page-meta-lang.test.ts",
-        "tests/shared/seo/localize-metadata.test.ts",
+        "tests/shared/seo/jsonld-in-language.test.ts",
         "tests/shared/seo/howto-eligible.test.ts",
         "tests/app/robots-opensearch.test.ts",
         "tests/app/profile-og-image.itest.ts",

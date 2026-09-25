@@ -38,7 +38,7 @@ import { pageMeta } from '@/shared/seo/page-meta'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
   const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
-  return pageMeta({ title: `${t('issueWord', lang)} #${number} · ${handle}/${slug}`, path: `/${handle}/${slug}/issues/${number}`, lang })
+  return pageMeta({ title: `${t('issueWord', lang)} #${number} · ${handle}/${slug}`, path: `/${handle}/${slug}/issues/${number}` })
 }
 
 export default async function IssueThreadPage({

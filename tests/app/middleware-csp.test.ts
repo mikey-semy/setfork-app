@@ -17,8 +17,8 @@ const toRender = (res: Response, name: string) => res.headers.get(`x-middleware-
 const nonceIn = (policy: string | null) => /'nonce-([^']+)'/.exec(policy ?? '')?.[1]
 
 describe('политика скриптов в middleware', () => {
-  // Оба выхода middleware: обычный проход и переписывание (языковой префикс).
-  it.each(['/miki/list', '/ru/miki/list'])('%s: один nonce в ответе, в политике для Next и в x-nonce для layout', async (path) => {
+  // Оба выхода middleware: обычный проход и переписывание (`.md` к адресу списка).
+  it.each(['/miki/list', '/miki/list.md'])('%s: один nonce в ответе, в политике для Next и в x-nonce для layout', async (path) => {
     const res = await call(path)
     const nonce = nonceIn(res.headers.get(CSP_HEADER))
     expect(nonce).toBeTruthy()

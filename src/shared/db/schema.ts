@@ -2576,9 +2576,12 @@ export const indexnowSubmissions = pgTable('indexnow_submissions', {
     .primaryKey()
     .references(() => templates.id, { onDelete: 'cascade' }),
   sentUpdatedAt: timestamp('sent_updated_at', { withTimezone: true }).notNull(),
-  /** Отправленный адрес без языкового префикса — полный, с хостом (`x-default`). */
+  /** Отправленный адрес страницы — полный, с хостом; языка в адресе нет (ADR-0029). */
   sentUrl: text('sent_url').notNull(),
-  /** Языки, чьи адреса отправлены, через запятую: новый язык — повод отправить снова. */
+  /**
+   * Языки, чьи ПРЕФИКСНЫЕ адреса отправлены (`en,ru` — с 22 по 25.09), через запятую; пусто —
+   * только адрес без префикса. Расхождение с текущим набором — повод отправить снова.
+   */
   sentLangs: text('sent_langs').notNull(),
   sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
 })
