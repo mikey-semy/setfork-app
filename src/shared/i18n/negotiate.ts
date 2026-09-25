@@ -56,3 +56,13 @@ function quality(params: string[]): number {
   }
   return 1
 }
+
+/**
+ * Прислал ли клиент хоть какое-то языковое предпочтение. Пустой заголовок и `*` («любой») —
+ * нет: так приходит робот поисковика, и ему страница списка отдаётся на языке самого списка
+ * (ADR-0030). Любой названный язык — да, даже незнакомый нам.
+ */
+export function hasLangPreference(header: string | null | undefined): boolean {
+  const h = (header ?? '').trim()
+  return h !== '' && h !== '*'
+}

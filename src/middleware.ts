@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 import { isLang, DEFAULT_LANG, LANG_COOKIE, LANG_COOKIE_OPTIONS, t, type Lang } from '@/shared/i18n'
-import { negotiateLang } from '@/shared/i18n/negotiate'
+import { preferredLang } from '@/shared/i18n/negotiate'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { maintenanceEnabled } from '@/shared/settings/maintenance'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
@@ -134,7 +134,9 @@ function dropLangPrefix(req: NextRequest, lang: Lang, rest: string): NextRespons
   // истории браузера. Постоянство для поисковика задаёт код, а не кеш.
   res.headers.set('Cache-Control', 'private, no-store')
   const cookie = req.cookies.get(LANG_COOKIE)?.value
-  const current = isLang(cookie) ? cookie : negotiateLang(req.headers.get('accept-language'))
+  // Язык, который зритель назвал САМ; не назвал (робот, пустой `Accept-Language`) — `null`, и кука
+  // ставится всегда: без неё страница выбрала бы язык по содержимому списка, а не прежнего адреса.
+  const current = isLang(cookie) ? cookie : preferredLang(req.headers.get('accept-language'))
   if (current !== lang) res.cookies.set(LANG_COOKIE, lang, LANG_COOKIE_OPTIONS)
   return res
 }

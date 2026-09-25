@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { negotiateLang, preferredLang } from '@/shared/i18n/negotiate'
+import { hasLangPreference, negotiateLang, preferredLang } from '@/shared/i18n/negotiate'
 
 // Разбор Accept-Language был продублирован: серверный резолвер интерфейса перебирал теги
 // по порядку, git-транспорт брал первый — и обе копии выбрасывали веса `q`. Для
@@ -64,5 +64,18 @@ describe('preferredLang — назвал ли клиент язык', () => {
 
   it('negotiateLang по-прежнему отдаёт язык по умолчанию, когда клиент промолчал', () => {
     expect(negotiateLang(null)).toBe('en')
+  })
+})
+
+describe('hasLangPreference — прислал ли клиент хоть какой-то язык', () => {
+  it.each([
+    [null, false],
+    ['', false],
+    ['  ', false],
+    ['*', false],
+    ['de', true],
+    ['en', true],
+  ])('%j → %s', (header, want) => {
+    expect(hasLangPreference(header)).toBe(want)
   })
 })

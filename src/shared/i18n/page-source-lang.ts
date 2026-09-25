@@ -1,10 +1,10 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
 import { publiclyVisible } from '@/shared/db/visibility'
 import { RESERVED_TOP } from '@/shared/nav/reserved-top'
-import { textLang } from './detect-text-lang'
+import { listSourceLang } from './detect-text-lang'
 
 /**
  * ЯЗЫК ОРИГИНАЛА СПИСКА, НА СТРАНИЦЕ КОТОРОГО МЫ НАХОДИМСЯ, — по адресу запроса.
@@ -17,12 +17,14 @@ import { textLang } from './detect-text-lang'
  *
  * Только ПУБЛИЧНЫЙ список (`publiclyVisible`): язык чужого приватного списка не должен
  * просачиваться даже сменой языка интерфейса. `templates.lang` пуст (списки до ADR-0030) —
- * угадываем по алфавиту названия. Сбой базы — `null`: язык страницы не повод её ронять.
+ * угадываем по алфавиту названия (`listSourceLang`, то же правило, что у кнопки перевода). Сбой базы — `null`: язык страницы не повод её ронять.
  *
  * `cache` — один запрос на рендер: язык спрашивают корневой макет, страница и метаданные.
  */
 export const pageSourceLang = cache(async (path: string | null): Promise<string | null> => {
-  const m = path ? /^\/([^/?#]+)\/([^/?#]+)/.exec(path) : null
+  // `.md` к адресу списка — тот же список (middleware переписывает его на экспорт, а в заголовок
+  // пути кладёт исходный адрес): без среза агент по `/a/b.md` получал бы другой язык, чем по экспорту.
+  const m = path ? /^\/([^/?#]+)\/([^/?#]+?)(?:\.md)?(?:[/?#]|$)/.exec(path) : null
   // Корневые разделы (`/tags/…`, `/admin/…`) — не список: ника с таким именем не бывает, так что
   // это не правило, а экономия запроса к базе на каждом их просмотре роботом.
   if (!m || RESERVED_TOP.has(m[1])) return null
@@ -37,10 +39,12 @@ export const pageSourceLang = cache(async (path: string | null): Promise<string 
       .select({ lang: templates.lang, title: templates.title })
       .from(templates)
       .innerJoin(users, eq(users.id, templates.ownerId))
-      .where(and(eq(sql`lower(${users.handle})`, m[1].toLowerCase()), eq(templates.slug, slug), publiclyVisible()))
+      // Ник — точным совпадением, как у самой страницы (`getTemplateDetail`): при другом регистре
+      // она отвечает переадресацией, язык которой неважен, а `lower()` обходил бы индекс.
+      .where(and(eq(users.handle, m[1]), eq(templates.slug, slug), publiclyVisible()))
       .limit(1)
     if (!row) return null
-    return row.lang || textLang(Object.values(row.title ?? {}))
+    return listSourceLang(row.lang, row.title)
   } catch {
     return null
   }

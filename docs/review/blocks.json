@@ -1468,6 +1468,7 @@
         "tests/shared/http/cache.test.ts",
         "tests/shared/i18n/negotiate.test.ts",
         "tests/shared/i18n/lang-cookie.test.ts",
+        "tests/shared/i18n/list-source-lang.test.ts",
         "tests/shared/i18n/plural-forms.test.ts",
         "tests/shared/i18n/tr-with-lang.test.ts",
         "tests/shared/jobs/backoff.test.ts",

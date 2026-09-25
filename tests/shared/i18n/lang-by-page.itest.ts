@@ -32,6 +32,10 @@ beforeAll(async () => {
     { ownerId: o.id, slug: 'secret', title: { ru: 'Тайный' }, lang: 'ru', status: 'published', visibility: 'private' },
     // До ADR-0030: язык не записан — угадывается по названию.
     { ownerId: o.id, slug: 'old', title: { ru: 'Старый' }, status: 'published', visibility: 'public' },
+    // Записанный язык и алфавит расходятся: русский список с латинским названием.
+    { ownerId: o.id, slug: 'compose', title: { ru: 'Docker Compose' }, lang: 'ru', status: 'published', visibility: 'public' },
+    // Язык оригинала, которого нет среди языков интерфейса.
+    { ownerId: o.id, slug: 'suppe', title: { de: 'Erbsensuppe' }, lang: 'de', status: 'published', visibility: 'public' },
   ])
 })
 
@@ -47,6 +51,33 @@ describe('язык страницы для зрителя без предпоч�
       req.path = path
       expect(await getLang(), path).toBe('ru')
     }
+  })
+
+  it('⚠️ записанный язык главнее алфавита: «Docker Compose» русского автора — ru', async () => {
+    req.path = '/srclang/compose'
+    expect(await getLang()).toBe('ru')
+  })
+
+  it('язык оригинала не из языков интерфейса (de) — по умолчанию', async () => {
+    req.path = '/srclang/suppe'
+    expect(await getLang()).toBe('en')
+  })
+
+  it('`.md` к адресу списка — тот же список, тот же язык', async () => {
+    req.path = '/srclang/sup.md'
+    expect(await getLang()).toBe('ru')
+  })
+
+  it('`Accept-Language: *` — предпочтения нет: язык списка', async () => {
+    req.path = '/srclang/sup'
+    req.accept = '*'
+    expect(await getLang()).toBe('ru')
+  })
+
+  it('⚠️ назвал незнакомый язык (de) — по умолчанию, а не язык списка: иначе шапка и страница разошлись бы', async () => {
+    req.path = '/srclang/sup'
+    req.accept = 'de-DE,de;q=0.9'
+    expect(await getLang()).toBe('en')
   })
 
   it('язык не записан — угадывается по названию', async () => {

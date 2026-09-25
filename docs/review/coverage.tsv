@@ -1791,6 +1791,7 @@ tests/shared/http/cache.test.ts	V12f
 tests/shared/i18n/lang-by-page.itest.ts	H6
 tests/shared/i18n/lang-cookie.test.ts	V12f
 tests/shared/i18n/lang-url.test.ts	H6
+tests/shared/i18n/list-source-lang.test.ts	V12f
 tests/shared/i18n/negotiate.test.ts	V12f
 tests/shared/i18n/plural-forms.test.ts	V12f
 tests/shared/jobs/backoff.test.ts	V12f
