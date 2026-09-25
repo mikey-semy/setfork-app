@@ -39,6 +39,28 @@ describe('classifySkillLicense', () => {
     expect(classifySkillLicense(undefined, bsd).open).toBe(true)
   })
 
+  const MIT_TEXT = 'Permission is hereby granted, free of charge, to any person obtaining a copy of this software…'
+  it.each([
+    ['MIT + «только некоммерчески»', `${MIT_TEXT}\nThis software may be used for non-commercial purposes only.`],
+    ['MIT + Commons Clause', `"Commons Clause" License Condition v1.0\n${MIT_TEXT}`],
+    ['соглашение, цитирующее Apache', 'PROPRIETARY SOFTWARE LICENSE AGREEMENT\nThird-party parts: Apache License\n Version 2.0'],
+    ['Business Source License', 'Business Source License 1.1'],
+    ['Elastic License 2.0', 'Elastic License 2.0 (ELv2)'],
+  ])('знакомый текст не перевешивает запрет: %s', (_name, text) => {
+    expect(classifySkillLicense(undefined, text).open).toBe(false)
+  })
+
+  it('шапка MIT не перекрывает закрытый или незнакомый LICENSE — и наоборот', () => {
+    expect(classifySkillLicense('MIT', 'Proprietary. All use requires a paid license.').open).toBe(false)
+    expect(classifySkillLicense('MIT', 'Some custom terms nobody recognises.').open).toBe(false)
+    expect(classifySkillLicense('Proprietary', MIT_TEXT).open).toBe(false)
+    expect(classifySkillLicense('MIT', MIT_TEXT)).toEqual({ id: 'MIT', open: true, from: 'header' })
+  })
+
+  it('незнакомый LICENSE называется «unknown», а не «без лицензии»', () => {
+    expect(classifySkillLicense(undefined, 'Custom terms.').id).toBe('unknown')
+  })
+
   it('узкие тексты раньше широких: LGPL не читается как GPL', () => {
     expect(licenseFromText('GNU LESSER GENERAL PUBLIC LICENSE\n                       Version 3, 29 June 2007')).toBe('LGPL-3.0')
   })
@@ -50,5 +72,8 @@ describe('canBePublic', () => {
     expect(canBePublic({ sourceLicenseOpen: true })).toBe(true)
     expect(canBePublic({ sourceLicenseOpen: null })).toBe(true)
     expect(canBePublic({})).toBe(true)
+    // Импорт с недописанным вердиктом — закрыт: источник есть, «открыто» не записано.
+    expect(canBePublic({ sourceUrl: 'https://github.com/a/b/tree/x', sourceLicenseOpen: null })).toBe(false)
+    expect(canBePublic({ sourceUrl: 'https://github.com/a/b/tree/x', sourceLicenseOpen: true })).toBe(true)
   })
 })

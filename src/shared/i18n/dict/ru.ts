@@ -541,6 +541,7 @@ export const ru: Record<DictKey, string> = {
   importedFrom: 'Импортирован из',
   importLicense: 'лицензия {license}',
   importNoLicense: 'без лицензии',
+  importUnknownLicense: 'лицензия не распознана',
   importPrivateOnly: 'только приватно: у оригинала нет открытой лицензии',
   importSkillTitle: 'Импортировать скилл с GitHub',
   importSkillHint: 'Адрес репозитория, папки скилла или его SKILL.md — как для npx skills add. С открытой лицензией список можно опубликовать, без неё он останется приватным.',

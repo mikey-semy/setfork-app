@@ -128,12 +128,7 @@ export async function useTemplate(templateId: string): Promise<void> {
   if (src.isSkill) await db.update(templates).set({ isSkill: true, skillHeader: src.skillHeader }).where(eq(templates.id, created.id))
   // Источник и лицензия импорта — наследуются: копия чужого скилла остаётся с указанием
   // автора, а запрет на публичность не теряется на следующей смене видимости.
-  if (src.sourceUrl) {
-    await db
-      .update(templates)
-      .set({ sourceUrl: src.sourceUrl, sourceLicense: src.sourceLicense, sourceLicenseOpen: src.sourceLicenseOpen })
-      .where(eq(templates.id, created.id))
-  }
+  if (src.sourceUrl) await inheritSource(src, created.id)
   // Копия публикуется — но состояние публикации ей задал фасад create, до записи.
   revalidatePath('/', 'layout')
   redirect(`/${session.handle}/${slug}`)
@@ -149,6 +144,22 @@ async function copiedFiles(src: { ownerId: string; slug: string }, version: numb
   if (!version) return undefined
   const files = await authoredFilesOf(await ownerHandle(src.ownerId), src.slug, version)
   return files?.length ? files : undefined
+}
+
+/**
+ * Источник и лицензия импорта — в копию. Не легли — копия удаляется и ошибка идёт дальше:
+ * копия закрытого импорта без записанного запрета стала бы обходом правила владельца.
+ */
+async function inheritSource(src: { sourceUrl: string | null; sourceLicense: string | null; sourceLicenseOpen: boolean | null }, copyId: string) {
+  try {
+    await db
+      .update(templates)
+      .set({ sourceUrl: src.sourceUrl, sourceLicense: src.sourceLicense, sourceLicenseOpen: src.sourceLicenseOpen })
+      .where(eq(templates.id, copyId))
+  } catch (e) {
+    await db.delete(templates).where(eq(templates.id, copyId)).catch(() => {}) // каскад, как у удаления списка
+    throw e
+  }
 }
 
 export type ForkResult = { error?: string }
@@ -272,12 +283,7 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
   if (src.isSkill) await db.update(templates).set({ isSkill: true, skillHeader: src.skillHeader }).where(eq(templates.id, forked.id))
   // Источник и лицензия импорта — наследуются: копия чужого скилла остаётся с указанием
   // автора, а запрет на публичность не теряется на следующей смене видимости.
-  if (src.sourceUrl) {
-    await db
-      .update(templates)
-      .set({ sourceUrl: src.sourceUrl, sourceLicense: src.sourceLicense, sourceLicenseOpen: src.sourceLicenseOpen })
-      .where(eq(templates.id, forked.id))
-  }
+  if (src.sourceUrl) await inheritSource(src, forked.id)
 
   await db
     .update(templates)

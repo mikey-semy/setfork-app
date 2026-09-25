@@ -6,6 +6,7 @@ import { classifySkillLicense, type SkillLicense } from '@/core/domain/skill-lic
 import { parseSkillMd } from '@/features/library/skill-parse'
 import { fetchGithubSkill, parseGithubSkillUrl } from '@/features/library/skill-import/github'
 import { mcpPublishSkill } from './skill'
+import { mcpDeleteList } from './delete'
 
 /**
  * ИМПОРТ ЧУЖОГО СКИЛЛА С GITHUB — одна точка на сайт, MCP и `sf`.
@@ -23,7 +24,11 @@ import { mcpPublishSkill } from './skill'
  * разошлась бы с ним.
  */
 
-/** Сколько импортов в час на человека: каждый — несколько запросов к GitHub с общего IP. */
+/**
+ * Сколько импортов в час на человека: каждый — несколько запросов к GitHub с общего IP
+ * сервера (без токена — 60 в час на всех). Поэтому попытка, дошедшая до GitHub, считается
+ * и при его отказе; опечатка в адресе — нет: её отсекает разбор до счётчика.
+ */
 const IMPORTS_PER_HOUR = 10
 
 export interface ImportedSkill {
@@ -57,11 +62,19 @@ export async function importSkillFromGithub(userId: string, url: string): Promis
   })
   if ('error' in res) return { error: res.error as string }
   const createdRef = (res as { ref: string }).ref
-  const slug = createdRef.split('/')[1]
-  await db
-    .update(templates)
-    .set({ sourceUrl: fetched.sourceUrl, sourceLicense: license.id, sourceLicenseOpen: license.open })
-    .where(and(eq(templates.ownerId, userId), eq(templates.slug, slug)))
+  const [handle, slug] = createdRef.split('/')
+  // Источник и вердикт — ОТДЕЛЬНОЙ записью после создания (ядро этих колонок не знает).
+  // Не легли — список удаляется: приватный импорт без записанного вердикта был бы открыт
+  // для «сделать публичным» (canBePublic видит источник только по этой записи).
+  try {
+    await db
+      .update(templates)
+      .set({ sourceUrl: fetched.sourceUrl, sourceLicense: license.id, sourceLicenseOpen: license.open })
+      .where(and(eq(templates.ownerId, userId), eq(templates.slug, slug)))
+  } catch (e) {
+    await mcpDeleteList(userId, handle, slug, true).catch(() => {})
+    throw e
+  }
 
   const notes = (res as { parseNotes?: string[] }).parseNotes
   return {

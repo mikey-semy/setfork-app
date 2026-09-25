@@ -549,6 +549,7 @@ export const en = {
   importedFrom: 'Imported from',
   importLicense: 'license {license}',
   importNoLicense: 'no license',
+  importUnknownLicense: 'license not recognised',
   importPrivateOnly: 'private only: the original has no open license',
   importSkillTitle: 'Import a skill from GitHub',
   importSkillHint: 'The address of the repository, the skill folder or its SKILL.md — the same as for npx skills add. With an open license the list can be published; without one it stays private.',

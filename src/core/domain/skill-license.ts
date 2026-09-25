@@ -44,8 +44,17 @@ const TEXT_SIGNATURES: [RegExp, string][] = [
   [/Redistribution and use in source and binary forms, with or without\s+modification, are permitted/i, 'BSD'],
 ]
 
-/** Слова, при которых «открытость» не угадываем, даже если рядом стоит знакомый текст. */
-const CLOSED_WORDS = /proprietary|all rights reserved|without a license|no license|non-?commercial|noderivatives|\bCC-BY-NC|\bCC-BY-ND/i
+/**
+ * Слова, при которых список закрыт, ДАЖЕ если рядом стоит знакомый текст открытой лицензии:
+ * «MIT + только некоммерчески», Commons Clause, лицензии «исходник виден, продавать нельзя»
+ * (BSL, Elastic, SSPL, PolyForm). Знакомая фраза не перевешивает запрет — она часто
+ * цитируется внутри чужого соглашения (поймано ревью).
+ */
+const CLOSED_WORDS =
+  /proprietary|all rights reserved|without a license|no license|non-?commercial|noderivatives|\bCC-BY-NC|\bCC-BY-ND|commons clause|business source license|elastic license|server side public license|\bSSPL\b|polyform|does not (?:include|grant)[^.]{0,80}right to sell/i
+
+/** Строки копирайта не судим: «All rights reserved» там — обычная формула, и у BSD она в тексте. */
+const withoutCopyright = (text: string) => text.split('\n').filter((l) => !/^\s*(?:copyright|\(c\)|©)/i.test(l)).join('\n')
 
 export interface SkillLicense {
   /** Что узнали: SPDX-идентификатор (или «BSD» по тексту), сырое значение шапки, либо null. */
@@ -76,24 +85,24 @@ export function licenseFromText(text: string): string | null {
 }
 
 /**
- * Вердикт по шапке и тексту LICENSE. Шапка — первой: это заявление автора скилла. Не
- * SPDX-выражение (например «Proprietary. LICENSE.txt has complete terms») — решает текст
- * файла, но слова «proprietary», «all rights reserved» и подобные закрывают список сразу.
+ * Вердикт по шапке и тексту LICENSE. Открыто, только если НИ ОДИН источник не говорит
+ * «закрыто»: шапка `license: MIT` не перекрывает LICENSE с запретом продажи, и наоборот.
+ * Шапка — SPDX-выражение открытых лицензий или её нет; файл — узнан как открытый или его
+ * нет; хотя бы один из двух открыт. Незнакомый файл — «неизвестная», то есть закрытая.
  */
 export function classifySkillLicense(header: string | undefined, licenseText: string | null): SkillLicense {
   const h = header?.trim() ?? ''
-  if (h && CLOSED_WORDS.test(h)) return { id: h, open: false, from: 'header' }
-  if (h) {
-    const open = spdxOpen(h)
-    if (open !== null) return { id: h, open, from: 'header' }
-  }
-  if (licenseText) {
-    if (CLOSED_WORDS.test(licenseText.slice(0, 2000)) && !licenseFromText(licenseText)) return { id: null, open: false, from: 'file' }
-    const id = licenseFromText(licenseText)
-    if (id) return { id, open: true, from: 'file' }
-    return { id: null, open: false, from: 'file' }
-  }
-  return { id: h || null, open: false, from: h ? 'header' : 'none' }
+  const fileBody = licenseText ? withoutCopyright(licenseText) : null
+  const fileId = licenseText ? licenseFromText(licenseText) : null
+  const closed = (h && CLOSED_WORDS.test(h)) || (fileBody !== null && CLOSED_WORDS.test(fileBody))
+  const headerOpen = h ? spdxOpen(h) : null
+  // Что показать человеку: SPDX шапки, иначе узнанный текст файла, иначе как написано.
+  const id = (headerOpen ? h : fileId) || h || (licenseText ? 'unknown' : null)
+  const from: SkillLicense['from'] = h ? 'header' : licenseText ? 'file' : 'none'
+  if (closed) return { id, open: false, from }
+  if (h && headerOpen !== true && !(headerOpen === null && fileId)) return { id, open: false, from }
+  if (licenseText && !fileId) return { id, open: false, from }
+  return { id, open: headerOpen === true || fileId !== null, from }
 }
 
 /**
@@ -101,4 +110,6 @@ export function classifySkillLicense(header: string | undefined, licenseText: st
  * копии (шаблон, форк) и то, что показывает интерфейс. `false` — импорт без открытой
  * лицензии; null/true — список не импортирован или лицензия открытая.
  */
-export const canBePublic = (tpl: { sourceLicenseOpen?: boolean | null }): boolean => tpl.sourceLicenseOpen !== false
+export const canBePublic = (tpl: { sourceUrl?: string | null; sourceLicenseOpen?: boolean | null }): boolean =>
+  // Импорт (есть источник) — публичен только при ЯВНОМ «открыто»: недописанный вердикт — закрыто.
+  tpl.sourceUrl ? tpl.sourceLicenseOpen === true : tpl.sourceLicenseOpen !== false

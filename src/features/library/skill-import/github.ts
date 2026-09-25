@@ -59,14 +59,20 @@ export function parseGithubSkillUrl(input: string): GithubSkillRef | { error: st
 }
 
 async function api<T>(path: string, token?: string): Promise<{ ok: true; data: T } | { ok: false; status: number }> {
-  const res = await fetchPublicUrl(`${API}${path}`, {
-    headers: {
-      accept: 'application/vnd.github+json',
-      'user-agent': 'setfork-skill-import',
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
+  // Без переадресаций: заголовки переходят на следующий хоп как есть, и токен ушёл бы
+  // туда, куда API его переслал бы. У API GitHub для этих вызовов переадресаций нет.
+  const res = await fetchPublicUrl(
+    `${API}${path}`,
+    {
+      headers: {
+        accept: 'application/vnd.github+json',
+        'user-agent': 'setfork-skill-import',
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
+      signal: signal(),
     },
-    signal: signal(),
-  }).catch(() => null)
+    0,
+  ).catch(() => null)
   if (!res) return { ok: false, status: 0 }
   if (!res.ok) return { ok: false, status: res.status }
   return { ok: true, data: (await res.json()) as T }
@@ -100,8 +106,16 @@ export interface FetchedSkill {
 
 const AUTHORED_DIRS = ['scripts', 'references', 'assets']
 const LICENSE_NAMES = /^(LICEN[CS]E|COPYING)(\.(md|txt))?$/i
-/** Один файл крупнее этого не везём: дерево скилла всё равно его не примет (предел набора — у ядра). */
-const FILE_MAX_BYTES = 1024 * 1024
+/**
+ * ⚠️ КОПИЯ пределов ядра (setfork-core `serialize.rs`: AUTHORED_MAX_FILES = 50,
+ * AUTHORED_MAX_BYTES = 1 МБ). Решает здесь не она — набор судит ядро и откажет само; она
+ * только останавливает СКАЧИВАНИЕ заранее: папка с тысячей файлов держала бы действие
+ * человека минутами. Разойдутся — ядро всё равно скажет своё.
+ */
+const FILES_MAX = 50
+const BYTES_MAX = 1024 * 1024
+/** LICENSE крупнее — не текст лицензии, а что-то иное: считаем неизвестной (закрытой). */
+const LICENSE_MAX_BYTES = 200 * 1024
 
 async function raw(ref: GithubSkillRef, sha: string, path: string): Promise<Uint8Array | null> {
   const url = `${RAW}/${ref.owner}/${ref.repo}/${sha}/${path.split('/').map(encodeURIComponent).join('/')}`
@@ -124,6 +138,8 @@ export async function fetchGithubSkill(ref: GithubSkillRef, token?: string): Pro
   const sha = commit.data.sha
   const tree = await api<{ tree: TreeEntry[]; truncated: boolean }>(`/repos/${slug}/git/trees/${sha}?recursive=1`, token)
   if (!tree.ok) return { error: githubError(tree.status, `${slug} tree`) }
+  // Усечённое дерево молча теряло бы файлы и LICENSE папки — а без LICENSE вердикт другой.
+  if (tree.data.truncated) return { error: `${slug} is too large to read in one go — point at the skill folder in a smaller repository` }
   const blobs = tree.data.tree.filter((e) => e.type === 'blob')
 
   // Папка не названа, а в корне SKILL.md нет — ищем единственный скилл в репозитории.
@@ -143,6 +159,16 @@ export async function fetchGithubSkill(ref: GithubSkillRef, token?: string): Pro
 
   const files: FetchedSkill['files'] = []
   const skipped: FetchedSkill['skipped'] = []
+  // Сначала — сколько придётся скачать: по дереву, до первого запроса за файлом.
+  const wanted = blobs.filter((b) => {
+    if (!b.path.startsWith(prefix)) return false
+    const [top, ...restPath] = b.path.slice(prefix.length).split('/')
+    return AUTHORED_DIRS.includes(top) && restPath.length === 1
+  })
+  const total = wanted.reduce((n, b) => n + (b.size ?? 0), 0)
+  if (wanted.length > FILES_MAX || total > BYTES_MAX) {
+    return { error: `the skill has ${wanted.length} files, ${Math.ceil(total / 1024)} KB — a skill holds at most ${FILES_MAX} files and ${BYTES_MAX / 1024} KB` }
+  }
   for (const b of blobs) {
     if (!b.path.startsWith(prefix)) continue
     const rel = b.path.slice(prefix.length)
@@ -151,10 +177,6 @@ export async function fetchGithubSkill(ref: GithubSkillRef, token?: string): Pro
     // Дерево скилла — один уровень: `scripts/a.sh`, но не `scripts/lib/a.sh`.
     if (restPath.length > 1) {
       skipped.push({ path: rel, why: 'in a subfolder — a skill keeps files directly in scripts/, references/, assets/' })
-      continue
-    }
-    if ((b.size ?? 0) > FILE_MAX_BYTES) {
-      skipped.push({ path: rel, why: 'larger than 1 MB' })
       continue
     }
     const content = await raw(ref, sha, b.path)
@@ -170,7 +192,7 @@ export async function fetchGithubSkill(ref: GithubSkillRef, token?: string): Pro
   const lic =
     blobs.find((b) => b.path.startsWith(prefix) && LICENSE_NAMES.test(b.path.slice(prefix.length))) ??
     blobs.find((b) => !b.path.includes('/') && LICENSE_NAMES.test(b.path))
-  const licenseBytes = lic ? await raw(ref, sha, lic.path) : null
+  const licenseBytes = lic ? ((lic.size ?? 0) > LICENSE_MAX_BYTES ? new TextEncoder().encode('(license file too large to read)') : await raw(ref, sha, lic.path)) : null
 
   return {
     skillMd: new TextDecoder().decode(skillBytes),
@@ -178,6 +200,6 @@ export async function fetchGithubSkill(ref: GithubSkillRef, token?: string): Pro
     skipped,
     licenseText: licenseBytes ? new TextDecoder().decode(licenseBytes) : null,
     sha,
-    sourceUrl: `https://github.com/${slug}/tree/${sha}${dir ? `/${dir}` : ''}`,
+    sourceUrl: `https://github.com/${slug}/tree/${sha}${dir ? `/${dir.split('/').map(encodeURIComponent).join('/')}` : ''}`,
   }
 }
