@@ -59,10 +59,14 @@ README.md	V12c
 SECURITY.md	V12c
 buf.gen.yaml	H13
 cli/README.md	H2
+cli/auth.mjs	H2
 cli/lib.mjs	H2
 cli/lib.test.mjs	H2
+cli/mcp.mjs	H2
 cli/package.json	H2
 cli/sf.mjs	H2
+cli/sf.test.mjs	H2
+cli/skill.mjs	H2
 docker-compose.demo.yml	H13
 docker-compose.prod.yml	H13
 docker-compose.ru-egress.yml	H13
@@ -83,6 +87,7 @@ docs/review/blocks.json	V12e
 docs/review/blocks/H1-access.md	V12e
 docs/review/blocks/H15-domain-core.md	V12e
 docs/review/blocks/H2-core-contract.md	V12e
+docs/review/blocks/H3-db-schema.md	V12e
 docs/review/blocks/H5-money.md	V12e
 docs/review/blocks/V1d-list-write.md	V12e
 docs/review/findings.jsonl	V12e
@@ -99,6 +104,8 @@ docs/review/reports/H15-verifier-calibration.md	V12h
 docs/review/reports/H2-core-contract.hunter.md	V12h
 docs/review/reports/H2-core-contract.verify.md	V12h
 docs/review/reports/H2-findings.jsonl	V12e
+docs/review/reports/H3-db-schema.hunter.md	V12h
+docs/review/reports/H3-db-schema.verify.md	V12h
 docs/review/reports/H5-findings.jsonl	V12e
 docs/review/reports/H5-money.hunter-parallel.md	V12h
 docs/review/reports/H5-money.hunter.md	V12h
@@ -353,6 +360,7 @@ src/core/domain/product.ts	H15
 src/core/domain/quiz-fingerprint.ts	H15
 src/core/domain/quiz.ts	H15
 src/core/domain/script-dialect.ts	H15
+src/core/domain/secret-scan.ts	H15
 src/core/index.ts	H15
 src/core/ports.ts	H15
 src/features/admin/AchievementsAdmin.tsx	V9c
@@ -564,7 +572,6 @@ src/features/issues/search.ts	V3
 src/features/issues/thread.ts	V3
 src/features/knowledge/jobs.ts	V6
 src/features/knowledge/service.ts	V6
-src/features/landing/stats.ts	V12
 src/features/library/AdvancedFacets.tsx	V1p
 src/features/library/ChangeNoteField.tsx	V1n
 src/features/library/ChecksList.tsx	V1p
@@ -813,6 +820,7 @@ src/features/mcp/tools/lists/edit.ts	H4
 src/features/mcp/tools/lists/index.ts	H4
 src/features/mcp/tools/lists/patch-block.ts	H4
 src/features/mcp/tools/lists/publish.ts	H4
+src/features/mcp/tools/lists/rename.ts	H4
 src/features/mcp/tools/lists/skill.ts	H4
 src/features/mcp/tools/lists/write.ts	H4
 src/features/mcp/tools/reads.ts	H4
@@ -1098,6 +1106,7 @@ src/shared/jobs/backoff.ts	H10
 src/shared/jobs/error.ts	H10
 src/shared/jobs/queue.ts	H10
 src/shared/jobs/worker.ts	H10
+src/shared/landing-keys.ts	V12
 src/shared/lib/block-id.ts	V12b
 src/shared/lib/catalog-match.ts	V12b
 src/shared/lib/cn.ts	V12b
@@ -1310,6 +1319,7 @@ src/widgets/explore/ExploreNav.tsx	V12
 src/widgets/explore/TrendControls.tsx	V12
 src/widgets/sidebar-context.tsx	V12
 tests/app/api/auth/provider-gate-both-ends.test.ts	V12d
+tests/app/api/landing-route.itest.ts	V12,V12d
 tests/app/api/ready.itest.ts	V12d
 tests/app/api/user-search-order.itest.ts	V12d
 tests/app/api/write-allowed-content.test.ts	V12d
@@ -1332,6 +1342,7 @@ tests/app/raw-failure-loud.test.ts	V12d
 tests/app/robots-opensearch.test.ts	H11,V12d
 tests/app/sitemap-verification.itest.ts	V12d
 tests/app/sitemap.itest.ts	V12d
+tests/app/skill-badge.itest.ts	V12d
 tests/app/skill-routes.itest.ts	V12d
 tests/app/telegram-link-page.test.tsx	V12d
 tests/app/web-manifest.test.ts	H11,V12d
@@ -1384,6 +1395,8 @@ tests/core/domain/destructive-command.mutants.json	V12d
 tests/core/domain/destructive-command.test.ts	V12d
 tests/core/domain/links.test.ts	V12d
 tests/core/domain/list-state.test.ts	V12d
+tests/core/domain/secret-scan.mutants.json	V12d
+tests/core/domain/secret-scan.test.ts	V12d
 tests/core/edit-block-reason.test.ts	V12d
 tests/email-layout.test.ts	V12d
 tests/empty.ts	V12d
@@ -1460,6 +1473,7 @@ tests/features/git/clone-dropdown.test.tsx	H2
 tests/features/git/core-capability.test.ts	H2
 tests/features/git/http-body.test.ts	H2
 tests/features/git/list-content.test.ts	H2
+tests/features/git/moved-response.test.ts	H2
 tests/features/git/push-effects.itest.ts	H2
 tests/features/git/push-resilience.itest.ts	H2
 tests/features/git/push-role.test.ts	H2
@@ -1481,7 +1495,6 @@ tests/features/issues/lock.itest.ts	V3
 tests/features/issues/rate-limits.test.ts	V3
 tests/features/issues/service-writer.test.ts	V3
 tests/features/issues/thread-merge.test.ts	V3
-tests/features/landing/stats.test.ts	V12
 tests/features/library/accept-suggestion.itest.ts	V1
 tests/features/library/actions-mutations.itest.ts	V1d
 tests/features/library/agent-draft-detail.itest.ts	V8c
@@ -1566,7 +1579,9 @@ tests/features/library/search-ranking.itest.ts	V1g
 tests/features/library/selfgen-outcome.test.ts	V1h,V1k
 tests/features/library/semantic-order.itest.ts	V1g
 tests/features/library/set-verification-level.itest.ts	V1h
+tests/features/library/skill-files.test.tsx	V1k
 tests/features/library/skill-load.test.ts	V1k
+tests/features/library/skill-parse.test.ts	V1k
 tests/features/library/skill.test.ts	V1k
 tests/features/library/slug.test.ts	V1k
 tests/features/library/suggest-refusal-keeps-edit.test.ts	V1k
@@ -1574,6 +1589,7 @@ tests/features/library/suggestion-apply.test.ts	V1,V1k
 tests/features/library/suggestion-blocks.mutants.json	V1
 tests/features/library/suggestion-checks.test.ts	V1,V1k
 tests/features/library/suggestion-close-reopen.itest.ts	V1
+tests/features/library/suggestion-items-secret.test.ts	V1,V1k
 tests/features/library/suggestion-locked.itest.ts	V1
 tests/features/library/suggestion-result-blocks.test.tsx	V1,V1k
 tests/features/library/suggestion-result.test.tsx	V1,V1k
@@ -1622,6 +1638,7 @@ tests/features/mcp/update-hold.itest.ts	H4
 tests/features/mcp/write-proposed-base.test.ts	H4
 tests/features/moderation-reason.test.ts	V9b
 tests/features/moderation/approve-many.itest.ts	V9b
+tests/features/moderation/authored-texts.itest.ts	V9b
 tests/features/moderation/automation.test.ts	V9b
 tests/features/moderation/gate.itest.ts	V9b
 tests/features/monetization/pro-interest.itest.ts	H5
@@ -1791,6 +1808,7 @@ tests/shared/seo/localize-metadata.test.ts	H11
 tests/shared/seo/page-meta-image.test.ts	H11
 tests/shared/seo/page-meta-lang.test.ts	H11
 tests/shared/seo/site-jsonld.test.ts	H11
+tests/shared/settings/landing.test.ts	V12
 tests/shared/settings/media-singleflight.test.ts	V12f
 tests/shared/settings/provider-switch.itest.ts	V12f
 tests/shared/settings/readiness-settings.itest.ts	V12f

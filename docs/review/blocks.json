@@ -1314,7 +1314,6 @@
         "src/app/privacy/**",
         "src/app/terms/**",
         "src/features/feedback/**",
-        "src/features/landing/**",
         "src/instrumentation-loops.ts",
         "src/instrumentation.ts",
         "src/shared/docs.ts",
@@ -1326,7 +1325,9 @@
         "public/browserconfig.xml",
         "public/site.webmanifest",
         "tests/widgets",
-        "tests/features/landing",
+        "src/shared/landing-keys.ts",
+        "tests/app/api/landing-route.itest.ts",
+        "tests/shared/settings/landing.test.ts",
         "tests/features/feedback"
       ],
       "ref_paths": []
