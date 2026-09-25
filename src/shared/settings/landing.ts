@@ -1,5 +1,6 @@
 import 'server-only'
 import { getSettings, saveSettings } from './kv'
+import { LANDING_KEYS, LANDING_MAX_STATS, STAT_MAX, landingMaxLength, type LandingKey } from '@/shared/landing-keys'
 
 /**
  * ПРАВКИ ЛЕНДИНГА ИЗ АДМИНКИ — И ТОЛЬКО ОНИ.
@@ -22,28 +23,7 @@ const KEY = 'landing.content'
 export const LANDING_LANGS = ['en', 'ru'] as const
 export type LandingLang = (typeof LANDING_LANGS)[number]
 
-/**
- * Строковые ключи словаря лендинга, которые разрешено перекрыть. Список — из
- * `setfork-about/src/copy.ts` (ветка `claude/setfork-capabilities-wn6pye`, коммит
- * `8aaaf25`): строковые поля верхнего уровня `COPY.en`. Лендинг сам отбрасывает незнакомые
- * ключи, так что расхождение безопасно, но правка по такому ключу просто не появится —
- * меняя словарь лендинга, обнови и этот список.
- */
-export const LANDING_KEYS = [
-  'brand', 'metaTitle', 'metaDescription', 'langSwitch',
-  'navHow', 'navSkills', 'navAgents', 'navExplore', 'navLabel', 'signIn', 'startFree',
-  'eyebrow', 'heroTitle', 'heroSub', 'searchPlaceholder', 'searchBtn',
-  'howKicker', 'howTitle', 'howSub',
-  'skillsKicker', 'skillsTitle', 'skillsSub', 'skillWindowTitle',
-  'aiKicker', 'aiTitle', 'aiSub', 'aiPanelTitle', 'aiPrompt', 'aiPanelBtn',
-  'gitKicker', 'gitTitle', 'gitSub', 'gitCardTitle',
-  'mcpKicker', 'mcpTitle', 'mcpSub', 'mcpRegistry', 'mcpWindowTitle',
-  'listsKicker', 'listsTitle', 'listsLink', 'usedLabel',
-  'commKicker', 'commTitle',
-  'ctaTitle', 'ctaSub', 'ctaPrimary', 'ctaSecondary',
-  'footerBlurb', 'footerNote', 'copyright',
-] as const
-export type LandingKey = (typeof LANDING_KEYS)[number]
+export { LANDING_KEYS, type LandingKey } from '@/shared/landing-keys'
 const KNOWN = new Set<string>(LANDING_KEYS)
 
 /**
@@ -72,7 +52,9 @@ function stat(v: unknown): LandingStat | undefined {
   const num = str(v.num)
   const label = str(v.label)
   const source = str(v.source)
-  return num && label && source ? { num, label, source } : undefined
+  if (!num || !label || !source) return undefined
+  if (num.length > STAT_MAX.num || label.length > STAT_MAX.label || source.length > STAT_MAX.source) return undefined
+  return { num, label, source }
 }
 
 /**
@@ -85,9 +67,34 @@ export function sanitizeLang(raw: unknown): LandingLangOverrides {
   const texts = isRecord(raw.texts) ? raw.texts : raw
   for (const [k, v] of Object.entries(texts)) {
     const s = str(v)
-    if (s && KNOWN.has(k)) out.texts[k as LandingKey] = s
+    if (s && KNOWN.has(k) && s.length <= landingMaxLength(k)) out.texts[k as LandingKey] = s
   }
-  if (Array.isArray(raw.stats)) out.stats = raw.stats.map(stat).filter((s): s is LandingStat => !!s)
+  if (Array.isArray(raw.stats)) out.stats = raw.stats.map(stat).filter((s): s is LandingStat => !!s).slice(0, LANDING_MAX_STATS)
+  return out
+}
+
+/**
+ * Что из присланного НЕ будет сохранено — называется, а не теряется молча: плитка без
+ * источника или не до конца заполненная, лишняя плитка, строка сверх лимита. Экшен
+ * сохранения отказывает с этим списком; `sanitize` при чтении отсеивает то же самое.
+ */
+export function landingProblems(raw: unknown): string[] {
+  const out: string[] = []
+  const r = isRecord(raw) ? raw : {}
+  for (const l of LANDING_LANGS) {
+    const lang = isRecord(r[l]) ? r[l] : {}
+    const texts = isRecord(lang.texts) ? lang.texts : lang
+    for (const [k, v] of Object.entries(texts)) {
+      const s = str(v)
+      if (s && KNOWN.has(k) && s.length > landingMaxLength(k)) out.push(`${l}.${k}: longer than ${landingMaxLength(k)}`)
+    }
+    const stats = Array.isArray(lang.stats) ? lang.stats : []
+    const filled = stats.filter((x) => isRecord(x) && (str(x.num) || str(x.label) || str(x.source)))
+    if (filled.length > LANDING_MAX_STATS) out.push(`${l}.stats: at most ${LANDING_MAX_STATS} tiles`)
+    filled.forEach((x, i) => {
+      if (!stat(x)) out.push(`${l}.stats[${i + 1}]: value, label and source are required (within ${STAT_MAX.num}/${STAT_MAX.label}/${STAT_MAX.source} chars)`)
+    })
+  }
   return out
 }
 

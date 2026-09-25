@@ -7,7 +7,8 @@ import { getAiSettings } from '@/shared/settings/ai'
 import { getAiChatClient } from '@/shared/ai/provider'
 import { pickChatModel } from '@/shared/ai/credits'
 import { extractUsage, outcomeOf, recordUsage } from '@/shared/ai/usage'
-import { saveLandingOverrides } from '@/shared/settings/landing'
+import { landingProblems, saveLandingOverrides } from '@/shared/settings/landing'
+import { LANDING_KEYS, landingMaxLength } from '@/shared/landing-keys'
 
 type Res = { ok: true } | { error: string }
 
@@ -15,6 +16,9 @@ type Res = { ok: true } | { error: string }
  *  Вход разбирается заново на сервере: форма — не граница доверия. */
 export async function saveLanding(content: unknown): Promise<Res> {
   await requireAdmin()
+  // Отказ с перечнем, а не «Сохранено» при тихо выброшенной плитке (без тихой деградации).
+  const problems = landingProblems(content)
+  if (problems.length) return { error: problems.join('; ') }
   try {
     await saveLandingOverrides(content)
     revalidatePath('/admin/landing')
@@ -27,6 +31,9 @@ export async function saveLanding(content: unknown): Promise<Res> {
 /** AI-подсказка слогана (кнопка прямо в поле). Одна строка на языке поля. */
 export async function suggestSlogan(lang: 'en' | 'ru', kind: string, current: string): Promise<{ text: string } | { error: string }> {
   await requireAdmin()
+  // Ввод идёт в промпт модели — только известный ключ и строка разумной длины.
+  if (!(LANDING_KEYS as readonly string[]).includes(kind)) return { error: 'unknown field' }
+  current = current.slice(0, landingMaxLength(kind))
   const client = await getAiChatClient()
   if (!client) return { error: 'AI не настроен (нет ключа).' }
   const settings = await getAiSettings()

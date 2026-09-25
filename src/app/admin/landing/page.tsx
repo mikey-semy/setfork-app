@@ -19,7 +19,7 @@ export default async function AdminLandingPage() {
 
   return (
     <div className="min-w-0">
-      <PageHeader icon={<Megaphone size={18} />} title={t('admin.landing', lang)} subtitle={t('admin.editableCopyStatsHero', lang)} />
+      <PageHeader icon={<Megaphone size={18} />} title={t('admin.landing', lang)} subtitle={t('admin.landingSubtitle', lang)} />
       <LandingEditor initial={overrides} keys={LANDING_KEYS} lang={lang} />
     </div>
   )

@@ -8,7 +8,9 @@ import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
-import type { LandingKey, LandingLang, LandingOverrides, LandingStat } from '@/shared/settings/landing'
+import type { LandingLang, LandingOverrides, LandingStat } from '@/shared/settings/landing'
+import { LANDING_MAX_STATS, STAT_MAX, isLongKey, landingMaxLength, type LandingKey } from '@/shared/landing-keys'
+import { cn } from '@/shared/lib/cn'
 import { saveLanding, suggestSlogan } from './landing-actions'
 import { t } from '@/shared/i18n'
 import { Spinner } from '@/shared/ui/Spinner'
@@ -25,8 +27,6 @@ import { Segment, SegmentedControl } from '@/shared/ui/SegmentedControl'
  *
  * Плитки полосы доверия — с источником: без него плитка не сохранится (ADR-0005).
  */
-const LONG = /Sub$|Description$|Blurb$|Prompt$/
-
 export function LandingEditor({ initial, keys, lang }: { initial: LandingOverrides; keys: readonly LandingKey[]; lang: Lang }) {
   const router = useRouter()
   const [c, setC] = useState<LandingOverrides>(initial)
@@ -70,7 +70,8 @@ export function LandingEditor({ initial, keys, lang }: { initial: LandingOverrid
           <TextField
             key={`${tab}:${key}`}
             name={key}
-            area={LONG.test(key)}
+            area={isLongKey(key)}
+            max={landingMaxLength(key)}
             value={cur.texts[key] ?? ''}
             placeholder={t('admin.landingDefault', lang)}
             onChange={(v) => setText(key, v)}
@@ -85,16 +86,16 @@ export function LandingEditor({ initial, keys, lang }: { initial: LandingOverrid
         <div className="flex flex-col gap-2">
           {cur.stats.map((s, i) => (
             <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-[8rem_1fr_1fr_auto]">
-              <Input value={s.num} maxLength={12} onChange={(e) => setStat(i, 'num', e.target.value)} placeholder={t('admin.statNum', lang)} size="sm" />
-              <Input value={s.label} maxLength={40} onChange={(e) => setStat(i, 'label', e.target.value)} placeholder={t('admin.statLabel', lang)} size="sm" />
-              <Input value={s.source} maxLength={200} onChange={(e) => setStat(i, 'source', e.target.value)} placeholder={t('admin.statSource', lang)} size="sm" />
+              <Input value={s.num} maxLength={STAT_MAX.num} onChange={(e) => setStat(i, 'num', e.target.value)} placeholder={t('admin.statNum', lang)} size="sm" />
+              <Input value={s.label} maxLength={STAT_MAX.label} onChange={(e) => setStat(i, 'label', e.target.value)} placeholder={t('admin.statLabel', lang)} size="sm" />
+              <Input value={s.source} maxLength={STAT_MAX.source} onChange={(e) => setStat(i, 'source', e.target.value)} placeholder={t('admin.statSource', lang)} size="sm" />
               <IconButton size="sm" variant="ghost" label={t('admin.statRemove', lang)} onClick={() => setStats(cur.stats.filter((_, j) => j !== i))}>
                 <X size={14} />
               </IconButton>
             </div>
           ))}
         </div>
-        {cur.stats.length < 4 && (
+        {cur.stats.length < LANDING_MAX_STATS && (
           <TextButton onClick={() => setStats([...cur.stats, { num: '', label: '', source: '' }])} className="mt-2">
             <Plus size={12} /> {t('admin.statAdd', lang)}
           </TextButton>
@@ -113,9 +114,12 @@ export function LandingEditor({ initial, keys, lang }: { initial: LandingOverrid
 }
 
 // ── Поле строки словаря с AI-подсказкой ──
+// Кнопка AI — ВНЕ `<label>`: иначе её подпись входила бы в доступное имя поля
+// («heroTitle AI»). Поле связано с подписью через id.
 function TextField({
   name,
   area,
+  max,
   value,
   placeholder,
   onChange,
@@ -123,39 +127,45 @@ function TextField({
 }: {
   name: string
   area: boolean
+  max: number
   value: string
   placeholder: string
   onChange: (v: string) => void
   onSuggest: () => Promise<{ text: string } | { error: string }>
 }) {
   const [busy, setBusy] = useState(false)
+  const id = `landing-${name}`
+  const left = max - value.length
 
   const suggest = async () => {
     setBusy(true)
     const r = await onSuggest()
     setBusy(false)
-    if ('text' in r && r.text) onChange(r.text)
+    if ('text' in r && r.text) onChange(r.text.slice(0, max))
   }
 
-  const aiBtn = (
-    <Tooltip label="AI">
-      <IconButton size="xs" variant="ghost" label="AI" onClick={suggest} disabled={busy} className="text-accent hover:bg-accent-soft">
-        {busy ? <Spinner size="sm" /> : <Sparkles size={13} />}
-      </IconButton>
-    </Tooltip>
-  )
-
   return (
-    <label className={area ? 'flex flex-col gap-1 sm:col-span-2' : 'flex flex-col gap-1'}>
-      <span className="font-mono text-body-sm text-ink-2">{name}</span>
+    <div className={area ? 'flex flex-col gap-1 sm:col-span-2' : 'flex flex-col gap-1'}>
+      <span className="flex items-center justify-between gap-2">
+        <label htmlFor={id} className="font-mono text-body-sm text-ink-2">
+          {name}
+        </label>
+        <span className={cn('font-mono text-caption', left < 0 ? 'text-danger' : 'text-muted')}>{left}</span>
+      </span>
       <div className="relative">
         {area ? (
-          <Textarea value={value} maxLength={400} rows={3} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="pr-9" />
+          <Textarea id={id} value={value} maxLength={max} rows={3} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="pr-9" />
         ) : (
-          <Input value={value} maxLength={200} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="pr-9" />
+          <Input id={id} value={value} maxLength={max} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="pr-9" />
         )}
-        <div className={area ? 'absolute right-1.5 top-1.5' : 'absolute right-1.5 top-1/2 -translate-y-1/2'}>{aiBtn}</div>
+        <div className={area ? 'absolute right-1.5 top-1.5' : 'absolute right-1.5 top-1/2 -translate-y-1/2'}>
+          <Tooltip label="AI">
+            <IconButton size="xs" variant="ghost" label="AI" onClick={suggest} disabled={busy} className="text-accent hover:bg-accent-soft">
+              {busy ? <Spinner size="sm" /> : <Sparkles size={13} />}
+            </IconButton>
+          </Tooltip>
+        </div>
       </div>
-    </label>
+    </div>
   )
 }

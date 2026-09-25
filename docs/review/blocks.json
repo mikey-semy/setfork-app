@@ -1325,6 +1325,7 @@
         "public/browserconfig.xml",
         "public/site.webmanifest",
         "tests/widgets",
+        "src/shared/landing-keys.ts",
         "tests/app/api/landing-route.itest.ts",
         "tests/shared/settings/landing.test.ts",
         "tests/features/feedback"

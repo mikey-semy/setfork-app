@@ -1106,6 +1106,7 @@ src/shared/jobs/backoff.ts	H10
 src/shared/jobs/error.ts	H10
 src/shared/jobs/queue.ts	H10
 src/shared/jobs/worker.ts	H10
+src/shared/landing-keys.ts	V12
 src/shared/lib/block-id.ts	V12b
 src/shared/lib/catalog-match.ts	V12b
 src/shared/lib/cn.ts	V12b
