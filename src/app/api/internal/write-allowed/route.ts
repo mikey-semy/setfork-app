@@ -1,7 +1,7 @@
 // eslint-disable-next-line no-restricted-imports -- внутренний канал ядро→фронт: своя авторизация общим токеном, не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
 import { canEditList, editBlockReason } from '@/core'
-import { findDestructiveSteps } from '@/core/domain/destructive-command'
+import { findDestructiveInScript, findDestructiveSteps } from '@/core/domain/destructive-command'
 import { findSecret, findSecretInFile } from '@/core/domain/secret-scan'
 
 /**
@@ -73,7 +73,7 @@ type Verdict =
   | { allow: true }
   | { allow: false; reason: 'archived' | 'frozen' | 'not-found' }
   /** Запрещённая команда: причина + МЕСТО (шаг с единицы, код правила, фрагмент). */
-  | { allow: false; reason: 'destructive'; step: number; rule: string; fragment: string }
+  | { allow: false; reason: 'destructive'; step: number; rule: string; fragment: string; path?: string }
   /** Ключ доступа: файл и строка (у команды шага — `step`), вид ключа и его НАЧАЛО. */
   | { allow: false; reason: 'secret'; path: string; step: number; line: number; rule: string; provider: string; fragment: string }
 
@@ -154,6 +154,14 @@ export async function POST(req: Request) {
     if (first) {
       return json({ allow: false, reason: 'destructive', step: first.index + 1, rule: first.match.reason, fragment: first.match.fragment })
     }
+  }
+
+  // Скрипты из `files` — тем же правилом, что на фасаде (`findDestructiveInScript`): шелл
+  // целиком, Python/JS — по командам, отданным на исполнение. Место — файл.
+  for (const f of files ?? []) {
+    if (!/^scripts\//.test(f.path)) continue
+    const hit = findDestructiveInScript(f.path, f.text)
+    if (hit) return json({ allow: false, reason: 'destructive', step: 0, rule: hit.reason, fragment: hit.fragment, path: f.path })
   }
 
   for (const [i, b] of (blocks ?? []).entries()) {

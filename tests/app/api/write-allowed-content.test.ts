@@ -187,3 +187,21 @@ describe('write-allowed: ключ доступа в пушнутом комми�
     expect((await ask({ owner: 'alice', slug: 'deploy', files: [null] })).status).toBe(400)
   })
 })
+
+describe('write-allowed: скрипт из files — тем же правилом, что на фасаде', () => {
+  it('Python, отдающий rm -rf / на исполнение, — отказ с файлом', async () => {
+    const { verdict } = await ask({ owner: 'alice', slug: 'deploy', files: [{ path: 'scripts/clean.py', text: 'import os\nos.system("rm -rf /")\n' }] })
+    expect(verdict).toMatchObject({ allow: false, reason: 'destructive', path: 'scripts/clean.py', rule: 'wipesFilesystem' })
+  })
+
+  it('Python, лишь упоминающий команду в строке, — проходит (пуш не строже редактора)', async () => {
+    const { verdict } = await ask({ owner: 'alice', slug: 'deploy', files: [{ path: 'scripts/help.py', text: 'print("never run rm -rf /")\n' }] })
+    expect(verdict).toEqual({ allow: true })
+  })
+
+  it('не скрипты (references/) командами не судятся', async () => {
+    const { verdict } = await ask({ owner: 'alice', slug: 'deploy', files: [{ path: 'references/why.md', text: 'rm -rf /' }] })
+    expect(verdict).toEqual({ allow: true })
+  })
+})
+
