@@ -28,7 +28,7 @@ import { VERSION_ERR } from '../version-error'
 import { parseTags, slugify } from '../slug'
 import { notifyWatchersNewVersion } from '../suggestion-side-effects'
 import { enqueueReindex } from '../jobs'
-import { ownerHandle } from './shared'
+import { authoredFilesOf, ownerHandle } from './shared'
 
 /**
  * Жизнь содержимого списка: создание, правка метаданных, новая версия, черновик
@@ -373,12 +373,19 @@ export async function revertToVersion(templateId: string, version: number): Prom
 
   const snap = await getVersionSteps(tpl.id, version)
   if (!snap) return
+  const handle = await ownerHandle(tpl.ownerId)
+  // Файлы — ТОЙ версии, к которой возвращаемся: «пусть содержимым снова станет v3»
+  // касается и `scripts/`. Не прочитались — отказ с причиной, а не откат блоков при
+  // чужих файлах.
+  const authored = await authoredFilesOf(handle, tpl.slug, version).catch(() => null)
+  if (authored === null) redirect(`/${handle}/${tpl.slug}/versions?e=files-unreadable`)
 
   try {
     await listStore.addVersion(tpl.id, {
       note: `revert to v${version}`,
       steps: toStepInput(snap.steps as unknown as ProposedItem[]),
       authorId: session.userId,
+      authored,
     })
   } catch (e) {
     // Отказ записи — не сбой кнопки: без этой ветки человек получал безымянный
@@ -393,14 +400,18 @@ export async function revertToVersion(templateId: string, version: number): Prom
     // Теперь код едет в адрес как есть, а текст ему подбирает VERSION_ERR — общая
     // со страницей таблица, и код без текста туда не попадёт (узда).
     if (e instanceof ListWriteError && VERSION_ERR[e.code]) {
-      redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/versions?e=${e.code}`)
+      redirect(`/${handle}/${tpl.slug}/versions?e=${e.code}`)
+    }
+    // Старая версия может нести то, что сейчас не принимается (команду или ключ, которые
+    // тогда ещё не проверялись): откат — новая версия, и страж её не пропустит.
+    if (e instanceof DestructiveCommandError || e instanceof SecretFoundError) {
+      redirect(`/${handle}/${tpl.slug}/versions?e=content-refused`)
     }
     throw e
   }
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
 
-  const handle = await ownerHandle(tpl.ownerId)
   revalidatePath(`/${handle}/${tpl.slug}`)
   revalidatePath(`/${handle}/${tpl.slug}/versions`)
   redirect(`/${handle}/${tpl.slug}`)
