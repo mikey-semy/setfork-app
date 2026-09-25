@@ -18,6 +18,8 @@
     "auth.mjs",
     "mcp.mjs",
     "skill.mjs",
+    "action.mjs",
+    "action.yml",
     "README.md"
   ],
   "license": "MIT"

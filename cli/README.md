@@ -50,6 +50,47 @@ sf api create_issue @issue.json
 
 `sf skill publish` reads `SKILL.md` and the files directly inside `scripts/`, `references/`, `assets/` (one level, text only; the executable bit is kept for `scripts/`). Anything else in the folder is named as skipped, not silently dropped. Blocks, files and title come in **one version**; files missing from the folder are removed from the list.
 
+## GitHub Action: tag → version and release
+
+Keep the skill in a GitHub repository; every pushed tag becomes one version of the SetFork list and a release under the same tag. The folder is the truth, as with `sf skill publish`: files missing from it are removed from the list.
+
+```yaml
+# .github/workflows/setfork.yml
+on:
+  push:
+    tags: ['v*']
+permissions: {}
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: mikey-semy/setfork-app/cli@<commit-sha>
+        with:
+          list: owner/slug
+          token: ${{ secrets.SETFORK_TOKEN }}   # API token with the write scope
+          path: skills/my-skill                 # default: the repository root
+```
+
+| Input | Default | |
+|---|---|---|
+| `list` | — | the list to publish into, `owner/slug` |
+| `token` | — | API token with the `write` scope, from a secret |
+| `path` | `.` | the skill folder (`SKILL.md` + `scripts/`, `references/`, `assets/`) |
+| `tag` | the pushed tag | release tag; without a tag only a version is published |
+| `prerelease` | `false` | mark the release as a pre-release |
+| `url` | `https://setfork.com` | the instance |
+
+Outputs: `version` (the list version), `release-url`. Re-running the job for a tag that is already released publishes nothing and reports the version the tag points at. Release notes are generated from the version history.
+
+The released skill stays installable at that tag even after the list moves on:
+
+```sh
+npx skills add https://setfork.com/owner/slug/skill.tar.gz?ref=v0.7.0
+```
+
 ## Self-hosted / dev instances
 
 ```sh

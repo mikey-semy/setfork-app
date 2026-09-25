@@ -32,6 +32,9 @@ export interface SkillContext {
   lastRun?: { verdict: string; passed: number; total: number; at: Date } | null
   /** Авторские файлы версии из git-дерева (ADR-0028). Нет — скилл собирается из блоков. */
   authored?: AuthoredFile[] | null
+  /** Скилл снят с тега или версии (`?ref=`), а не с вершины: ссылка на архив в `SKILL.md`
+   *  обязана вести на тот же снимок, иначе файл и архив разошлись бы. */
+  ref?: string | null
 }
 
 export interface SkillFile {
@@ -104,7 +107,8 @@ export function skillDescription(list: ExportList, lang: Lang): string {
 export const listUrl = (list: ExportList, origin: string): string => `${origin}/${list.ownerHandle}/${list.slug}`
 
 /** Адрес архива со всем скиллом — для однофайлового `SKILL.md`, которому некуда сослаться. */
-export const skillArchiveUrl = (list: ExportList, origin: string): string => `${listUrl(list, origin)}/skill.tar.gz`
+export const skillArchiveUrl = (list: ExportList, origin: string, ref?: string | null): string =>
+  `${listUrl(list, origin)}/skill.tar.gz${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`
 
 /**
  * Шапка по стандарту. `metadata` — словарь строка→строка: номер версии тоже строкой,
@@ -261,7 +265,7 @@ function skillBody(
       out.push(`Files from the author, exactly as in this version (review scripts before running):`, '', ...authoredPaths.map((p) => `- [${p}](${p})`), '')
     }
   } else if (withScript || authoredPaths.length) {
-    out.push(`This file is the instructions only. The full skill${withScript ? ' with the script' : ''}${authoredPaths.length ? `${withScript ? ' and' : ' with'} the author\u2019s files` : ''}: ${skillArchiveUrl(list, ctx.origin)}`, '')
+    out.push(`This file is the instructions only. The full skill${withScript ? ' with the script' : ''}${authoredPaths.length ? `${withScript ? ' and' : ' with'} the author\u2019s files` : ''}: ${skillArchiveUrl(list, ctx.origin, ctx.ref)}`, '')
   }
 
   let section = ''
