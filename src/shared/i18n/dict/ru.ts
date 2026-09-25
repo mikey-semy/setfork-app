@@ -1411,6 +1411,8 @@ export const ru: Record<DictKey, string> = {
   skillFilesTitle: 'Файлы скилла',
   skillFilesCount: 'файлов: {n}',
   skillFileFailed: 'Не удалось открыть файл.',
+  skillFileLoading: 'Открываю файл…',
+  skillFileRaw: 'Открыть как текст',
   badgeSkill: 'Скилл',
   badgeTemplate: 'Шаблон',
   badgeFrozen: 'Заморожен',

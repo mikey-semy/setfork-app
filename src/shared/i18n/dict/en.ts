@@ -1415,6 +1415,8 @@ export const en = {
   skillFilesTitle: 'Skill files',
   skillFilesCount: '{n} files',
   skillFileFailed: 'Could not open the file.',
+  skillFileLoading: 'Opening the file…',
+  skillFileRaw: 'Open as plain text',
   badgeSkill: 'Skill',
   badgeTemplate: 'Template',
   badgeFrozen: 'Frozen',

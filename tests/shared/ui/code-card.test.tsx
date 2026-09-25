@@ -99,3 +99,17 @@ describe('карточка кода', () => {
     expect(body.className, 'без overscroll-contain свайп по коду листает страницу').toMatch(/overscroll-x-contain/)
   })
 })
+
+describe('колонка номеров строк', () => {
+  it('ширина по числу цифр: файл в тысячи строк не выталкивает номер за колонку', () => {
+    // Было зашито 20px — две цифры; файл скилла бывает в тысячи строк.
+    const code = Array.from({ length: 1200 }, (_, i) => `x${i}`).join('\n')
+    const { container } = render(
+      <TooltipProvider>
+        <CodeCard code={code} name="py" />
+      </TooltipProvider>,
+    )
+    const num = [...container.querySelectorAll('span')].find((s) => s.textContent === '1200')!
+    expect((num as HTMLElement).style.width).toBe('4ch')
+  })
+})
