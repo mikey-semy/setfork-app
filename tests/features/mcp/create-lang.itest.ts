@@ -33,3 +33,16 @@ describe('create_list: язык', () => {
     expect((await langOf(made.ref)).lang).toBe('ru')
   })
 })
+
+describe('create_list без lang: догадка — только запасной вариант', () => {
+  it('⚠️ украинское название — не ru навсегда, а пусто (кириллица не из русского алфавита)', async () => {
+    const made = (await mcpCreateList(ownerId, { title: 'Як спекти хліб', items: [{ title: 'Замісити тісто' }] })) as { ref: string }
+    expect((await langOf(made.ref)).lang).toBeNull()
+  })
+
+  it('настройка автора старше догадки', async () => {
+    const [u] = await db.insert(users).values({ handle: 'mcp-de', email: 'mcp-de@x.dev', listLang: 'de' }).returning({ id: users.id })
+    const made = (await mcpCreateList(u.id, { title: 'Kartoffelsuppe', items: [{ title: 'Kartoffeln schälen' }] })) as { ref: string }
+    expect((await langOf(made.ref)).lang).toBe('de')
+  })
+})

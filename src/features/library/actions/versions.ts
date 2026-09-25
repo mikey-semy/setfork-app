@@ -1,5 +1,6 @@
 'use server'
 
+import { classifyListLang } from '@/shared/i18n/detect-text-lang'
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -59,6 +60,16 @@ export type NewListRefusal =
   | { kind: 'list_quota'; limit: number }
   | { kind: 'no_title' }
 
+/**
+ * Язык интерфейса как запасной язык нового списка — если текст ему не противоречит. Уверенная
+ * догадка по тексту (`classifyListLang`: ru или en) против языка интерфейса — языка не пишем:
+ * пусто лучше неверного, пустой язык угадывается по алфавиту. Смесь или пусто — противоречия нет.
+ */
+function fallbackUnlessContradicted(uiLang: string, texts: string[]): string | null {
+  const guess = classifyListLang(texts, false)
+  return (guess === 'ru' || guess === 'en') && guess !== uiLang ? null : uiLang
+}
+
 export async function createTemplate(_prev: NewListRefusal | null, formData: FormData): Promise<NewListRefusal | null> {
   const session = await requireSession()
   const lang = await getLang()
@@ -92,8 +103,10 @@ export async function createTemplate(_prev: NewListRefusal | null, formData: For
     list = await listStore.create({
       ownerId: session.userId,
       // Автор пишет на языке интерфейса — это запасной язык списка; настройка «язык моих
-      // списков» старше (ADR-0030, решает фасад).
-      writingLang: lang,
+      // списков» старше (ADR-0030, решает фасад). ⚠️ Но только если текст ему не противоречит:
+      // английский список автора с русским интерфейсом иначе навсегда записался бы русским, и
+      // робот увидел бы русскую страницу над английским текстом (ревью по линзам).
+      langFallback: fallbackUnlessContradicted(lang, [title, desc ?? '', ...proposed.map((p) => `${p.title ?? ''} ${p.desc ?? ''}`)]),
       slug,
       title: { [lang]: title },
       desc: desc ? { [lang]: desc } : {},

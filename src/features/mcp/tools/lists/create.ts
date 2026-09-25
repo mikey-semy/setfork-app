@@ -7,6 +7,7 @@
 
 import 'server-only'
 import { isContentLang } from '@/shared/i18n/iso639'
+import { classifyListLang } from '@/shared/i18n/detect-text-lang'
 import { eq } from 'drizzle-orm'
 import { db, repositories, templates, users } from '@/shared/db'
 import { listQuota } from '@/shared/quota'
@@ -64,6 +65,13 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   // Локаль заголовка/описания: явный lang из запроса или детект по тексту —
   // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
   const lang = isContentLang(input.lang) ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
+  // Язык ОРИГИНАЛА: явный аргумент — факт; без него догадка по тексту идёт ПОСЛЕДНИМ запасным
+  // вариантом (настройка автора старше) и только осторожная — смесь или кириллица не из русского
+  // алфавита дают пусто, а не `ru` навсегда (ADR-0030; ключ текста выше — по-прежнему детект).
+  const guessed = classifyListLang(
+    [title, input.desc ?? '', ...(input.items ?? []).flatMap((it) => [it.title ?? '', it.desc ?? ''])],
+    false,
+  )
 
   // Отказ стража содержимого — ответ с местом, а не исключение: иначе агент видел код
   // `destructive_command:rm_rf` без шага, а пачка (`bulk_create_lists`) падала целиком.
@@ -71,7 +79,8 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   try {
     list = await listStore.create({
       ownerId: userId,
-      lang,
+      lang: isContentLang(input.lang) ? input.lang : null,
+      langFallback: guessed === 'ru' || guessed === 'en' ? guessed : null,
       slug,
       title: { [lang]: title },
       desc: cleanText(input.desc) ? { [lang]: cleanText(input.desc) } : {},

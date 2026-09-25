@@ -1531,6 +1531,7 @@ tests/features/library/change-summary.test.ts	V1k
 tests/features/library/closing-refs.test.ts	V1,V1k
 tests/features/library/commits-keyset.itest.ts	V1g
 tests/features/library/cover-section.test.tsx	V1k
+tests/features/library/create-list-lang.itest.ts	V8c
 tests/features/library/create-reason.test.ts	V1d,V1k
 tests/features/library/create-refusal-keeps-input.test.ts	V1d,V1k
 tests/features/library/create-wire.test.ts	V1d,V1k
@@ -1582,6 +1583,7 @@ tests/features/library/outline-numbering.test.tsx	V1k
 tests/features/library/owner-lists-isolation.itest.ts	V1d
 tests/features/library/ownership-breadth.itest.ts	V1d
 tests/features/library/page-stability.itest.ts	V1g
+tests/features/library/pick-list-lang.test.ts	V1k,V8c
 tests/features/library/pr-settings.test.ts	V1,V1k
 tests/features/library/publication-state.itest.ts	V1d
 tests/features/library/publish-still-eligible.itest.ts	V1d

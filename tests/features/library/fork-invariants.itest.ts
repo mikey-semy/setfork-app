@@ -157,6 +157,50 @@ describe('язык оригинала у копии (ADR-0030)', () => {
     expect(copy?.lang).toBe('be')
   })
 
+  it('⚠️ источник без языка — копия без языка, а не с настройкой того, кто копирует', async () => {
+    await db.update(users).set({ listLang: 'be' }).where(eq(users.id, ctx.forker))
+    const [src] = await db
+      .insert(templates)
+      .values({ ownerId: ctx.owner, slug: 'src-nolang', title: { ru: 'Старый список' }, currentVersion: 1, visibility: 'public', status: 'published' })
+      .returning({ id: templates.id })
+    await db.insert(templateVersions).values({ templateId: src.id, version: 1, note: 'v1' })
+    h.session = { userId: ctx.forker, handle: FORKER }
+    try {
+      await forkTemplate(src.id)
+    } catch (e) {
+      if ((e as Error).message !== 'REDIRECT') throw e
+    } finally {
+      await db.update(users).set({ listLang: null }).where(eq(users.id, ctx.forker))
+    }
+    const [copy] = await db
+      .select({ lang: templates.lang })
+      .from(templates)
+      .where(and(eq(templates.ownerId, ctx.forker), eq(templates.forkedFromId, src.id)))
+    expect(copy?.lang).toBeNull()
+  })
+
+  it('⚠️ «как шаблон» у источника без языка — тоже без языка', async () => {
+    await db.update(users).set({ listLang: 'be' }).where(eq(users.id, ctx.forker))
+    const [src] = await db
+      .insert(templates)
+      .values({ ownerId: ctx.owner, slug: 'tpl-nolang', title: { ru: 'Старый шаблон' }, currentVersion: 1, visibility: 'public', status: 'published', isTemplate: true })
+      .returning({ id: templates.id })
+    await db.insert(templateVersions).values({ templateId: src.id, version: 1, note: 'v1' })
+    h.session = { userId: ctx.forker, handle: FORKER }
+    try {
+      await useTemplate(src.id)
+    } catch (e) {
+      if ((e as Error).message !== 'REDIRECT') throw e
+    } finally {
+      await db.update(users).set({ listLang: null }).where(eq(users.id, ctx.forker))
+    }
+    const [copy] = await db
+      .select({ lang: templates.lang })
+      .from(templates)
+      .where(and(eq(templates.ownerId, ctx.forker), eq(templates.slug, 'tpl-nolang')))
+    expect(copy?.lang).toBeNull()
+  })
+
   it('«использовать как шаблон» — тоже на языке источника', async () => {
     const [src] = await db
       .insert(templates)

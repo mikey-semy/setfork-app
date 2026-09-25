@@ -1739,6 +1739,8 @@
         "tests/features/library/agent-draft-detail.itest.ts",
         "tests/features/library/draft-tags-registry.itest.ts",
         "tests/features/library/list-source-lang-create.itest.ts",
+        "tests/features/library/create-list-lang.itest.ts",
+        "tests/features/library/pick-list-lang.test.ts",
         "tests/features/library/needs-human-store.itest.ts"
       ],
       "ref_paths": []

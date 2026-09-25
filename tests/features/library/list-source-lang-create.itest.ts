@@ -23,7 +23,7 @@ beforeAll(async () => {
   withSetting = b.id
 })
 
-async function create(ownerId: string, extra: { lang?: string | null; writingLang?: string | null }) {
+async function create(ownerId: string, extra: { lang?: string | null; langFallback?: string | null; langFromContent?: boolean }) {
   const list = await listStore.create({
     ownerId,
     slug: `lang-${++n}`,
@@ -44,19 +44,23 @@ async function create(ownerId: string, extra: { lang?: string | null; writingLan
 
 describe('язык оригинала при создании', () => {
   it('известный язык содержимого главнее настройки автора', async () => {
-    expect(await create(withSetting, { lang: 'ru', writingLang: 'en' })).toBe('ru')
+    expect(await create(withSetting, { lang: 'ru', langFallback: 'en' })).toBe('ru')
   })
 
   it('не известен — настройка автора главнее языка, на котором он пишет', async () => {
-    expect(await create(withSetting, { writingLang: 'ru' })).toBe('be')
+    expect(await create(withSetting, { langFallback: 'ru' })).toBe('be')
   })
 
   it('нет ни того, ни другого — язык, на котором автор пишет', async () => {
-    expect(await create(plain, { writingLang: 'ru' })).toBe('ru')
+    expect(await create(plain, { langFallback: 'ru' })).toBe('ru')
   })
 
   it('⚠️ не код ISO 639-1 — не пишется: пусто лучше неверного', async () => {
-    expect(await create(plain, { lang: 'russian', writingLang: 'xx' })).toBeNull()
+    expect(await create(plain, { lang: 'russian', langFallback: 'xx' })).toBeNull()
+  })
+
+  it('⚠️ язык задан только содержимым (копия): не задан — пусто, настройку автора НЕ берём', async () => {
+    expect(await create(withSetting, { lang: null, langFromContent: true, langFallback: 'ru' })).toBeNull()
   })
 
   it('ничего не известно — пусто (язык угадают по алфавиту)', async () => {

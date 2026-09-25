@@ -1,21 +1,31 @@
 import { describe, expect, it } from 'vitest'
+import { LOCALES } from '@/shared/i18n'
 import { ISO_639_1, isContentLang } from '@/shared/i18n/iso639'
 
 /**
- * Перечень языков содержимого — стандарт ISO 639-1, а не наша выдумка. Проверяем стандартом же:
- * у каждого кода есть имя в `Intl.DisplayNames` (голый код вместо имени значит опечатку или
- * устаревший код), повторов нет.
+ * Перечень языков содержимого — стандарт ISO 639-1, а не наша выдумка. Сверяем со стандартом,
+ * который знает ICU: код обязан быть КАНОНИЧЕСКИМ тегом — устаревшие `in`, `iw`, `ji`, `mo`, `sh`
+ * ICU знает и называет, но канонизирует в `id`, `he`, `yi`, `ro`, `sr` (ревью по линзам: «имя есть»
+ * их не отсекало). Выдуманный код ICU отдаёт голым кодом вместо имени.
  */
 describe('ISO 639-1', () => {
-  it('коды уникальны, двухбуквенные, у каждого есть имя языка', () => {
+  it('183 кода, без повторов', () => {
+    expect(ISO_639_1).toHaveLength(183)
     expect(new Set(ISO_639_1).size).toBe(ISO_639_1.length)
-    const names = new Intl.DisplayNames(['en'], { type: 'language' })
-    const unnamed = ISO_639_1.filter((c) => !/^[a-z]{2}$/.test(c) || names.of(c) === c)
-    expect(unnamed).toEqual([])
   })
 
-  it('языки интерфейса и соседние — есть, выдуманных и устаревших — нет', () => {
-    for (const code of ['en', 'ru', 'uk', 'be', 'kk', 'de']) expect(isContentLang(code), code).toBe(true)
-    for (const code of ['xx', 'russian', 'iw', 'EN', '', null, 1]) expect(isContentLang(code), String(code)).toBe(false)
+  it('каждый — канонический тег с именем языка (устаревших и выдуманных нет)', () => {
+    const names = new Intl.DisplayNames(['en'], { type: 'language' })
+    // `tl` (тагальский) ICU канонизирует в `fil` (филиппинский) — это не устаревший код ISO 639-1.
+    const bad = ISO_639_1.filter((c) => names.of(c) === c || (Intl.getCanonicalLocales(c)[0] !== c && c !== 'tl'))
+    expect(bad).toEqual([])
+  })
+
+  it('языки интерфейса входят в языки содержимого', () => {
+    for (const l of LOCALES) expect(isContentLang(l), l).toBe(true)
+  })
+
+  it('выдуманные, устаревшие и не-строки — нет', () => {
+    for (const code of ['xx', 'russian', 'iw', 'in', 'EN', '', null, 1]) expect(isContentLang(code), String(code)).toBe(false)
   })
 })

@@ -264,7 +264,14 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
   }
 
   // Мета — патчем: title/desc только если их меняют, на языке входа, прочие переводы целы.
-  const lang = isContentLang(input.lang) ? input.lang : detectTextLang(`${input.title ?? ''} ${input.desc ?? ''}`)
+  // Без явного `lang` — язык ОРИГИНАЛА списка (ADR-0030), а не догадка детектора: иначе новое
+  // название белорусского списка легло бы под `ru` рядом со старым под `be`, и зритель видел бы
+  // старое. Язык самого списка обновление не меняет — оригинал объявляется при создании.
+  const lang = isContentLang(input.lang)
+    ? input.lang
+    : isContentLang(tpl.lang)
+      ? tpl.lang
+      : detectTextLang(`${input.title ?? ''} ${input.desc ?? ''}`)
   const title = input.title?.trim() ? { ...(tpl.title as Record<string, string>), [lang]: input.title.trim() } : undefined
   const desc = input.desc !== undefined ? { ...(tpl.desc as Record<string, string>), [lang]: input.desc.trim() } : undefined
 
