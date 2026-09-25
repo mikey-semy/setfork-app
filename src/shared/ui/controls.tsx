@@ -4,7 +4,7 @@ import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Monitor, Moon, Sun } from 'lucide-react'
-import { LOCALES, t, type Lang } from '@/shared/i18n'
+import { LOCALES, langCookieString, t, type Lang } from '@/shared/i18n'
 import { Tooltip } from './Tooltip'
 import { Segment, SegmentedControl } from './SegmentedControl'
 import { TOUCH_HIT } from './control'
@@ -13,7 +13,7 @@ export function LangSwitch({ lang }: { lang: Lang }) {
   const router = useRouter()
   function set(next: Lang) {
     if (next === lang) return
-    document.cookie = `lang=${next}; path=/; max-age=${60 * 60 * 24 * 365}`
+    document.cookie = langCookieString(next)
     router.refresh()
   }
   return (

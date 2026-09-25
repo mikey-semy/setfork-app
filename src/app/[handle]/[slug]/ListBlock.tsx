@@ -12,7 +12,7 @@ import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
-import { t, type Lang } from '@/shared/i18n'
+import { servedLang, t, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ListPageData } from './load'
 import { cardClass } from '@/shared/ui/card-style'
 
@@ -38,6 +38,10 @@ type BlockProps = Pick<
 const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
   text: ({ step, section, tpl, viewer, readOnlyView, digSteps, mon, lang }) => {
     const md = blockText(step.content?.md, lang)
+    // Язык текста — только у многоязычного значения: у старой простой строки он неизвестен,
+    // и придумывать его нельзя (`lang` без значения наследует язык страницы).
+    const raw = step.content?.md
+    const mdLang = raw && typeof raw === 'object' ? servedLang(raw as LocaleText, lang) : undefined
     // Текст без слов, но со ссылками — законный блок-«источники» (#962): редактор и
     // MCP его сохраняют, и прятать его при пустом тексте значило бы терять ссылки на
     // глазах у читателя (находка Codex на #963).
@@ -57,7 +61,7 @@ const BLOCKS: Record<string, (p: BlockProps) => ReactNode> = {
             />
           </span>
         )}
-        {md && <Markdown className={`text-body-lg leading-relaxed text-ink-2${canDig ? ' pr-10' : ''}`}>{renderWikiLinks(md)}</Markdown>}
+        {md && <Markdown lang={mdLang} className={`text-body-lg leading-relaxed text-ink-2${canDig ? ' pr-10' : ''}`}>{renderWikiLinks(md)}</Markdown>}
         {/* Источники текста — тем же рядом чипов, что у шага (#962). У текста без слов
             ряд первый в карточке и сам резервирует угол кирки, как в RunTextBlock, —
             иначе длинная ссылка уходит под кнопку (находка Codex на #963). */}

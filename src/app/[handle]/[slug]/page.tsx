@@ -10,9 +10,9 @@ import { FeedList } from '@/features/library/FeedList'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { getLang } from '@/shared/i18n/server'
 import { howToEligible } from '@/shared/seo/howto-eligible'
-import { servedLang } from '@/features/library/export'
-import { t, tr } from '@/shared/i18n'
-import { breadcrumbList, creativeWork, howTo, itemList, JsonLd } from '@/shared/seo/jsonld'
+import { servedLang, t, tr } from '@/shared/i18n'
+import { JsonLd } from '@/shared/seo/jsonld'
+import { listJsonLd } from './list-jsonld'
 import { PAGE, STACK } from '@/shared/ui/control'
 import { ListAbout } from './ListAbout'
 import { ListAdNotices } from './ListAdNotices'
@@ -95,78 +95,35 @@ export default async function ListPage({
   // Структурные данные — только у публично видимой страницы: у черновика их быть
   // не должно ровно потому же, почему его нет в карте сайта.
   const indexable = tpl.status === 'published' && tpl.visibility === 'public' && tpl.moderation === 'active'
-  const path = `/${owner}/${slug}`
-  // Язык ТЕКСТА списка — для поисковика и экранного диктора. Языка в адресе нет
-  // (ADR-0029), и русский список обязан объявлять себя русским при любом языке интерфейса:
-  // робот без `Accept-Language` видит английскую обвязку, но текст — русский.
-  const textLang = servedLang(tpl, lang)
+  // Разметка для поисковика — чистой функцией (см. `list-jsonld.ts`); `HowTo` — только там,
+  // где страница действительно инструкция: условия и причина каждого — в `howToEligible`.
+  const jsonLd = indexable
+    ? listJsonLd({
+        tpl: { title: tpl.title, desc: tpl.desc, tags: tpl.tags, createdAt: tpl.createdAt, updatedAt: tpl.updatedAt, ownerName: tpl.owner.name },
+        owner,
+        slug,
+        lang,
+        version: currentVersion?.version ?? tpl.currentVersion,
+        steps,
+        howToSteps: howToEligible({
+          ordered: tpl.ordered,
+          listKind: tpl.listKind,
+          readOnlyView,
+          find,
+          firstLockedIdx,
+          stepCount: steps.filter((s) => isStepBlock(s)).length,
+        })
+          ? steps.filter((s) => isStepBlock(s))
+          : null,
+      })
+    : []
 
   return (
     <>
-      {indexable ? (
-        <>
-          <JsonLd
-            data={creativeWork({
-              name: tr(tpl.title, lang),
-              description: tr(tpl.desc, lang) || undefined,
-              path,
-              authorName: tpl.owner.name || owner,
-              authorPath: `/${owner}`,
-              datePublished: tpl.createdAt,
-              dateModified: tpl.updatedAt,
-              tags: tpl.tags,
-              // Как ниже в печатной шапке: показанная версия может быть не текущей,
-              // а на некоторых путях её нет вовсе.
-              version: currentVersion?.version ?? tpl.currentVersion,
-              inLanguage: textLang,
-            })}
-          />
-          <JsonLd data={breadcrumbList([{ name: owner, path: `/${owner}` }, { name: tr(tpl.title, lang) || slug, path }])} />
-          {/* Шаги отдаём списком: это то, ЧТО здесь исполняется, и единственная
-              часть страницы, ради которой машина сюда приходит. Потолок в 25 —
-              чтобы разметка не раздувалась на курсах в сотню уроков. */}
-          <JsonLd
-            data={itemList(
-              tr(tpl.title, lang) || slug,
-              steps.slice(0, 25).map((s) => ({ name: tr(s.title, lang) || `${s.n}` })),
-              textLang,
-            )}
-          />
-          {/* `HowTo` — только там, где страница действительно инструкция: условия и
-              причина каждого — в `howToEligible`. */}
-          {howToEligible({
-            ordered: tpl.ordered,
-            listKind: tpl.listKind,
-            readOnlyView,
-            find,
-            firstLockedIdx,
-            stepCount: steps.filter((s) => isStepBlock(s)).length,
-          }) ? (
-            <JsonLd
-              data={howTo({
-                name: tr(tpl.title, lang) || slug,
-                description: tr(tpl.desc, lang) || undefined,
-                path,
-                inLanguage: textLang,
-                // ⚠️ ТОЛЬКО блоки-шаги. В списке бывают текст, картинка, опрос и тест —
-                // страница их шагами не считает (`isStepBlock`, и `ListBlocks` их
-                // нумерацию пропускает). Объявить их шагами инструкции значит соврать
-                // поисковику о составе: человек увидел бы «шаг 3: картинка».
-                // ⚠️ ВСЕ шаги, без потолка. Инструкция, обрезанная на 25-м, объявляет
-                // процедуру законченной там, где страница продолжается, — и теряет как
-                // раз последние шаги, которые обычно и доводят дело до конца (находка
-                // авто-ревью). Страница и так отдаёт все шаги целиком.
-                steps: steps
-                  .filter((s) => isStepBlock(s))
-                  .map((s) => ({
-                    name: tr(s.title, lang) || `${s.n}`,
-                    text: tr(s.desc, lang) || undefined,
-                  })),
-              })}
-            />
-          ) : null}
-        </>
-      ) : null}
+      {/* Типы блоков разметки в выдаче уникальны — ими и ключуем. */}
+      {jsonLd.map((data) => (
+        <JsonLd key={String(data['@type'])} data={data} />
+      ))}
 
       {/* Просмотр: владелец себя не накручивает, сервер дополнительно дедупит. */}
       {!isOwner && mon.viewTracking && <ViewBeacon templateId={tpl.id} />}
@@ -180,8 +137,8 @@ export default async function ListPage({
           <main className={`min-w-0 flex-1 ${STACK}`}>
             {/* Заголовок только для печати (в экране он в шапке) */}
             <div className="hidden print:block">
-              <h1 lang={textLang} className="text-heading font-bold text-ink">{tr(tpl.title, lang)}</h1>
-              {tr(tpl.desc, lang) && <p className="mt-1 text-body text-ink-2">{tr(tpl.desc, lang)}</p>}
+              <h1 lang={servedLang(tpl.title, lang)} className="text-heading font-bold text-ink">{tr(tpl.title, lang)}</h1>
+              {tr(tpl.desc, lang) && <p lang={servedLang(tpl.desc, lang)} className="mt-1 text-body text-ink-2">{tr(tpl.desc, lang)}</p>}
               <p className="mt-1 font-mono text-caption text-muted">
                 {owner}/{slug} · v{currentVersion?.version ?? tpl.currentVersion}
               </p>
@@ -213,10 +170,7 @@ export default async function ListPage({
               />
             )}
 
-            {/* `contents` — без своей коробки: раскладка та же, а у текста — его язык. */}
-            <div lang={textLang} className="contents">
-              <ListBlocks {...loaded} lang={lang} />
-            </div>
+            <ListBlocks {...loaded} lang={lang} />
 
             {/* Файлы автора (ADR-0028) — приложением к списку, проводником в одном блоке. */}
             <SkillFiles files={loaded.skillFiles} base={base} version={loaded.shownVersion} lang={lang} />

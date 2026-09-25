@@ -216,6 +216,7 @@ src/app/[handle]/[slug]/issues/new/page.tsx	V1c,V3
 src/app/[handle]/[slug]/issues/page.tsx	V1c,V3
 src/app/[handle]/[slug]/layout.tsx	V1cb
 src/app/[handle]/[slug]/leaderboard/page.tsx	V6
+src/app/[handle]/[slug]/list-jsonld.ts	V1c
 src/app/[handle]/[slug]/load.ts	V1cb
 src/app/[handle]/[slug]/milestones/page.tsx	V1cb
 src/app/[handle]/[slug]/opengraph-image.tsx	V10
@@ -1785,6 +1786,7 @@ tests/shared/geo.test.ts	V12f
 tests/shared/gh-handle-privesc.itest.ts	V12f
 tests/shared/handle.test.ts	V12f
 tests/shared/http/cache.test.ts	V12f
+tests/shared/i18n/lang-cookie.test.ts	V12f
 tests/shared/i18n/lang-url.test.ts	H6
 tests/shared/i18n/negotiate.test.ts	V12f
 tests/shared/i18n/plural-forms.test.ts	V12f
@@ -1824,6 +1826,7 @@ tests/shared/security/csp.test.ts	H9
 tests/shared/sentry.test.ts	V12f
 tests/shared/seo/howto-eligible.test.ts	H11
 tests/shared/seo/jsonld-in-language.test.ts	H11
+tests/shared/seo/list-content-lang.test.tsx	H11
 tests/shared/seo/page-meta-image.test.ts	H11
 tests/shared/seo/page-meta-lang.test.ts	H11
 tests/shared/seo/site-jsonld.test.ts	H11

@@ -51,6 +51,10 @@ describe('адрес с языковым префиксом', () => {
     expect((await call('/ru/miki/spisok', {}, 'POST')).status).toBe(308)
   })
 
+  it('переход не кешируется: решение о куке зависит от запроса, а 308 браузер хранит долго', async () => {
+    expect((await call('/ru/explore')).headers.get('cache-control')).toBe('private, no-store')
+  })
+
   it('в ремонте — тоже переход, а не заглушка: правило адреса старше', async () => {
     maintenance = true
     expect((await call('/ru/explore')).status).toBe(308)
@@ -58,6 +62,13 @@ describe('адрес с языковым префиксом', () => {
 
   it('язык прежнего адреса остаётся кукой, если расходится с выбранным', async () => {
     expect(langCookie(await call('/ru/explore', { 'accept-language': 'en' }))).toBe('ru')
+  })
+
+  it('кука — на год, на весь сайт и Lax: иначе язык терялся бы после перезапуска или при входе из выдачи', async () => {
+    const raw = (await call('/ru/explore', { 'accept-language': 'en' })).headers.get('set-cookie') ?? ''
+    expect(raw).toMatch(/Path=\//i)
+    expect(raw).toMatch(/Max-Age=31536000/i)
+    expect(raw).toMatch(/SameSite=lax/i)
   })
 
   it('совпадает с выбранным — куку не пишем', async () => {

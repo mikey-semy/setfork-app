@@ -75,7 +75,7 @@ export const INDEXNOW_KEYS = {
  * строк `sent_langs` = `en,ru`, и расхождение с этим значением само отправит их ещё раз:
  * новый адрес и прежние языковые, на которых поисковик увидит перенаправление.
  */
-export const CURRENT_LANGS = ''
+const CURRENT_LANGS = ''
 
 /** Адрес страницы списка — один на все языки; последним, как и раньше, идёт он. */
 export function listUrls(handle: string, slug: string, origin: string): string[] {

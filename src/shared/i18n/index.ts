@@ -16,6 +16,20 @@ export type Lang = Locale
 export const DEFAULT_LANG: Lang = 'en'
 export const LANG_COOKIE = 'lang'
 
+/**
+ * Атрибуты куки языка — ОДНИ на всех, кто её пишет: переключатель в шапке и middleware
+ * (переход со старого адреса `/ru/…`). Год — выбор не теряется при перезапуске браузера;
+ * `Lax` — кука уходит и при переходе с чужого сайта (из выдачи поисковика), а без явного
+ * атрибута Firefox и Safari её `Lax` не считают.
+ */
+export const LANG_COOKIE_OPTIONS = { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' } as const
+
+/** Та же кука строкой — для `document.cookie` в браузере. */
+export function langCookieString(lang: Lang): string {
+  const o = LANG_COOKIE_OPTIONS
+  return `${LANG_COOKIE}=${lang}; path=${o.path}; max-age=${o.maxAge}; samesite=${o.sameSite}`
+}
+
 /** Метаданные локали: endonym (само-название для UI) + English name (для
  *  промпта ИИ-генерации/перевода). BCP-47-код совпадает с самим ключом Lang,
  *  поэтому в Intl.* передаётся напрямую. */
@@ -72,6 +86,16 @@ export function trKey(text: LocaleText | null | undefined, lang: Lang): string |
   if (text[lang]) return lang
   if (text.en) return 'en'
   return Object.keys(text).find((k) => text[k as Lang])
+}
+
+/** Язык, на котором ОТДАН текст: запрошенный, если есть перевод, иначе оригинал.
+ *
+ *  Метка языка наружу обязана говорить о тексте, а не о просьбе: `data.json` русского
+ *  списка без перевода объявлял `en` (fe#968), а разметка с `lang="en"` читалась бы
+ *  экранным диктором английским голосом. Языка в адресе нет (ADR-0029), и поисковик
+ *  узнаёт язык страницы отсюда же. Порядок — тот же, что у `tr`, через `trKey`. */
+export function servedLang(text: LocaleText | null | undefined, lang: Lang): string {
+  return trKey(text, lang) ?? lang
 }
 
 // Словарь UI-строк живёт по языкам в dict/ (Ф1 трека i18n-extraction):

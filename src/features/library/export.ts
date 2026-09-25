@@ -1,5 +1,5 @@
 // Экспорт списка в Markdown / автономный HTML (для скачивания и печати).
-import { tr, trKey, type Lang, type LocaleText } from '@/shared/i18n'
+import { servedLang, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { blockIdentity } from '@/core'
 import type { StepLevel } from '@/shared/db'
 import { safeHref } from '@/shared/lib/safe-url'
@@ -216,23 +216,12 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
   return out.join('\n')
 }
 
-/**
- * Язык, на котором ОТДАН текст списка: запрошенный, если есть перевод, иначе оригинал.
- * Метка `lang` наружу обязана говорить о тексте, а не о просьбе: `data.json` русского
- * списка без перевода объявлял `en`, а разметка с `lang="en"` читалась бы экранным
- * диктором английским голосом (fe#968). Язык названия — через `trKey`, у которого
- * порядок подстановки один с `tr`.
- */
-export function servedLang(list: Pick<ExportList, 'title'>, lang: Lang): string {
-  return trKey(list.title, lang) ?? lang
-}
-
 /** Компактный embed-виджет: авто light/dark, фикс-высота с внутренним скроллом,
  *  футер-ссылка назад. Для вставки в <iframe> на внешних сайтах. */
 export function embedHtml(list: ExportList, lang: Lang, backUrl: string): string {
   const title = esc(tr(list.title, lang))
   // Рамка (число пунктов, «Открыть на SetFork») — на языке зрителя, текст списка — на своём.
-  const textLang = esc(servedLang(list, lang))
+  const textLang = esc(servedLang(list.title, lang))
   const count = list.steps.filter(isStepBlk).length
   const itemsWord = lang === 'ru' ? 'пунктов' : 'items'
   const openWord = lang === 'ru' ? 'Открыть на SetFork' : 'Open on SetFork'
@@ -339,7 +328,7 @@ export function toHtml(list: ExportList, lang: Lang): string {
     .join('\n')
 
   return `<!doctype html>
-<html lang="${esc(servedLang(list, lang))}">
+<html lang="${esc(servedLang(list.title, lang))}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

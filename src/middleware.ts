@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
-import { isLang, DEFAULT_LANG, LANG_COOKIE, t, type Lang } from '@/shared/i18n'
+import { isLang, DEFAULT_LANG, LANG_COOKIE, LANG_COOKIE_OPTIONS, t, type Lang } from '@/shared/i18n'
 import { negotiateLang } from '@/shared/i18n/negotiate'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { maintenanceEnabled } from '@/shared/settings/maintenance'
@@ -129,9 +129,13 @@ function rewrite(req: NextRequest, target: string): NextResponse {
  */
 function dropLangPrefix(req: NextRequest, lang: Lang, rest: string): NextResponse {
   const res = NextResponse.redirect(new URL(rest + req.nextUrl.search, req.url), 308)
+  // ⚠️ Не кешировать: решение о куке зависит от запроса (кука, `Accept-Language`), а 308
+  // браузер хранит долго и отдаёт из кеша уже без `Set-Cookie` — язык стал бы зависеть от
+  // истории браузера. Постоянство для поисковика задаёт код, а не кеш.
+  res.headers.set('Cache-Control', 'private, no-store')
   const cookie = req.cookies.get(LANG_COOKIE)?.value
   const current = isLang(cookie) ? cookie : negotiateLang(req.headers.get('accept-language'))
-  if (current !== lang) res.cookies.set(LANG_COOKIE, lang, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' })
+  if (current !== lang) res.cookies.set(LANG_COOKIE, lang, LANG_COOKIE_OPTIONS)
   return res
 }
 
@@ -183,8 +187,7 @@ const PROBE_PATHS = new Set(['/api/health', '/api/ready', '/healthz'])
 
 export async function middleware(req: NextRequest) {
   // ФАЙЛ КЛЮЧА INDEXNOW — первым делом, по ПОЛНОМУ пути. Он обязан лежать в корне
-  // (`/<key>.txt`): ключ в подкаталоге подтверждал бы только адреса под ним, а языковой
-  // префикс превратил бы `/ru/<key>.txt` в такой подкаталог. Корень занят профилями
+  // (`/<key>.txt`): ключ в подкаталоге подтверждал бы только адреса под ним. Корень занят профилями
   // (`/[handle]`), поэтому отвечаем здесь, без базы и без ремонта: поисковик проверяет
   // ключ, пока сайт на обслуживании, и отказ там стоил бы отказа всей пачки (403).
   // Любой другой `*.txt` идёт дальше как раньше.
