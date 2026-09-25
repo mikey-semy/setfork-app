@@ -546,6 +546,7 @@ export const en = {
   secretWhereStep: 'Step {n}',
   secretWhereMeta: 'Title, description or tags',
   secretSuggestRefusal: 'The change looks like it contains an access key — remove it: the list owner sees the suggestion and the branch stays in their repository. If the key has been shared anywhere, revoke it with the provider.',
+  copyContentRefused: 'The copy was not made: this list holds something no longer accepted — a destructive command or an access key. The author should fix the list.',
   importedFrom: 'Imported from',
   importLicense: 'license {license}',
   importNoLicense: 'no license',

@@ -55,7 +55,7 @@ export async function growLiving(
   // `stale` — ОТДЕЛЬНЫЙ исход, а не разновидность `failed`. Гонка с владельцем и отказ
   // модели требуют от смотрящего в журнал разного: первое — норма и повторится само,
   // второе — повод чинить. Под одним значением их не различить.
-): Promise<{ result: 'grown' | 'nothing-new' | 'failed' | 'stale'; snapshot?: ReadinessInput }> {
+): Promise<{ result: 'grown' | 'nothing-new' | 'failed' | 'stale' | 'refused'; snapshot?: ReadinessInput }> {
   // Ищем материал по тегам списка И по доменам мастера, который за него отвечает. Только по
   // тегам списка искать нельзя: теги списку придумала МОДЕЛЬ при создании («kubernetes», «ci»),
   // а тему подписки задавал ЧЕЛОВЕК («devops») — они законно не совпадают, и лента, которая
@@ -128,6 +128,11 @@ Keep the existing items below in their current order and wording. If the list th
     if (wrote === 'stale') {
       log.info('gardener: living list moved on, growth dropped', { slug: tpl.slug, base: ctx.baseVersion })
       return { result: 'stale' }
+    }
+    // Страж содержимого не принял версию: материал не списываем — как и при гонке.
+    if (wrote === 'refused') {
+      log.info('gardener: living list refused by the content guard', { slug: tpl.slug })
+      return { result: 'refused' }
     }
   }
   // Материал списываем ПОСЛЕ версии: упади запись — новости остались бы «использованными»

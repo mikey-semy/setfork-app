@@ -122,3 +122,36 @@ describe('publishGardenerVersion — сверка версии', () => {
     await expect(publishGardenerVersion('t1', items, { note: 'n', authorId: 'a1', expectedVersion: 7 })).rejects.toThrow('out-of-sync')
   })
 })
+
+/**
+ * ОТКАЗ СТРАЖА СОДЕРЖИМОГО — ИСХОД, А НЕ ИСКЛЮЧЕНИЕ. В списке может лежать команда или ключ,
+ * легшие до проверки; садовник, переписывающий такой список, получал исключение, и оно
+ * обрывало всю партию. Теперь — 'refused', последствия записи не наступают.
+ */
+describe('publishGardenerVersion — отказ стража', () => {
+  beforeEach(() => {
+    calls.length = 0
+  })
+
+  it.each([
+    ['разрушительная команда', async () => new (await import('@/core/domain/destructive-command')).DestructiveCommandError(2, 'wipesFilesystem', 'rm -rf /')],
+    [
+      'ключ доступа',
+      async () => new (await import('@/core/domain/secret-scan')).SecretFoundError({ rule: 'github-pat', provider: 'GitHub', line: 1, fragment: 'ghp_…' }, 1),
+    ],
+  ])('%s → refused, ни afterVersion, ни уведомлений', async (_name, make) => {
+    const err = await make()
+    const { listStore } = await import('@/features/library/list-store')
+    vi.mocked(listStore.addVersion).mockImplementationOnce(async () => {
+      throw err
+    })
+    const res = await publishGardenerVersion('t1', items, {
+      note: 'n',
+      authorId: 'a1',
+      expectedVersion: 5,
+      afterVersion: async () => { calls.push('afterVersion') },
+    })
+    expect(res).toBe('refused')
+    expect(calls).toEqual([])
+  })
+})
