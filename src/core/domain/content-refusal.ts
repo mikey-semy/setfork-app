@@ -18,3 +18,12 @@ export function contentRefusalOf(e: unknown): ContentRefusal | null {
   if (e instanceof SecretFoundError) return { kind: 'secret', rule: e.match.rule, step: String(e.stepIndex), ...at(e.path) }
   return null
 }
+
+/** Отказ из параметров адреса (`?blocked=…&step=…` или `?secret=…&step=…`, у файла ещё
+ *  `&file=…`); нет ни того, ни другого — `null`. */
+export function contentRefusalFrom(sp: { blocked?: string; secret?: string; step?: string; file?: string }): ContentRefusal | null {
+  const at = sp.file ? { path: sp.file } : {}
+  if (sp.secret) return { kind: 'secret', rule: sp.secret, step: sp.step ?? '0', ...at }
+  if (sp.blocked) return { kind: 'destructive', reason: sp.blocked, step: sp.step ?? '?', ...at }
+  return null
+}

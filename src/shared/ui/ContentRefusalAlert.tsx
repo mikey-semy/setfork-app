@@ -2,25 +2,9 @@ import { t, type Lang, type TKey } from '@/shared/i18n'
 import { Alert } from '@/shared/ui/Alert'
 import { secretProvider } from '@/core/domain/secret-scan'
 import type { ContentRefusal } from '@/core/domain/content-refusal'
+import { secretWhere } from './secret-where'
 
 export type { ContentRefusal }
-
-/** Отказ из параметров адреса (`?blocked=…&step=…` или `?secret=…&step=…`, у файла ещё
- *  `&file=…`); нет ни того, ни другого — `null`. */
-export function contentRefusalFrom(sp: { blocked?: string; secret?: string; step?: string; file?: string }): ContentRefusal | null {
-  const at = sp.file ? { path: sp.file } : {}
-  if (sp.secret) return { kind: 'secret', rule: sp.secret, step: sp.step ?? '0', ...at }
-  if (sp.blocked) return { kind: 'destructive', reason: sp.blocked, step: sp.step ?? '?', ...at }
-  return null
-}
-
-/** Где ключ: файл автора, номер шага или мета списка (шаг 0 без файла). */
-export const secretWhere = (step: string, lang: Lang, path?: string): string =>
-  path
-    ? t('fileWhere', lang).replace('{path}', path)
-    : step === '0'
-      ? t('secretWhereMeta', lang)
-      : t('secretWhereStep', lang).replace('{n}', step)
 
 /**
  * Отказ стража содержимого — причина словами и МЕСТО. Одна разметка на редактор списка

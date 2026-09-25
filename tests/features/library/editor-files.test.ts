@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { fileRefusalWarning, parseEditorFiles } from '@/features/library/editor-files'
 import { authoredPathProblem } from '@/core/domain/authored-path'
-import { contentRefusalFrom, secretWhere } from '@/shared/ui/ContentRefusalAlert'
+import { contentRefusalFrom } from '@/core/domain/content-refusal'
+import { secretWhere } from '@/shared/ui/secret-where'
 
 // Поле `authored` формы редактора: «не трогали» и «убрали все» — разные вещи.
 describe('parseEditorFiles', () => {

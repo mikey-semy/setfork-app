@@ -24,7 +24,9 @@ import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { Alert } from '@/shared/ui/Alert'
-import { ContentRefusalAlert, contentRefusalFrom, secretWhere } from '@/shared/ui/ContentRefusalAlert'
+import { ContentRefusalAlert } from '@/shared/ui/ContentRefusalAlert'
+import { contentRefusalFrom } from '@/core/domain/content-refusal'
+import { secretWhere } from '@/shared/ui/secret-where'
 import { secretProvider } from '@/core/domain/secret-scan'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { FloatingActions } from '@/shared/ui/FloatingActions'
@@ -251,10 +253,12 @@ export default async function EditPage({
           canonOf={tpl.id}
         />
 
-        {/* Файлы скилла — в той же форме: уходят в ту же версию, что и шаги. Раздел — у
+        {/* Файлы скилла — в той же форме: уходят в ту же версию, что и шаги. `key` — ревизия
+            черновика: сменился черновик (сохранили, дописал агент) — раздел берёт его набор
+            заново, а не держит копию, снятую при первом показе. Раздел — у
             скилла или у списка, где файлы уже есть: рецепту он только мешал бы. Первый
             файл обычному списку добавляют, пометив его скиллом в настройках. */}
-        {tpl.isSkill || (files?.length ?? 0) > 0 ? <SkillFilesEditor initial={files} dirty={!!draft?.authored} lang={lang} /> : null}
+        {tpl.isSkill || (files?.length ?? 0) > 0 ? <SkillFilesEditor key={draftRefField(tpl.currentVersion, draft)} initial={files} dirty={!!draft?.authored} lang={lang} /> : null}
 
         {/* ОБЕ кнопки в одной форме: публикация обязана взять то, что человек видит
             сейчас, а не прошлое сохранение (иначе дописанное пропадает молча).
