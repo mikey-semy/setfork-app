@@ -324,6 +324,8 @@ export async function acceptCandidate(generationId: string, candidateId: string)
   try {
     list = await listStore.create({
       ownerId: session.userId,
+      // Язык, на котором писала модель: он и есть язык оригинала.
+      lang: genLang,
       slug,
       title: { [genLang]: cand.title || gen.query },
       desc: cand.desc ? { [genLang]: cand.desc } : {},

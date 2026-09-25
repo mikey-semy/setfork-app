@@ -84,6 +84,14 @@ export interface CreateListInput {
   authored?: AuthoredFile[]
   /** Шапка исходного SKILL.md — в строку списка и в канон первой версии. */
   skillHeader?: SkillHeader | null
+  /**
+   * Язык ОРИГИНАЛА, если он известен из самого содержимого (ADR-0030): генерация знает язык,
+   * на котором писала модель, форк — язык источника, MCP — аргумент. Не задан — решает фасад:
+   * настройка автора «язык моих списков», иначе `writingLang`.
+   */
+  lang?: string | null
+  /** Язык, на котором автор пишет сейчас (интерфейс в вебе) — последний запасной вариант. */
+  writingLang?: string | null
 }
 
 export interface ListStore {

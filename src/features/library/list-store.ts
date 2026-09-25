@@ -2,7 +2,8 @@ import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import type { List, ListStore, Moderation, NewStepInput } from '@/core'
 import { canEditList, editBlockReason, ListWriteError } from '@/core'
-import { db, templateVersions, templates } from '@/shared/db'
+import { db, templateVersions, templates, users } from '@/shared/db'
+import { isContentLang } from '@/shared/i18n/iso639'
 import { initialModeration } from '@/shared/moderation/publication-state'
 import { captureError } from '@/shared/observability'
 import { listStore as drizzleStore } from './list-store.adapter'
@@ -132,6 +133,22 @@ async function withCarriedTranslations(templateId: string, input: NewStepInput[]
   return carryTranslations(steps as NextStep[], prev as PrevStep[]) as NewStepInput[]
 }
 
+/**
+ * Язык оригинала нового списка (ADR-0030) — на ЕДИНОЙ точке создания, как модерация: правило
+ * «известный язык содержимого → настройка автора → язык, на котором он пишет» размазанное по
+ * семи путям создания, в одном из них потерялось бы.
+ *
+ * Ядро пока про язык не знает (шаг 3 — поле в каноне `list.v1`), поэтому язык ставится
+ * апдейтом после вставки — как `enforceModeration`. Не код ISO 639-1 — не пишем: пусто лучше
+ * неверного, пустой язык угадывается по алфавиту.
+ */
+async function resolveListLang(input: { ownerId: string; lang?: string | null; writingLang?: string | null }): Promise<string | null> {
+  if (isContentLang(input.lang)) return input.lang
+  const [owner] = await db.select({ listLang: users.listLang }).from(users).where(eq(users.id, input.ownerId)).limit(1)
+  if (isContentLang(owner?.listLang)) return owner.listLang
+  return isContentLang(input.writingLang) ? input.writingLang : null
+}
+
 export const listStore: ListStore = {
   ...base,
   async addVersion(templateId, input) {
@@ -149,8 +166,11 @@ export const listStore: ListStore = {
     // Точка одна и обойти её нельзя — как барьер moderate ниже и assertVersionAllowed
     // выше: правило, размазанное по семи местам создания списка, теряется в одном из них.
     const moderation = await initialModeration(input)
-    const list = await base.create({ ...input, moderation })
+    const { lang: _lang, writingLang: _writing, ...rest } = input
+    const list = await base.create({ ...rest, moderation })
     await enforceModeration(list, moderation)
+    const lang = await resolveListLang(input)
+    if (lang) await db.update(templates).set({ lang }).where(eq(templates.id, list.id))
     await moderate(list.id)
     return list
   },

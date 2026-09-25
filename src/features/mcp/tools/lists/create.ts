@@ -6,6 +6,7 @@
 // украшение, а условие её существования (см. комментарий у mcpBulkCreate).
 
 import 'server-only'
+import { isContentLang } from '@/shared/i18n/iso639'
 import { eq } from 'drizzle-orm'
 import { db, repositories, templates, users } from '@/shared/db'
 import { listQuota } from '@/shared/quota'
@@ -62,7 +63,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   const tags = normalizeTags(input.tags ?? [])
   // Локаль заголовка/описания: явный lang из запроса или детект по тексту —
   // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
-  const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
+  const lang = isContentLang(input.lang) ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
 
   // Отказ стража содержимого — ответ с местом, а не исключение: иначе агент видел код
   // `destructive_command:rm_rf` без шага, а пачка (`bulk_create_lists`) падала целиком.
@@ -70,6 +71,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   try {
     list = await listStore.create({
       ownerId: userId,
+      lang,
       slug,
       title: { [lang]: title },
       desc: cleanText(input.desc) ? { [lang]: cleanText(input.desc) } : {},

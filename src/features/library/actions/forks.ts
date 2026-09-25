@@ -105,6 +105,8 @@ export async function useTemplate(templateId: string): Promise<void> {
   try {
     created = await listStore.create({
       ownerId: session.userId,
+      // Копия — на языке источника: текст скопирован как есть (ADR-0030).
+      lang: src.lang,
       slug,
       title: src.title,
       desc: src.desc,
@@ -255,6 +257,7 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
   let created: Awaited<ReturnType<typeof createForkOrNull>>
   try {
     created = await createForkOrNull({
+      lang: src.lang,
       ownerId: session.userId,
       slug,
       title: src.title,

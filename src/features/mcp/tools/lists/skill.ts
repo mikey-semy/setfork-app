@@ -18,6 +18,7 @@
 // входа, слияние набора и дружелюбный ранний отказ.
 
 import 'server-only'
+import { isContentLang } from '@/shared/i18n/iso639'
 import { and, eq } from 'drizzle-orm'
 import { isPubliclyVisible, type AuthoredFile } from '@/core'
 import { db, listDrafts, templates } from '@/shared/db'
@@ -263,7 +264,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
   }
 
   // Мета — патчем: title/desc только если их меняют, на языке входа, прочие переводы целы.
-  const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${input.title ?? ''} ${input.desc ?? ''}`)
+  const lang = isContentLang(input.lang) ? input.lang : detectTextLang(`${input.title ?? ''} ${input.desc ?? ''}`)
   const title = input.title?.trim() ? { ...(tpl.title as Record<string, string>), [lang]: input.title.trim() } : undefined
   const desc = input.desc !== undefined ? { ...(tpl.desc as Record<string, string>), [lang]: input.desc.trim() } : undefined
 

@@ -250,6 +250,11 @@ export const users = pgTable('users', {
   notifyPrefs: jsonb('notify_prefs').notNull().default({}).$type<NotifyPrefs>(),
   // Язык ДОСТАВКИ (email/push-уведомления) — интерфейс пока English-only.
   lang: text('lang').notNull().default('en').$type<Lang>(),
+  /**
+   * Язык моих списков (ISO 639-1) — язык оригинала НОВОГО списка по умолчанию (ADR-0030, как
+   * «язык публикаций» у Mastodon). Пусто — язык, на котором автор пишет сейчас (интерфейс).
+   */
+  listLang: text('list_lang'),
   deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
   // Приватный профиль: страница /handle скрыта от всех кроме владельца, юзер убран
   // из поиска людей. Публичные СПИСКИ остаются публичными (со своим ником) — это не

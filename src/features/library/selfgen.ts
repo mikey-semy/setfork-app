@@ -197,6 +197,7 @@ export async function selfGenerateOne(expertId: string, topicOverride?: string):
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
   const created = await listStore.create({
     ownerId: userId,
+    lang,
     slug,
     title: { [lang]: draft.title || topic },
     desc: draft.desc ? { [lang]: draft.desc } : {},

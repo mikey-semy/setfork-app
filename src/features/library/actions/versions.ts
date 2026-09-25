@@ -91,6 +91,9 @@ export async function createTemplate(_prev: NewListRefusal | null, formData: For
   try {
     list = await listStore.create({
       ownerId: session.userId,
+      // Автор пишет на языке интерфейса — это запасной язык списка; настройка «язык моих
+      // списков» старше (ADR-0030, решает фасад).
+      writingLang: lang,
       slug,
       title: { [lang]: title },
       desc: desc ? { [lang]: desc } : {},
