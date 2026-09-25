@@ -31,6 +31,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import type { Lang, LocaleText } from '../i18n'
 import type { WatchEvents } from '../../core/ports'
+import type { SkillHeader } from '../../core/domain/skill-header'
 
 // ── Enums ────────────────────────────────────────────────────────────
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
@@ -402,6 +403,9 @@ export const templates = pgTable(
     // Решает автор, как галочку «Template repository» у GitHub: чек-лист со скриптом ещё не
     // обязательно скилл. publish_skill ставит её сам — там намерение названо вызовом.
     isSkill: boolean('is_skill').notNull().default(false),
+    // Шапка исходного SKILL.md (license, compatibility, allowed-tools, metadata) — чтобы
+    // экспорт отдал скилл тем, чем он пришёл («экспорт верный», 24.09.2026). null — нет.
+    skillHeader: jsonb('skill_header').$type<SkillHeader>(),
     coverImage: text('cover_image'), // storage_key обложки-баннера (витрина/og); null → авто-баннер
     accent: text('accent'), // hex акцента карточки/авто-баннера ('' / null = дефолт)
     // Тип списка (ADR-0010): переносится из generations при принятии кандидата,

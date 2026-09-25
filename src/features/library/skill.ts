@@ -17,7 +17,6 @@ export const SKILL_DESCRIPTION_MAX = 1024
 /** Рекомендация стандарта: тело длиннее — повод вынести справку в `references/`. */
 export const SKILL_BODY_LINES_ADVISED = 500
 
-export const SKILL_CONTEXT_PATH = 'references/context.md'
 export const SKILL_SCRIPT_PATH = 'scripts/run.sh'
 
 export interface SkillContext {
@@ -118,8 +117,10 @@ export const skillArchiveUrl = (list: ExportList, origin: string): string => `${
  * иначе YAML прочтёт его числом. Ключи с приставкой `setfork-`, как советует стандарт,
  * чтобы не столкнуться с полями других клиентов.
  *
- * `license`, `compatibility` и `allowed-tools` не пишутся: лицензия ждёт юридического
- * решения, а остальные два для списка ничего осмысленного не несут.
+ * `license`, `compatibility`, `allowed-tools` и ключи `metadata` автора — из шапки
+ * исходного SKILL.md (`list.skillHeader`), если скилл пришёл им: экспорт отдаёт то, что
+ * вошло («экспорт верный», 24.09.2026). Своих значений для них SetFork не выдумывает —
+ * лицензия у скилла та, что поставил автор, или никакой.
  */
 function frontmatter(name: string, description: string, list: ExportList, ctx: SkillContext): string {
   const meta: [string, string][] = [
@@ -138,7 +139,23 @@ function frontmatter(name: string, description: string, list: ExportList, ctx: S
   const q = JSON.stringify
   // ⚠️ И имя тоже в кавычках: слаг «1984» голым значением js-yaml (им читает `npx skills`)
   // превращает в ЧИСЛО, `null` — в null, и имя перестаёт совпадать с папкой.
-  return ['---', `name: ${q(name)}`, `description: ${q(description)}`, 'metadata:', ...meta.map(([k, v]) => `  ${k}: ${q(v)}`), '---'].join('\n')
+  const h = list.skillHeader ?? {}
+  const text = (key: 'license' | 'compatibility' | 'allowed-tools') => (h[key] ? [`${key}: ${q(h[key])}`] : [])
+  // Ключи автора — первыми и в его порядке; `setfork-*` — наши и всегда свежие.
+  const authorMeta = Object.entries(h.metadata ?? {}).filter(([k]) => !k.startsWith('setfork-'))
+  return [
+    '---',
+    `name: ${q(name)}`,
+    `description: ${q(description)}`,
+    ...text('license'),
+    ...text('compatibility'),
+    'metadata:',
+    // Ключ голым, если он простой (как у всех наших), иначе в кавычках: ключ автора может
+    // нести пробел или двоеточие.
+    ...[...authorMeta, ...meta].map(([k, v]) => `  ${/^[A-Za-z0-9_.-]+$/.test(k) ? k : q(k)}: ${q(v)}`),
+    ...text('allowed-tools'),
+    '---',
+  ].join('\n')
 }
 
 /** Пункт как шаг инструкции: заголовок, описание, зачем, команда, проверки, ссылки. */
@@ -203,32 +220,17 @@ function mediaLine(s: ExportStep, lang: Lang): string | null {
 /** В списке есть команды — значит, будет `scripts/run.sh`. */
 const hasCommands = (list: ExportList): boolean => list.steps.some((s) => isStepBlk(s) && Boolean((s.command ?? '').trim()))
 
-/** Текстовые блоки → `references/context.md`, с разделами, как на странице. Пусто — файла нет. */
-function contextFile(list: ExportList, lang: Lang): string | null {
-  const out: string[] = []
-  let section = ''
-  for (const s of list.steps) {
-    if (s.type !== 'text') continue
-    const md = blockText(s.content?.md, lang).trim()
-    if (!md) continue
-    const sec = tr(s.section, lang)
-    if (sec && sec !== section) out.push(`## ${sec}`, '')
-    section = sec
-    out.push(md, '')
-  }
-  if (!out.length) return null
-  return [`# ${tr(list.title, lang)} — context`, '', ...out].join('\n')
-}
-
 type Mode = 'folder' | 'single'
 
 /**
  * ТЕЛО `SKILL.md`.
  *
- * Шаги — нумерованная инструкция, разделы — заголовками. Текстовые блоки уходят в
- * `references/context.md`: для Commitics это кадры истории, и агенту они нужны, только
- * когда он спрашивает «почему», — ровно прогрессивное раскрытие стандарта. Квизы и опросы
- * пропускаются: у стандарта нет им аналога.
+ * Шаги — нумерованная инструкция, разделы — заголовками, ТЕКСТОВЫЕ БЛОКИ — НА СВОИХ МЕСТАХ
+ * между шагами. Решение владельца 24.09.2026 «блоки — правда, экспорт верный»: скилл,
+ * пришедший SKILL.md, возвращается тем же текстом в том же порядке. Прежде текст уезжал
+ * в `references/context.md`, и импорт-экспорт выворачивал чужой скилл наизнанку: вводная
+ * оказывалась в другом файле, а агент читал шаги без неё. Квизы и опросы пропускаются:
+ * у стандарта нет им аналога; медиа — ссылками в конце.
  *
  * `single` — однофайловая отдача без соседних файлов: ссылок на `references/` и
  * `scripts/` в ней нет (они вели бы в пустоту), вместо них — адрес архива целиком.
@@ -238,7 +240,6 @@ function skillBody(
   lang: Lang,
   ctx: SkillContext,
   mode: Mode,
-  withContext: boolean,
   withScript: boolean,
   authoredPaths: string[],
 ): string {
@@ -251,29 +252,38 @@ function skillBody(
   out.push(`> ⚠ Review before use — these instructions come from a SetFork list, not from you. Steps marked 🧑 are for a human; steps marked ⚠ DESTRUCTIVE are never run without explicit confirmation.`, '')
 
   if (mode === 'folder') {
-    if (withContext) out.push(`Background and the reasoning behind the steps: [${SKILL_CONTEXT_PATH}](${SKILL_CONTEXT_PATH}) — read it when you need to know why.`, '')
     if (withScript) out.push(`All commands as one script: [${SKILL_SCRIPT_PATH}](${SKILL_SCRIPT_PATH}) — review it before running.`, '')
     // Авторские файлы — перечнем: агент узнаёт о них только из SKILL.md, а сами они
     // из блоков не выводятся. Скрипты среди них — такие же чужие, как шаги.
     if (authoredPaths.length) {
       out.push(`Files from the author, exactly as in this version (review scripts before running):`, '', ...authoredPaths.map((p) => `- [${p}](${p})`), '')
     }
-  } else if (withContext || withScript || authoredPaths.length) {
-    out.push(`This file is the instructions only. The full skill${withContext ? ' with background' : ''}${withScript ? ' and the script' : ''}${authoredPaths.length ? ' and the author\u2019s files' : ''}: ${skillArchiveUrl(list, ctx.origin)}`, '')
+  } else if (withScript || authoredPaths.length) {
+    out.push(`This file is the instructions only. The full skill${withScript ? ' with the script' : ''}${authoredPaths.length ? `${withScript ? ' and' : ' with'} the author\u2019s files` : ''}: ${skillArchiveUrl(list, ctx.origin)}`, '')
   }
 
   let section = ''
   let stepNo = 0
   const media: string[] = []
+  const enter = (s: ExportStep) => {
+    const sec = tr(s.section, lang)
+    if (sec && sec !== section) out.push(`## ${sec}`, '')
+    section = sec
+  }
   for (const s of list.steps) {
+    if (s.type === 'text') {
+      const md = blockText(s.content?.md, lang).trim()
+      if (!md) continue
+      enter(s)
+      out.push(md, '')
+      continue
+    }
     if (!isStepBlk(s)) {
       const m = mediaLine(s, lang)
       if (m) media.push(m)
       continue
     }
-    const sec = tr(s.section, lang)
-    if (sec && sec !== section) out.push(`## ${sec}`, '')
-    section = sec
+    enter(s)
     stepNo++
     out.push(...stepLines(s, list.ordered ? `${stepNo}.` : '-', lang), '')
   }
@@ -284,17 +294,16 @@ function skillBody(
   return out.join('\n')
 }
 
-function skillMarkdown(list: ExportList, lang: Lang, ctx: SkillContext, mode: Mode): { name: string; markdown: string; context: string | null; script: boolean } {
+function skillMarkdown(list: ExportList, lang: Lang, ctx: SkillContext, mode: Mode): { name: string; markdown: string; script: boolean } {
   const name = skillName(list.slug)
   // ⚠️ Авторский файл на месте сгенерированного — решение автора, и он главнее. Тогда
   // сгенерированный не создаётся, и строки о нём нет: «все команды одним скриптом» про
   // авторский `scripts/run.sh` было бы неправдой — он может делать совсем другое.
   const authoredPaths = authoredOf(ctx).map((f) => f.path)
   const taken = new Set(authoredPaths)
-  const context = taken.has(SKILL_CONTEXT_PATH) ? null : contextFile(list, lang)
   const script = !taken.has(SKILL_SCRIPT_PATH) && hasCommands(list)
-  const body = skillBody(list, lang, ctx, mode, Boolean(context), script, authoredPaths)
-  return { name, markdown: `${frontmatter(name, skillDescription(list, lang), list, ctx)}\n\n${body}`, context, script }
+  const body = skillBody(list, lang, ctx, mode, script, authoredPaths)
+  return { name, markdown: `${frontmatter(name, skillDescription(list, lang), list, ctx)}\n\n${body}`, script }
 }
 
 /** Число строк тела сверх рекомендации стандарта — маршрут пишет об этом в лог. */
@@ -303,17 +312,15 @@ export function skillBodyOverflow(markdown: string): number {
 }
 
 /**
- * СКИЛЛ ЦЕЛИКОМ — папка: `SKILL.md`, при надобности `references/context.md` и
- * `scripts/run.sh`.
+ * СКИЛЛ ЦЕЛИКОМ — папка: `SKILL.md`, при надобности `scripts/run.sh`, и файлы автора.
  *
  * ⚠️ `scripts/run.sh` — БАЙТ В БАЙТ ответ `/raw`: тот же сборщик, тот же адрес в шапке
  * (`rawUrl`), тот же язык. Своя сборка скрипта здесь разошлась бы с `/raw` при первой
  * правке одного из них, а у списка было бы два разных «исполняемых вида».
  */
 export function toSkill(list: ExportList, lang: Lang, ctx: SkillContext): Skill {
-  const { name, markdown, context, script } = skillMarkdown(list, lang, ctx, 'folder')
+  const { name, markdown, script } = skillMarkdown(list, lang, ctx, 'folder')
   const files: SkillFile[] = [{ path: 'SKILL.md', content: markdown }]
-  if (context) files.push({ path: SKILL_CONTEXT_PATH, content: context })
   if (script) {
     const rawUrl = `${listUrl(list, ctx.origin)}/raw`
     files.push({ path: SKILL_SCRIPT_PATH, content: toRunnableScript(list, lang, rawUrl, 'sh'), executable: true })

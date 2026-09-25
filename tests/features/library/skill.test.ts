@@ -14,6 +14,9 @@ import {
   type SkillContext,
 } from '@/features/library/skill'
 import { tarGz } from '@/shared/lib/tar'
+import { parseSkillMd } from '@/features/library/skill-parse'
+import { pickSkillHeader } from '@/core/domain/skill-header'
+import { parse as parseYaml } from 'yaml'
 
 /**
  * СПИСОК КАК СКИЛЛ АГЕНТА — по стандарту Agent Skills (agentskills.io/specification).
@@ -146,9 +149,29 @@ describe('SKILL.md по стандарту', () => {
     expect(frontmatter(skill.markdown).name, 'стандарт требует имя = папка').toBe(skill.name)
   })
 
-  it('в шапке только поля стандарта; лицензии и «когда применять» нет', () => {
+  it('без шапки исходника — только поля стандарта; своей лицензии SetFork не выдумывает', () => {
     const fm = frontmatter(toSkill(list(), 'ru', ctx).markdown)
     expect(fm.keys).toEqual(['name', 'description', 'metadata'])
+  })
+
+  it('шапка исходника возвращается: license, compatibility, allowed-tools, metadata автора — первой', () => {
+    const header = { license: 'Apache-2.0', compatibility: 'Needs git', 'allowed-tools': 'Bash(git:*)', metadata: { author: 'Ann: "the" one' } }
+    const md = toSkill(list({ skillHeader: header }), 'ru', ctx).markdown
+    const fm = parseYaml(/^---\n([\s\S]*?)\n---\n/.exec(md)![1]) as Record<string, unknown> & { metadata: Record<string, string> }
+    expect(Object.keys(fm)).toEqual(['name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools'])
+    expect(fm.license).toBe('Apache-2.0')
+    expect(fm['allowed-tools']).toBe('Bash(git:*)')
+    expect(Object.keys(fm.metadata)).toEqual(['author', 'setfork-ref', 'setfork-url', 'setfork-version'])
+    expect(fm.metadata.author).toBe('Ann: "the" one')
+    // Круг: шапка, прочитанная обратно, — та же, что хранилась.
+    expect(pickSkillHeader(parseSkillMd(md).header).header).toEqual(header)
+  })
+
+  it('чужой setfork-* в сохранённой шапке не подменяет живой', () => {
+    const md = toSkill(list({ skillHeader: { metadata: { 'setfork-version': '1' } } }), 'ru', ctx).markdown
+    expect(frontmatter(md).metadata['setfork-version']).toBe('3')
+    // И ключ один: дубль строгий YAML (им читает `npx skills`) не разберёт вовсе.
+    expect(md.match(/setfork-version:/g)).toHaveLength(1)
   })
 
   it('metadata — строки: ссылка, канон, версия, подпись, проверка, прогон', () => {
@@ -303,34 +326,47 @@ describe('SKILL.md по стандарту', () => {
   })
 })
 
-describe('раскрытие по уровням: история — отдельно, проверки — в SKILL.md', () => {
+describe('текст — в SKILL.md на своих местах («блоки — правда, экспорт верный»)', () => {
   const commitics = list({
     steps: [text('**Кадр 1.** Фелипе не может запустить тест.'), text('**Кадр 2.** Том показывает дверь.'), step({ title: { ru: 'Читать exports' }, section: { ru: 'Что это значит для нас' } })],
   })
 
-  it('текстовые блоки уходят в references/context.md', () => {
+  it('текстовые блоки — в SKILL.md, в порядке списка, до шага своего раздела', () => {
+    const md = toSkill(commitics, 'ru', ctx).markdown
+    const at = (s: string) => md.indexOf(s)
+    expect(at('Фелипе не может запустить тест'), 'история потерялась').toBeGreaterThan(0)
+    expect(at('Фелипе')).toBeLessThan(at('Том показывает дверь'))
+    expect(at('Том показывает дверь')).toBeLessThan(at('## Что это значит для нас'))
+    expect(at('## Что это значит для нас')).toBeLessThan(at('Читать exports'))
+  })
+
+  it('references/context.md больше не собирается и не упоминается', () => {
     const skill = toSkill(commitics, 'ru', ctx)
-    const context = skill.files.find((f) => f.path === 'references/context.md')
-    expect(context?.content, 'история потерялась').toContain('Фелипе не может запустить тест')
-    expect(context?.content).toContain('Том показывает дверь')
-    expect(skill.markdown, 'история легла в SKILL.md целиком').not.toContain('Фелипе')
-  })
-
-  it('SKILL.md ссылается на context.md — иначе агент о нём не узнает', () => {
-    expect(toSkill(commitics, 'ru', ctx).markdown).toContain('](references/context.md)')
-  })
-
-  it('нет текстовых блоков — нет ни файла, ни ссылки на него', () => {
-    const skill = toSkill(list(), 'ru', ctx)
     expect(skill.files.map((f) => f.path)).not.toContain('references/context.md')
-    expect(skill.markdown).not.toContain('references/')
+    expect(skill.markdown).not.toContain('context.md')
   })
 
-  // Однофайловая отдача без соседей: ссылка на references/ вела бы в пустоту.
-  it('однофайловый SKILL.md не ссылается на соседние файлы, а называет архив', () => {
+  it('текст в разделе — под заголовком раздела, как на странице', () => {
+    const md = toSkill(list({ steps: [text('Сначала прочтите.', 'Подготовка'), step({ title: { ru: 'Шаг' }, section: { ru: 'Подготовка' } })] }), 'ru', ctx).markdown
+    expect(md.indexOf('## Подготовка')).toBeLessThan(md.indexOf('Сначала прочтите.'))
+    expect(md.split('## Подготовка').length, 'раздел повторён').toBe(2)
+  })
+
+  // Соседние текстовые блоки при разборе сливаются в один: разбор делит прозу только
+  // шагами и заголовками. Текст и порядок целы; нарезка на блоки — нет, и это известная
+  // цена «блоки — правда»: у SKILL.md нет разметки границы абзацных блоков.
+  it('круг «экспорт → разбор» сохраняет текст и порядок относительно шагов', () => {
+    const parsed = parseSkillMd(toSkillMarkdown(commitics, 'ru', ctx))
+    expect(parsed.items.map((b) => b.type ?? 'step')).toEqual(['text', 'step'])
+    expect(parsed.items[0].text).toMatch(/Фелипе[\s\S]*Том показывает дверь/)
+    expect(parsed.items[1]).toMatchObject({ title: 'Читать exports', section: 'Что это значит для нас' })
+  })
+
+  it('однофайловый SKILL.md без скрипта и файлов — без ссылок наружу, текст на месте', () => {
     const md = toSkillMarkdown(commitics, 'ru', ctx)
     expect(md).not.toContain('](references/')
-    expect(md).toContain(`${ORIGIN}/miki/otkaz-veb-servisa/skill.tar.gz`)
+    expect(md).not.toContain('skill.tar.gz')
+    expect(md).toContain('Фелипе')
   })
 
   it('однофайловый SKILL.md списка без фона и скрипта архив не рекламирует', () => {
@@ -381,7 +417,7 @@ describe('архив', () => {
         ...skill.files.map((f) => ({ path: `${skill.name}/${f.path}`, content: f.content, mode: f.executable ? 0o755 : 0o644 })),
       ]),
     )
-    expect(paths).toEqual([`${skill.name}/SKILL.md`, `${skill.name}/references/context.md`, `${skill.name}/scripts/run.sh`].sort())
+    expect(paths).toEqual([`${skill.name}/SKILL.md`, `${skill.name}/scripts/run.sh`].sort())
     expect(paths.some((p) => p.includes('..'))).toBe(false)
   })
 
