@@ -24,8 +24,17 @@ type Tag = { file: string; line: number; name: string; ok: boolean }
  */
 const EMITTERS = new Set(['script', 'Script', 'ThemeProvider'])
 
+/**
+ * ⚠️ Дерево строится только у файлов, где имя такого тега вообще встречается в тексте:
+ * без этого разбор всех ~450 `.tsx` шёл за секунду в простое и не укладывался в
+ * тайм-аут теста под нагрузкой прогона с покрытием (master, 25.09). Фильтр ничего не
+ * теряет: тег не может оказаться в файле, не упомянув своё имя.
+ */
+const MENTIONS = new RegExp(`<(?:${[...EMITTERS].join('|')})\\b`)
+
 function scriptTags(file: string): Tag[] {
   const text = readFileSync(file, 'utf8')
+  if (!MENTIONS.test(text)) return []
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   const out: Tag[] = []
   const visit = (node: ts.Node) => {
