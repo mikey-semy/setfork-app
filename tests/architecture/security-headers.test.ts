@@ -57,6 +57,7 @@ describe('заголовки безопасности', () => {
       expect(applied, `${path}: nosniff`).toContain('X-Content-Type-Options')
       expect(applied, `${path}: HSTS`).toContain('Strict-Transport-Security')
       expect(applied, `${path}: Permissions-Policy`).toContain('Permissions-Policy')
+      expect(applied, `${path}: COOP`).toContain('Cross-Origin-Opener-Policy')
     }
   })
 })

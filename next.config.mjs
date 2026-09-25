@@ -52,7 +52,8 @@ const nextConfig = {
   // Базовые security-заголовки на все ответы. nosniff — критично для отдачи
   // пользовательских вложений (браузер не MIME-sniff-ит файл в html/script).
   // X-Frame-Options и полный CSP тут НЕ ставим глобально: embed-роут намеренно
-  // фреймится (frame-ancestors *), а CSP script-src требует nonce для inline-темы.
+  // фреймится (frame-ancestors *), а политику скриптов с nonce ставит middleware — у
+  // каждого ответа он свой (shared/security/csp.ts).
   async headers() {
     // HSTS: год, с поддоменами. Проверено 19.09.2026 — `stats`, `docs`, `mail` и `www`
     // отвечают по HTTPS, а http отдаёт 301 на https, поэтому включение поддоменов
@@ -66,11 +67,20 @@ const nextConfig = {
       key: 'Permissions-Policy',
       value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
     }
+    // COOP: окно, открытое с чужого сайта, не получает ссылки на наше (`window.opener`),
+    // и наоборот — защита от подмены вкладки и утечек через общий контекст окон
+    // (Spectre). Цена — связь с всплывающими окнами других сайтов, а у нас их нет: вход
+    // через GitHub, Яндекс и OAuth-клиентов идёт ПЕРЕНАПРАВЛЕНИЕМ, Telegram — опросом
+    // статуса со своей же страницы (features/auth/TelegramLoginWatcher.tsx).
+    // ⚠️ Появится вход всплывающим окном — здесь `same-origin-allow-popups`, иначе окно
+    // провайдера не сможет сообщить результат открывшей его странице.
+    const coop = { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' }
     const base = [
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
       hsts,
       permissions,
+      coop,
     ]
     return [
       {

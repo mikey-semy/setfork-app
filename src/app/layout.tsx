@@ -31,6 +31,7 @@ import './globals.css'
 import { SITE_ORIGIN } from '@/shared/site'
 import { JsonLd, organization, softwareApplication, webSite } from '@/shared/seo/jsonld'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
+import { NONCE_HEADER } from '@/shared/security/csp'
 import { LANG_HEADER, langAlternates, langHref, splitLangPath } from '@/shared/i18n/url'
 
 /**
@@ -201,7 +202,10 @@ export const viewport: Viewport = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [lang, user, jar] = await Promise.all([getLang(), getSession(), cookies()])
+  const [lang, user, jar, h] = await Promise.all([getLang(), getSession(), cookies(), headers()])
+  // Nonce политики скриптов (shared/security/csp.ts): свои скрипты Next.js помечает сам,
+  // а написанные здесь руками без него попали бы в отчёты о нарушениях.
+  const nonce = h.get(NONCE_HEADER) ?? undefined
   // Сайдбар: свёрнут по умолчанию, развёрнут — только по явному выбору человека.
   // Выбор приходит КУКОЙ, чтобы сервер нарисовал его сразу и не было прыжка после гидрации.
   const sidebarCollapsed = jar.get(SIDEBAR_COOKIE)?.value !== '0'
@@ -278,12 +282,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Локальный выбор (localStorage) приоритетнее аккаунтного SSR — мгновенная
             реакция на этом устройстве; иначе остаются data-атрибуты из аккаунта. */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html:
               "try{var d=document.documentElement,a=localStorage.getItem('sf-accent'),f=localStorage.getItem('sf-font'),s=localStorage.getItem('sf-scale');if(a)d.setAttribute('data-accent',a);else if(a==='')d.removeAttribute('data-accent');if(f)d.setAttribute('data-font',f);else if(f==='')d.removeAttribute('data-font');if(s)d.setAttribute('data-scale',s);else if(s==='')d.removeAttribute('data-scale')}catch(e){}",
           }}
         />
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange nonce={nonce}>
           <TooltipProvider>
             <div className="flex min-h-screen flex-col bg-canvas">
               {/* Состояние сайдбара приходит из куки: сервер рисует его сразу таким, каким
@@ -313,6 +318,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {process.env.NEXT_PUBLIC_UMAMI_URL && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <script
             defer
+            nonce={nonce}
             src={`${process.env.NEXT_PUBLIC_UMAMI_URL}/script.js`}
             data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
           />

@@ -8,6 +8,7 @@ import { REQUEST_PATH_HEADER } from '@/shared/request-path'
 import { LANG_HEADER, langHref, splitLangPath } from '@/shared/i18n/url'
 import { dialectMime, errorScript, normalizeDialect } from '@/core/domain/script-dialect'
 import { indexNowKey, indexNowKeyPath } from '@/shared/indexnow'
+import { CSP_HEADER, NONCE_HEADER, cspNonce, cspPolicy } from '@/shared/security/csp'
 
 // Режим «сайт на ремонте»: включается админом из /admin (флаг в БД, кэш 5с)
 // либо аварийно env SETFORK_MAINTENANCE=1. Всё отвечает 503 + Retry-After,
@@ -59,6 +60,26 @@ async function isAdminRequest(req: NextRequest): Promise<boolean> {
 }
 
 /**
+ * Одноразовый nonce и политика скриптов — в запрос и в ответ.
+ *
+ * В ЗАПРОС: по заголовку политики Next.js вешает nonce на свои скрипты, по `x-nonce`
+ * его берёт корневой layout для наших. ⚠️ Оба заголовка ставятся ВСЕГДА, поверх
+ * присланных клиентом: иначе nonce выбирал бы тот, кто шлёт запрос, и политика
+ * пропускала бы его скрипт.
+ * В ОТВЕТ: та же политика.
+ */
+function withCsp(headers: Headers): (res: NextResponse) => NextResponse {
+  const nonce = cspNonce()
+  const policy = cspPolicy(nonce)
+  headers.set(NONCE_HEADER, nonce)
+  headers.set(CSP_HEADER, policy)
+  return (res) => {
+    res.headers.set(CSP_HEADER, policy)
+    return res
+  }
+}
+
+/**
  * Пропустить запрос дальше, сообщив серверным компонентам ПУТЬ.
  *
  * В App Router путь текущего запроса компоненту недоступен, а он нужен ровно одному
@@ -76,7 +97,8 @@ function pass(req: NextRequest): NextResponse {
   headers.delete(LANG_HEADER)
   // Путь ВМЕСТЕ с query: перенаправление обязано сохранить и то и другое.
   headers.set(REQUEST_PATH_HEADER, req.nextUrl.pathname + req.nextUrl.search)
-  return NextResponse.next({ request: { headers } })
+  const csp = withCsp(headers)
+  return csp(NextResponse.next({ request: { headers } }))
 }
 
 /**
@@ -133,7 +155,9 @@ function proceed(req: NextRequest, lang: Lang | null, rest: string, target?: str
     url = req.nextUrl.clone()
     url.pathname = rest
   }
-  const res = NextResponse.rewrite(url, { request: { headers } })
+  // Заголовки запроса дописываются ДО того, как Next их заберёт.
+  const csp = withCsp(headers)
+  const res = csp(NextResponse.rewrite(url, { request: { headers } }))
   if (lang) {
     const cookie = req.cookies.get(LANG_COOKIE)?.value
     const current = isLang(cookie) ? cookie : negotiateLang(req.headers.get('accept-language'))
