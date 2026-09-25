@@ -54,6 +54,8 @@ describe('classifySkillLicense', () => {
     expect(classifySkillLicense('MIT', 'Proprietary. All use requires a paid license.').open).toBe(false)
     expect(classifySkillLicense('MIT', 'Some custom terms nobody recognises.').open).toBe(false)
     expect(classifySkillLicense('Proprietary', MIT_TEXT).open).toBe(false)
+    // Шапка называет свою, не открытую лицензию — файл MIT её не отменяет.
+    expect(classifySkillLicense('LicenseRef-Acme-EULA', MIT_TEXT).open).toBe(false)
     expect(classifySkillLicense('MIT', MIT_TEXT)).toEqual({ id: 'MIT', open: true, from: 'header' })
   })
 
