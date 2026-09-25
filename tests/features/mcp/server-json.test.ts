@@ -28,16 +28,21 @@ describe('server.json', () => {
     expect(doc.version).toMatch(/^\d+\.\d+\.\d+$/)
     expect(doc.description.length).toBeLessThanOrEqual(100)
   })
+
+  it('данные издателя — в пределах 4 КБ, которые реестр принимает в publisher-provided', () => {
+    expect(JSON.stringify(doc._meta[META]).length).toBeLessThan(4096)
+  })
 })
 
 describe('план публикации (scripts/mcp-registry-plan.py)', () => {
   const dir = mkdtempSync(join(tmpdir(), 'mcp-plan-'))
-  const run = (published?: unknown) => {
-    const local = join(dir, 'server.json')
-    writeFileSync(local, JSON.stringify(doc))
+  const run = (published?: unknown, latest = '', local: unknown = doc) => {
+    const localPath = join(dir, 'server.json')
+    writeFileSync(localPath, JSON.stringify(local))
     const pub = join(dir, 'published.json')
     if (published !== undefined) writeFileSync(pub, JSON.stringify(published))
-    return spawnSync('python3', ['scripts/mcp-registry-plan.py', local, published === undefined ? join(dir, 'none.json') : pub], { encoding: 'utf8' })
+    const args = ['scripts/mcp-registry-plan.py', localPath, published === undefined ? join(dir, 'none.json') : pub, latest]
+    return spawnSync('python3', args, { encoding: 'utf8' })
   }
 
   it('версии в реестре нет — publish', () => {
@@ -49,6 +54,18 @@ describe('план публикации (scripts/mcp-registry-plan.py)', () => {
   it('версия есть, поверхность та же — skip', () => {
     const r = run({ server: doc })
     expect(r.stdout.trim()).toBe('skip')
+  })
+
+  it('тело 404 — не запись: версии нет, publish', () => {
+    expect(run({ title: 'Not Found', status: 404, detail: 'Server not found' }).stdout.trim()).toBe('publish')
+  })
+
+  it('версии нет, но она ниже последней опубликованной — отказ: последней она не станет', () => {
+    const r = run(undefined, '9.0.0')
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toContain('ниже последней')
+    // Выше последней — публикуется.
+    expect(run(undefined, '1.0.1').stdout.trim()).toBe('publish')
   })
 
   it('версия есть, поверхность другая — отказ: версию не подняли', () => {

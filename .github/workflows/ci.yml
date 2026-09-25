@@ -67,6 +67,19 @@ jobs:
       - name: CLI sf
         working-directory: cli
         run: npm test
+      # Запись в реестре MCP: поверхность поменяли, а version в server.json не подняли —
+      # ловим здесь, в PR, а не красной джобой после мержа (версии в реестре неизменяемы).
+      # Реестр недоступен (код 2) — предупреждение, а не красный: чужой сбой не держит PR.
+      - name: Реестр MCP — план записи
+        run: |
+          set +e
+          OUT=$(python3 scripts/mcp-registry-plan.py --fetch server.json 2>&1); CODE=$?
+          set -e
+          case "$CODE" in
+            0) echo "::notice::реестр MCP: $OUT" ;;
+            2) echo "::warning::$OUT — план не проверен" ;;
+            *) echo "::error::$OUT"; exit 1 ;;
+          esac
       # Повтор сборки СНЯТ 23.08. Он лечил ровно один срыв — загрузку шрифтов с
       # fonts.googleapis.com, от которой зависела каждая сборка. С 20.08 шрифты лежат
       # у нас (next/font/local, src/shared/fonts), внешнего хоста в сборке нет, и
@@ -426,6 +439,9 @@ jobs:
     concurrency:
       group: deploy-prod-frontend
       queue: max
+    # Какой коммит выкатка подтвердила свежим на проде — по нему идёт публикация в реестр MCP.
+    outputs:
+      fresh: ${{ steps.target.outputs.fresh }}
     permissions:
       contents: read
       issues: write
@@ -781,17 +797,21 @@ jobs:
   # Запись опубликовали руками 07.07 и больше не трогали: сервер с тех пор получил десятки
   # инструментов, сценарии и ресурсы, а реестр показывал июльский. Версия записи — своя
   # (`server.json` → version, решение владельца 25.09), а слепок поверхности в ней сверяет с
-  # кодом тест `server-json`. Что делать — решает `scripts/mcp-registry-plan.py`:
-  # нет версии → публикуем; есть и поверхность та же → ничего; есть, а поверхность другая →
-  # красный: поверхность меняли, а версию не подняли (версии в реестре неизменяемы).
+  # кодом тест `server-json`. Что делать — решает `scripts/mcp-registry-plan.py` (тот же
+  # план гоняет `check` в PR): нет версии → публикуем; есть и поверхность та же → ничего;
+  # есть, а поверхность другая, или версия ниже последней → красный.
   #
   # Отдельной джобой, а не шагом выкатки: сбой реестра не должен красить деплой и будить
   # тревогу «деплой упал». Публикуется С ПРОДА: там лежит ключ подписи реестра
   # (`/root/setfork-mcp-registry.key`, DNS-подтверждение домена), и он не покидает сервер.
   mcp-registry:
+    # Только если выкатка подтвердила свежим ИМЕННО этот коммит. Прогон, чей коммит уже не
+    # вершина master, выкатку пропускает, но завершается успехом — без этого условия он
+    # опубликовал бы неизменяемую версию записи с поверхностью, которой на проде нет.
     if: >-
       github.ref == 'refs/heads/master' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      needs.deploy.outputs.fresh == github.sha
     needs: [deploy]
     runs-on: [self-hosted, setfork]
     concurrency:
@@ -802,10 +822,6 @@ jobs:
     timeout-minutes: 10
     env:
       DEPLOY: root@159.195.151.41
-      # Публикатор — закреплённый релиз и его контрольная сумма из официального
-      # registry_1.8.1_checksums.txt: бинарь запускается рядом с ключом подписи.
-      PUBLISHER_VERSION: v1.8.1
-      PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
     steps:
       - uses: actions/checkout@v4
         with:
@@ -814,16 +830,11 @@ jobs:
       - name: План — публиковать ли эту версию
         id: plan
         run: |
-          V=$(python3 -c "import json; print(json.load(open('server.json'))['version'])")
-          CODE=$(curl -s -m 30 -o /tmp/mcp-published.json -w '%{http_code}' \
-            "https://registry.modelcontextprotocol.io/v0/servers/com.setfork%2Fsetfork/versions/$V")
-          case "$CODE" in
-            200) ;;
-            404) rm -f /tmp/mcp-published.json ;;
-            *) echo "::error::реестр ответил $CODE — повторит следующая выкатка"; exit 1 ;;
-          esac
-          ACTION=$(python3 scripts/mcp-registry-plan.py server.json /tmp/mcp-published.json)
-          echo "::notice::реестр MCP, версия $V: $ACTION"
+          set +e
+          ACTION=$(python3 scripts/mcp-registry-plan.py --fetch server.json); CODE=$?
+          set -e
+          [ "$CODE" = 0 ] || { echo "::error::план не построен (код $CODE) — повторит следующая выкатка"; exit 1; }
+          echo "::notice::реестр MCP: $ACTION"
           echo "action=$ACTION" >> "$GITHUB_OUTPUT"
 
       - name: Ключ деплоя (ro-mount раннера)
@@ -832,23 +843,34 @@ jobs:
           test -f /ssh/setfork || { echo "::error::нет /ssh/setfork — подними раннер из setfork-ci-runner/docker-compose.yml"; exit 1; }
           install -m 600 /ssh/setfork /tmp/deploy_key_mcp
 
+      # Протокол — тот же, что у официального mcp-publisher (cmd/publisher/auth/common.go):
+      # подпись ed25519 метки времени RFC 3339 → POST /v0/auth/dns → registry_token →
+      # POST /v0/publish. Сам публикатор НЕ используется: ключ он берёт только аргументом
+      # (`-private-key <hex>`), а на проде /proc без hidepid и есть другие пользователи —
+      # зерно ключа было бы видно в `ps`. Здесь подписывает openssl прямо файлом ключа, а
+      # подпись, токен и тело идут curl-у файлами в каталоге 700, а не аргументами.
       - name: Публикация с прода
         if: steps.plan.outputs.action == 'publish'
         run: |
           SSH="ssh -i /tmp/deploy_key_mcp -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
-          $SSH "cat > /tmp/setfork-server.json" < server.json
-          # Зерно ключа (32 байта ed25519, hex) извлекается НА СЕРВЕРЕ и туда же подаётся:
-          # в лог раннера и на раннер ключ не попадает.
-          $SSH "PV=$PUBLISHER_VERSION PS=$PUBLISHER_SHA256 bash -s" <<'REMOTE'
+          # Каталог 700 на сервере — под запись, подпись и токен; убирается в конце скрипта.
+          D=$($SSH 'umask 077; mktemp -d')
+          $SSH "cat > $D/server.json" < server.json
+          $SSH "D=$D bash -s" <<'REMOTE'
           set -euo pipefail
-          d=$(mktemp -d); trap 'rm -rf "$d" /tmp/setfork-server.json' EXIT
-          curl -fsSL -m 120 -o "$d/p.tgz" "https://github.com/modelcontextprotocol/registry/releases/download/$PV/mcp-publisher_linux_amd64.tar.gz"
-          echo "$PS  $d/p.tgz" | sha256sum -c --quiet -
-          tar -xzf "$d/p.tgz" -C "$d" mcp-publisher
-          cd "$d"
-          SEED=$(openssl pkey -in /root/setfork-mcp-registry.key -outform DER | tail -c 32 | od -An -tx1 | tr -d ' \n')
-          HOME="$d" ./mcp-publisher login dns -algorithm ed25519 -domain setfork.com -private-key "$SEED" >/dev/null
-          HOME="$d" ./mcp-publisher publish /tmp/setfork-server.json
+          trap 'rm -rf "$D"' EXIT
+          R=https://registry.modelcontextprotocol.io
+          TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          printf %s "$TS" > "$D/ts"
+          SIG=$(openssl pkeyutl -sign -rawin -inkey /root/setfork-mcp-registry.key -in "$D/ts" | od -An -tx1 | tr -d ' \n')
+          printf '{"domain":"setfork.com","timestamp":"%s","signed_timestamp":"%s"}' "$TS" "$SIG" > "$D/auth.json"
+          curl -fsS -m 30 -X POST -H 'Content-Type: application/json' --data @"$D/auth.json" "$R/v0/auth/dns" -o "$D/token.json"
+          python3 -c 'import json,sys; print("Authorization: Bearer " + json.load(open(sys.argv[1]))["registry_token"])' "$D/token.json" > "$D/auth.hdr"
+          CODE=$(curl -sS -m 60 -o "$D/out.json" -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H @"$D/auth.hdr" --data @"$D/server.json" "$R/v0/publish")
+          case "$CODE" in
+            200|201) python3 -c 'import json,sys; s=json.load(open(sys.argv[1]))["server"]; print("опубликовано:", s["name"], s["version"])' "$D/out.json" ;;
+            *) echo "реестр ответил $CODE: $(head -c 500 "$D/out.json")"; exit 1 ;;
+          esac
           REMOTE
 
       - name: Очистка ключа деплоя
