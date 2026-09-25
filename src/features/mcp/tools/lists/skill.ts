@@ -31,6 +31,8 @@ import { mcpCreateList, normalizeTags } from './create'
 import { rowsToProposed } from './patch-block'
 import { headVersion } from './base-version'
 import { authoredError, contentError, ownedList, writeProposed } from './write'
+import { pickSkillHeader, type SkillHeader } from '@/core/domain/skill-header'
+import { findSecretInContent } from '@/core/domain/secret-scan'
 
 export interface McpSkillFileInput {
   path: string
@@ -143,7 +145,12 @@ export function mergeSkillFiles(
 
 /** Метка «Скилл» — publish_skill ставит её сам: намерение названо вызовом, как у GitHub
  *  шаблон ставят галочкой. Снять её можно в настройках; вызов её не снимает. */
-const markSkill = (where: ReturnType<typeof eq>) => db.update(templates).set({ isSkill: true }).where(where)
+const markSkill = (where: ReturnType<typeof eq>, header?: { header: SkillHeader | null }) =>
+  db
+    .update(templates)
+    // Шапку трогаем, только если пришёл SKILL.md: правка блоками её не касается.
+    .set({ isSkill: true, ...(header ? { skillHeader: header.header } : {}) })
+    .where(where)
 
 const installLine = (ref: string) => `npx skills add ${SITE_URL}/${ref}/skill.tar.gz`
 
@@ -168,15 +175,17 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         items: parsed.items as McpItemInput[],
       }
     : rawInput
-  // Что из исходника в список не попадает (license, compatibility, metadata…) — называем,
-  // а не теряем молча; хранение шапки — следующий шаг трека.
-  const headerKeys = parsed ? Object.keys(parsed.header) : []
+  // Шапка исходника (license, compatibility, allowed-tools, metadata) хранится при списке и
+  // возвращается экспортом. Что сохранить не вышло — называем, а не теряем молча.
+  const picked = parsed ? pickSkillHeader(parsed.header) : undefined
   const parseNotes = parsed
-    ? [
-        ...parsed.warnings,
-        ...(headerKeys.length ? [`not stored yet from the SKILL.md header: ${headerKeys.join(', ')}`] : []),
-      ]
+    ? [...parsed.warnings, ...(picked?.dropped.length ? [`not kept from the SKILL.md header: ${picked.dropped.join(', ')}`] : [])]
     : []
+  // Шапка публикуется вместе со скиллом — ключ в лицензии или metadata утёк бы так же.
+  const headerLeak = picked?.header ? findSecretInContent([], undefined, picked.header) : null
+  if (headerLeak) {
+    return { error: `refused: the SKILL.md header contains what looks like an access key for ${headerLeak.match.provider} (${headerLeak.match.rule}): ${headerLeak.match.fragment} — remove it; if it was ever shared, revoke it with the provider` }
+  }
 
   if (!input.list) {
     if (!input.title?.trim()) return { error: 'title is required for a new skill (or pass list to update an existing one)' }
@@ -194,9 +203,10 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         // У нового списка «без файлов» — это просто без файлов: слать пустой набор ядру
         // незачем, а старое ядро на нём отказало бы скиллу, которому файлы и не нужны.
         authored: authored.length ? authored : undefined,
+        skillHeader: picked?.header,
       })
       if ('error' in res) return res
-      await markSkill(and(eq(templates.ownerId, userId), eq(templates.slug, res.ref.split('/')[1]))!)
+      await markSkill(and(eq(templates.ownerId, userId), eq(templates.slug, res.ref.split('/')[1]))!, picked)
       if (authored.length && res.authoredApplied !== true) return notApplied(`the draft ${res.ref} (version 1)`)
       const { authoredApplied: _applied, ...rest } = res
       return {
@@ -253,7 +263,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
 
   const filesChanged = merged ? merged.added.length + merged.changed.length + merged.removed.length > 0 : false
   if (!input.items && !filesChanged && !title && !desc && !input.tags && input.ordered === undefined) {
-    await markSkill(eq(templates.id, tpl.id))
+    await markSkill(eq(templates.id, tpl.id), picked)
     if (input.catalog) await assignCatalogByName(tpl.id, userId, input.catalog)
     return { ref: `${handle}/${slug}`, version: current, note: 'Nothing to change — the files and blocks are already like this; no version was made.' }
   }
@@ -267,23 +277,38 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
     if (!detail) return { error: 'list not found' }
     proposed = rowsToProposed(detail.steps)
   }
-  const res = await writeProposed(
-    tpl,
-    handle,
-    slug,
-    proposed,
-    input.note?.trim() || 'skill via API',
-    {
-      tags: input.tags ? normalizeTags(input.tags) : tpl.tags,
-      ordered: input.ordered ?? tpl.ordered,
-      ...(title ? { title } : {}),
-      ...(desc ? { desc } : {}),
-    },
-    input.baseVersion,
-    // Файлы не трогали — поля нет: ядро перенесёт набор родителя как есть.
-    merged && filesChanged ? merged.files : undefined,
-  )
-  if ('error' in res) return res
+  // Шапку — ДО версии: канон версии ядро собирает из строки списка, и она обязана попасть
+  // в ту же версию, что и блоки из этого же SKILL.md. Версию не приняли — шапка
+  // возвращается прежней: иначе экспорт отдавал бы новую лицензию со старыми шагами.
+  const headerBefore = picked ? tpl.skillHeader : undefined
+  const restoreHeader = () => (picked ? db.update(templates).set({ skillHeader: headerBefore ?? null }).where(eq(templates.id, tpl.id)) : undefined)
+  if (picked) await markSkill(eq(templates.id, tpl.id), picked)
+  let res: Awaited<ReturnType<typeof writeProposed>>
+  try {
+    res = await writeProposed(
+      tpl,
+      handle,
+      slug,
+      proposed,
+      input.note?.trim() || 'skill via API',
+      {
+        tags: input.tags ? normalizeTags(input.tags) : tpl.tags,
+        ordered: input.ordered ?? tpl.ordered,
+        ...(title ? { title } : {}),
+        ...(desc ? { desc } : {}),
+      },
+      input.baseVersion,
+      // Файлы не трогали — поля нет: ядро перенесёт набор родителя как есть.
+      merged && filesChanged ? merged.files : undefined,
+    )
+  } catch (e) {
+    await restoreHeader()
+    throw e
+  }
+  if ('error' in res) {
+    await restoreHeader()
+    return res
+  }
   await markSkill(eq(templates.id, tpl.id))
   if (merged && filesChanged && res.authoredApplied !== true) return notApplied(`version ${res.version}`)
   const filed = input.catalog ? await assignCatalogByName(tpl.id, userId, input.catalog) : undefined

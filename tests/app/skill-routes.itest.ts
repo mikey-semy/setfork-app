@@ -111,12 +111,12 @@ describe('что агент получает в SKILL.md', () => {
 })
 
 describe('архив', () => {
-  it('папка с именем скилла: SKILL.md, фон и скрипт — и ничего больше', async () => {
+  it('папка с именем скилла: SKILL.md и скрипт — и ничего больше (текст — в SKILL.md)', async () => {
     const res = await getTar('runbook')
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toBe('application/gzip')
     const { paths } = await unpack(res)
-    expect(paths).toEqual(['runbook/SKILL.md', 'runbook/references/context.md', 'runbook/scripts/run.sh'])
+    expect(paths).toEqual(['runbook/SKILL.md', 'runbook/scripts/run.sh'])
   })
 
   it('слаг с дефисом на конце — папка и name без него, и они совпадают', async () => {

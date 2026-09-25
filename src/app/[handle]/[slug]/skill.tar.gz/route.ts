@@ -12,7 +12,7 @@ import { problemListNotFound } from '@/shared/http/problem'
  *   npx skills add https://setfork.com/{handle}/{slug}/skill.tar.gz
  *
  * Внутри одна папка с именем скилла (стандарт требует, чтобы оно совпадало с `name`):
- * `SKILL.md`, фон из текстовых блоков в `references/context.md` и команды списка в
+ * `SKILL.md` (шаги и текст на своих местах) и команды списка в
  * `scripts/run.sh` — тот же скрипт, что отдаёт `/raw`. Авторские файлы версии
  * (`scripts/`, `references/`, `assets/` из git-дерева, ADR-0028) ложатся рядом байт в байт.
  *

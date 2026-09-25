@@ -28,6 +28,17 @@
       "enum": ["procedure", "inventory", "checklist", "criteria", "options", "recipe"],
       "description": "Тип списка (ADR-0010). Отсутствует у списков, где тип не определён."
     },
+    "skillHeader": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Шапка исходного SKILL.md (Agent Skills): license, compatibility, allowed-tools, metadata. Экспорт скилла отдаёт её обратно. Отсутствует, если список пришёл не скиллом.",
+      "properties": {
+        "license": { "type": "string" },
+        "compatibility": { "type": "string" },
+        "allowed-tools": { "type": "string" },
+        "metadata": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
     "version": {
       "type": "integer",
       "minimum": 1,

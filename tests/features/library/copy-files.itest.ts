@@ -64,7 +64,10 @@ description('копия содержимого несёт файлы автор�
     const v1 = (await row(OWNER, 'copy-skill'))!.currentVersion
     await mcpPublishSkill(ownerId, { list: `${OWNER}/copy-skill`, baseVersion: v1, files: [GUIDE] })
     // Опубликовать и сделать шаблоном — это настройки, их проверяют другие тесты.
-    await db.update(templates).set({ status: 'published', visibility: 'public', moderation: 'active', isTemplate: true }).where(eq(templates.slug, 'copy-skill'))
+    await db
+      .update(templates)
+      .set({ status: 'published', visibility: 'public', moderation: 'active', isTemplate: true, skillHeader: { license: 'Apache-2.0' } })
+      .where(eq(templates.slug, 'copy-skill'))
   })
 
   it('«Вернуть версию» возвращает и файлы той версии', async () => {
@@ -83,6 +86,7 @@ description('копия содержимого несёт файлы автор�
     await acting(forkTemplate(src.id))
     const fork = (await row(OTHER, 'copy-skill'))!
     expect(fork.isSkill).toBe(true)
+    expect(fork.skillHeader, 'лицензия автора потерялась в форке').toEqual({ license: 'Apache-2.0' })
     expect(await filesAt(OTHER, 'copy-skill', fork.currentVersion)).toEqual(await filesAt(OWNER, 'copy-skill', src.currentVersion))
   })
 
@@ -92,6 +96,7 @@ description('копия содержимого несёт файлы автор�
     await acting(useTemplate(src.id))
     const copy = (await row(OWNER, 'copy-skill-copy'))!
     expect(copy.isSkill).toBe(true)
+    expect(copy.skillHeader).toEqual({ license: 'Apache-2.0' })
     expect(await filesAt(OWNER, 'copy-skill-copy', copy.currentVersion)).toEqual(await filesAt(OWNER, 'copy-skill', src.currentVersion))
   })
 })

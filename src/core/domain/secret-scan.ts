@@ -218,7 +218,8 @@ export function findSecret(text: string): SecretMatch | null {
 function textOf(v: unknown): string {
   if (typeof v === 'string') return v
   if (Array.isArray(v)) return v.map(textOf).filter(Boolean).join('\n')
-  if (v && typeof v === 'object') return Object.values(v).map(textOf).filter(Boolean).join('\n')
+  // Имена полей — тоже текст: в `metadata` шапки скилла ключ приходит от автора.
+  if (v && typeof v === 'object') return Object.entries(v).flatMap(([k, x]) => [k, textOf(x)]).filter(Boolean).join('\n')
   return ''
 }
 

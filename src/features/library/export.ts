@@ -8,6 +8,7 @@ import { markdownCodeBlock } from '@/shared/lib/markdown'
 import { stepDanger } from '@/core/domain/destructive-command'
 import { productItems, blockText } from './blocks'
 import { carriesCommands, dialectSpec, flatten, hashComment, scriptFilename, scriptUrl, type ScriptDialect } from '@/core/domain/script-dialect'
+import type { SkillHeader } from '@/core/domain/skill-header'
 
 export interface ExportStep {
   n: number
@@ -90,6 +91,8 @@ export interface ExportList {
   slug: string
   /** Подпись версии из ядра. Пусто — законно: у списков до git-слоя коммита нет. */
   commitSha?: string | null
+  /** Шапка исходного SKILL.md — экспорт скилла отдаёт её обратно. */
+  skillHeader?: SkillHeader | null
   steps: ExportStep[]
 }
 
@@ -113,6 +116,7 @@ export function toExportList(detail: TemplateDetail, commitSha?: string | null):
     version: currentVersion?.version ?? tpl.currentVersion,
     ownerHandle: tpl.owner.handle,
     slug: tpl.slug,
+    skillHeader: tpl.skillHeader ?? null,
     steps: steps.map((s) => ({
       n: s.n,
       type: s.type,

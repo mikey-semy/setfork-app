@@ -373,4 +373,8 @@ message CreateListRequest {
   // список рождается git-first: репозиторий и тег v1 сразу, с файлами в дереве. Не задано —
   // как раньше: только Postgres, репозиторий лениво при первом обращении.
   AuthoredFileSet authored = 14;
+  // Шапка исходного SKILL.md (license, compatibility, allowed-tools, metadata) JSON-строкой;
+  // '' — нет. Едет в СОЗДАНИЕ, а не догоняющим апдейтом: у git-first рождения v1 — это
+  // коммит, и шапка, поставленная после, в его list.json уже не попала бы.
+  string skill_header_json = 15;
 }
