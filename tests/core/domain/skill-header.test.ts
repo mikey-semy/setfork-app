@@ -34,4 +34,8 @@ describe('pickSkillHeader', () => {
     expect(pickSkillHeader({}).header).toBeNull()
     expect(pickSkillHeader({ metadata: { 'setfork-ref': 'a/b' } }).header).toBeNull()
   })
+
+  it('allowed-tools списком — строкой через пробел, как в спецификации', () => {
+    expect(pickSkillHeader({ 'allowed-tools': ['Bash(git:*)', 'Read'] }).header).toEqual({ 'allowed-tools': 'Bash(git:*) Read' })
+  })
 })

@@ -190,6 +190,11 @@ describe('findSecretInContent / assertNoSecrets: место находки', () 
     expect(hit).toMatchObject({ step: 0, path: 'references/setup.md', match: { line: 3 } })
   })
 
+  it('ключ в ИМЕНИ поля (metadata шапки скилла) — тоже ключ', () => {
+    const key = SAMPLES['openrouter-api-key'].split('=')[1]
+    expect(findSecretInContent([], undefined, { metadata: { [key]: 'x' } })?.match.rule).toBe('openrouter-api-key')
+  })
+
   it('файлы не заданы (перенос из прошлой версии) — не проверяются', () => {
     expect(findSecretInContent([{ title: 'ok' }], undefined)).toBeNull()
   })

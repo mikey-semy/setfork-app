@@ -276,26 +276,38 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
     if (!detail) return { error: 'list not found' }
     proposed = rowsToProposed(detail.steps)
   }
-  // Шапку — ДО версии: канон версии собирается из строки списка, и она обязана попасть
-  // в ту же версию, что и блоки из этого же SKILL.md.
+  // Шапку — ДО версии: канон версии ядро собирает из строки списка, и она обязана попасть
+  // в ту же версию, что и блоки из этого же SKILL.md. Версию не приняли — шапка
+  // возвращается прежней: иначе экспорт отдавал бы новую лицензию со старыми шагами.
+  const headerBefore = picked ? tpl.skillHeader : undefined
+  const restoreHeader = () => (picked ? db.update(templates).set({ skillHeader: headerBefore ?? null }).where(eq(templates.id, tpl.id)) : undefined)
   if (picked) await markSkill(eq(templates.id, tpl.id), picked)
-  const res = await writeProposed(
-    tpl,
-    handle,
-    slug,
-    proposed,
-    input.note?.trim() || 'skill via API',
-    {
-      tags: input.tags ? normalizeTags(input.tags) : tpl.tags,
-      ordered: input.ordered ?? tpl.ordered,
-      ...(title ? { title } : {}),
-      ...(desc ? { desc } : {}),
-    },
-    input.baseVersion,
-    // Файлы не трогали — поля нет: ядро перенесёт набор родителя как есть.
-    merged && filesChanged ? merged.files : undefined,
-  )
-  if ('error' in res) return res
+  let res: Awaited<ReturnType<typeof writeProposed>>
+  try {
+    res = await writeProposed(
+      tpl,
+      handle,
+      slug,
+      proposed,
+      input.note?.trim() || 'skill via API',
+      {
+        tags: input.tags ? normalizeTags(input.tags) : tpl.tags,
+        ordered: input.ordered ?? tpl.ordered,
+        ...(title ? { title } : {}),
+        ...(desc ? { desc } : {}),
+      },
+      input.baseVersion,
+      // Файлы не трогали — поля нет: ядро перенесёт набор родителя как есть.
+      merged && filesChanged ? merged.files : undefined,
+    )
+  } catch (e) {
+    await restoreHeader()
+    throw e
+  }
+  if ('error' in res) {
+    await restoreHeader()
+    return res
+  }
   await markSkill(eq(templates.id, tpl.id))
   if (merged && filesChanged && res.authoredApplied !== true) return notApplied(`version ${res.version}`)
   const filed = input.catalog ? await assignCatalogByName(tpl.id, userId, input.catalog) : undefined

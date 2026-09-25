@@ -10,6 +10,7 @@ import { safeHref } from '@/shared/lib/safe-url'
 import { stepDanger } from '@/core/domain/destructive-command'
 import { blockText } from './blocks'
 import { isStepBlk, toRunnableScript, type ExportList, type ExportStep } from './export'
+import { TEXT_CLOSE, TEXT_OPEN, textNeedsFence } from './skill-parse'
 
 /** Пределы стандарта для шапки `SKILL.md`. */
 export const SKILL_NAME_MAX = 64
@@ -150,12 +151,20 @@ function frontmatter(name: string, description: string, list: ExportList, ctx: S
     ...text('license'),
     ...text('compatibility'),
     'metadata:',
-    // Ключ голым, если он простой (как у всех наших), иначе в кавычках: ключ автора может
-    // нести пробел или двоеточие.
-    ...[...authorMeta, ...meta].map(([k, v]) => `  ${/^[A-Za-z0-9_.-]+$/.test(k) ? k : q(k)}: ${q(v)}`),
+    ...[...authorMeta, ...meta].map(([k, v]) => `  ${yamlKey(k)}: ${q(v)}`),
     ...text('allowed-tools'),
     '---',
   ].join('\n')
+}
+
+/**
+ * Ключ `metadata` в шапке: голым, только если YAML прочтёт его той же строкой. Ключ автора
+ * бывает `1.0`, `0x1F`, `null` или `true` — голым их js-yaml (им читает `npx skills`)
+ * превращает в число, null и булево, а `1` рядом с `1.0` даёт «повтор ключа» и нечитаемый
+ * скилл. Всё, что не начинается с буквы или совпадает со словом YAML, — в кавычках.
+ */
+function yamlKey(k: string): string {
+  return /^[A-Za-z][A-Za-z0-9_-]*$/.test(k) && !/^(true|false|null|yes|no|on|off|y|n)$/i.test(k) ? k : JSON.stringify(k)
 }
 
 /** Пункт как шаг инструкции: заголовок, описание, зачем, команда, проверки, ссылки. */
@@ -265,6 +274,7 @@ function skillBody(
   let section = ''
   let stepNo = 0
   const media: string[] = []
+  let prev: 'text' | 'step' | null = null
   const enter = (s: ExportStep) => {
     const sec = tr(s.section, lang)
     if (sec && sec !== section) out.push(`## ${sec}`, '')
@@ -275,7 +285,10 @@ function skillBody(
       const md = blockText(s.content?.md, lang).trim()
       if (!md) continue
       enter(s)
-      out.push(md, '')
+      // Граница — только там, где без неё разбор вернул бы блок не тем (см. TEXT_OPEN).
+      if (textNeedsFence(md, prev)) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')
+      else out.push(md, '')
+      prev = 'text'
       continue
     }
     if (!isStepBlk(s)) {
@@ -284,6 +297,7 @@ function skillBody(
       continue
     }
     enter(s)
+    prev = 'step'
     stepNo++
     out.push(...stepLines(s, list.ordered ? `${stepNo}.` : '-', lang), '')
   }

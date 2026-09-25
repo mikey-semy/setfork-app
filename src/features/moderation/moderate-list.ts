@@ -98,7 +98,9 @@ async function loadListSignals(templateId: string): Promise<LoadedList | null> {
   const text = [flat(tpl.title), flat(tpl.desc), ...refUrls, ...refLabels, ...stepRows.map(stepBody)].filter(Boolean).join('\n')
   return {
     signals: { title: flat(tpl.title), stepCount: stepRows.length, text },
-    authored: (await authoredTexts(tpl, ver?.version)).join('\n'),
+    // Шапка скилла (лицензия, требования, metadata) уходит в публичный SKILL.md — судится
+    // вместе с файлами, классификатором; в эвристики спама не идёт.
+    authored: [...contentStrings(tpl.skillHeader), ...(await authoredTexts(tpl, ver?.version))].filter(Boolean).join('\n'),
     stepTitles: stepRows.map((s) => flat(s.title)),
     ownerId: tpl.ownerId,
     moderation: tpl.moderation,

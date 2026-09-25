@@ -143,3 +143,12 @@ describe('чужой скилл', () => {
     for (const h of md.match(/^## .+$/gm) ?? []) expect(p.items.some((b) => b.section === h.slice(3))).toBe(true)
   })
 })
+
+describe('шапка — строками, как написана', () => {
+  it('version: 1.0 остаётся «1.0», имя 1984 — строкой', () => {
+    const p = parseSkillMd(['---', 'name: 1984', 'description: d', 'metadata:', '  version: 1.0', '---', '# T', '', 'x'].join('\n'))
+    expect(p.name).toBe('1984')
+    expect(p.header).toEqual({ metadata: { version: '1.0' } })
+  })
+})
+

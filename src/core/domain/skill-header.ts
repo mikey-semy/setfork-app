@@ -33,7 +33,9 @@ export function pickSkillHeader(raw: Record<string, unknown>): { header: SkillHe
   const dropped: string[] = []
   for (const [key, value] of Object.entries(raw)) {
     if ((TEXT_KEYS as readonly string[]).includes(key)) {
-      const text = asText(value)
+      // `allowed-tools` списком (так пишут скиллы Claude Code) — строкой через пробел, как
+      // в спецификации: инструменты те же, форма стандартная.
+      const text = key === 'allowed-tools' && Array.isArray(value) && value.every((x) => typeof x === 'string') ? value.join(' ') : asText(value)
       if (text !== null && text.trim()) header[key as (typeof TEXT_KEYS)[number]] = text
       else dropped.push(key)
       continue

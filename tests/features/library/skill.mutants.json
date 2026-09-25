@@ -236,13 +236,13 @@
     },
     {
       "name": "текстовый блок не встаёт в SKILL.md",
-      "from": "      enter(s)\n      out.push(md, '')",
+      "from": "      if (textNeedsFence(md, prev)) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')\n      else out.push(md, '')",
       "to": "      void md"
     },
     {
       "name": "текст без заголовка своего раздела",
-      "from": "      enter(s)\n      out.push(md, '')",
-      "to": "      out.push(md, '')"
+      "from": "      enter(s)\n      // Граница",
+      "to": "      // Граница"
     },
     {
       "name": "сохранённый setfork-* подменяет живой",
@@ -253,6 +253,21 @@
       "name": "шапка исходника не выводится",
       "from": "    ...text('license'),\n    ...text('compatibility'),",
       "to": "    ...text('compatibility'),"
+    },
+    {
+      "name": "текст без границы там, где она нужна",
+      "from": "      if (textNeedsFence(md, prev)) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')",
+      "to": "      if (false) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')"
+    },
+    {
+      "name": "граница везде — чужой скилл возвращается с нашими метками",
+      "from": "      if (textNeedsFence(md, prev)) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')",
+      "to": "      if (true) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')"
+    },
+    {
+      "name": "ключ YAML всегда голым",
+      "from": "  return /^[A-Za-z][A-Za-z0-9_-]*$/.test(k) && !/^(true|false|null|yes|no|on|off|y|n)$/i.test(k) ? k : JSON.stringify(k)",
+      "to": "  return k"
     }
   ]
 }

@@ -167,6 +167,13 @@ describe('SKILL.md по стандарту', () => {
     expect(pickSkillHeader(parseSkillMd(md).header).header).toEqual(header)
   })
 
+  it('ключи metadata, которые YAML прочёл бы не строкой, — в кавычках', () => {
+    const md = toSkill(list({ skillHeader: { metadata: { '1.0': 'a', '1': 'b', null: 'c', 'has space': 'd', plain: 'e' } } }), 'ru', ctx).markdown
+    const fm = parseYaml(/^---\n([\s\S]*?)\n---\n/.exec(md)![1]) as { metadata: Record<string, string> }
+    expect(fm.metadata).toMatchObject({ '1.0': 'a', '1': 'b', null: 'c', 'has space': 'd', plain: 'e' })
+    expect(md).toContain('  plain: "e"')
+  })
+
   it('чужой setfork-* в сохранённой шапке не подменяет живой', () => {
     const md = toSkill(list({ skillHeader: { metadata: { 'setfork-version': '1' } } }), 'ru', ctx).markdown
     expect(frontmatter(md).metadata['setfork-version']).toBe('3')
@@ -352,14 +359,43 @@ describe('текст — в SKILL.md на своих местах («блоки 
     expect(md.split('## Подготовка').length, 'раздел повторён').toBe(2)
   })
 
-  // Соседние текстовые блоки при разборе сливаются в один: разбор делит прозу только
-  // шагами и заголовками. Текст и порядок целы; нарезка на блоки — нет, и это известная
-  // цена «блоки — правда»: у SKILL.md нет разметки границы абзацных блоков.
-  it('круг «экспорт → разбор» сохраняет текст и порядок относительно шагов', () => {
+  it('круг «экспорт → разбор» сохраняет блоки: соседние тексты не сливаются', () => {
     const parsed = parseSkillMd(toSkillMarkdown(commitics, 'ru', ctx))
-    expect(parsed.items.map((b) => b.type ?? 'step')).toEqual(['text', 'step'])
-    expect(parsed.items[0].text).toMatch(/Фелипе[\s\S]*Том показывает дверь/)
-    expect(parsed.items[1]).toMatchObject({ title: 'Читать exports', section: 'Что это значит для нас' })
+    expect(parsed.items.map((b) => b.type ?? 'step')).toEqual(['text', 'text', 'step'])
+    expect(parsed.items[0].text).toContain('Фелипе')
+    expect(parsed.items[1].text).toContain('Том показывает дверь')
+    expect(parsed.items[2]).toMatchObject({ title: 'Читать exports', section: 'Что это значит для нас' })
+  })
+
+  it('текст, который разбор понял бы иначе, возвращается тем же блоком: граница только там, где нужна', () => {
+    const risky = list({
+      steps: [
+        text('- [docs](https://x.example)\n- [api](https://y.example)'), // первым — как перечень файлов автора
+        text('Порядок:\n\n1. сначала это\n2. потом то'), // стали бы шагами
+        text('## Не раздел\nа строка текста'), // стал бы разделом
+        step({ title: { ru: 'Шаг' } }),
+        text('    отступ сразу после шага'), // ушёл бы в шаг
+        text('Обычный абзац.'),
+      ],
+    })
+    const md = toSkillMarkdown(risky, 'ru', ctx)
+    const parsed = parseSkillMd(md)
+    const texts = risky.steps.filter((b) => b.type === 'text').map((b) => String((b.content as { md: string }).md).trim())
+    expect(parsed.items.filter((b) => b.type === 'text').map((b) => b.text)).toEqual(texts)
+    expect(parsed.items.map((b) => b.type ?? 'step')).toEqual(['text', 'text', 'text', 'step', 'text', 'text'])
+    // Второй круг ничего не меняет.
+    expect(toSkillMarkdown(risky, 'ru', ctx)).toBe(md)
+  })
+
+  it('скилл, пришедший чужим SKILL.md, возвращается без наших границ', () => {
+    const src = ['---', 'name: pdf', 'description: d', '---', '# PDF', '', 'Works through pypdf.', '', '1. **Install** it once', '', '## Notes', '', 'Keep it simple.'].join('\n')
+    const parsed = parseSkillMd(src)
+    const back = list({
+      steps: parsed.items.map((b) =>
+        b.type === 'text' ? text(b.text!, b.section ?? '') : step({ title: { ru: b.title! }, section: { ru: b.section ?? '' } }),
+      ),
+    })
+    expect(toSkillMarkdown(back, 'ru', ctx)).not.toContain('setfork:text')
   })
 
   it('однофайловый SKILL.md без скрипта и файлов — без ссылок наружу, текст на месте', () => {
@@ -487,12 +523,13 @@ describe('авторские файлы версии', () => {
     expect(skill.markdown, 'авторский скрипт выдан за «все команды»').not.toContain('All commands as one script')
   })
 
-  it('авторский references/context.md заменяет собранный из текстовых блоков', () => {
+  it('авторский references/context.md едет как есть, текст блоков — в SKILL.md', () => {
     const skill = toSkill(list({ steps: [text('фон из блоков'), step()] }), 'ru', { ...ctx, authored: authored([['references/context.md', 'мой фон\n']]) })
     const ctxFiles = skill.files.filter((f) => f.path === 'references/context.md')
     expect(ctxFiles).toHaveLength(1)
     expect(new TextDecoder().decode(ctxFiles[0].content as Uint8Array)).toBe('мой фон\n')
     expect(skill.markdown).not.toContain('Background and the reasoning')
+    expect(skill.markdown).toContain('фон из блоков')
   })
 
   it.each([['../evil'], ['scripts/a/b.sh'], ['other/x.sh'], ['scripts'], ['/etc/passwd']])(

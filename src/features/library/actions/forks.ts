@@ -120,7 +120,7 @@ export async function useTemplate(templateId: string): Promise<void> {
     steps: toStepInput(srcSteps as unknown as ProposedItem[]),
     authored: await copiedFiles(src, srcCurrent?.version),
   })
-  if (src.isSkill) await db.update(templates).set({ isSkill: true }).where(eq(templates.id, created.id))
+  if (src.isSkill) await db.update(templates).set({ isSkill: true, skillHeader: src.skillHeader }).where(eq(templates.id, created.id))
   // Копия публикуется — но состояние публикации ей задал фасад create, до записи.
   revalidatePath('/', 'layout')
   redirect(`/${session.handle}/${slug}`)
@@ -252,8 +252,8 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
     return { error: t('forkFailed', await getLang()) }
   }
   const forked = created
-  // Форк скилла — скилл: метка про содержимое, а не про владельца.
-  if (src.isSkill) await db.update(templates).set({ isSkill: true }).where(eq(templates.id, forked.id))
+  // Форк скилла — скилл: метка и шапка (лицензия автора!) — про содержимое, не про владельца.
+  if (src.isSkill) await db.update(templates).set({ isSkill: true, skillHeader: src.skillHeader }).where(eq(templates.id, forked.id))
 
   await db
     .update(templates)
