@@ -9,7 +9,7 @@ import { getDraft } from '@/features/library/queries'
 // Единый конвертер шагов на запись — тот же, что у веба, садовника и предложений.
 // Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
-import { detailByRefOrMoved, toProposed, type DetailStep, type McpItemInput } from '../shared'
+import { detailByRefOrMoved, mcpLang, toProposed, type DetailStep, type McpItemInput } from '../shared'
 import { patchBlock, rowsToProposed } from './patch-block'
 import { duplicateBid, listWritable, lockList } from './draft-store'
 import { draftBaseMismatch, headVersion, staleBase } from './base-version'
@@ -45,7 +45,7 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
   if ('error' in found) return found
   const { tpl } = found
   const tags = input.tags ? normalizeTags(input.tags) : tpl.tags
-  const proposed = toProposed(input.items ?? [])
+  const proposed = toProposed(input.items ?? [], mcpLang(tpl))
 
   // publish:false — полная замена ложится в РАБОЧУЮ КОПИЮ, версии не создавая. Тот же
   // черновик, что видит редактор и наполняет patch_list: путь накопления один на оба
@@ -177,8 +177,8 @@ export async function mcpPatchList(
   const patchIO = {
     bidOf: (it: ProposedItem) =>
       it.blockId ?? (typeof (it.content as Record<string, unknown> | undefined)?.bid === 'string' ? (it.content as Record<string, string>).bid : undefined),
-    update: patchBlock,
-    create: (block: McpItemInput) => toProposed([block])[0] ?? { error: 'the inserted block is empty (a step needs a title)' },
+    update: (item: ProposedItem, op: McpPatchOp) => patchBlock(item, op, mcpLang(tpl)),
+    create: (block: McpItemInput) => toProposed([block], mcpLang(tpl))[0] ?? { error: 'the inserted block is empty (a step needs a title)' },
   }
 
   const detail = await detailByRefOrMoved(handle, slug)

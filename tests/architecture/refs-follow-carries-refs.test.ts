@@ -37,14 +37,14 @@ describe('ссылки блока подчиняются carriesRefs на обо
     })
 
     it(`${type}: ссылка переживает запись через MCP`, () => {
-      const [p] = toProposed([{ type, title: 'пункт', text: 'текст', refs: [{ label: 'источник', url: URL }] }])
+      const [p] = toProposed([{ type, title: 'пункт', text: 'текст', refs: [{ label: 'источник', url: URL }] }], 'en')
       expect(p.refs).toEqual([{ label: { en: 'источник' }, url: URL }])
     })
   }
 
   for (const type of BLOCK_TYPES.filter((t) => !carriesRefs(t))) {
     it(`${type}: ссылки через MCP — отказ, а не молчаливая потеря`, () => {
-      expect(() => toProposed([{ type, refs: [{ label: 'источник', url: URL }] }])).toThrow(/cannot carry refs/)
+      expect(() => toProposed([{ type, refs: [{ label: 'источник', url: URL }] }], 'en')).toThrow(/cannot carry refs/)
     })
   }
 })

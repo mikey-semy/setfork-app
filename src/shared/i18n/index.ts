@@ -54,8 +54,11 @@ export function isLang(v: unknown): v is Lang {
 /** Резолв locale-текста с фолбэком: запрошенный → en → первый доступный.
  *  Фолбэк по ПУСТОТЕ, а не по nullish: `{ ru: '', en: 'Soak gelatin' }` должен
  *  дать английский. С `??` пустая строка не nullish и глушила фолбэк — пункт
- *  рендерился как голое «1.» без текста (видно было в диффе версий). */
-export function tr(text: LocaleText | null | undefined, lang: Lang): string {
+ *  рендерился как голое «1.» без текста (видно было в диффе версий).
+ *
+ *  Запросить можно любой язык контента, не только язык интерфейса: MCP читает список на
+ *  языке его оригинала (ADR-0030), а оригинал бывает белорусским. */
+export function tr(text: LocaleText | null | undefined, lang: ContentLang): string {
   if (!text) return ''
   return text[lang] || text.en || Object.values(text).find(Boolean) || ''
 }
@@ -82,11 +85,11 @@ export function trLoose(v: unknown, lang: Lang = 'en'): string {
  *  значит обновить один перевод, а наружу продолжать отдавать прежний — правка
  *  выглядит применённой, но не видна. Порядок ОБЯЗАН повторять tr() выше, поэтому
  *  они и живут рядом. */
-export function trKey(text: LocaleText | null | undefined, lang: Lang): string | undefined {
+export function trKey(text: LocaleText | null | undefined, lang: ContentLang): string | undefined {
   if (!text) return undefined
   if (text[lang]) return lang
   if (text.en) return 'en'
-  return Object.keys(text).find((k) => text[k as Lang])
+  return Object.keys(text).find((k) => text[k])
 }
 
 /** Язык, на котором ОТДАН текст: запрошенный, если есть перевод, иначе оригинал.

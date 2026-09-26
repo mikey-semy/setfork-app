@@ -22,12 +22,11 @@ import { isContentLang } from '@/shared/i18n/iso639'
 import { and, eq } from 'drizzle-orm'
 import { isPubliclyVisible, type AuthoredFile } from '@/core'
 import { db, listDrafts, templates } from '@/shared/db'
-import { detectTextLang } from '@/shared/lib/translit'
 import { AUTHORED_NAME_MAX_BYTES, authoredPathProblem } from '@/core/domain/authored-path'
 import { parseSkillMd } from '@/features/library/skill-parse'
 import { assignCatalogByName } from '@/features/catalogs/assign'
 import { gitCore } from '@/features/git/core'
-import { SITE_URL, detailByRefOrMoved, toProposed, type McpItemInput } from '../shared'
+import { SITE_URL, detailByRefOrMoved, mcpLang, toProposed, type McpItemInput } from '../shared'
 import { mcpCreateList, normalizeTags } from './create'
 import { rowsToProposed } from './patch-block'
 import { headVersion } from './base-version'
@@ -284,11 +283,9 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
   // Без явного `lang` — язык ОРИГИНАЛА списка (ADR-0030), а не догадка детектора: иначе новое
   // название белорусского списка легло бы под `ru` рядом со старым под `be`, и зритель видел бы
   // старое. Язык самого списка обновление не меняет — оригинал объявляется при создании.
-  const lang = isContentLang(input.lang)
-    ? input.lang
-    : isContentLang(tpl.lang)
-      ? tpl.lang
-      : detectTextLang(`${input.title ?? ''} ${input.desc ?? ''}`)
+  // Тот же ключ, что у блоков ниже и у чтения (`mcpLang`): у списка без языка это ключ его
+  // заголовка, а не догадка по новому тексту — иначе заголовок и шаги легли бы под разные ключи.
+  const lang = isContentLang(input.lang) ? input.lang : mcpLang(tpl)
   const title = input.title?.trim() ? { ...(tpl.title as Record<string, string>), [lang]: input.title.trim() } : undefined
   const desc = input.desc !== undefined ? { ...(tpl.desc as Record<string, string>), [lang]: input.desc.trim() } : undefined
 
@@ -302,7 +299,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
   // Блоки не пришли — остаются текущие ТОЙ ЖЕ доменной формой (переводы, содержимое).
   let proposed
   if (input.items) {
-    proposed = toProposed(input.items)
+    proposed = toProposed(input.items, lang)
   } else {
     const detail = await detailByRefOrMoved(handle, slug)
     if (!detail) return { error: 'list not found' }
