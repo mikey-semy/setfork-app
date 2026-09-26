@@ -354,6 +354,7 @@
         "src/shared/ui/PageAside.tsx",
         "src/shared/ui/PageHeader.tsx",
         "src/shared/ui/Pagination.tsx",
+        "src/shared/ui/LanguagePicker.tsx",
         "src/shared/ui/PickerPanel.tsx",
         "src/shared/ui/ProductBlock.tsx",
         "src/shared/ui/ProvenancePanel.tsx",
@@ -1739,6 +1740,7 @@
         "tests/features/library/agent-draft-detail.itest.ts",
         "tests/features/library/draft-tags-registry.itest.ts",
         "tests/features/library/list-source-lang-create.itest.ts",
+        "tests/features/library/list-lang-settings.itest.ts",
         "tests/features/library/create-list-lang.itest.ts",
         "tests/features/library/pick-list-lang.test.ts",
         "tests/features/library/needs-human-store.itest.ts"

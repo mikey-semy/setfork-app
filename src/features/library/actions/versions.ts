@@ -7,7 +7,8 @@ import { redirect } from 'next/navigation'
 import { db, repositories, steps, templates, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { type LocaleText } from '@/shared/i18n'
+import { editKey, trKey, type LocaleText } from '@/shared/i18n'
+import { isContentLang } from '@/shared/i18n/iso639'
 import { listQuota } from '@/shared/quota'
 import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, editBlockReason, ListWriteError } from '@/core'
@@ -72,14 +73,13 @@ function fallbackUnlessContradicted(uiLang: string, texts: string[]): string | n
 
 export async function createTemplate(_prev: NewListRefusal | null, formData: FormData): Promise<NewListRefusal | null> {
   const session = await requireSession()
-  const lang = await getLang()
+  const uiLang = await getLang()
   const title = String(formData.get('title') ?? '').trim()
   const desc = String(formData.get('desc') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
   const visibility = formData.get('visibility') === 'private' ? 'private' : 'public'
   const ordered = formData.get('ordered') !== 'unordered'
   const gated = formData.get('gated') === 'on'
-  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   // Пустое название раньше просто НИЧЕГО не делало: человек жал «Создать» и не получал
   // ни списка, ни объяснения. `required` в разметке прикрывает обычный путь, но не
   // отправку без JS и не одни пробелы в поле.
@@ -87,6 +87,10 @@ export async function createTemplate(_prev: NewListRefusal | null, formData: For
   // Квота на число списков (мягкая защита от абьюза; админ без лимита).
   const quota = await listQuota(session.userId, session.handle)
   if (!quota.ok) return { kind: 'list_quota', limit: quota.limit }
+
+  // Автор пишет на языке интерфейса — под ним и текст нового списка (ADR-0030).
+  const lang = uiLang
+  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
   let slug = slugify(title)
   const owned = await db
@@ -102,8 +106,8 @@ export async function createTemplate(_prev: NewListRefusal | null, formData: For
   try {
     list = await listStore.create({
       ownerId: session.userId,
-      // Автор пишет на языке интерфейса — это запасной язык списка; настройка «язык моих
-      // списков» старше (ADR-0030, решает фасад). ⚠️ Но только если текст ему не противоречит:
+      // Автор пишет на языке интерфейса — это запасной язык списка (ADR-0030). ⚠️ Но только
+      // если текст ему не противоречит:
       // английский список автора с русским интерфейсом иначе навсегда записался бы русским, и
       // робот увидел бы русскую страницу над английским текстом (ревью по линзам).
       langFallback: fallbackUnlessContradicted(lang, [title, desc ?? '', ...proposed.map((p) => `${p.title ?? ''} ${p.desc ?? ''}`)]),
@@ -157,6 +161,23 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
   const desc = String(formData.get('desc') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
   const ordered = formData.get('ordered') !== 'unordered'
+  // Язык оригинала (ADR-0030): код ISO 639-1 или пусто — «не задан». Чужое значение не пишем.
+  const rawSource = String(formData.get('sourceLang') ?? '')
+  const sourceLang = rawSource === '' ? null : isContentLang(rawSource) ? rawSource : tpl.lang
+  // ⚠️ Ключ — тот, что форма ПОКАЗАЛА (`trKey`), а не язык интерфейса: белорусское название,
+  // открытое русским интерфейсом без перевода, иначе сохранилось бы под `ru` рядом с `be`, и
+  // оригинал раздвоился бы. Нечего было показать — язык оригинала, иначе интерфейса.
+  const keyFor = (text: LocaleText) => editKey(lang, sourceLang, text)
+  // Язык сменили — одноязычные название и описание переезжают под новый ключ: иначе список
+  // объявлен белорусским, а текст лежит под `ru`, и русскому читателю перевод не предложат
+  // никогда (ревью по линзам). С переводами не трогаем — какой из ключей оригинал, не ясно.
+  // Шаги живут в версиях и не переезжают здесь.
+  const rekey = (text: LocaleText): LocaleText => {
+    const keys = Object.keys(text ?? {}).filter((k) => text[k])
+    return isContentLang(sourceLang) && sourceLang !== tpl.lang && keys.length === 1 && keys[0] !== sourceLang ? { [sourceLang]: text[keys[0]] } : text
+  }
+  const baseTitle = rekey(tpl.title as LocaleText)
+  const baseDesc = rekey(tpl.desc as LocaleText)
   // Мета пишется здесь МИМО фасада, и его страж ключей её не видит. Название публичного
   // списка видно в ленте и поиске раньше шагов — ключ в нём утекает первым.
   const leak = findSecretInContent([], undefined, { title, desc, tags })
@@ -164,8 +185,9 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
   await db
     .update(templates)
     .set({
-      title: carryField({ [lang]: title }, tpl.title as LocaleText),
-      desc: carryField(desc ? { [lang]: desc } : {}, tpl.desc as LocaleText),
+      title: carryField({ [keyFor(baseTitle)]: title }, baseTitle),
+      desc: carryField(desc ? { [keyFor(baseDesc)]: desc } : {}, baseDesc),
+      lang: sourceLang,
       tags,
       ordered,
       updatedAt: new Date(),
@@ -241,7 +263,7 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) redirect('/')
   if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${editBlockReason(tpl) ?? 'frozen'}`)
 
-  const items = toProposedItems(parseEditorItems(formData.get('items')), lang)
+  const items = toProposedItems(parseEditorItems(formData.get('items')), editKey(lang, tpl.lang, tpl.title as LocaleText))
   const meta = {
     tags: parseTags(formData.get('tags')),
     ordered: formData.get('ordered') !== 'unordered',

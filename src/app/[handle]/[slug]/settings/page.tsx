@@ -58,7 +58,7 @@ export default async function ListSettingsPage({
       id: 'general',
       title: t('generalTitle', lang),
       icon: <Info size={15} />,
-      keywords: ['general', 'title', 'name', 'description', 'tags', 'ordered', 'основное', 'название', 'описание', 'теги', 'порядок'],
+      keywords: ['general', 'title', 'name', 'description', 'tags', 'ordered', 'language', 'основное', 'название', 'описание', 'теги', 'порядок', 'язык', 'оригинал'],
       content: (
         <GeneralSection
           refusal={refusal && <ContentRefusalAlert refusal={refusal} lang={lang} />}
@@ -67,6 +67,7 @@ export default async function ListSettingsPage({
           desc={meta.desc}
           tags={meta.tags}
           ordered={meta.ordered}
+          sourceLang={meta.lang}
           lang={lang}
         />
       ),

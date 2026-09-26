@@ -1,4 +1,5 @@
 import { en, type DictKey } from './dict/en'
+import { isContentLang, type ContentLang } from './iso639'
 import { ru } from './dict/ru'
 
 // i18n SetFork. English-first (как GitHub), сейчас доступен русский.
@@ -96,6 +97,20 @@ export function trKey(text: LocaleText | null | undefined, lang: Lang): string |
  *  узнаёт язык страницы отсюда же. Порядок — тот же, что у `tr`, через `trKey`. */
 export function servedLang(text: LocaleText | null | undefined, lang: Lang): string {
   return trKey(text, lang) ?? lang
+}
+
+/** Ключ, под который пишется ПРАВКА текста (ADR-0030) — одно правило на редактор, предложение
+ *  правки и настройки: ключ ПОКАЗАННОГО текста (`trKey` — тот же порядок, что у `tr`, которым
+ *  форма его показала); показывать нечего — язык оригинала, иначе язык интерфейса.
+ *
+ *  ⚠️ Именно показанного, а не «оригинала»: у белорусского списка с английским переводом русский
+ *  интерфейс показывает английский текст, и запись под `be` затёрла бы оригинал переводом (ревью по
+ *  линзам). А без правила вообще первая же правка белорусского списка из русского интерфейса
+ *  уводила шаг под `ru`, и ключи смешивались. */
+export function editKey(ui: Lang, stored: string | null | undefined, shown: LocaleText | null | undefined): ContentLang {
+  const key = trKey(shown, ui)
+  if (isContentLang(key)) return key
+  return isContentLang(stored) ? stored : ui
 }
 
 // Словарь UI-строк живёт по языкам в dict/ (Ф1 трека i18n-extraction):

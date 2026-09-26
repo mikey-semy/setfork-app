@@ -1,7 +1,7 @@
 'use server'
 
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { tr, editKey } from '@/shared/i18n'
 // eslint-disable-next-line boundaries/dependencies -- канон собирает и разбирает git-ядро
 import { snapshotSteps } from '@/features/git/snapshot-steps'
 import type { ProposedItem } from '@/shared/db'
@@ -30,7 +30,7 @@ export async function renderCanonAction(templateId: string, itemsJson: string): 
   // Право и язык друг от друга не зависят — ждём их разом.
   const [tpl, lang] = await Promise.all([editableList(templateId), getLang()])
   if (!tpl) return { error: 'forbidden' }
-  const proposed: ProposedItem[] = toProposedItems(parseEditorItems(itemsJson), lang)
+  const proposed: ProposedItem[] = toProposedItems(parseEditorItems(itemsJson), editKey(lang, tpl.lang, tpl.title))
   const content = toListContent(
     proposed,
     {

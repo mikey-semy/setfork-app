@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { db, steps, templates, users, type ProposedItem, type StepLevel } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { isLang, langEnName, trKey, type Lang, type LocaleText } from '@/shared/i18n'
+import { isLang, langEnName, trKey, type Lang, type LocaleText, editKey } from '@/shared/i18n'
 import { generateBlockRefine, generateChangeNote, generateListRefine, generateListTranslation, generateTextTranslation } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
@@ -422,7 +422,7 @@ export async function generateChangeNoteAction(
   // Списком заголовков правка описания или команды не видна, и модель, не найдя
   // разницы, сочиняла совет вместо описания (жалоба владельца 04.08.2026).
   const baseCmp = rowsToCmp(baseSteps as unknown as Parameters<typeof rowsToCmp>[0], lang)
-  const nextRows = toProposedItems(parseEditorItems(itemsJson), lang)
+  const nextRows = toProposedItems(parseEditorItems(itemsJson), editKey(lang, tpl.lang, tpl.title as LocaleText))
   const nextCmp = rowsToCmp(nextRows as unknown as Parameters<typeof rowsToCmp>[0], lang)
   const { entries, summary } = diffSteps(baseCmp, nextCmp)
   // Менять нечего — модель не зовём вовсе: это и лишний расход, и источник выдумок.

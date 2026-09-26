@@ -1,5 +1,6 @@
 // Типы и конвертеры редактора пунктов. Редактор работает в ОДНОМ языке
 // (текущий UI-язык), контент сохраняется как locale-JSON под этот код.
+import type { ContentLang } from '@/shared/i18n/iso639'
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ProposedItem, StepLevel } from '@/shared/db'
 import { blankCount, type QuizKind } from '@/core'
@@ -106,7 +107,8 @@ const emptyQuiz = (): EditorQuiz => ({ kind: 'choice', question: '', options: []
  *  ЧТО-ТО: раньше выживала только та, у которой написана подпись, и «просто
  *  ссылка» молча пропадала при сохранении (жалоба владельца 04.08.2026 про
  *  обязательный label в API). Подпись не обязательна — интерфейс покажет домен. */
-function refsToStored(refs: EditorRef[], lang: Lang): { label: LocaleText; url?: string }[] {
+/** `lang` — ключ записи: язык интерфейса или язык оригинала списка (любой код ISO 639-1, ADR-0030). */
+function refsToStored(refs: EditorRef[], lang: ContentLang): { label: LocaleText; url?: string }[] {
   return refs
     .filter((r) => r.label.trim() || r.url.trim())
     .map((r) => ({ label: r.label.trim() ? { [lang]: r.label.trim() } : {}, url: safeHref(r.url) || undefined }))
@@ -138,7 +140,8 @@ export const isStepItem = (it: EditorItem): boolean => it.type === 'step'
 
 /** Плоские (одноязычные) пункты редактора → locale-JSON снимок.
  *  Шаг без заголовка — мусор (отбрасываем); text/image валидны и без title. */
-export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[] {
+/** `lang` — ключ записи: язык интерфейса или язык оригинала списка (любой код ISO 639-1, ADR-0030). */
+export function toProposedItems(items: EditorItem[], lang: ContentLang): ProposedItem[] {
   // langScope — «сказано только про этот язык». Редактор показывает поля через
   // tr() и пишет обратно один ключ; без метки перенос чужих переводов не отличил
   // бы это от записи, которая язык осознанно удаляет.
