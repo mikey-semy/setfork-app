@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { toast } from '@/shared/ui/toast'
 import { t, type Lang } from '@/shared/i18n'
+import { imageRejection } from '@/shared/media/limits'
+import { shrinkImage } from '@/shared/media/shrink-image'
+import { coverFailureText } from '../use-cover-upload'
 import { uploadStepFile, uploadStepImage, uploadStepVideo } from '../actions/uploads'
 import type { EditorItem } from '../editor'
 import type { DropKind } from './FileDrop'
@@ -51,8 +54,18 @@ export function useBlockUploads(
     const key = `${uid}:${kind}`
     setRunning((keys) => [...keys, key])
     try {
+      // Картинку — как обложку: уменьшаем ДО проверки предела (фото с iPhone 3–10 МБ
+      // после уменьшения весит сотни килобайт), и отказ по размеру/формату видно сразу,
+      // без мегабайтов по мобильной сети. «Повторить» тут нет: тот же файл не станет
+      // меньше — как и при отказе сервера кодом ниже.
+      const sent = kind === 'image' ? await shrinkImage(file) : file
+      const early = kind === 'image' ? imageRejection(sent) : null
+      if (early) {
+        toast.error(coverFailureText(early, sent, lang))
+        return
+      }
       const form = new FormData()
-      form.append('file', file)
+      form.append('file', sent)
       const res = await uploaders[kind](form)
       if ('error' in res) toast.error(res.error)
       else patchByUid(uid, res)

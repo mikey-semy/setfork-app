@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { IMAGE_MAX_BYTES } from '@/shared/media/limits'
 import { fitWithin, shrinkImage, SHRINK_MAX_SIDE } from '@/shared/media/shrink-image'
 import { fakeImageApi } from '../../helpers/fake-image-api'
 
@@ -7,7 +8,8 @@ import { fakeImageApi } from '../../helpers/fake-image-api'
 // упирался в предел картинки 4 МБ, и обложку было не поставить вовсе.
 //
 // jsdom, а не node: правилу нужен document.createElement('canvas'). Подменены только
-// браузерные API (декодер и кодирование холста) — см. helpers/fake-image-api.
+// браузерные API (декодер <img>, createImageBitmap, кодирование холста) — см.
+// helpers/fake-image-api.
 
 const file = (bytes: number, type: string, name = 'a') => new File([new Uint8Array(bytes)], name, { type })
 
@@ -58,15 +60,69 @@ describe('shrinkImage', () => {
     expect(out.type).toBe('image/png')
   })
 
-  it('крупный JPEG → уменьшенный JPEG; сглаживание высокое, холст освобождён', async () => {
+  it('крупный JPEG → уменьшенный JPEG; декодер сразу отдаёт уменьшенную, холст освобождён', async () => {
     const seen = fakeImageApi({ width: 4032, height: 3024, outBytes: 300_000 })
     const out = await shrinkImage(file(6_000_000, 'image/jpeg', 'IMG_0001.HEIC.jpeg'))
     expect(seen.encodedAs).toEqual(['image/jpeg'])
     expect(out.type).toBe('image/jpeg')
     expect(out.name).toBe('IMG_0001.HEIC.jpg')
     expect(out.size).toBe(300_000)
-    expect(seen.smoothing).toEqual(['high'])
+    // Полноразмерный ImageBitmap (48 Мп → ~190 МБ) не заводится: уменьшение — в декодере.
+    expect(seen.bitmapOptions).toEqual([{ resizeWidth: 1600, resizeQuality: 'high' }])
     expect([seen.canvases[0].width, seen.canvases[0].height]).toEqual([0, 0])
+  })
+
+  it('портрет уменьшается по высоте — длинной стороне', async () => {
+    const seen = fakeImageApi({ width: 3024, height: 4032, outBytes: 300_000 })
+    await shrinkImage(file(6_000_000, 'image/jpeg', 'a.jpg'))
+    expect(seen.bitmapOptions).toEqual([{ resizeHeight: 1600, resizeQuality: 'high' }])
+  })
+
+  it('размер узнаётся без отрисовки, objectURL освобождён', async () => {
+    const seen = fakeImageApi({ width: 800, height: 600 })
+    await shrinkImage(file(5000, 'image/jpeg', 'a.jpg'))
+    expect(seen.decoded).toBe(0)
+    // decode() раскодировал бы пиксели целиком — ровно то, от чего уходили (48 Мп ≈ 190 МБ).
+    expect(HTMLImageElement.prototype.decode).not.toHaveBeenCalled()
+    expect(seen.objectUrls.created).toHaveLength(1)
+    expect(seen.objectUrls.revoked).toEqual(seen.objectUrls.created)
+  })
+
+  it('непрозрачный PNG крупнее предела → JPEG (скриншот без альфы)', async () => {
+    const seen = fakeImageApi({
+      width: 4000,
+      height: 3000,
+      outBytes: { 'image/png': IMAGE_MAX_BYTES + 1, 'image/jpeg': 500_000 },
+    })
+    const out = await shrinkImage(file(9_000_000, 'image/png', 'shot.png'))
+    expect(seen.encodedAs).toEqual(['image/png', 'image/jpeg'])
+    expect(out.type).toBe('image/jpeg')
+    expect(out.name).toBe('shot.jpg')
+  })
+
+  it('прозрачный PNG крупнее предела остаётся PNG — прозрачное не чернеет; предел скажет проверка', async () => {
+    const seen = fakeImageApi({
+      width: 4000,
+      height: 3000,
+      transparent: true,
+      outBytes: { 'image/png': IMAGE_MAX_BYTES + 1, 'image/jpeg': 500_000 },
+    })
+    const out = await shrinkImage(file(9_000_000, 'image/png', 'logo.png'))
+    expect(seen.encodedAs).toEqual(['image/png'])
+    expect(out.type).toBe('image/png')
+  })
+
+  it('PNG в пределе → JPEG не пробуется, даже если легче: буквы скриншота не мылятся', async () => {
+    const seen = fakeImageApi({ width: 4000, height: 3000, outBytes: { 'image/png': 1_000_000, 'image/jpeg': 200_000 } })
+    const out = await shrinkImage(file(9_000_000, 'image/png', 'shot.png'))
+    expect(seen.encodedAs).toEqual(['image/png'])
+    expect(out.type).toBe('image/png')
+  })
+
+  it('освобождение картинки бросило → уходит уже уменьшенный файл, исключения наружу нет', async () => {
+    fakeImageApi({ width: 4032, height: 3024, outBytes: 300_000, closeThrows: true })
+    const out = await shrinkImage(file(6_000_000, 'image/jpeg', 'a.jpg'))
+    expect(out.size).toBe(300_000)
   })
 
   it('перекодированный вышел тяжелее исходника → уходит исходник', async () => {
@@ -79,7 +135,8 @@ describe('shrinkImage', () => {
     const seen = fakeImageApi({ width: 4000, height: 3000, decodeFails: true })
     const jpg = file(5000, 'image/jpeg', 'a.jpg')
     expect(await shrinkImage(jpg)).toBe(jpg)
-    expect(seen.decoded).toBe(1)
+    expect(seen.encodedAs).toEqual([])
+    expect(seen.objectUrls.revoked).toEqual(seen.objectUrls.created)
   })
 
   it('декодера нет вовсе (старый браузер) → уходит оригинал', async () => {

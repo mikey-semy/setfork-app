@@ -46,16 +46,6 @@ export function coverFailureNext(reason: CoverFailure): 'retry' | 'pick' | null 
   return null
 }
 
-/** Уменьшить, а при любом сбое уменьшения — отдать оригинал: размер и формат тогда
- *  оценят проверка предела и сервер, каждый со своей понятной причиной. */
-async function shrinkOrOriginal(picked: File): Promise<File> {
-  try {
-    return await shrinkImage(picked)
-  } catch {
-    return picked
-  }
-}
-
 /**
  * Загрузка обложки. Экшен приходит параметром, чтобы состояние проверялось без
  * серверного кода (как `useBlockUploads`).
@@ -74,7 +64,9 @@ export function useCoverUpload(templateId: string, upload: Upload, onDone: (url:
     // Фото с телефона — мегабайты; обложке хватает 1600px. Уменьшаем ДО проверки
     // предела: иначе обычное фото с iPhone отказывалось бы «больше 4 МБ», хотя после
     // уменьшения весит сотни килобайт.
-    const file = await shrinkOrOriginal(picked)
+    // shrinkImage не бросает: при любом сбое отдаёт оригинал, размер и формат тогда
+    // оценят проверка предела и сервер, каждый со своей понятной причиной.
+    const file = await shrinkImage(picked)
     const early = imageRejection(file)
     if (early) {
       setState({ kind: 'failed', reason: early, file })
