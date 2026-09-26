@@ -76,6 +76,7 @@ export default async function EditSuggestionPage({
         texts={{
           closed: t('prEditClosed', lang),
           'not-allowed': t('prEditNotAllowed', lang),
+          secret: t('secretSuggestRefusal', lang),
           frozen: t('frozenOn', lang),
           archived: t('archivedOn', lang),
           // Ядро не ответило на чтение ветки: правка цела, повторить осмысленно. Без

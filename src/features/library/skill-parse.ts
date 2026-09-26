@@ -61,6 +61,17 @@ const LEVEL = /\s*_\((required|recommended|optional)\)_\s*$/
 const HUMAN = /^🧑 NEEDS A HUMAN — stop here and ask the human(?:: (.*?))?(?: before doing this step)?\. Do not do it yourself\.$/
 const DANGER = /^⚠ DESTRUCTIVE \(.*?\) — /
 
+/**
+ * Граница текстового блока, который без неё разобрался бы не тем: в нём строка вида
+ * «1. …» (стала бы шагом), заголовок (стал бы разделом), он стоит вплотную к другому
+ * тексту (слился бы с ним) или начинается отступом сразу после шага (ушёл бы в шаг).
+ * HTML-комментарий в отрисованном markdown не виден. Экспорт ставит его ТОЛЬКО там, где
+ * без него круг «экспорт → разбор» потерял бы блок (`textNeedsFence`), поэтому скилл,
+ * пришедший чужим SKILL.md, возвращается без них.
+ */
+export const TEXT_OPEN = '<!-- setfork:text -->'
+export const TEXT_CLOSE = '<!-- /setfork:text -->'
+
 /** Строки нашего собственного экспорта, которые в список возвращаться не должны. */
 const NOISE = [
   /^> ⚠ Review before use/,
@@ -87,7 +98,9 @@ export function parseSkillMd(md: string): ParsedSkill {
   const fm = FRONT.exec(body)
   if (fm) {
     try {
-      const y = parseYaml(fm[1])
+      // failsafe: все значения — строками, как написаны. Иначе `version: 1.0` читался бы
+      // числом 1, а имя «1984» — числом, и круг «импорт → экспорт» менял бы шапку.
+      const y = parseYaml(fm[1], { schema: 'failsafe' })
       if (y && typeof y === 'object' && !Array.isArray(y)) header = y as Record<string, unknown>
       else warnings.push('the frontmatter is not a key-value map — ignored')
     } catch (e) {
@@ -139,6 +152,16 @@ export function parseSkillMd(md: string): ParsedSkill {
     if (NOISE.some((re) => re.test(line))) {
       if (/^Files from the author/.test(line)) skipAuthorList = true
       i++
+      continue
+    }
+
+    if (line.trim() === TEXT_OPEN) {
+      flushText()
+      let end = i + 1
+      while (end < lines.length && lines[end].trim() !== TEXT_CLOSE) end++
+      const t = lines.slice(i + 1, end).join('\n').trim()
+      if (t) items.push({ type: 'text', text: t, ...(section ? { section } : {}) })
+      i = end + 1
       continue
     }
 
@@ -267,3 +290,20 @@ function readStep(lines: string[], at: number, head: string, indentWidth: number
   if (d) block.desc = d
   return [block, k]
 }
+
+/**
+ * Нужна ли тексту граница (`TEXT_OPEN`/`TEXT_CLOSE`), чтобы круг «экспорт → разбор» вернул
+ * его одним блоком, как есть. Решает сам разбор, а не список примет: текст, который
+ * разбор в одиночку понимает иначе, чем одним текстовым блоком, — в границу. Плюс места,
+ * которые одиночный разбор не видит: соседний текст (слился бы) и отступ сразу после шага
+ * (ушёл бы в шаг).
+ */
+export function textNeedsFence(md: string, prev: 'text' | 'step' | null): boolean {
+  if (prev === 'text') return true
+  if (prev === 'step' && /^\s/.test(md)) return true
+  // Первым после перечня файлов автора: строку-ссылку разбор счёл бы продолжением перечня.
+  if (prev === null && /^- \[.+\]\(.+\)/.test(md.trimStart())) return true
+  const alone = parseSkillMd(`---\nname: x\n---\n${md}\n`).items
+  return !(alone.length === 1 && alone[0].type === 'text' && alone[0].text === md.trim() && !alone[0].section)
+}
+

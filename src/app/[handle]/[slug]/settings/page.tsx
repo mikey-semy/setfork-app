@@ -16,19 +16,31 @@ import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
 import { SkillSection, TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
 import { GeneralSection } from '@/features/library/GeneralSection'
+import { ContentRefusalAlert } from '@/shared/ui/ContentRefusalAlert'
+import { contentRefusalFrom } from '@/core/domain/content-refusal'
 import { FeaturesSection } from '@/features/library/FeaturesSection'
 import { LivingSection } from '@/features/library/LivingSection'
 import { PrSettingsSection } from '@/features/library/PrSettingsSection'
 import { withPrDefaults } from '@/features/library/pr-settings'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
+import { canBePublic } from '@/core/domain/skill-license'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
   return { title: `${t('settings', lang)} · ${handle}/${slug}` }
 }
 
-export default async function ListSettingsPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
+export default async function ListSettingsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ handle: string; slug: string }>
+  searchParams: Promise<{ secret?: string; step?: string }>
+}) {
+  const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
+  // Отказ сохранения «Основного» (ключ доступа в названии, описании или тегах) — здесь же,
+  // где его набирали: уводить человека в редактор значило бы потерять место правки.
+  const refusal = contentRefusalFrom(sp)
   const meta = await getListMeta(owner, slug)
   if (!meta) notFound()
   if (!session || session.userId !== meta.ownerId) notFound() // только владелец
@@ -46,14 +58,16 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       id: 'general',
       title: t('generalTitle', lang),
       icon: <Info size={15} />,
-      keywords: ['general', 'title', 'name', 'description', 'tags', 'ordered', 'основное', 'название', 'описание', 'теги', 'порядок'],
+      keywords: ['general', 'title', 'name', 'description', 'tags', 'ordered', 'language', 'основное', 'название', 'описание', 'теги', 'порядок', 'язык', 'оригинал'],
       content: (
         <GeneralSection
+          refusal={refusal && <ContentRefusalAlert refusal={refusal} lang={lang} />}
           templateId={meta.id}
           title={meta.title}
           desc={meta.desc}
           tags={meta.tags}
           ordered={meta.ordered}
+          sourceLang={meta.lang}
           lang={lang}
         />
       ),
@@ -172,6 +186,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
           frozen={meta.frozenAt != null}
           mirrored={!!meta.mirrorUrl}
           pendingTransfer={pendingTransfer}
+          publicLocked={!canBePublic(meta)}
           lang={lang}
         />
       ),

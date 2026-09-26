@@ -16,6 +16,7 @@ import { getWatcherIds } from '@/features/watch/queries'
 import { enqueueReindex } from '@/features/library/jobs'
 import { toStepInput } from '@/shared/lib/step-input'
 import type { ProposedItem } from '@/shared/db'
+import { contentRefusalOf } from '@/core/domain/content-refusal'
 
 /**
  * Записать версию от имени садовника и довести последствия до конца.
@@ -53,7 +54,7 @@ export async function publishGardenerVersion(
   templateId: string,
   items: ProposedItem[],
   opts: { note: string; authorId: string; expectedVersion: number; afterVersion?: () => Promise<void> },
-): Promise<'published' | 'stale'> {
+): Promise<'published' | 'stale' | 'refused'> {
   try {
     await listStore.addVersion(templateId, {
       note: opts.note,
@@ -63,6 +64,10 @@ export async function publishGardenerVersion(
     })
   } catch (e) {
     if (e instanceof ListWriteError && e.code === 'stale') return 'stale'
+    // Страж содержимого (команда, ключ доступа, лёгшие в список до проверки): версию не
+    // принять, и это не сбой прохода — список пропускается, остальные идут дальше.
+    // Исключение здесь обрывало бы всю партию из-за одного списка.
+    if (contentRefusalOf(e)) return 'refused'
     throw e
   }
   await opts.afterVersion?.()

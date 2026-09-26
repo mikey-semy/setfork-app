@@ -26,6 +26,8 @@ export const MERGE_ERR: Record<string, TKey> = {
   // связь сорвалась — повторить; ответ не разобран — повтор бесполезен. Без этих
   // строк оба падали в общий `prMergeErrGeneric` («не удалось»), то есть человек
   // не узнавал ни причины, ни того, ждать ему или нет.
+  // В правке ключ доступа — в ветку чужого списка он не пишется.
+  secret: 'secretSuggestRefusal',
   'gate-unavailable': 'branch.errGateUnavailable',
   'gate-malformed': 'branch.errGateMalformed',
   // Содержимое ветки не прочиталось — и слияние на этом ОСТАНОВЛЕНО намеренно: по нему

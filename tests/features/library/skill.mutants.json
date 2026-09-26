@@ -71,8 +71,8 @@
     },
     {
       "name": "в шапку вписана лицензия",
-      "from": "`description: ${q(description)}`, 'metadata:'",
-      "to": "`description: ${q(description)}`, 'license: unknown', 'metadata:'"
+      "from": "    ...text('license'),\n    ...text('compatibility'),",
+      "to": "    'license: unknown',\n    ...text('compatibility'),"
     },
     {
       "name": "зачем потерян",
@@ -96,23 +96,8 @@
     },
     {
       "name": "раздел повторяется у каждого пункта",
-      "from": "    if (sec && sec !== section) out.push(`## ${sec}`, '')\n    section = sec\n    stepNo++",
-      "to": "    if (sec) out.push(`## ${sec}`, '')\n    section = sec\n    stepNo++"
-    },
-    {
-      "name": "история остаётся в SKILL.md вместо references",
-      "from": "    if (!isStepBlk(s)) {\n      const m = mediaLine(s, lang)",
-      "to": "    if (s.type === 'text') { out.push(blockText(s.content?.md, lang), '') }\n    if (!isStepBlk(s)) {\n      const m = mediaLine(s, lang)"
-    },
-    {
-      "name": "текстовые блоки не собираются в context.md",
-      "from": "  if (!out.length) return null",
-      "to": "  return null"
-    },
-    {
-      "name": "SKILL.md не ссылается на context.md",
-      "from": "    if (withContext) out.push(`Background",
-      "to": "    if (false) out.push(`Background"
+      "from": "    if (sec && sec !== section) out.push(`## ${sec}`, '')\n    section = sec\n  }",
+      "to": "    if (sec) out.push(`## ${sec}`, '')\n    section = sec\n  }"
     },
     {
       "name": "однофайловый ссылается на соседние файлы",
@@ -171,8 +156,8 @@
     },
     {
       "name": "имя без кавычек — «1984» читается числом",
-      "from": "  return ['---', `name: ${q(name)}`,",
-      "to": "  return ['---', `name: ${name}`,"
+      "from": "    `name: ${q(name)}`,",
+      "to": "    `name: ${name}`,"
     },
     {
       "name": "разрушительный шаг без пометки",
@@ -225,19 +210,14 @@
       "to": "  const script = hasCommands(list)"
     },
     {
-      "name": "авторский context.md не главнее собранного",
-      "from": "  const context = taken.has(SKILL_CONTEXT_PATH) ? null : contextFile(list, lang)",
-      "to": "  const context = contextFile(list, lang)"
-    },
-    {
       "name": "SKILL.md не перечисляет авторские файлы",
       "from": "    if (authoredPaths.length) {\n      out.push(`Files from the author",
       "to": "    if (false) {\n      out.push(`Files from the author"
     },
     {
       "name": "однофайловый не называет архив при авторских файлах",
-      "from": "  } else if (withContext || withScript || authoredPaths.length) {",
-      "to": "  } else if (withContext || withScript) {"
+      "from": "  } else if (withScript || authoredPaths.length) {",
+      "to": "  } else if (withScript) {"
     },
     {
       "name": "исполняемость авторского файла потеряна",
@@ -253,6 +233,41 @@
       "name": "пропуск молчаливый",
       "from": "  const skipped = (ctx.authored ?? []).map((f) => f.path).filter((p) => !kept.some((k) => k.path === p))",
       "to": "  const skipped: string[] = []"
+    },
+    {
+      "name": "текстовый блок не встаёт в SKILL.md",
+      "from": "      if (textNeedsFence(md, prev)) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')\n      else out.push(md, '')",
+      "to": "      void md"
+    },
+    {
+      "name": "текст без заголовка своего раздела",
+      "from": "      enter(s)\n      // Граница",
+      "to": "      // Граница"
+    },
+    {
+      "name": "сохранённый setfork-* подменяет живой",
+      "from": ".filter(([k]) => !k.startsWith('setfork-'))",
+      "to": ".filter(() => true)"
+    },
+    {
+      "name": "шапка исходника не выводится",
+      "from": "    ...text('license'),\n    ...text('compatibility'),",
+      "to": "    ...text('compatibility'),"
+    },
+    {
+      "name": "текст без границы там, где она нужна",
+      "from": "      if (textNeedsFence(md, prev)) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')",
+      "to": "      if (false) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')"
+    },
+    {
+      "name": "граница везде — чужой скилл возвращается с нашими метками",
+      "from": "      if (textNeedsFence(md, prev)) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')",
+      "to": "      if (true) out.push(TEXT_OPEN, md, TEXT_CLOSE, '')"
+    },
+    {
+      "name": "ключ YAML всегда голым",
+      "from": "  return /^[A-Za-z][A-Za-z0-9_-]*$/.test(k) && !/^(true|false|null|yes|no|on|off|y|n)$/i.test(k) ? k : JSON.stringify(k)",
+      "to": "  return k"
     }
   ]
 }

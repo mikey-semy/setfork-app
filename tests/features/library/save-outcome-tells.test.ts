@@ -33,6 +33,22 @@ describe('после сохранения человеку сказано, чт�
     expect(q, 'номер шага потерян').toContain('step=3')
   })
 
+  it('опасное в ФАЙЛЕ — назван путь, а не «шаг 0»', () => {
+    const d = saveOutcomeQuery({ overwrote: false, destructiveStep: null, file: { kind: 'destructive', path: 'scripts/clean.py' } })
+    expect(d).toContain('warn=destructive')
+    expect(d, 'файл не назван').toContain('file=scripts%2Fclean.py')
+    const k = saveOutcomeQuery({ overwrote: false, destructiveStep: null, file: { kind: 'secret', path: 'references/a b.md', rule: 'github-pat' } })
+    expect(k).toContain('warn=secret')
+    expect(k).toContain('kind=github-pat')
+    expect(k, 'путь с пробелом обязан пережить адрес').toContain('file=references%2Fa%20b.md')
+  })
+
+  it('шаг важнее файла: одно предупреждение за раз, и начинается с шагов', () => {
+    const q = saveOutcomeQuery({ overwrote: false, destructiveStep: 2, file: { kind: 'destructive', path: 'scripts/x.sh' } })
+    expect(q).toContain('step=2')
+    expect(q).not.toContain('file=')
+  })
+
   it('оба положения разом — сказано про оба', () => {
     const q = saveOutcomeQuery({ overwrote: true, destructiveStep: 7 })
     expect(q).toContain('over=1')
@@ -44,6 +60,19 @@ describe('после сохранения человеку сказано, чт�
     // Номер приходит как 0 только если считать с нуля; здесь счёт с единицы, и шаг 1
     // обязан назваться, а не исчезнуть из-за ложной проверки на пустоту.
     expect(saveOutcomeQuery({ overwrote: false, destructiveStep: 1 })).toContain('step=1')
+  })
+
+  it('ключ доступа — назван вид ключа и шаг, и он важнее команды', () => {
+    const q = saveOutcomeQuery({ overwrote: false, destructiveStep: 2, secret: { step: 5, rule: 'github-pat' } })
+    expect(q).toContain('warn=secret')
+    expect(q).toContain('step=5')
+    expect(q).toContain('kind=github-pat')
+    // Предупреждение одно: два `step=` в адресе странице не разобрать.
+    expect(q).not.toContain('warn=destructive')
+  })
+
+  it('ключ в названии (шаг 0) — не путается с «ключа нет»', () => {
+    expect(saveOutcomeQuery({ overwrote: false, destructiveStep: null, secret: { step: 0, rule: 'aws-access-token' } })).toContain('warn=secret')
   })
 })
 

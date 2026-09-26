@@ -1,0 +1,33 @@
+name: SetFork skill release
+description: Publish an Agent Skill folder to a SetFork list as one version and release it under the pushed git tag.
+author: SetFork
+branding:
+  icon: package
+  color: green
+inputs:
+  list:
+    description: The SetFork list to publish into, as owner/slug.
+    required: true
+  token:
+    description: SetFork API token with the write scope. Pass it from a secret.
+    required: true
+  path:
+    description: The skill folder (SKILL.md with scripts/, references/, assets/ next to it).
+    default: .
+  tag:
+    description: Release tag. Defaults to the pushed tag; without a tag only a version is published.
+    default: ''
+  prerelease:
+    description: Mark the release as a pre-release.
+    default: 'false'
+  url:
+    description: SetFork instance.
+    default: https://setfork.com
+outputs:
+  version:
+    description: The list version the folder became (or the version the tag already points at).
+  release-url:
+    description: The release page, when a release was made or already existed.
+runs:
+  using: node24
+  main: action.mjs

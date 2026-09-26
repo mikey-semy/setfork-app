@@ -558,9 +558,72 @@ export function assertNoDestructiveContent(
   assertNoDestructiveSteps(steps)
   for (const f of authored ?? []) {
     if (!f.path.startsWith('scripts/')) continue
-    const match = findDestructive(new TextDecoder().decode(f.content))
+    const match = findDestructiveInScript(f.path, new TextDecoder().decode(f.content))
     if (match) throw new DestructiveCommandError(0, match.reason, match.fragment, f.path)
   }
+}
+
+/**
+ * СКРИПТ НЕ НА ШЕЛЛЕ: что он отдаёт на исполнение.
+ *
+ * Детектор выше читает шелл. Скрипт на Python или JS шеллом не является — его текст целиком
+ * судить нельзя (`print("не запускайте rm -rf /")` дал бы ложный отказ), а пропускать —
+ * значит пропускать `os.system("rm -rf /")`. Поэтому из такого скрипта вынимаются ТОЛЬКО
+ * команды, переданные на исполнение (`os.system`, `subprocess.*`, `execSync`, `system`…),
+ * строкой или списком аргументов, и судятся тем же набором правил, что шаг. Отдельно —
+ * удаление корня средствами самого языка (`shutil.rmtree("/")`, `fs.rmSync("/")`), у которого
+ * шелловой строки нет вовсе.
+ */
+const EXEC_CALL =
+  /\b(?:os\.system|os\.popen|subprocess\.(?:run|call|check_call|check_output|Popen)|(?:child_process\.)?(?:execSync|execFileSync|exec|spawnSync|spawn)|Kernel\.system|system|exec)\s*\(\s*/g
+/** Строковый литерал: префиксы Python (f/r/b), тройные кавычки, одинарные, двойные, обратные. */
+const LITERAL = /^(?:[fFrRbBuU]{0,2})("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)/
+const ROOT_REMOVE = /(?:\bshutil\.rmtree|\.rmSync|\.rmdirSync|\bfs\.rm|\bFileUtils\.rm_rf|\brmtree)\s*\(\s*(?:[fFrRbB]{0,2})(["'`])(?:\/|~|\$HOME)\/?\*?\1/
+
+const unquote = (lit: string) => lit.replace(/^("""|'''|["'`])/, '').replace(/("""|'''|["'`])$/, '')
+
+/** Команды, которые скрипт отдаёт на исполнение: строкой или списком аргументов через пробел. */
+export function execCommandsIn(text: string): string[] {
+  const out: string[] = []
+  for (const m of text.matchAll(EXEC_CALL)) {
+    const rest = text.slice((m.index ?? 0) + m[0].length)
+    const lit = LITERAL.exec(rest)
+    if (lit) {
+      out.push(unquote(lit[1]))
+      continue
+    }
+    if (rest.startsWith('[')) {
+      const end = rest.indexOf(']')
+      const parts = [...rest.slice(1, end < 0 ? undefined : end).matchAll(/(["'])((?:\\.|(?!\1)[^\\])*)\1/g)].map((x) => x[2])
+      if (parts.length) out.push(parts.join(' '))
+    }
+  }
+  return out
+}
+
+/** Шелл ли это: по расширению, иначе по шебангу; без того и другого — шелл (как было). */
+function isShellScript(path: string, text: string): boolean {
+  const name = path.replace(/@[0-9a-f]{8}$/, '')
+  const ext = /\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase()
+  if (ext) return ['sh', 'bash', 'zsh', 'ksh', 'ps1', 'cmd', 'bat'].includes(ext)
+  const bang = /^#!\s*(\S+)(?:\s+(\S+))?/.exec(text)
+  if (!bang) return true
+  const interp = (bang[1].endsWith('/env') ? bang[2] : bang[1])?.split('/').pop() ?? ''
+  return /^(ba|z|k|da)?sh$/.test(interp)
+}
+
+/**
+ * Разрушительное в файле скрипта: шелл судится целиком, как шаг; прочее — по командам,
+ * отданным на исполнение, и по удалению корня средствами языка.
+ */
+export function findDestructiveInScript(path: string, text: string): DestructiveMatch | null {
+  if (isShellScript(path, text)) return findDestructive(text)
+  for (const cmd of execCommandsIn(text)) {
+    const hit = findDestructive(cmd)
+    if (hit) return hit
+  }
+  const root = ROOT_REMOVE.exec(text)
+  return root ? { reason: 'wipesFilesystem', fragment: root[0] } : null
 }
 
 /** Индексы шагов с разрушительными командами — для отказа на записи. */

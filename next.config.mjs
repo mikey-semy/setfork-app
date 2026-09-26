@@ -52,7 +52,8 @@ const nextConfig = {
   // Базовые security-заголовки на все ответы. nosniff — критично для отдачи
   // пользовательских вложений (браузер не MIME-sniff-ит файл в html/script).
   // X-Frame-Options и полный CSP тут НЕ ставим глобально: embed-роут намеренно
-  // фреймится (frame-ancestors *), а CSP script-src требует nonce для inline-темы.
+  // фреймится (frame-ancestors *), а политику скриптов с nonce ставит middleware — у
+  // каждого ответа он свой (shared/security/csp.ts).
   async headers() {
     // HSTS: год, с поддоменами. Проверено 19.09.2026 — `stats`, `docs`, `mail` и `www`
     // отвечают по HTTPS, а http отдаёт 301 на https, поэтому включение поддоменов
@@ -66,6 +67,18 @@ const nextConfig = {
       key: 'Permissions-Policy',
       value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
     }
+    // COOP: окно, открытое с чужого сайта, не получает ссылки на наше (`window.opener`),
+    // и наоборот — защита от подмены вкладки и утечек через общий контекст окон
+    // (Spectre). Своих всплывающих окон у нас нет: вход через GitHub и Яндекс идёт
+    // ПЕРЕНАПРАВЛЕНИЕМ, Telegram — опросом статуса со своей же страницы
+    // (features/auth/TelegramLoginWatcher.tsx).
+    // ⚠️ Но НАС открывают окном: OAuth-клиент (claude.ai при подключении MCP) вправе
+    // открыть `/oauth/authorize` всплывающим окном и ждать результата через `opener`.
+    // Страница с COOP на пути такого окна рвёт связь с открывшим НАВСЕГДА, в том числе
+    // после возврата на адрес клиента, — поэтому весь путь входа без COOP: авторизация,
+    // страница входа и колбэки провайдеров. `same-origin-allow-popups` тут не помог бы:
+    // он про окна, которые открываем мы.
+    const coop = { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' }
     const base = [
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -89,6 +102,14 @@ const nextConfig = {
         // Встраиваемая страница: рамки разрешены кому угодно, остальное — как везде.
         source: '/:handle/:slug/embed',
         headers: base,
+      },
+      {
+        // Всё, КРОМЕ пути входа (см. `coop` выше), в том числе с языковым префиксом:
+        // заголовки сопоставляются с адресом ДО переписывания в middleware. Сегмент
+        // сравнивается ЦЕЛИКОМ: ник `oauthfan` или `login-club` пишет человек, и его
+        // страницы защиту не теряют.
+        source: '/:path((?!(?:(?:ru|en)/)?(?:oauth|api/auth|login)(?:/|$)).*)',
+        headers: [coop],
       },
     ]
   },

@@ -96,6 +96,9 @@ const DIALECTS: Record<ScriptDialect, DialectSpec> = {
   },
 }
 
+/** Все диалекты — для описания API (`?lang=`). */
+export const SCRIPT_DIALECTS = Object.keys(DIALECTS) as ScriptDialect[]
+
 export const dialectSpec = (d: ScriptDialect): Readonly<DialectSpec> => DIALECTS[d]
 export const dialectExt = (d: ScriptDialect) => DIALECTS[d].ext
 export const dialectMime = (d: ScriptDialect) => DIALECTS[d].mime

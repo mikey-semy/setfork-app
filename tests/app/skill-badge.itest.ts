@@ -13,11 +13,18 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
  */
 const h = vi.hoisted(() => ({
   session: null as null | { userId: string; handle: string },
-  files: [] as { path: string; content: Uint8Array; executable: boolean }[],
+  files: [] as { path: string; content: Uint8Array; executable: boolean }[] | null,
 }))
 vi.mock('@/shared/auth/session', () => ({ getSession: async () => h.session, requireSession: async () => h.session }))
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
-vi.mock('@/features/git/core', () => ({ gitCore: { authoredFiles: async () => h.files } }))
+vi.mock('@/features/git/core', () => ({
+  gitCore: {
+    authoredFiles: async () => {
+      if (h.files === null) throw new Error('core is down')
+      return h.files
+    },
+  },
+}))
 
 const { db, users, templates } = await import('@/shared/db')
 const blob = await import('@/app/[handle]/[slug]/blob/route')
@@ -63,9 +70,27 @@ describe('blob — файл автора текстом', () => {
     expect(await res.text()).toBe('<script>alert(1)</script>')
   })
 
-  it('нет такого файла или пути — 404', async () => {
-    expect((await get('badge-skill', 'scripts/none.sh')).status).toBe(404)
-    expect((await get('badge-skill', '')).status).toBe(404)
+  it('отказы — Problem Details, и у каждого свой машинный код', async () => {
+    const none = await get('badge-skill', 'scripts/none.sh')
+    expect(none.status).toBe(404)
+    expect(none.headers.get('content-type')).toContain('application/problem+json')
+    expect((await none.json()).error).toBe('file_not_found')
+    const noPath = await get('badge-skill', '')
+    expect(noPath.status).toBe(400)
+    expect((await noPath.json()).error).toBe('path_required')
+    expect((await (await get('no-such-list', 'x')).json()).error).toBe('not_found')
+  })
+
+  it('ядро не ответило — 503 «повторите», а не «файла нет»', async () => {
+    const saved = h.files
+    h.files = null
+    try {
+      const res = await get('badge-skill', 'assets/page.html')
+      expect(res.status).toBe(503)
+      expect((await res.json()).error).toBe('core_unavailable')
+    } finally {
+      h.files = saved
+    }
   })
 
   it('приватный список чужому — 404, владельцу — файл', async () => {

@@ -193,11 +193,15 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         // что два других отказа прохода: иначе три отказа одной природы лежат в журнале
         // тремя способами, и сравнить их между собой нечем. Под `failed` (отказ модели)
         // её прятать нельзя — это норма, которая повторится сама, а не повод чинить.
-        if (res.result === 'stale') {
+        if (res.result === 'stale' || res.result === 'refused') {
           await journal(
             'list.grow',
             'skipped',
-            { mode: 'grow-feed', reason: 'the list moved to a newer version while the feed was being grown', profession: byWhom },
+            {
+              mode: 'grow-feed',
+              reason: res.result === 'refused' ? 'the list holds content the guard refuses (a destructive command or an access key) — nothing written; the author has to fix the list' : 'the list moved to a newer version while the feed was being grown',
+              profession: byWhom,
+            },
             { trigger: 'schedule' },
           )
         }
@@ -287,11 +291,15 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       // платный refine, за которые список мог уйти вперёд — решение по маршруту
       // («отказ, а не запись поверх») описано в `publishGardenerVersion`.
       const wrote = await publishGardenerVersion(tpl.id, items, { note, authorId: tenderId, expectedVersion: tpl.currentVersion })
-      if (wrote === 'stale') {
+      if (wrote === 'stale' || wrote === 'refused') {
         await journal(
           'list.improve',
           'skipped',
-          { mode: 'direct-edit', reason: 'the list moved to a newer version while the edit was being prepared', profession: byWhom },
+          {
+            mode: 'direct-edit',
+            reason: wrote === 'refused' ? 'the list holds content the guard refuses (a destructive command or an access key) — nothing written; the author has to fix the list' : 'the list moved to a newer version while the edit was being prepared',
+            profession: byWhom,
+          },
           { trigger: 'schedule', deadLinks: deadUrls.length },
         )
         skipped++
@@ -365,6 +373,13 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
           await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, created.id))
         },
       })
+      if (wrote === 'refused') {
+        // Страж не принял версию — как при гонке, предложение остаётся открытым, и человек
+        // узнаёт почему: слить его руками тоже не выйдет, пока список не поправят.
+        await leaveSuggestionOpen('the list holds content the guard refuses — auto-merge refused, the suggestion stays open')
+        proposed++
+        continue
+      }
       if (wrote === 'stale') {
         // Версии нет — значит `afterVersion` не сработал и предложение осталось ОТКРЫТЫМ.
         // Это и есть нужный исход: правка не пропала, её просто решает человек (или

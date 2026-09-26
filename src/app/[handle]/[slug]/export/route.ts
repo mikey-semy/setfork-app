@@ -1,7 +1,8 @@
 import { getLang } from '@/shared/i18n/server'
 import { requireViewableDetail } from '@/features/library/guard'
 import { toHtml, toMarkdown, toExportList } from '@/features/library/export'
-import { cacheHeaders, noStoreHeaders } from '@/shared/http/cache'
+import { cacheHeaders } from '@/shared/http/cache'
+import { problemListNotFound } from '@/shared/http/problem'
 import { versionShaMap } from '@/features/library/version-sha'
 import { listStore } from '@/features/library/list-store'
 
@@ -13,7 +14,7 @@ export async function GET(
   const { handle, slug } = await params
   const format = new URL(req.url).searchParams.get('format') === 'html' ? 'html' : 'md'
   const [lang, detail] = await Promise.all([getLang(), requireViewableDetail(handle, slug)])
-  if (!detail) return new Response('Not found', { status: 404, headers: noStoreHeaders() })
+  if (!detail) return problemListNotFound()
 
   // Подпись версии — из ядра, одним вызовом и мягко: отказ ядра не должен лишать
   // человека файла. Нет подписи — в шапке её просто не будет (см. toMarkdown).

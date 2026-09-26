@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { blockComments, blockCommentThreads, db, suggestionReviews, suggestions, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { type Lang } from '@/shared/i18n'
+import { type Lang, editKey } from '@/shared/i18n'
 import { notify } from '@/features/notifications/notify'
 import { canEditList, editBlockReason } from '@/core'
 import { parseEditorItems, toProposedItems } from '../editor'
@@ -16,6 +16,7 @@ import { BLOCKS_UNREADABLE, readSuggestionBlocks } from '../suggestion-blocks'
 import { applyFieldValue } from '../suggestion-apply'
 import { gitPort, ownerHandle } from './shared'
 import { NOREPLY_DOMAIN } from '@/shared/site'
+import { findSecretInContent } from '@/core/domain/secret-scan'
 
 /**
  * ПУНКТЫ предложения: правка редактором и применение предложенной правки одной
@@ -63,7 +64,7 @@ export async function updateSuggestionItems(
   const tpl = sug.template
   if (!canEditList(tpl)) return editBlockReason(tpl) === 'archived' ? 'archived' : 'frozen'
 
-  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
+  const proposed = toProposedItems(parseEditorItems(formData.get('items')), editKey(lang, tpl.lang, tpl.title))
   const err = await writeSuggestionItems(sug, proposed, session, lang, `Update suggestion by @${session.handle}`)
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.number ?? sug.id}`
@@ -92,6 +93,9 @@ async function writeSuggestionItems(
   lang: Lang,
   message: string,
 ): Promise<string | null> {
+  // Одна точка на правку предложения и на «применить предложенную правку»: ключ
+  // доступа в ветку чужого списка не пишется ни тем, ни другим путём.
+  if (findSecretInContent(proposed)) return 'secret'
   const tpl = sug.template
   const owner = await ownerHandle(tpl.ownerId)
 

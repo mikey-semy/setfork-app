@@ -55,7 +55,7 @@ const EXPECTED = [
   // гномы и совет
   'list_gnomes', 'ask_gnome', 'gnome_review', 'get_council_draft', 'council_draft',
   // списки
-  'create_list', 'update_list', 'patch_list', 'publish_draft', 'discard_draft', 'delete_list', 'bulk_create_lists', 'publish_skill', 'rename_list',
+  'create_list', 'update_list', 'patch_list', 'publish_draft', 'discard_draft', 'delete_list', 'bulk_create_lists', 'publish_skill', 'rename_list', 'import_skill',
   // полки и разбор черновиков: чем владелец раскладывает библиотеку
   'my_catalogs', 'my_drafts', 'publish_lists',
   // предложения и проверки
@@ -360,5 +360,31 @@ describe('описание различает вид предложения та
       return !/\bbranch\b/i.test(d)
     })
     expect(flat, 'агент поверит объявлению и станет избегать законных веточных слияний').toEqual([])
+  })
+})
+
+/**
+ * Язык содержимого — любой код ISO 639-1, и схема сама отвергает не-коды (ADR-0030). Без отказа
+ * на схеме `lang: 'russian'` молча ушёл бы в детекцию: агент не узнал бы, что язык не принят.
+ */
+describe('аргумент lang — код ISO 639-1', () => {
+  const tools = collect()
+  const parse = (name: string, input: Record<string, unknown>) =>
+    z.object(tools.find((t) => t.name === name)?.config.inputSchema as Record<string, z.ZodTypeAny>).safeParse(input)
+  const cases: [string, (lang: string) => Record<string, unknown>][] = [
+    ['create_list', (lang) => ({ title: 'x', lang, items: [{ title: 'a' }] })],
+    ['bulk_create_lists', (lang) => ({ lists: [{ title: 'x', lang, items: [{ title: 'a' }] }] })],
+  ]
+
+  it.each(cases)('%s: be и de — да, russian — нет', (name, input) => {
+    expect(parse(name, input('be')).success, `${name}: be`).toBe(true)
+    expect(parse(name, input('de')).success, `${name}: de`).toBe(true)
+    expect(parse(name, input('russian')).success, `${name}: russian`).toBe(false)
+  })
+
+  it('publish_skill: тот же отказ', () => {
+    const lang = tools.find((t) => t.name === 'publish_skill')?.config.inputSchema?.lang
+    expect(lang?.safeParse('be').success).toBe(true)
+    expect(lang?.safeParse('russian').success).toBe(false)
   })
 })

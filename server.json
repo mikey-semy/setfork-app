@@ -1,0 +1,72 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.setfork/setfork",
+  "title": "SetFork",
+  "description": "Runnable, versioned lists for agents: tools, prompts and lists as resources. Git under the hood.",
+  "version": "1.2.0",
+  "websiteUrl": "https://setfork.com",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://setfork.com/api/mcp"
+    }
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "surface": {
+        "tools": [
+          "add_issue_comment",
+          "apply_suggestion",
+          "ask_gnome",
+          "bulk_create_lists",
+          "check_step",
+          "close_issue",
+          "council_draft",
+          "create_issue",
+          "create_list",
+          "create_release",
+          "delete_list",
+          "discard_draft",
+          "get_council_draft",
+          "get_issue",
+          "get_list",
+          "get_run",
+          "get_script",
+          "gnome_review",
+          "import_skill",
+          "list_gnomes",
+          "list_releases",
+          "list_sources",
+          "merge_suggestion",
+          "my_catalogs",
+          "my_drafts",
+          "patch_list",
+          "pending_suggestions",
+          "publish_draft",
+          "publish_lists",
+          "publish_skill",
+          "register_source",
+          "rename_list",
+          "reopen_issue",
+          "report_check",
+          "report_run",
+          "revert_suggestion",
+          "review_suggestion",
+          "search_issues",
+          "search_lists",
+          "start_run",
+          "suggest_edit",
+          "update_list"
+        ],
+        "prompts": [
+          "commitics",
+          "review-list",
+          "run-list"
+        ],
+        "resourceTemplates": [
+          "setfork://lists/{handle}/{slug}"
+        ]
+      }
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { en, type DictKey } from './dict/en'
+import { isContentLang, type ContentLang } from './iso639'
 import { ru } from './dict/ru'
 
 // i18n SetFork. English-first (как GitHub), сейчас доступен русский.
@@ -15,6 +16,20 @@ export type Lang = Locale
 
 export const DEFAULT_LANG: Lang = 'en'
 export const LANG_COOKIE = 'lang'
+
+/**
+ * Атрибуты куки языка — ОДНИ на всех, кто её пишет: переключатель в шапке и middleware
+ * (переход со старого адреса `/ru/…`). Год — выбор не теряется при перезапуске браузера;
+ * `Lax` — кука уходит и при переходе с чужого сайта (из выдачи поисковика), а без явного
+ * атрибута Firefox и Safari её `Lax` не считают.
+ */
+export const LANG_COOKIE_OPTIONS = { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' } as const
+
+/** Та же кука строкой — для `document.cookie` в браузере. */
+export function langCookieString(lang: Lang): string {
+  const o = LANG_COOKIE_OPTIONS
+  return `${LANG_COOKIE}=${lang}; path=${o.path}; max-age=${o.maxAge}; samesite=${o.sameSite}`
+}
 
 /** Метаданные локали: endonym (само-название для UI) + English name (для
  *  промпта ИИ-генерации/перевода). BCP-47-код совпадает с самим ключом Lang,
@@ -72,6 +87,30 @@ export function trKey(text: LocaleText | null | undefined, lang: Lang): string |
   if (text[lang]) return lang
   if (text.en) return 'en'
   return Object.keys(text).find((k) => text[k as Lang])
+}
+
+/** Язык, на котором ОТДАН текст: запрошенный, если есть перевод, иначе оригинал.
+ *
+ *  Метка языка наружу обязана говорить о тексте, а не о просьбе: `data.json` русского
+ *  списка без перевода объявлял `en` (fe#968), а разметка с `lang="en"` читалась бы
+ *  экранным диктором английским голосом. Языка в адресе нет (ADR-0029), и поисковик
+ *  узнаёт язык страницы отсюда же. Порядок — тот же, что у `tr`, через `trKey`. */
+export function servedLang(text: LocaleText | null | undefined, lang: Lang): string {
+  return trKey(text, lang) ?? lang
+}
+
+/** Ключ, под который пишется ПРАВКА текста (ADR-0030) — одно правило на редактор, предложение
+ *  правки и настройки: ключ ПОКАЗАННОГО текста (`trKey` — тот же порядок, что у `tr`, которым
+ *  форма его показала); показывать нечего — язык оригинала, иначе язык интерфейса.
+ *
+ *  ⚠️ Именно показанного, а не «оригинала»: у белорусского списка с английским переводом русский
+ *  интерфейс показывает английский текст, и запись под `be` затёрла бы оригинал переводом (ревью по
+ *  линзам). А без правила вообще первая же правка белорусского списка из русского интерфейса
+ *  уводила шаг под `ru`, и ключи смешивались. */
+export function editKey(ui: Lang, stored: string | null | undefined, shown: LocaleText | null | undefined): ContentLang {
+  const key = trKey(shown, ui)
+  if (isContentLang(key)) return key
+  return isContentLang(stored) ? stored : ui
 }
 
 // Словарь UI-строк живёт по языкам в dict/ (Ф1 трека i18n-extraction):

@@ -28,9 +28,12 @@ import {
   uniqueIndex,
   uuid,
   vector,
+  json,
 } from 'drizzle-orm/pg-core'
 import type { Lang, LocaleText } from '../i18n'
 import type { WatchEvents } from '../../core/ports'
+import type { SkillHeader } from '../../core/domain/skill-header'
+import type { AuthoredText } from '../../core/domain/authored-path'
 
 // ── Enums ────────────────────────────────────────────────────────────
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
@@ -247,6 +250,13 @@ export const users = pgTable('users', {
   notifyPrefs: jsonb('notify_prefs').notNull().default({}).$type<NotifyPrefs>(),
   // Язык ДОСТАВКИ (email/push-уведомления) — интерфейс пока English-only.
   lang: text('lang').notNull().default('en').$type<Lang>(),
+  /**
+   * ⚠️ НЕ ИСПОЛЬЗУЕТСЯ. Была «язык моих списков» (ADR-0030, шаг 2a); владелец убрал настройку
+   * 26.09 как лишнюю — язык задаётся у самого списка. Колонка уже на проде, и убрать её из схемы
+   * значит удалить столбец, а это разрушительная миграция (`ALLOW_DESTRUCTIVE_MIGRATION`) —
+   * отдельным шагом. Не читать и не писать.
+   */
+  listLang: text('list_lang'),
   deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
   // Приватный профиль: страница /handle скрыта от всех кроме владельца, юзер убран
   // из поиска людей. Публичные СПИСКИ остаются публичными (со своим ником) — это не
@@ -366,6 +376,12 @@ export const templates = pgTable(
     slug: text('slug').notNull(),
     title: jsonb('title').notNull().$type<LocaleText>(),
     desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
+    /**
+     * Язык ОРИГИНАЛА списка (ISO 639-1: `ru`, `be`, `de`…), ADR-0030. Пусто — неизвестен
+     * (списки до 25.09, пока их не заполнили): тогда язык угадывается по алфавиту текста.
+     * Языков контента столько, сколько кодов, — они не ограничены языками интерфейса.
+     */
+    lang: text('lang'),
     topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'set null' }),
     tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
     currentVersion: integer('current_version').notNull().default(1),
@@ -402,6 +418,18 @@ export const templates = pgTable(
     // Решает автор, как галочку «Template repository» у GitHub: чек-лист со скриптом ещё не
     // обязательно скилл. publish_skill ставит её сам — там намерение названо вызовом.
     isSkill: boolean('is_skill').notNull().default(false),
+    // Шапка исходного SKILL.md (license, compatibility, allowed-tools, metadata) — чтобы
+    // экспорт отдал скилл тем, чем он пришёл («экспорт верный», 24.09.2026). null — нет.
+    // ⚠️ json, а НЕ jsonb: jsonb пересортировывает ключи, и `metadata` автора выходила бы
+    // из экспорта не в его порядке (находка ревью ядра).
+    skillHeader: json('skill_header').$type<SkillHeader>(),
+    // ИМПОРТ ЧУЖОГО СКИЛЛА (решение владельца 25.09.2026): откуда взят (адрес папки на
+    // закреплённом коммите), какая лицензия и разрешает ли она публиковать. null в
+    // `sourceLicenseOpen` — список не импортирован. false — только приватно: публичным его
+    // не сделать ни настройками, ни копией (шаблон и форк наследуют запрет).
+    sourceUrl: text('source_url'),
+    sourceLicense: text('source_license'),
+    sourceLicenseOpen: boolean('source_license_open'),
     coverImage: text('cover_image'), // storage_key обложки-баннера (витрина/og); null → авто-баннер
     accent: text('accent'), // hex акцента карточки/авто-баннера ('' / null = дефолт)
     // Тип списка (ADR-0010): переносится из generations при принятии кандидата,
@@ -1154,6 +1182,13 @@ export const listDrafts = pgTable(
     meta: jsonb('meta').notNull().default({}).$type<{ tags?: string[]; ordered?: boolean; gated?: boolean }>(),
     /** Заметка к будущей версии — чтобы не набирать её заново при публикации. */
     note: text('note').notNull().default(''),
+    /**
+     * Файлы автора (`scripts/`, `references/`, `assets/`) ПОЛНЫМ набором — или `null`:
+     * «файлы не трогали», и публикация оставит их ядру перенести из родителя. Отличать
+     * «не трогали» от «убрали все» обязательно: пустой массив стирает набор.
+     * Пишет только редактор сайта; правки через агента (`patch_list`) колонку не трогают.
+     */
+    authored: jsonb('authored').$type<AuthoredText[] | null>(),
     /**
      * Счётчик правок черновика. Публикация удаляет ИМЕННО ту ревизию, которую
      * опубликовала: пока идёт вызов ядра, другой вход мог сохранить новые правки, и
@@ -2562,11 +2597,38 @@ export const indexnowSubmissions = pgTable('indexnow_submissions', {
     .primaryKey()
     .references(() => templates.id, { onDelete: 'cascade' }),
   sentUpdatedAt: timestamp('sent_updated_at', { withTimezone: true }).notNull(),
-  /** Отправленный адрес без языкового префикса — полный, с хостом (`x-default`). */
+  /** Отправленный адрес страницы — полный, с хостом; языка в адресе нет (ADR-0029). */
   sentUrl: text('sent_url').notNull(),
-  /** Языки, чьи адреса отправлены, через запятую: новый язык — повод отправить снова. */
+  /**
+   * Языки, чьи ПРЕФИКСНЫЕ адреса отправлены (`en,ru` — с 22 по 25.09), через запятую; пусто —
+   * только адрес без префикса. Расхождение с текущим набором — повод отправить снова.
+   */
   sentLangs: text('sent_langs').notNull(),
   sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/**
+ * СВОДКА НАРУШЕНИЙ CSP — отчёты браузеров, пока политика скриптов в режиме отчётов
+ * (shared/security/csp.ts).
+ *
+ * Не журнал, а СВОДКА: одна строка на пару «что заблокировано откуда», со счётчиком.
+ * Отчёт шлёт каждый браузер на каждой странице, и журнал за неделю вырос бы в миллионы
+ * одинаковых строк, а вопрос у недели один — есть ли среди нарушений НАШИ скрипты.
+ * `key` — хеш директивы, заблокированного адреса и файла-источника; адреса хранятся
+ * без query и фрагмента (там бывают токены). Пример страницы — последний увиденный.
+ */
+export const cspReports = pgTable('csp_reports', {
+  key: text('key').primaryKey(),
+  directive: text('directive').notNull(),
+  /** Адрес заблокированного скрипта либо ключевое слово: `inline`, `eval`. */
+  blocked: text('blocked').notNull(),
+  /** Файл, где случилось нарушение; пусто, если браузер его не назвал. */
+  source: text('source').notNull(),
+  samplePath: text('sample_path').notNull(),
+  sampleLine: integer('sample_line'),
+  count: integer('count').notNull().default(1),
+  firstSeen: timestamp('first_seen', { withTimezone: true }).notNull().defaultNow(),
+  lastSeen: timestamp('last_seen', { withTimezone: true }).notNull().defaultNow(),
 })
 
 // Вхождение URL в контент списка. Пересобирается delete+insert per template
@@ -2797,12 +2859,21 @@ export const oauthRefreshTokens = pgTable(
     /** Выданный по нему доступный токен — гасим вместе при ротации и отзыве. */
     accessTokenId: uuid('access_token_id').references(() => apiTokens.id, { onDelete: 'set null' }),
     clientId: text('client_id').notNull(),
+    /**
+     * ГРАНТ — одно согласие человека, на всю цепочку ротаций. Каждая ротация создаёт новую
+     * строку, и без общего id отзыв старого refresh (клиент потерял ответ на обновление или
+     * вышел во время фонового обновления) гасил бы только его, а новая пара жила бы ещё
+     * полгода — при ответе «отозвано». Новая строка наследует id прежней; отзыв гасит все
+     * строки гранта (RFC 7009 §2.1: «all access tokens based on the same authorization
+     * grant»). У строк до этой колонки — свой id на каждую: их цепочки уже не восстановить.
+     */
+    grantId: uuid('grant_id').notNull().defaultRandom(),
     scope: text('scope').notNull().default('read'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('oauth_refresh_user_idx').on(t.userId)],
+  (t) => [index('oauth_refresh_user_idx').on(t.userId), index('oauth_refresh_grant_idx').on(t.grantId)],
 )
 
 // ── Audit log (кто что сделал: пуши, удаления, токены, модерация) ────
