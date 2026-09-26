@@ -9,7 +9,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { StepDangerBadge, StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
-import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { servedLang, t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ListPageData } from './load'
 import { cardClass } from '@/shared/ui/card-style'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
@@ -28,7 +28,10 @@ type Props = Pick<ListPageData, 'tpl' | 'base' | 'viewer' | 'readOnlyView' | 'is
  */
 export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, isOwner, digSteps, stepImages, mon, lang }: Props) {
   // flatMap, а не map().filter(Boolean): один проход, пустой перевод отсеивается сразу.
-  const subs = (step.subtasks as LocaleText[]).flatMap((x) => tr(x, lang) || [])
+  // `lang` у каждого поля — его СОБСТВЕННЫЙ язык (ADR-0029, WCAG 3.1.2): шаг, дописанный после
+  // перевода, бывает на другом языке, а надписи интерфейса вокруг («Why:») — на языке зрителя.
+  const textLang = (v: LocaleText | null | undefined) => servedLang(v, lang)
+  const subs = (step.subtasks as LocaleText[]).flatMap((x) => (tr(x, lang) ? [{ label: tr(x, lang), lang: textLang(x) }] : []))
   const desc = tr(step.desc, lang)
   const why = tr(step.why, lang)
   // Автор пронумеровал заголовок сам — его номер идёт в колонку номера вместо нашего.
@@ -52,18 +55,18 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
           <div className="flex flex-wrap items-center gap-2 pr-7">
             {/* Заголовок шага пишет человек: слово без пробелов иначе уезжает
                 за правый край и тянет за собой страницу (мобила 390px). */}
-            <span className="min-w-0 text-body-lg font-semibold text-ink [overflow-wrap:anywhere]">{titleText}</span>
+            <span lang={textLang(step.title)} className="min-w-0 text-body-lg font-semibold text-ink [overflow-wrap:anywhere]">{titleText}</span>
             <StepLevelBadge level={step.level} lang={lang} />
             {/* Разрушительный пункт виден ДО того, как его скопировали
                 в терминал, — на сайте, а не только в скрипте. */}
             <StepDangerBadge step={step} lang={lang} />
           </div>
-          {desc && <Markdown className="mt-1">{renderWikiLinks(desc)}</Markdown>}
+          {desc && <Markdown lang={textLang(step.desc)} className="mt-1">{renderWikiLinks(desc)}</Markdown>}
           {why && (
             <div className="mt-1.5 flex gap-1.5 text-body-sm text-ink-2">
               <Info size={13} className="mt-0.5 shrink-0 text-muted" />
               <span className="min-w-0 [overflow-wrap:anywhere]">
-                <span className="font-medium text-ink-2">{t('whyLabel', lang)}:</span> {why}
+                <span className="font-medium text-ink-2">{t('whyLabel', lang)}:</span> <span lang={textLang(step.why)}>{why}</span>
               </span>
             </div>
           )}
@@ -76,7 +79,7 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
               <UserRound size={13} className="mt-0.5 shrink-0 text-muted" />
               <span className="min-w-0 [overflow-wrap:anywhere]">
                 <span className="font-medium text-ink-2">{t('needsHumanLabel', lang)}:</span>{' '}
-                {tr(step.needsHumanAsk, lang) || t('needsHumanGeneric', lang)}
+                {tr(step.needsHumanAsk, lang) ? <span lang={textLang(step.needsHumanAsk)}>{tr(step.needsHumanAsk, lang)}</span> : t('needsHumanGeneric', lang)}
                 {!readOnlyView && (
                   <>
                     {' '}
@@ -119,10 +122,10 @@ export function ListStepCard({ step, number, tpl, base, viewer, readOnlyView, is
               <ul className="flex flex-col gap-1.5">
                 {/* Ключ по тексту проверки, а не по индексу: при правке шага
                     список пересобирается, и индексные ключи путают строки. */}
-                {subs.map((label, i) => (
-                  <li key={`${label}#${i}`} className="flex gap-2 text-body text-ink-2 [overflow-wrap:anywhere]">
+                {subs.map((sub, i) => (
+                  <li key={`${sub.label}#${i}`} lang={sub.lang} className="flex gap-2 text-body text-ink-2 [overflow-wrap:anywhere]">
                     <SquareCheckBig size={14} className="mt-0.5 shrink-0 text-muted" />
-                    {label}
+                    {sub.label}
                   </li>
                 ))}
               </ul>

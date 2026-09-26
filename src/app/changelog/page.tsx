@@ -16,7 +16,7 @@ export async function generateMetadata() {
   const lang = await getLang()
   // Описание берём то же, что видит человек под заголовком страницы: карточка обязана
   // обещать ровно то, что откроется по ссылке.
-  return pageMeta({ title: 'Changelog', description: t('changelogSub', lang), path: '/changelog', lang })
+  return pageMeta({ title: 'Changelog', description: t('changelogSub', lang), path: '/changelog' })
 }
 
 /**

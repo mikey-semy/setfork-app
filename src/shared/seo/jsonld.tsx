@@ -53,11 +53,12 @@ export function breadcrumbList(items: { name: string; path: string }[]): Record<
 }
 
 /** Список чего угодно по порядку: шаги списка, списки тега, списки подборки. */
-export function itemList(name: string, items: { name: string; path?: string }[]): Record<string, unknown> {
+export function itemList(name: string, items: { name: string; path?: string }[], inLanguage?: string): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name,
+    ...(inLanguage ? { inLanguage } : {}),
     numberOfItems: items.length,
     itemListElement: items.map((it, i) => ({
       '@type': 'ListItem',
@@ -80,9 +81,12 @@ export function creativeWork(o: {
   dateModified?: Date | string
   tags?: string[]
   version?: number
+  /** Язык ТЕКСТА (BCP 47), а не интерфейса: языка в адресе нет (ADR-0029), и поисковик узнаёт его отсюда. */
+  inLanguage?: string
 }): Record<string, unknown> {
   const iso = (d?: Date | string) => (d instanceof Date ? d.toISOString() : d)
   return {
+    ...(o.inLanguage ? { inLanguage: o.inLanguage } : {}),
     '@context': 'https://schema.org',
     '@type': 'CreativeWork',
     name: o.name,
@@ -98,7 +102,7 @@ export function creativeWork(o: {
 }
 
 /** Страница профиля: кто автор корпуса. */
-export function profilePage(o: { name: string; handle: string; description?: string; path?: string }): Record<string, unknown> {
+export function profilePage(o: { name: string; handle: string; description?: string }): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'ProfilePage',
@@ -106,8 +110,7 @@ export function profilePage(o: { name: string; handle: string; description?: str
       '@type': 'Person',
       name: o.name,
       alternateName: o.handle,
-      // `path` — адрес на языке адреса страницы (`/ru/miki`); без него — адрес без языка.
-      url: absolute(o.path ?? `/${o.handle}`),
+      url: absolute(`/${o.handle}`),
       ...(o.description ? { description: o.description } : {}),
     },
   }
@@ -189,11 +192,14 @@ export function howTo(o: {
   description?: string
   path: string
   steps: { name: string; text?: string }[]
+  /** Язык ТЕКСТА — см. `creativeWork`. */
+  inLanguage?: string
 }): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'HowTo',
     name: o.name,
+    ...(o.inLanguage ? { inLanguage: o.inLanguage } : {}),
     ...(o.description ? { description: o.description } : {}),
     url: absolute(o.path),
     step: o.steps.map((s, i) => ({

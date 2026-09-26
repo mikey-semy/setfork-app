@@ -3,9 +3,12 @@ import { requireViewableDetail } from '@/features/library/guard'
 import { cacheHeaders } from '@/shared/http/cache'
 import { problem, problemListNotFound } from '@/shared/http/problem'
 import { highlightLines, resolveHighlightLang } from '@/shared/ui/highlight-code'
+import { binaryAllowedAt, lfsPointerOf } from '@/core/domain/lfs-pointer'
+import { getAsset } from '@/shared/media/asset-store'
 
 /**
- * GET /{handle}/{slug}/blob?path=scripts/run.sh[&v=N] — один файл автора (ADR-0028) текстом.
+ * GET /{handle}/{slug}/blob?path=scripts/run.sh[&v=N] — один файл автора (ADR-0028): текст —
+ * текстом, двоичный из `assets/` — скачиванием (байты из хранилища по хешу).
  *
  * Проводник файлов на странице списка открывает их отсюда по щелчку, а не везёт все в
  * страницу: набор бывает до мегабайта.
@@ -36,6 +39,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   if (!file) return problem(404, 'file_not_found', { detail: `No file ${path} in version ${version}.` })
 
   const name = path.slice(path.lastIndexOf('/') + 1)
+  // Двоичный файл лежит в дереве указателем: отдаём его байты из хранилища — СКАЧИВАНИЕМ и
+  // как `application/octet-stream`, чтобы браузер ничего из него не исполнял и не показывал.
+  const pointer = binaryAllowedAt(path) ? lfsPointerOf(file.content) : null
+  if (pointer) {
+    const bytes = await getAsset(pointer).catch(() => undefined)
+    if (bytes === undefined) return problem(503, 'storage_unavailable', { detail: 'The file could not be read from storage right now; try again.' })
+    if (!bytes) return problem(404, 'file_not_found', { detail: `The bytes of ${path} are missing from storage.` })
+    return new Response(bytes as unknown as BodyInit, {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "sandbox; default-src 'none'",
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(name)}`,
+        ...cacheHeaders({ shared: false }),
+      },
+    })
+  }
   // ?format=lines — для просмотра на странице: строки уже подсвечены НА СЕРВЕРЕ, как у
   // CodeCard (highlight.js в бандл клиента не попадает). Токены — текст, клиент кладёт
   // их текстом, не HTML, так что `text/plain`-защита выше тут не нужна.

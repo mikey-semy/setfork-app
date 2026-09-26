@@ -58,6 +58,8 @@ DIVERGE, do not polish. The list is already good for its original case. Produce 
   const slug = await uniqueSlug(variant.title || current.title, other.userId)
   const created = await listStore.create({
     ownerId: other.userId,
+    // Вариант пишется на языке `lang` — это язык его оригинала.
+    lang,
     slug,
     title: { [lang]: variant.title || current.title },
     desc: variant.desc ? { [lang]: variant.desc } : (tpl.desc ?? {}),

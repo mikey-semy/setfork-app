@@ -1,6 +1,7 @@
 'use server'
 
 import { and, eq, ne } from 'drizzle-orm'
+import { findUserByHandle } from '@/shared/auth/handle'
 import { revalidatePath } from 'next/cache'
 import { collaborators, db, listRedirects, templates, transferInvites, users } from '@/shared/db'
 import { normalizeHandle } from '@/shared/auth/handle-input'
@@ -24,8 +25,8 @@ export async function initiateTransfer(templateId: string, _prev: TransferResult
   }
   const toHandle = normalizeHandle(String(formData.get('toHandle') ?? ''))
   if (!toHandle) return { error: 'Укажите ник получателя.' }
-  const [to] = await db.select({ id: users.id, deleted: users.deleted }).from(users).where(eq(users.handle, toHandle)).limit(1)
-  if (!to || to.deleted) return { error: 'Пользователь не найден.' }
+  const to = await findUserByHandle(toHandle)
+  if (!to) return { error: 'Пользователь не найден.' }
   if (to.id === session.userId) return { error: 'Нельзя передать список самому себе.' }
 
   try {

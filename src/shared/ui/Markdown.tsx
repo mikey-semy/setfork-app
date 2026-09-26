@@ -31,10 +31,10 @@ function codeOf(children: ReactNode): { code: string; name?: string } | null {
 // задач и обсуждений, описания шагов и заметки релизов — текст, который пишет человек.
 // Абзацы и автоссылки GFM сами не рвутся, поэтому одна ссылка без пробелов уносила
 // страницу за край (замер: тело обсуждения — 2235px при экране 390).
-export function Markdown({ children, className, refBase }: { children: string; className?: string; refBase?: string }) {
+export function Markdown({ children, className, refBase, lang }: { children: string; className?: string; refBase?: string; lang?: string }) {
   if (!children?.trim()) return null
   return (
-    <div className={cn('text-body leading-snug text-ink-2 [overflow-wrap:anywhere] [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
+    <div lang={lang} className={cn('text-body leading-snug text-ink-2 [overflow-wrap:anywhere] [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
       <ReactMarkdown
         remarkPlugins={refBase ? [remarkGfm, remarkIssueRefs(refBase)] : [remarkGfm]}
         components={{

@@ -9,7 +9,7 @@ import { getDraft } from '@/features/library/queries'
 // Единый конвертер шагов на запись — тот же, что у веба, садовника и предложений.
 // Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
-import { detailByRefOrMoved, toProposed, type DetailStep, type McpItemInput } from '../shared'
+import { detailByRefOrMoved, mcpLang, toProposed, type DetailStep, type McpItemInput } from '../shared'
 import { patchBlock, rowsToProposed } from './patch-block'
 import { duplicateBid, listWritable, lockList } from './draft-store'
 import { draftBaseMismatch, headVersion, staleBase } from './base-version'
@@ -45,7 +45,7 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
   if ('error' in found) return found
   const { tpl } = found
   const tags = input.tags ? normalizeTags(input.tags) : tpl.tags
-  const proposed = toProposed(input.items ?? [])
+  const proposed = toProposed(input.items ?? [], mcpLang(tpl))
 
   // publish:false — полная замена ложится в РАБОЧУЮ КОПИЮ, версии не создавая. Тот же
   // черновик, что видит редактор и наполняет patch_list: путь накопления один на оба
@@ -177,8 +177,8 @@ export async function mcpPatchList(
   const patchIO = {
     bidOf: (it: ProposedItem) =>
       it.blockId ?? (typeof (it.content as Record<string, unknown> | undefined)?.bid === 'string' ? (it.content as Record<string, string>).bid : undefined),
-    update: patchBlock,
-    create: (block: McpItemInput) => toProposed([block])[0] ?? { error: 'the inserted block is empty (a step needs a title)' },
+    update: (item: ProposedItem, op: McpPatchOp) => patchBlock(item, op, mcpLang(tpl)),
+    create: (block: McpItemInput) => toProposed([block], mcpLang(tpl))[0] ?? { error: 'the inserted block is empty (a step needs a title)' },
   }
 
   const detail = await detailByRefOrMoved(handle, slug)
@@ -293,6 +293,8 @@ export async function mcpPublishDraft(userId: string, handle: string, slug: stri
       // своя арифметика здесь врала бы агенту в предпросмотре.
       wouldBeVersion: headVersion(tpl) + 1,
       blocks: draft.items.length,
+      // Правка файлов из редактора сайта едет той же версией — агент должен её видеть.
+      ...(draft.authored ? { files: draft.authored.map((f) => f.path) } : {}),
       note: (note ?? draft.note).trim() || 'edit',
       updatedAt: draft.updatedAt.toISOString(),
       hint: 'nothing published yet — these edits include everything pending on this list (yours and whatever was left in the editor); call again with confirm:true to publish them as one version',
@@ -304,7 +306,17 @@ export async function mcpPublishDraft(userId: string, handle: string, slug: stri
     // Наблюдатели узнают о версии так же, как при сохранении из редактора.
     const { notifyWatchersNewVersion } = await import('@/features/library/suggestion-side-effects')
     await notifyWatchersNewVersion(tpl.id, userId).catch(() => {})
-    return { ref: `${handle}/${slug}`, status: 'published' as const, version: res.version, blocks: res.blocks }
+    return {
+      ref: `${handle}/${slug}`,
+      status: 'published' as const,
+      version: res.version,
+      blocks: res.blocks,
+      ...(res.files !== undefined ? { files: res.files } : {}),
+      // Блоки вышли, набор файлов ядро не подтвердило: правка файлов лежит в черновике.
+      ...(res.filesNotApplied
+        ? { warning: 'the blocks are published but the git core did not confirm the files — the file edits stay pending; call publish_draft again' }
+        : {}),
+    }
   } catch (e) {
     const refused = contentError(e)
     if (refused) return refused

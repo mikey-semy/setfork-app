@@ -3,8 +3,7 @@ import { and, asc, eq, gt, isNull, ne, not, or, sql } from 'drizzle-orm'
 import { db, indexnowSubmissions, jobs, templates, users } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { cursorKey } from '@/shared/db/keyset'
-import { LOCALES, isLang } from '@/shared/i18n'
-import { langAlternates, langHref } from '@/shared/i18n/url'
+import { isLang } from '@/shared/i18n'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { botUserAgent } from '@/shared/site'
 import { getSettings, saveSettings } from '@/shared/settings/kv'
@@ -18,7 +17,7 @@ import { indexableFilter } from './queries/shared'
  * INDEXNOW — сообщать поисковикам о новых версиях публичных списков.
  *
  * Яндекс, Bing и остальные участники протокола узнают о правке сразу, не дожидаясь робота
- * (Google протокол не поддерживает). Главная цель — Яндекс и адреса `/ru/…`.
+ * (Google протокол не поддерживает). Главная цель — Яндекс.
  *
  * ⚠️ ПРОХОД, А НЕ ВЫЗОВ ПРИ ПУБЛИКАЦИИ. Версию публикуют больше шести путей, и вызов на
  * каждом — корень «забыли один путь». Проход раз в `PASS_EVERY_MIN` ловит все сразу. Что
@@ -70,20 +69,24 @@ export const INDEXNOW_KEYS = {
   backoffUntil: 'indexnow.backoff_until',
 } as const
 
-/** Языки, чьи адреса сейчас уходят, — строкой для сравнения с отправленным. */
-const CURRENT_LANGS = LOCALES.join(',')
+/**
+ * Языки, чьи адреса сейчас уходят, — строкой для сравнения с отправленным. Пусто: языка в
+ * адресе нет (ADR-0029, 25.09.2026). С 22 по 25.09 уходили ещё `/ru/…` и `/en/…` — у таких
+ * строк `sent_langs` = `en,ru`, и расхождение с этим значением само отправит их ещё раз:
+ * новый адрес и прежние языковые, на которых поисковик увидит перенаправление.
+ */
+const CURRENT_LANGS = ''
 
-/** Все адреса страницы списка: по одному на язык и адрес без префикса (`x-default`) — последним. */
+/** Адрес страницы списка — один на все языки; последним, как и раньше, идёт он. */
 export function listUrls(handle: string, slug: string, origin: string): string[] {
-  const { languages, xDefault } = langAlternates(`/${handle}/${slug}`, origin)
-  return [...Object.values(languages), xDefault]
+  return [`${origin}/${handle}/${slug}`]
 }
 
-/** Адреса, отправленные раньше: из сохранённого адреса и набора языков ТОГО момента. */
+/** Адреса, отправленные раньше: сохранённый адрес и, если были, его языковые варианты ТОГО момента. */
 export function sentUrls(sentUrl: string, sentLangs: string): string[] {
   const { origin, pathname } = new URL(sentUrl)
   const langs = sentLangs.split(',').filter(isLang)
-  return [...langs.map((code) => `${origin}${langHref(pathname, code)}`), sentUrl]
+  return [...langs.map((code) => `${origin}/${code}${pathname}`), sentUrl]
 }
 
 export interface IndexNowBody {
@@ -152,8 +155,17 @@ export interface PassResult {
 /**
  * Один проход — одна пачка. Сначала снятые с публичности (убрать из выдачи важнее), затем
  * новые и изменённые, пока влезает в потолок. Пометки — только после принятого ответа.
+ *
+ * `maxUrls` — потолок пачки; в работе всегда протокольный. Передаётся ради тестов, как
+ * `send` и `checkKey`: проверка «не больше потолка, остаток — следующим проходом» на
+ * протокольном потолке требует десяти тысяч списков и не укладывалась в таймаут CI.
  */
-export async function runIndexNowPass(send: SendFn = postIndexNow, now: Date = new Date(), checkKey: CheckKeyFn = checkKeyFile): Promise<PassResult> {
+export async function runIndexNowPass(
+  send: SendFn = postIndexNow,
+  now: Date = new Date(),
+  checkKey: CheckKeyFn = checkKeyFile,
+  maxUrls: number = MAX_URLS_PER_REQUEST,
+): Promise<PassResult> {
   const result: PassResult = { status: 'ok', sentLists: 0, withdrawnLists: 0, sentUrls: 0 }
   const key = indexNowKey()
   if (!key) {
@@ -175,7 +187,7 @@ export async function runIndexNowPass(send: SendFn = postIndexNow, now: Date = n
   const host = new URL(origin).host
   const keyLocation = `${origin}${indexNowKeyPath(key)}`
   // Сколько адресов у списка — из того же правила, что строит адреса, а не числом.
-  const rowsCap = Math.floor(MAX_URLS_PER_REQUEST / listUrls('h', 's', origin).length)
+  const rowsCap = Math.floor(maxUrls / listUrls('h', 's', origin).length)
   // Текущий адрес без префикса — той же формы, что `listUrls(…).at(-1)`: сравнивается с отправленным.
   const currentUrl = sql<string>`${origin} || '/' || ${users.handle} || '/' || ${templates.slug}`
 
@@ -214,7 +226,7 @@ export async function runIndexNowPass(send: SendFn = postIndexNow, now: Date = n
 
   // Набираем пачку до потолка: снятые первыми, затем новые и изменённые.
   const urlList: string[] = []
-  const fits = (urls: string[]) => urlList.length + urls.length <= MAX_URLS_PER_REQUEST
+  const fits = (urls: string[]) => urlList.length + urls.length <= maxUrls
   const takenWithdrawn: string[] = []
   for (const w of withdrawn) {
     const urls = sentUrls(w.sentUrl, w.sentLangs)
@@ -226,8 +238,12 @@ export async function runIndexNowPass(send: SendFn = postIndexNow, now: Date = n
   for (const f of fresh) {
     const urls = listUrls(f.handle, f.slug, origin)
     const url = urls[urls.length - 1]
-    // Адрес сменился (ник, хост) — старые адреса тоже: поисковик увидит там 301.
-    const moved = f.sentUrl && f.sentUrl !== url ? sentUrls(f.sentUrl, f.sentLangs ?? '') : []
+    // Адрес сменился (ник, хост) или ушли языковые адреса — прежние адреса тоже: поисковик
+    // увидит там перенаправление. Совпадающий с нынешним адрес дважды не шлём.
+    const moved =
+      f.sentUrl && (f.sentUrl !== url || (f.sentLangs ?? '') !== CURRENT_LANGS)
+        ? sentUrls(f.sentUrl, f.sentLangs ?? '').filter((u) => !urls.includes(u))
+        : []
     if (!fits([...urls, ...moved])) break
     urlList.push(...urls, ...moved)
     takenFresh.push({ id: f.id, updatedAtText: f.updatedAtText, url })

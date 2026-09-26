@@ -1,5 +1,6 @@
 'use server'
 
+import { editKey } from '@/shared/i18n'
 import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -65,7 +66,7 @@ export async function submitSuggestion(
   if (!(await rateLimit(`suggest:${session.userId}`, 10, 10 * 60_000)).ok) return 'ratelimited'
 
   const note = String(formData.get('note') ?? '').trim()
-  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
+  const proposed = toProposedItems(parseEditorItems(formData.get('items')), editKey(lang, tpl.lang, tpl.title))
 
   const steps = toStepInput(proposed)
   // Ключ доступа увидит владелец ЧУЖОГО списка, а ветка останется в его репозитории:

@@ -58,3 +58,8 @@ export const wantsProblem = (req: Request) => (req.headers.get('accept') ?? '').
  * несуществующего: 403 подтверждал бы, что такой список есть.
  */
 export const problemListNotFound = () => problem(404, 'not_found', { detail: 'No such list, or it is not visible to you.' })
+
+/** `?ref=` не нашёлся: ни релиза с таким тегом, ни версии. Список при этом может и не
+ *  существовать — ответ тот же, чтобы по тегу нельзя было узнать о скрытом списке. */
+export const problemRefNotFound = (ref: string) =>
+  problem(404, 'not_found', { detail: `No release tag or version "${ref}" in this list, or the list is not visible to you.` })

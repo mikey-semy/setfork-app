@@ -1,6 +1,7 @@
 'use server'
 
 import { and, eq } from 'drizzle-orm'
+import { findUserByHandle } from '@/shared/auth/handle'
 import { revalidatePath } from 'next/cache'
 import { db, suggestionReviews, suggestions, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
@@ -46,7 +47,7 @@ export async function dismissSuggestionReview(suggestionId: string, reviewerHand
 
   // Рецензента адресуем НИКОМ, а не id: ник и так виден на странице, а id
   // пользователя выносить в клиент ради этой кнопки незачем.
-  const [reviewer] = await db.select({ id: users.id }).from(users).where(eq(users.handle, reviewerHandle)).limit(1)
+  const reviewer = await findUserByHandle(reviewerHandle)
   if (!reviewer) return { ok: false }
   const reviewerId = reviewer.id
   if (reviewerId === session.userId) return { ok: false } // своё снимают «убрать ревью», а не так

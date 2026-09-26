@@ -18,7 +18,15 @@ import { PROBLEM_JSON } from '@/shared/http/problem'
 
 const path = (name: string, description: string) => ({ name, in: 'path', required: true, description, schema: { type: 'string' } })
 const LIST_PARAMS = [path('handle', 'Owner handle'), path('slug', 'List slug')]
-const langQuery = { name: 'lang', in: 'query', required: false, description: 'Content language; without it — the viewer cookie and Accept-Language', schema: { type: 'string', enum: [...LOCALES] } }
+const skillRef = {
+  name: 'ref',
+  in: 'query',
+  required: false,
+  description:
+    'A release tag (`v0.7.0`) or a list version (`v3`): the steps and files of that version instead of the current one. A release tag wins over a version number, as in git. Unknown ref — 404',
+  schema: { type: 'string' },
+}
+const langQuery = { name: 'lang', in: 'query', required: false, description: 'Requested content language; without it — the viewer cookie and Accept-Language. Without a translation the original is served, and the envelope `lang` names the language actually served (`requestedLang` — the one asked for)', schema: { type: 'string', enum: [...LOCALES] } }
 
 const problem = (description: string) => ({ description, content: { [PROBLEM_JSON]: { schema: { $ref: '#/components/schemas/Problem' } } } })
 const NOT_FOUND = { '404': problem('No such list, or it is not visible to you — the same answer for both') }
@@ -136,10 +144,14 @@ export function openApiDocument() {
         },
       },
       '/{handle}/{slug}/SKILL.md': {
-        get: { summary: 'The list as an Agent Skill, one file', parameters: LIST_PARAMS, responses: { ...ok('SKILL.md', 'text/markdown'), ...NOT_FOUND } },
+        get: { summary: 'The list as an Agent Skill, one file', parameters: [...LIST_PARAMS, skillRef], responses: { ...ok('SKILL.md', 'text/markdown'), ...NOT_FOUND } },
       },
       '/{handle}/{slug}/skill.tar.gz': {
-        get: { summary: 'The list as an Agent Skill folder', parameters: LIST_PARAMS, responses: { ...ok('Archive', 'application/gzip', { type: 'string', format: 'binary' }), ...NOT_FOUND } },
+        get: {
+          summary: 'The list as an Agent Skill folder',
+          parameters: [...LIST_PARAMS, skillRef],
+          responses: { ...ok('Archive', 'application/gzip', { type: 'string', format: 'binary' }), ...NOT_FOUND },
+        },
       },
       '/{handle}/{slug}/blob': {
         get: {

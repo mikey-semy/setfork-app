@@ -3,7 +3,7 @@
 > Файл СГЕНЕРИРОВАН из `findings.jsonl` командой `npm run review -- findings`.
 > Не редактируй его руками — правь jsonl и перегенерируй.
 
-Открыто: **69** из 85 записей.
+Открыто: **68** из 85 записей.
 
 ## high (5 открыто / 8)
 
@@ -18,7 +18,7 @@
 | H5-011 | H5 | open | `src/shared/quota.ts:119` | Пол остатка OpenRouter применяется при ЛЮБОМ активном провайдере: пустой счёт OpenRouter останавливает ИИ, работающий на Яндексе/Selectel/GigaChat |
 | H5-019 | H5 | open | `src/shared/ai/credits.ts:33` | Ответ 200 с неожиданным телом даёт remaining=0, кладётся в кеш как валидный и глушит ИИ на всём инстансе — fail-closed там, где quota.ts:117 обещает best-effort |
 
-## medium (30 открыто / 38)
+## medium (29 открыто / 38)
 
 | id | блок | статус | место | что не так |
 |---|---|---|---|---|
@@ -52,7 +52,7 @@
 | V1d-001 | V1d | open | `src/features/library/actions/forks.ts:101` | «Использовать как шаблон» собирает шаги рукописным маппингом и теряет needsHuman, needsHumanAsk, blockId и danger — соседняя forkTemplate в том же файле три из них переносит, общий toStepInput не зовётся |
 | V1d-002 | V1d | open | `src/features/library/actions/forks.ts:214` | Форк теряет пометку «разрушительный пункт»: маппинг чинили дважды (needsHuman, blockId), а danger не доложили, и toStepInput с его тристейтом не зовётся |
 | V1d-003 | V1d | open | `src/features/generation/actions.ts:333` | Приём сгенерированного кандидата пишет шаги третьим рукописным маппингом и выбрасывает needsHuman/needsHumanAsk, вычисленные восемью строками выше, а также blockId и danger |
-| V1d-004 | V1d | open | `tests/features/library/fork-invariants.itest.ts:88` | Тест «копия шага несёт защитные поля» не импортирует forkTemplate вовсе: проверяемый маппинг переписан внутри теста, то есть подменено само проверяемое правило |
+| V1d-004 | V1d | fixed | `tests/features/library/fork-invariants.itest.ts:88` | Тест «копия шага несёт защитные поля» не импортирует forkTemplate вовсе: проверяемый маппинг переписан внутри теста, то есть подменено само проверяемое правило |
 | V1d-005 | V1d | open | `src/features/library/actions/versions.ts:127` | updateListMeta — единственный путь записи канонической меты без гейта архива и заморозки: проверяется только владение, canEditList не зовётся, форма GeneralSection про состояние списка не знает |
 | V1d-006 | V1d | open | `src/features/mcp/tools/lists/edit.ts:107` | update_list пишет полную замену состава без expectedVersion, и baseVersion нет даже в схеме инструмента, хотя patch_list его требует, а обзор сервера обещает агенту защиту от перезаписи чужой правки |
 | V1d-007 | V1d | open | `src/features/library/suggestion-core/apply.ts:65` | Принятие предложения «из пунктов» пишет версию без expectedVersion и без сравнения base_version с текущей, и через MCP об устаревшей базе не сообщает ничто: ни очередь, ни описание инструмента, ни ворота |

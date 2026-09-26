@@ -1,3 +1,4 @@
+import { isBinary } from '@/core/domain/lfs-pointer'
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
@@ -56,7 +57,12 @@ export async function importSkillFromGithub(userId: string, url: string): Promis
 
   const res = await mcpPublishSkill(userId, {
     skillMd: fetched.skillMd,
-    files: fetched.files.map((f) => ({ path: f.path, content: new TextDecoder().decode(f.content), executable: f.executable })),
+    // Двоичное — base64: TextDecoder заменил бы невалидные байты и испортил картинку.
+    files: fetched.files.map((f) =>
+      isBinary(f.content)
+        ? { path: f.path, content: Buffer.from(f.content).toString('base64'), encoding: 'base64' as const, executable: f.executable }
+        : { path: f.path, content: new TextDecoder().decode(f.content), executable: f.executable },
+    ),
     visibility: privateOnly ? 'private' : 'public',
     note: `imported from ${fetched.sourceUrl}`,
   })

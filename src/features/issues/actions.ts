@@ -1,6 +1,7 @@
 'use server'
 
 import { and, eq } from 'drizzle-orm'
+import { findUserByHandle } from '@/shared/auth/handle'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { councilExperts, db, issueAssignees, issues, users } from '@/shared/db'
@@ -174,7 +175,7 @@ export async function toggleIssueAssignee(owner: string, slug: string, number: n
   const canAssign = session.userId === tpl.ownerId || (await isCollaborator(tpl.id, session.userId))
   if (!canAssign) redirect(`/${owner}/${slug}/issues/${number}`)
 
-  const [u] = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
+  const u = await findUserByHandle(handle)
   if (!u) return
   const userId = u.id
   // ⚠️ ЗАПРЕТА «назначать только имеющих доступ» ЗДЕСЬ НЕТ, и это решение, а не пропуск.

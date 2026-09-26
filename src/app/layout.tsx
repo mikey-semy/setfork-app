@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/shared/providers/theme-provider'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { t, isLang } from '@/shared/i18n'
+import { t } from '@/shared/i18n'
 import { avatarSrc } from '@/shared/media'
 import { getBrowserNotifyEnabled, getNotifications, getUnreadCount } from '@/features/notifications/queries'
 import { getUserTemplates } from '@/features/library/queries'
@@ -32,7 +32,6 @@ import { SITE_ORIGIN } from '@/shared/site'
 import { JsonLd, organization, softwareApplication, webSite } from '@/shared/seo/jsonld'
 import { REQUEST_PATH_HEADER } from '@/shared/request-path'
 import { NONCE_HEADER } from '@/shared/security/csp'
-import { LANG_HEADER, langAlternates, langHref, splitLangPath } from '@/shared/i18n/url'
 
 /**
  * ШРИФТЫ ЛЕЖАТ В РЕПОЗИТОРИИ, а не качаются на сборке.
@@ -125,32 +124,13 @@ const SITE_URL = SITE_ORIGIN
 const DESCRIPTION = 'Canonical, runnable, versioned reference lists — run them, check off steps, and fork from the library.'
 
 /**
- * ⚠️ Метаданные СОБИРАЮТСЯ НА ЗАПРОС, а не заданы объектом: в них входят `hreflang` и
- * `canonical`, а те зависят от адреса. Статический объект не знал бы, на какой странице
- * он оказался, и указал бы всем один корень — русские страницы объявили бы себя копиями
- * английских, что для поисковика означает «не индексировать» (аудит 22.09.2026, работа 1).
+ * Метаданные собираются на запрос: канон — адрес этой страницы без параметров, а адрес
+ * знает только запрос (его ставит middleware). Язык в адрес не входит (ADR-0029): адрес
+ * страницы один на все языки, поэтому и `hreflang` нет.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const h = await headers()
-  // Путь ставит middleware: в самих метаданных адреса запроса нет.
-  const raw = h.get(REQUEST_PATH_HEADER) ?? '/'
-  const path = raw.split('?')[0] || '/'
-  // ⚠️ Язык — из СВОЕГО заголовка, а не из пути: путь здесь уже без префикса (его снял
-  // middleware, чтобы сверка переехавших адресов сравнивала сравнимое). Разбор пути
-  // оставлен для случая, когда заголовка нет вовсе — например, при прямом рендере.
-  const fromHeader = h.get(LANG_HEADER)
-  const { lang: inPath, rest } = splitLangPath(path)
-  const fromPath = isLang(fromHeader) ? fromHeader : inPath
-  const { languages, xDefault } = langAlternates(path)
-  return {
-    ...baseMetadata,
-    alternates: {
-      // canonical — на СВОЙ язык. Страница без префикса каноникализируется сама на себя:
-      // она и есть x-default, её задача — развести гостя по языкам.
-      canonical: fromPath ? langHref(rest, fromPath) : rest,
-      languages: { ...languages, 'x-default': xDefault },
-    },
-  }
+  const raw = (await headers()).get(REQUEST_PATH_HEADER) ?? '/'
+  return { ...baseMetadata, alternates: { canonical: raw.split('?')[0] || '/' } }
 }
 
 const baseMetadata: Metadata = {

@@ -1,28 +1,37 @@
 import { cookies, headers } from 'next/headers'
-import { isLang, LANG_COOKIE, type Lang } from './index'
-import { negotiateLang } from './negotiate'
-import { LANG_HEADER } from './url'
+import { DEFAULT_LANG, isLang, LANG_COOKIE, type Lang } from './index'
+import { hasLangPreference, preferredLang } from './negotiate'
+import { pageSourceLang } from './page-source-lang'
+import { REQUEST_PATH_HEADER } from '@/shared/request-path'
 
 /**
  * Текущий язык интерфейса: cookie `lang` (ставит LangSwitch в шапке) →
- * Accept-Language браузера → en. Включено при развороте на РФ (ADR-0008):
- * словарь UI полный (en/ru), контент — locale-JSON, так что язык — это
- * только выбор ключа. Хост-зависимый дефолт (setfork.ru → ru) — Ф-RU1.
+ * Accept-Language браузера → язык списка, на странице которого мы, → en. Включено при
+ * развороте на РФ (ADR-0008): словарь UI полный (en/ru), контент — locale-JSON, так что
+ * язык — это только выбор ключа. Хост-зависимый дефолт (setfork.ru → ru) — Ф-RU1.
  *
- * Разбор заголовка — общий (`negotiateLang`): у интерфейса и у git-транспорта
+ * Разбор заголовка — общий (`preferredLang`): у интерфейса и у git-транспорта
  * различаются только источники приоритета (cookie против профиля), а правила чтения
  * `Accept-Language` обязаны быть одни. Две копии уже разошлись и обе теряли веса `q`.
+ *
+ * ⚠️ Язык списка — ТОЛЬКО когда у зрителя нет никакого предпочтения: ни куки, ни заголовка
+ * `Accept-Language` (или там `*`). Так приходит робот поисковика. Человек, приславший хоть
+ * какой-то язык — даже незнакомый нам `de`, — получает прежний выбор (`en` по умолчанию):
+ * иначе на странице списка он видел бы русский, а в разделах — английский, и при переходах
+ * внутри сайта шапка (корневой макет не перерисовывается) расходилась бы со страницей
+ * (находка ревью по линзам).
+ * Языка в адресе нет (ADR-0029), и без этого шага русский список робот видел бы английской
+ * страницей (ADR-0030).
  */
 export async function getLang(): Promise<Lang> {
-  const h = await headers()
-  // ⚠️ Язык ИЗ АДРЕСА старше куки. `/ru/explore` обязан быть русским даже у человека,
-  // выбравшего английский: адрес конкретнее, чем общий выбор, и по нему приходят по
-  // ссылке извне. Иначе поисковик, сохранивший русский адрес, получал бы английскую
-  // страницу — ровно та беда, ради которой языки и разведены по адресам.
-  const fromPath = h.get(LANG_HEADER)
-  if (isLang(fromPath)) return fromPath
   const c = await cookies()
   const fromCookie = c.get(LANG_COOKIE)?.value
   if (isLang(fromCookie)) return fromCookie
-  return negotiateLang(h.get('accept-language'))
+  const h = await headers()
+  const header = h.get('accept-language')
+  const asked = preferredLang(header)
+  if (asked) return asked
+  if (hasLangPreference(header)) return DEFAULT_LANG
+  const source = await pageSourceLang(h.get(REQUEST_PATH_HEADER))
+  return isLang(source) ? source : DEFAULT_LANG
 }

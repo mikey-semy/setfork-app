@@ -6,6 +6,8 @@
 // украшение, а условие её существования (см. комментарий у mcpBulkCreate).
 
 import 'server-only'
+import { isContentLang } from '@/shared/i18n/iso639'
+import { classifyListLang } from '@/shared/i18n/detect-text-lang'
 import { eq } from 'drizzle-orm'
 import { db, repositories, templates, users } from '@/shared/db'
 import { listQuota } from '@/shared/quota'
@@ -30,7 +32,7 @@ export interface McpCreateInput {
   tags?: string[]
   ordered?: boolean
   items: McpItemInput[]
-  /** Язык контента ('ru'|'en'); не задан — детект по заголовку/описанию. */
+  /** Язык контента (ISO 639-1): под ним лягут заголовок и шаги; не задан — детект по заголовку/описанию. */
   lang?: string
   /** Имя полки владельца, на которую положить список. Нет такой — список остаётся без полки. */
   catalog?: string
@@ -52,7 +54,21 @@ export const normalizeTags = (tags: string[]): string[] =>
 export async function mcpCreateList(userId: string, input: McpCreateInput) {
   const title = cleanText(input.title)
   if (!title) return { error: 'title is required' }
-  const proposed = toProposed(input.items ?? [])
+  // Язык ОРИГИНАЛА: явный аргумент — факт; без него догадка по тексту идёт ПОСЛЕДНИМ запасным
+  // вариантом и только осторожная — смесь или кириллица не из русского
+  // алфавита дают пусто, а не `ru` навсегда (ADR-0030).
+  const guessed = classifyListLang(
+    [title, input.desc ?? '', ...(input.items ?? []).flatMap((it) => [it.title ?? '', it.desc ?? ''])],
+    false,
+  )
+  // Ключ текста — тот же язык, что станет языком списка: явный, иначе осторожная догадка по
+  // ВСЕМУ тексту, иначе детект по заголовку. Раньше ключ брался по одному заголовку, и английский
+  // заголовок над русскими шагами клал всё под `en` у списка с языком `ru`.
+  const known = guessed === 'ru' || guessed === 'en' ? guessed : null
+  const lang = isContentLang(input.lang) ? input.lang : (known ?? detectTextLang(`${title} ${input.desc ?? ''}`))
+  // Шаги — под ТЕМ ЖЕ ключом, что заголовок: раньше они ложились под `en` при любом языке,
+  // и русский список из MCP выглядел как оригинал-заголовок с английским «переводом» шагов.
+  const proposed = toProposed(input.items ?? [], lang)
   if (!proposed.length) return { error: 'at least one item with a title is required' }
 
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
@@ -60,9 +76,6 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   if (!(await listQuota(userId, u?.handle)).ok) return { error: 'list quota reached — delete a list first' }
   const slug = await uniqueSlug(title, userId)
   const tags = normalizeTags(input.tags ?? [])
-  // Локаль заголовка/описания: явный lang из запроса или детект по тексту —
-  // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
-  const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
 
   // Отказ стража содержимого — ответ с местом, а не исключение: иначе агент видел код
   // `destructive_command:rm_rf` без шага, а пачка (`bulk_create_lists`) падала целиком.
@@ -70,6 +83,8 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   try {
     list = await listStore.create({
       ownerId: userId,
+      lang: isContentLang(input.lang) ? input.lang : null,
+      langFallback: known,
       slug,
       title: { [lang]: title },
       desc: cleanText(input.desc) ? { [lang]: cleanText(input.desc) } : {},

@@ -1,6 +1,6 @@
 import { Fragment } from 'react'
 import { Lock } from 'lucide-react'
-import { t, tr, type Lang } from '@/shared/i18n'
+import { servedLang, t, tr, type Lang } from '@/shared/i18n'
 import { renderListBlock } from './ListBlock'
 import { ListStepCard } from './ListStepCard'
 import { sectionAnchor, type ListPageData } from './load'
@@ -55,6 +55,7 @@ export function ListBlocks(props: Props) {
               as="h2"
               size="body"
               id={sectionAnchor(section)}
+              lang={servedLang(s.section, lang)}
               className={cn('scroll-mt-24 [overflow-wrap:anywhere]', si > 0 && 'mt-3')}
             >
               {section}

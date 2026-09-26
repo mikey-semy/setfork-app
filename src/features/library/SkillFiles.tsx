@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, ExternalLink, FileCode, FileText, Folder, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, ExternalLink, FileCode, FileDown, FileText, Folder, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { cardClass } from '@/shared/ui/card-style'
 import { IconButton } from '@/shared/ui/IconButton'
@@ -11,19 +11,18 @@ import { CodeSurface } from '@/shared/ui/CodeSurface'
 import type { CodeToken } from '@/shared/ui/highlight-code'
 import { buttonClass } from '@/shared/ui/button-style'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { formatBytes } from '@/shared/lib/format-bytes'
 
 export interface SkillFileRow {
   path: string
   executable: boolean
   bytes: number
+  /** Двоичный файл из `assets/` (байты в хранилище по хешу): не показывается, а скачивается. */
+  binary?: boolean
 }
 
 const DIRS = ['scripts', 'references', 'assets'] as const
 
-function size(n: number): string {
-  if (n < 1024) return `${n} B`
-  return n < 1024 * 1024 ? `${(n / 1024).toFixed(n < 10 * 1024 ? 1 : 0)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`
-}
 
 /** Открытый файл: строки уже подсвечены на сервере (`/blob?format=lines`). */
 type Opened = { path: string; state: 'loading' } | { path: string; state: 'failed' } | { path: string; state: 'ready'; code: string; language: string | null; lines: CodeToken[][] }
@@ -134,15 +133,23 @@ export function SkillFiles({ files, base, version, lang }: { files: SkillFileRow
                     return (
                       <li key={f.path}>
                         <MenuItem
-                          onClick={() => toggle(f.path)}
+                          // Двоичное текстом не показать — скачиваем: ответ `attachment`, и
+                          // браузер сохраняет файл, не уходя со страницы.
+                          onClick={() => (f.binary ? window.location.assign(blobHref(f.path)) : toggle(f.path))}
                           active={isOpen}
-                          aria-expanded={isOpen}
+                          aria-expanded={f.binary ? undefined : isOpen}
                           className="min-w-0 rounded-none pl-10"
                         >
-                          {f.executable ? <FileCode size={14} className="shrink-0 text-muted" /> : <FileText size={14} className="shrink-0 text-muted" />}
+                          {f.binary ? (
+                            <FileDown size={14} className="shrink-0 text-muted" />
+                          ) : f.executable ? (
+                            <FileCode size={14} className="shrink-0 text-muted" />
+                          ) : (
+                            <FileText size={14} className="shrink-0 text-muted" />
+                          )}
                           <span className="min-w-0 flex-1 truncate font-mono text-ink">{name}</span>
                           {f.executable ? <span className="shrink-0 rounded border border-border px-1 text-caption text-muted">755</span> : null}
-                          <span className="shrink-0 font-mono text-caption text-muted">{size(f.bytes)}</span>
+                          <span className="shrink-0 font-mono text-caption text-muted">{formatBytes(f.bytes)}</span>
                         </MenuItem>
                         {isOpen && open ? viewer(open) : null}
                       </li>

@@ -18,21 +18,24 @@
 // входа, слияние набора и дружелюбный ранний отказ.
 
 import 'server-only'
+import { isContentLang } from '@/shared/i18n/iso639'
 import { and, eq } from 'drizzle-orm'
 import { isPubliclyVisible, type AuthoredFile } from '@/core'
 import { db, listDrafts, templates } from '@/shared/db'
-import { detectTextLang } from '@/shared/lib/translit'
-import { AUTHORED_PATH, fitsArchive } from '@/features/library/skill'
+import { AUTHORED_NAME_MAX_BYTES, authoredPathProblem } from '@/core/domain/authored-path'
 import { parseSkillMd } from '@/features/library/skill-parse'
 import { assignCatalogByName } from '@/features/catalogs/assign'
 import { gitCore } from '@/features/git/core'
-import { SITE_URL, detailByRefOrMoved, toProposed, type McpItemInput } from '../shared'
+import { SITE_URL, detailByRefOrMoved, mcpLang, toProposed, type McpItemInput } from '../shared'
 import { mcpCreateList, normalizeTags } from './create'
 import { rowsToProposed } from './patch-block'
 import { headVersion } from './base-version'
 import { authoredError, contentError, ownedList, writeProposed } from './write'
-import { pickSkillHeader, type SkillHeader } from '@/core/domain/skill-header'
+import { pickSkillHeader, withHeading, type SkillHeader } from '@/core/domain/skill-header'
 import { findSecretInContent } from '@/core/domain/secret-scan'
+import { binaryAllowedAt, isBinary } from '@/core/domain/lfs-pointer'
+import { assetRefusalText, assetsOverLimit, storeBinaryFiles } from '@/features/library/skill-assets'
+import { AssetStoreUnavailable } from '@/shared/media/asset-store'
 
 export interface McpSkillFileInput {
   path: string
@@ -70,21 +73,24 @@ export interface McpPublishSkillInput {
   note?: string
 }
 
-/** Символы, которые ломают отображение имени или распаковку: управляющие, `\` и символы
- *  направления текста. Правило то же, что у ядра (`input_name_ok`); здесь — ранний отказ. */
-const BAD_NAME_CHAR = /[\p{Cc}\\‎‏‪-‮⁦-⁩]/u
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/
 
+/** Причина отказа по пути — текстом для агента; правило одно с редактором сайта. */
 function pathProblem(path: string, executable: boolean | undefined): string | null {
-  const name = path.slice(path.lastIndexOf('/') + 1)
-  if (!AUTHORED_PATH.test(path) || path.split('/').includes('..'))
-    return `bad file path "${path}": files live directly in scripts/, references/ or assets/ — one level, no subfolders`
-  if (name.startsWith('.')) return `bad file name "${path}": a name must not start with a dot`
-  if (BAD_NAME_CHAR.test(name)) return `bad file name "${path}": control, backslash or text-direction characters`
-  // Длиннее — лёг бы в дерево, но не в архив скилла: установился бы скилл без файла.
-  if (!fitsArchive(path)) return `file name too long "${path}": at most 100 bytes (about 50 Cyrillic letters)`
-  if (executable && !path.startsWith('scripts/')) return `"${path}" cannot be executable: only files in scripts/ may be`
-  return null
+  switch (authoredPathProblem(path, executable)) {
+    case 'path':
+      return `bad file path "${path}": files live directly in scripts/, references/ or assets/ — one level, no subfolders`
+    case 'dot':
+      return `bad file name "${path}": a name must not start with a dot`
+    case 'chars':
+      return `bad file name "${path}": control, backslash or text-direction characters`
+    case 'long':
+      return `file name too long "${path}": at most ${AUTHORED_NAME_MAX_BYTES} bytes (about ${AUTHORED_NAME_MAX_BYTES / 2} Cyrillic letters)`
+    case 'exec':
+      return `"${path}" cannot be executable: only files in scripts/ may be`
+    case null:
+      return null
+  }
 }
 
 /** Вход → байты с ранним отказом. Число и размер не проверяем: их судит ядро, а вторая
@@ -107,8 +113,9 @@ export function decodeSkillFiles(files: McpSkillFileInput[]): { files: (Authored
     } else {
       content = new TextEncoder().encode(f.content ?? '')
     }
-    // Двоичное дерево скилла не примет (ни с сайта, ни пушем): признак тот же, что у git.
-    if (content.includes(0)) return { error: `"${path}" is a binary file — a skill keeps text only` }
+    // Двоичное — только в assets/ (байты уедут в хранилище по хешу, в дерево — указатель);
+    // скрипты и справка — текст. Признак двоичного тот же, что у git.
+    if (isBinary(content) && !binaryAllowedAt(path)) return { error: assetRefusalText({ code: 'binary-outside-assets', path }) }
     out.push({ path, content, executable: f.executable === true, execGiven: f.executable !== undefined })
   }
   return { files: out }
@@ -145,6 +152,10 @@ export function mergeSkillFiles(
   return { files: [...next.values()], added, changed, removed, unknown }
 }
 
+/** Новый текст поля на языке `lang`: тот же — `undefined` (менять нечего), другой — один язык. */
+const retext = (was: unknown, lang: string, next: string): Record<string, string> | undefined =>
+  (was as Record<string, string> | null)?.[lang] === next ? undefined : { [lang]: next }
+
 /** Метка «Скилл» — publish_skill ставит её сам: намерение названо вызовом, как у GitHub
  *  шаблон ставят галочкой. Снять её можно в настройках; вызов её не снимает. */
 const markSkill = (where: ReturnType<typeof eq>, header?: { header: SkillHeader | null }) =>
@@ -163,8 +174,17 @@ const notApplied = (what: string) => ({
 
 /** ОПУБЛИКОВАТЬ СКИЛЛ: блоки + файлы автора одной версией. */
 export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillInput) {
-  const decoded = decodeSkillFiles(rawInput.files ?? [])
-  if ('error' in decoded) return decoded
+  const raw = decodeSkillFiles(rawInput.files ?? [])
+  if ('error' in raw) return raw
+  // Двоичные файлы → хранилище, в набор — указатели. ДО сравнения с текущим набором: иначе
+  // та же картинка, присланная снова, считалась бы изменением (в дереве лежит указатель).
+  const stored = await storeBinaryFiles(raw.files).catch((e) => {
+    if (e instanceof AssetStoreUnavailable) return { unavailable: e.message }
+    throw e
+  })
+  if ('unavailable' in stored) return { error: stored.unavailable }
+  if ('refused' in stored) return { error: assetRefusalText(stored.refused) }
+  const decoded = { files: stored.files.map((f, i) => ({ ...f, execGiven: raw.files[i].execGiven })) }
   // SKILL.md → блоки, название, описание. Явные поля главнее: агент мог поправить описание.
   const parsed = rawInput.skillMd ? parseSkillMd(rawInput.skillMd) : null
   if (parsed && rawInput.items) return { error: 'pass either skillMd or items, not both — skillMd already becomes the blocks' }
@@ -177,9 +197,11 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         items: parsed.items as McpItemInput[],
       }
     : rawInput
-  // Шапка исходника (license, compatibility, allowed-tools, metadata) хранится при списке и
-  // возвращается экспортом. Что сохранить не вышло — называем, а не теряем молча.
-  const picked = parsed ? pickSkillHeader(parsed.header) : undefined
+  // Шапка исходника (license, compatibility, allowed-tools, metadata) и заголовок тела, если
+  // он не совпал с названием, хранятся при списке и возвращаются экспортом. Что сохранить не
+  // вышло — называем, а не теряем молча.
+  const fromHeader = parsed ? pickSkillHeader(parsed.header) : undefined
+  let picked = fromHeader && { ...fromHeader, header: withHeading(fromHeader.header, parsed?.heading) }
   const parseNotes = parsed
     ? [...parsed.warnings, ...(picked?.dropped.length ? [`not kept from the SKILL.md header: ${picked.dropped.join(', ')}`] : [])]
     : []
@@ -256,13 +278,32 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
     const have = await gitCore.authoredFiles({ owner: handle, slug }, current).catch(() => null)
     if (!have) return { error: 'could not read the current files of this list from the git core — nothing was written; try again' }
     merged = mergeSkillFiles(have, decoded.files, input.removeFiles ?? [], input.replaceFiles === true)
+    // Предел двоичных файлов — на скилл целиком, а не на присланную порцию: дополнение по
+    // одной картинке иначе обходило бы его.
+    const over = assetsOverLimit(merged.files)
+    if (over) return { error: assetRefusalText(over) }
     if (merged.unknown.length) return { error: `no such files to remove: ${merged.unknown.join(', ')}` }
   }
 
-  // Мета — патчем: title/desc только если их меняют, на языке входа, прочие переводы целы.
-  const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${input.title ?? ''} ${input.desc ?? ''}`)
-  const title = input.title?.trim() ? { ...(tpl.title as Record<string, string>), [lang]: input.title.trim() } : undefined
-  const desc = input.desc !== undefined ? { ...(tpl.desc as Record<string, string>), [lang]: input.desc.trim() } : undefined
+  // Вернулся наш же экспорт этого списка: заголовком в нём стоит сохранённый `heading`, и
+  // разбор, не зная этого, принял его за название. Название тогда не меняется, заголовок цел.
+  const storedHeading = (tpl.skillHeader as SkillHeader | null)?.heading
+  const ownExport = !!storedHeading && !!parsed && !parsed.heading && !rawInput.title && parsed.title === storedHeading
+  if (ownExport && picked) picked = { ...picked, header: withHeading(picked.header, storedHeading) }
+  const newTitle = ownExport ? undefined : input.title
+
+  // Мета — патчем: title/desc только если их меняют, и тогда ОДНИМ языком. Переводы (кнопкой
+  // «Перевести») были переводом прежнего текста: оставь их — и зритель на другом языке видел бы
+  // старое название («finetooth» → «Whole-repository review», 26.09.2026). Перевести заново можно
+  // той же кнопкой. Текст не изменился — переводы целы.
+  // Без явного `lang` — язык ОРИГИНАЛА списка (ADR-0030), а не догадка детектора: иначе новое
+  // название белорусского списка легло бы под `ru` рядом со старым под `be`, и зритель видел бы
+  // старое. Язык самого списка обновление не меняет — оригинал объявляется при создании.
+  // Тот же ключ, что у блоков ниже и у чтения (`mcpLang`): у списка без языка это ключ его
+  // заголовка, а не догадка по новому тексту — иначе заголовок и шаги легли бы под разные ключи.
+  const lang = isContentLang(input.lang) ? input.lang : mcpLang(tpl)
+  const title = newTitle?.trim() ? retext(tpl.title, lang, newTitle.trim()) : undefined
+  const desc = input.desc !== undefined ? retext(tpl.desc, lang, input.desc.trim()) : undefined
 
   const filesChanged = merged ? merged.added.length + merged.changed.length + merged.removed.length > 0 : false
   if (!input.items && !filesChanged && !title && !desc && !input.tags && input.ordered === undefined) {
@@ -274,7 +315,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
   // Блоки не пришли — остаются текущие ТОЙ ЖЕ доменной формой (переводы, содержимое).
   let proposed
   if (input.items) {
-    proposed = toProposed(input.items)
+    proposed = toProposed(input.items, lang)
   } else {
     const detail = await detailByRefOrMoved(handle, slug)
     if (!detail) return { error: 'list not found' }

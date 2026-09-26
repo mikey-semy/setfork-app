@@ -5,7 +5,7 @@ import { Archive, Eye, GitFork, Snowflake, Star } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { t, tr } from '@/shared/i18n'
+import { servedLang, t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Badge } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -101,7 +101,9 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             <Link href={`/${meta.ownerHandle}`} aria-label={meta.ownerHandle} className="hidden shrink-0 sm:block">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
             </Link>
-            <h1 className="min-w-0 text-page font-bold text-ink [overflow-wrap:anywhere] sm:truncate">{tr(meta.title, lang)}</h1>
+            {/* `lang` — язык ТЕКСТА названия, а не интерфейса (ADR-0029): поисковик узнаёт язык
+                страницы отсюда, а экранный диктор читает название своим голосом. */}
+            <h1 lang={servedLang(meta.title, lang)} className="min-w-0 text-page font-bold text-ink [overflow-wrap:anywhere] sm:truncate">{tr(meta.title, lang)}</h1>
             {/* Версию у заголовка НЕ показываем: она живёт в сайдбаре Releases (как у GitHub —
                 номер версии/релиза только в блоке Releases, а не рядом с именем). Убран дубль. */}
             {/* Род списка — у имени, как «Public template» у GitHub. */}

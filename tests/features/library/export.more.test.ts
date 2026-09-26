@@ -138,3 +138,26 @@ describe('embedHtml', () => {
     expect(html).not.toContain('href="https://back"x"') // кавычка в URL экранирована
   })
 })
+
+/**
+ * ЯЗЫК РАЗМЕТКИ = ЯЗЫК ТЕКСТА (fe#968). Русский список без перевода, запрошенный по-английски,
+ * отдаётся оригиналом — и метка `lang` обязана это сказать, иначе экранный диктор читает
+ * русский текст английским голосом.
+ */
+describe('язык разметки — язык отданного текста', () => {
+  const ruOnly = list([step({ title: { ru: 'Замочить желатин' } })], { title: { ru: 'Суфле' } })
+  const both = list([step()], { title: { ru: 'Суфле', en: 'Souffle' } })
+
+  it('экспорт HTML: без перевода — lang оригинала, с переводом — запрошенный', () => {
+    expect(toHtml(ruOnly, 'en')).toContain('<html lang="ru">')
+    expect(toHtml(both, 'en')).toContain('<html lang="en">')
+  })
+
+  it('встраивание: рамка на языке зрителя, заголовок и шаги — на языке текста', () => {
+    const html = embedHtml(ruOnly, 'en', 'https://x')
+    expect(html).toContain('<html lang="en">')
+    expect(html).toContain('<div class="title" lang="ru">')
+    expect(html).toContain('<ol class="steps" lang="ru">')
+    expect(embedHtml(both, 'en', 'https://x')).toContain('<div class="title" lang="en">')
+  })
+})

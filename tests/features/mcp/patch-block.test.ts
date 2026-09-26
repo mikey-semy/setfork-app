@@ -30,7 +30,7 @@ const step = (over: Partial<Record<string, unknown>> = {}): ProposedItem =>
     ...over,
   }) as unknown as ProposedItem
 
-const update = (item: ProposedItem, fields: Partial<McpPatchOp>) => patchBlock(item, { op: 'update', bid: 'a', ...fields } as McpPatchOp)
+const update = (item: ProposedItem, fields: Partial<McpPatchOp>) => patchBlock(item, { op: 'update', bid: 'a', ...fields } as McpPatchOp, 'en')
 const ok = (r: ProposedItem | { error: string }) => {
   if ('error' in r) throw new Error(`ожидался блок, пришёл отказ: ${r.error}`)
   return r as unknown as Record<string, unknown>
@@ -107,13 +107,13 @@ describe('patchBlock — content не-step блоков', () => {
   it('ЯВНАЯ очистка поля срабатывает, хотя сериализатор пустое опускает', () => {
     // При простом слиянии поверх старого значения такая правка не делала бы
     // ничего, а ответ был бы успешным.
-    const out = ok(patchBlock(image(), { op: 'update', bid: 'i', caption: '' } as McpPatchOp))
+    const out = ok(patchBlock(image(), { op: 'update', bid: 'i', caption: '' } as McpPatchOp, 'en'))
     expect((out.content as Record<string, unknown>).caption).toBeUndefined()
     expect((out.content as Record<string, unknown>).ref).toBe('k/photo.png')
   })
 
   it('ключи, которых плоская форма не знает, сохраняются', () => {
-    const out = ok(patchBlock(image(), { op: 'update', bid: 'i', caption: 'новая' } as McpPatchOp))
+    const out = ok(patchBlock(image(), { op: 'update', bid: 'i', caption: 'новая' } as McpPatchOp, 'en'))
     expect((out.content as Record<string, unknown>).legacyThing).toBe(42)
   })
 })
@@ -129,7 +129,7 @@ describe('patchBlock — отказы', () => {
   })
 
   it('товары через API пока не патчатся', () => {
-    const r = patchBlock(step({ type: 'product' }), { op: 'update', bid: 'a', title: 'x' } as McpPatchOp)
+    const r = patchBlock(step({ type: 'product' }), { op: 'update', bid: 'a', title: 'x' } as McpPatchOp, 'en')
     expect(r).toEqual({ error: 'product blocks cannot be patched through the API yet' })
   })
 

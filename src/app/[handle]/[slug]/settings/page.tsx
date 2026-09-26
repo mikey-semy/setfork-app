@@ -16,7 +16,8 @@ import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
 import { SkillSection, TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
 import { GeneralSection } from '@/features/library/GeneralSection'
-import { ContentRefusalAlert, contentRefusalFrom } from '@/features/library/ContentRefusalAlert'
+import { ContentRefusalAlert } from '@/shared/ui/ContentRefusalAlert'
+import { contentRefusalFrom } from '@/core/domain/content-refusal'
 import { FeaturesSection } from '@/features/library/FeaturesSection'
 import { LivingSection } from '@/features/library/LivingSection'
 import { PrSettingsSection } from '@/features/library/PrSettingsSection'
@@ -57,7 +58,7 @@ export default async function ListSettingsPage({
       id: 'general',
       title: t('generalTitle', lang),
       icon: <Info size={15} />,
-      keywords: ['general', 'title', 'name', 'description', 'tags', 'ordered', 'основное', 'название', 'описание', 'теги', 'порядок'],
+      keywords: ['general', 'title', 'name', 'description', 'tags', 'ordered', 'language', 'основное', 'название', 'описание', 'теги', 'порядок', 'язык', 'оригинал'],
       content: (
         <GeneralSection
           refusal={refusal && <ContentRefusalAlert refusal={refusal} lang={lang} />}
@@ -66,6 +67,7 @@ export default async function ListSettingsPage({
           desc={meta.desc}
           tags={meta.tags}
           ordered={meta.ordered}
+          sourceLang={meta.lang}
           lang={lang}
         />
       ),
