@@ -2,6 +2,8 @@ import 'server-only'
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
@@ -51,4 +53,29 @@ export async function deleteByPrefix(keyPrefix: string): Promise<void> {
   const objects = (listed.Contents ?? []).map((o) => ({ Key: o.Key! })).filter((o) => o.Key)
   if (objects.length === 0) return
   await s3.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: objects } }))
+}
+
+/** Прочитать объект целиком. Нет такого — `null`; прочие сбои — исключением. */
+export async function getObject(key: string): Promise<Uint8Array | null> {
+  const { s3, bucket, prefix } = await client()
+  try {
+    const res = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: withPrefix(prefix, key) }))
+    return res.Body ? await res.Body.transformToByteArray() : null
+  } catch (e) {
+    if ((e as { name?: string }).name === 'NoSuchKey') return null
+    throw e
+  }
+}
+
+/** Есть ли объект. Нет — `false`; прочие сбои — исключением. */
+export async function hasObject(key: string): Promise<boolean> {
+  const { s3, bucket, prefix } = await client()
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: withPrefix(prefix, key) }))
+    return true
+  } catch (e) {
+    const status = (e as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
+    if (status === 404 || (e as { name?: string }).name === 'NotFound') return false
+    throw e
+  }
 }

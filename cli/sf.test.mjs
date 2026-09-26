@@ -122,6 +122,8 @@ test('skill publish: папка — правда; база из get_list; реж
   writeFileSync(join(dir, 'references', 'guide.md'), '# g\n')
   chmodSync(join(dir, 'references', 'guide.md'), 0o755)
   writeFileSync(join(dir, 'assets', 'logo.png'), Buffer.from([0x89, 0, 1]))
+  // Двоичное вне assets/ не едет — там только текст.
+  writeFileSync(join(dir, 'scripts', 'tool.bin'), Buffer.from([1, 0, 2]))
   mkdirSync(join(dir, 'assets', 'nested'))
   writeFileSync(join(dir, 'README.md'), 'x')
   calls.length = 0
@@ -134,11 +136,13 @@ test('skill publish: папка — правда; база из get_list; реж
   assert.equal(input.replaceFiles, true)
   assert.match(input.skillMd, /^---\nname: kit/)
   // Исполняемый бит — только у scripts/: у references/guide.md (755 на диске) его нет.
+  // Двоичный файл из assets/ — base64 (байты уедут в хранилище по хешу), текст — как есть.
   assert.deepEqual(input.files, [
     { path: 'scripts/run.sh', content: 'echo hi\n', executable: true },
     { path: 'references/guide.md', content: '# g\n' },
+    { path: 'assets/logo.png', content: Buffer.from([0x89, 0, 1]).toString('base64'), encoding: 'base64' },
   ])
-  assert.match(r.err, /skipped: assets\/logo\.png \(binary/)
+  assert.match(r.err, /skipped: scripts\/tool\.bin \(binary — binary files are kept only in assets/)
   assert.match(r.err, /skipped: assets\/nested/)
   assert.match(r.err, /skipped: README\.md/)
   assert.match(r.out, /version 8/)

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { and as andOp, eq } from 'drizzle-orm'
 import { hasAffiliateLink, hasMarkedAffiliate, markedAdvertisers } from '@/core'
 import { quizContentHash } from '@/core/domain/quiz-fingerprint'
+import { authoredFileInfo } from '@/core/domain/lfs-pointer'
 import { isCollaborator } from '@/features/collab/queries'
 import { digStepsWithSession } from '@/features/dig/queries'
 import { gitCore } from '@/features/git/core'
@@ -285,7 +286,7 @@ export async function loadListPage({
       : ((await gitCore.authoredFiles({ owner, slug }, shownVersion).catch(() => null)) ?? []).map((f) => ({
           path: f.path,
           executable: f.executable,
-          bytes: f.content.length,
+          ...authoredFileInfo(f.path, f.content),
         }))
   return {
     related,

@@ -1,3 +1,4 @@
+import { authoredFileInfo } from '@/core/domain/lfs-pointer'
 import 'server-only'
 import { latestReport } from '@/features/library/verification-report'
 import { eq } from 'drizzle-orm'
@@ -80,7 +81,12 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     // арифметика у одной из сторон означала бы отказ по числу, которое выдала другая.
     version: head,
     ...(authored?.length
-      ? { files: authored.map((f) => ({ path: f.path, executable: f.executable || undefined, bytes: f.content.length })) }
+      ? {
+          files: authored.map((f) => {
+            const info = authoredFileInfo(f.path, f.content)
+            return { path: f.path, executable: f.executable || undefined, bytes: info.bytes, binary: info.binary || undefined }
+          }),
+        }
       : {}),
     // Шапка исходного SKILL.md — чтобы агент видел, что сохранилось и уйдёт в экспорт.
     ...(tpl.isSkill && tpl.skillHeader ? { skillHeader: tpl.skillHeader } : {}),

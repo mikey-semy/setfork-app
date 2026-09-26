@@ -11,6 +11,7 @@ import { toExportList, type ExportList } from './export'
 import { versionShaMap } from './version-sha'
 import { latestReport } from './verification-report'
 import { skillBodyOverflow, type SkillContext } from './skill'
+import { resolveAssetFiles } from './skill-assets'
 import type { AuthoredFile, GitCore } from '@/core'
 
 /**
@@ -118,7 +119,12 @@ async function atRef(detail: Detail, ref: string): Promise<Detail | null> {
 async function authoredFilesOf(git: AuthoredFilesPort, handle: string, slug: string, version: number): Promise<AuthoredFile[] | null> {
   if (!process.env.SETFORK_CORE_URL) return null
   try {
-    return await git.authoredFiles({ owner: handle, slug }, version)
+    const files = await git.authoredFiles({ owner: handle, slug }, version)
+    if (!files) return null
+    // Двоичные файлы лежат в дереве указателями — в скилл едут их байты из хранилища.
+    const { files: resolved, missing } = await resolveAssetFiles(files, { handle, slug, version })
+    if (missing.length) log.warn('skill assets missing from storage', { handle, slug, version, missing })
+    return resolved
   } catch (e) {
     captureError(e, { where: 'skill.authoredFiles', handle, slug, version })
     return null

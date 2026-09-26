@@ -1,3 +1,5 @@
+import { binaryAllowedAt, isBinary, nativeExecutable } from '@/core/domain/lfs-pointer'
+import { ATTACH_MAX_BYTES, megabytes } from '@/shared/media/limits'
 import 'server-only'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 
@@ -166,8 +168,13 @@ export async function fetchGithubSkill(ref: GithubSkillRef, token?: string): Pro
     return AUTHORED_DIRS.includes(top) && restPath.length === 1
   })
   const total = wanted.reduce((n, b) => n + (b.size ?? 0), 0)
-  if (wanted.length > FILES_MAX || total > BYTES_MAX) {
-    return { error: `the skill has ${wanted.length} files, ${Math.ceil(total / 1024)} KB — a skill holds at most ${FILES_MAX} files and ${BYTES_MAX / 1024} KB` }
+  // Какие из них двоичные, по дереву не видно: верхняя граница — текст скилла плюс предел
+  // двоичных файлов (они уезжают в хранилище, ATTACH_MAX_BYTES). Точнее судят запись и ядро.
+  const bytesMax = BYTES_MAX + ATTACH_MAX_BYTES
+  if (wanted.length > FILES_MAX || total > bytesMax) {
+    return {
+      error: `the skill has ${wanted.length} files, ${Math.ceil(total / 1024)} KB — a skill holds at most ${FILES_MAX} files, ${BYTES_MAX / 1024} KB of text and ${megabytes(ATTACH_MAX_BYTES)} MB of binary files in assets/`,
+    }
   }
   for (const b of blobs) {
     if (!b.path.startsWith(prefix)) continue
@@ -181,8 +188,14 @@ export async function fetchGithubSkill(ref: GithubSkillRef, token?: string): Pro
     }
     const content = await raw(ref, sha, b.path)
     if (!content) return { error: `could not read ${b.path} from GitHub — try again` }
-    if (content.includes(0)) {
-      skipped.push({ path: rel, why: 'binary — a skill keeps text only' })
+    // Двоичное — только в assets/ (байты уедут в хранилище по хешу), и не программы.
+    if (isBinary(content) && !binaryAllowedAt(rel)) {
+      skipped.push({ path: rel, why: 'binary — binary files are kept only in assets/' })
+      continue
+    }
+    const exe = isBinary(content) ? nativeExecutable(content) : null
+    if (exe) {
+      skipped.push({ path: rel, why: `a native program (${exe}) — a skill does not ship executables` })
       continue
     }
     files.push({ path: rel, content, executable: top === 'scripts' && b.mode === '100755' })

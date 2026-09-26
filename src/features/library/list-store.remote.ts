@@ -3,6 +3,7 @@ import { Code, ConnectError, createClient } from '@connectrpc/connect'
 import { coreTransport } from '@/shared/core-transport'
 import { assertNoDestructiveContent } from '@/core/domain/destructive-command'
 import { assertNoSecrets } from '@/core/domain/secret-scan'
+import { assertAssetsStored } from './skill-assets'
 import { AuthoredFilesError, ListWriteError } from '@/core'
 import type { AuthoredFile, Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
 import { coreCapabilities } from '@/shared/core-capabilities'
@@ -258,6 +259,7 @@ export const listWriteRemote = {
     assertNoDestructiveContent(input.steps, input.authored)
     assertNoSecrets(input.steps, input.authored, input.meta)
     if (input.authored !== undefined) await assertCoreAcceptsAuthored()
+    await assertAssetsStored(input.authored)
     const res = await callAddVersion({
       listId,
       note: input.note,
@@ -284,6 +286,7 @@ export const listWriteRemote = {
     assertNoDestructiveContent(input.steps, input.authored)
     assertNoSecrets(input.steps, input.authored, { title: input.title, desc: input.desc, tags: input.tags, skillHeader: input.skillHeader })
     if (input.authored !== undefined) await assertCoreAcceptsAuthored()
+    await assertAssetsStored(input.authored)
     const res = await callCreate({
       ownerId: input.ownerId,
       slug: input.slug,
