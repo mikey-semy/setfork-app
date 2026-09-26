@@ -54,9 +54,18 @@ export const normalizeTags = (tags: string[]): string[] =>
 export async function mcpCreateList(userId: string, input: McpCreateInput) {
   const title = cleanText(input.title)
   if (!title) return { error: 'title is required' }
-  // Локаль заголовка/описания: явный lang из запроса или детект по тексту —
-  // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
-  const lang = isContentLang(input.lang) ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
+  // Язык ОРИГИНАЛА: явный аргумент — факт; без него догадка по тексту идёт ПОСЛЕДНИМ запасным
+  // вариантом и только осторожная — смесь или кириллица не из русского
+  // алфавита дают пусто, а не `ru` навсегда (ADR-0030).
+  const guessed = classifyListLang(
+    [title, input.desc ?? '', ...(input.items ?? []).flatMap((it) => [it.title ?? '', it.desc ?? ''])],
+    false,
+  )
+  // Ключ текста — тот же язык, что станет языком списка: явный, иначе осторожная догадка по
+  // ВСЕМУ тексту, иначе детект по заголовку. Раньше ключ брался по одному заголовку, и английский
+  // заголовок над русскими шагами клал всё под `en` у списка с языком `ru`.
+  const known = guessed === 'ru' || guessed === 'en' ? guessed : null
+  const lang = isContentLang(input.lang) ? input.lang : (known ?? detectTextLang(`${title} ${input.desc ?? ''}`))
   // Шаги — под ТЕМ ЖЕ ключом, что заголовок: раньше они ложились под `en` при любом языке,
   // и русский список из MCP выглядел как оригинал-заголовок с английским «переводом» шагов.
   const proposed = toProposed(input.items ?? [], lang)
@@ -67,13 +76,6 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   if (!(await listQuota(userId, u?.handle)).ok) return { error: 'list quota reached — delete a list first' }
   const slug = await uniqueSlug(title, userId)
   const tags = normalizeTags(input.tags ?? [])
-  // Язык ОРИГИНАЛА: явный аргумент — факт; без него догадка по тексту идёт ПОСЛЕДНИМ запасным
-  // вариантом и только осторожная — смесь или кириллица не из русского
-  // алфавита дают пусто, а не `ru` навсегда (ADR-0030; ключ текста выше — по-прежнему детект).
-  const guessed = classifyListLang(
-    [title, input.desc ?? '', ...(input.items ?? []).flatMap((it) => [it.title ?? '', it.desc ?? ''])],
-    false,
-  )
 
   // Отказ стража содержимого — ответ с местом, а не исключение: иначе агент видел код
   // `destructive_command:rm_rf` без шага, а пачка (`bulk_create_lists`) падала целиком.
@@ -82,7 +84,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
     list = await listStore.create({
       ownerId: userId,
       lang: isContentLang(input.lang) ? input.lang : null,
-      langFallback: guessed === 'ru' || guessed === 'en' ? guessed : null,
+      langFallback: known,
       slug,
       title: { [lang]: title },
       desc: cleanText(input.desc) ? { [lang]: cleanText(input.desc) } : {},

@@ -35,6 +35,7 @@ export const serverOptions = {
       '- Every write to a list\'s CONTENT makes a new version unless you pass publish:false, which collects edits in the working copy instead; publishing a list changes who can see it, not what is in it. Issues and releases do not make versions: create_release names an existing version (a git tag plus notes) — list_releases shows the ones already used.',
       '- An Agent Skill is a list plus author files (scripts/, references/, assets/). Use publish_skill to put blocks and files in ONE version; get_list shows the current files. Any published public list installs with: npx skills add <site>/<handle>/<slug>/skill.tar.gz',
       '- baseVersion protects you: if someone edited the list meanwhile, the patch is rejected instead of overwriting their work — re-read with get_list and retry.',
+      '- A list has ONE source language — get_list names it as "lang" and returns the text in it, even when translations exist. Write edits in that language: patch_list, update_list and suggest_edit put your text under it, so English sent to a Russian list replaces the Russian original. Translations are made on the site by its translate button.',
       '- Step links are just {"url": "..."}; a label is optional and the interface falls back to the domain.',
       '- delete_list is irreversible and needs confirm:true; without it the call only reports what would go.',
       '- Write tools need a token with write scope; read tools work with any token.',

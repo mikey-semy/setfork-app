@@ -76,8 +76,9 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     movedTo: detail.movedTo ?? undefined,
     title: tr(tpl.title, lang),
     desc: tr(tpl.desc, lang),
-    // Язык оригинала: на нём отдан текст выше, и под него ляжет записанное обратно.
-    lang: tpl.lang ?? undefined,
+    // Язык, на котором отдан текст выше и под который ляжет записанное обратно, — ФАКТИЧЕСКИЙ
+    // (mcpLang), а не колонка: у списка без языка колонка пуста, а писать всё равно во что-то.
+    lang,
     tags: tpl.tags,
     ordered: tpl.ordered,
     // ⚠️ Это ЧИСЛО КОНТРАКТА: агент присылает его обратно в baseVersion, и запись
