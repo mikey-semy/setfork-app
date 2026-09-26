@@ -250,13 +250,6 @@ export const users = pgTable('users', {
   notifyPrefs: jsonb('notify_prefs').notNull().default({}).$type<NotifyPrefs>(),
   // Язык ДОСТАВКИ (email/push-уведомления) — интерфейс пока English-only.
   lang: text('lang').notNull().default('en').$type<Lang>(),
-  /**
-   * ⚠️ НЕ ИСПОЛЬЗУЕТСЯ. Была «язык моих списков» (ADR-0030, шаг 2a); владелец убрал настройку
-   * 26.09 как лишнюю — язык задаётся у самого списка. Колонка уже на проде, и убрать её из схемы
-   * значит удалить столбец, а это разрушительная миграция (`ALLOW_DESTRUCTIVE_MIGRATION`) —
-   * отдельным шагом. Не читать и не писать.
-   */
-  listLang: text('list_lang'),
   deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
   // Приватный профиль: страница /handle скрыта от всех кроме владельца, юзер убран
   // из поиска людей. Публичные СПИСКИ остаются публичными (со своим ником) — это не

@@ -19,8 +19,9 @@
 // БАРЬЕР ПРОТИВ УДАЛЕНИЯ. `push --force` принимает и разрушающие statements — то есть
 // будущее переименование или удаление колонки прод потерял бы данные МОЛЧА, вместо того
 // чтобы остановить одноразовый контейнер и позвать человека (P1 из авто-ревью #347).
-// Поэтому ДО push сверяем, что ничего не пропадает: таблица или колонка, которая есть в
-// БД и отсутствует в схеме кода, останавливает миграцию. Осознанное удаление проходит
+// Поэтому ДО push сверяем, что ничего не пропадает: таблица или колонка С ДАННЫМИ, которая
+// есть в БД и отсутствует в схеме кода, останавливает миграцию (колонка, где все значения
+// NULL, уходит с записью в лог — терять в ней нечего). Осознанное удаление данных проходит
 // явным разрешением ALLOW_DESTRUCTIVE_MIGRATION=1 (и попадает в лог деплоя).
 //
 // Раньше здесь стоял рукописный список маркеров — и он оказался ровно тем, чем
@@ -31,7 +32,7 @@
 import 'dotenv/config'
 import { spawnSync } from 'node:child_process'
 import { Pool } from 'pg'
-import { enumDrift, enumsFromDdl, plannedDrops, type Enums, type Schema, type TableColumns } from './migrate-drops'
+import { enumDrift, enumsFromDdl, plannedDrops, releasedDrops, type Enums, type Schema, type TableColumns } from './migrate-drops'
 import { bootstrapPost, bootstrapPre } from './db-bootstrap'
 import { EMBEDDING_COLUMN_DIM } from '@/shared/db/schema'
 
@@ -111,6 +112,30 @@ async function dbSchema(pool: Pool): Promise<Schema> {
   for (const r of rows) {
     if (!out.has(r.table_name)) out.set(r.table_name, new Map())
     out.get(r.table_name)!.set(r.column_name, r.udt_name)
+  }
+  return out
+}
+
+/**
+ * Какие из колонок `table.column` хранят хоть одно значение (не NULL). Пустую колонку
+ * барьер отпускает: удаляя её, push не теряет ничего, кроме самого поля.
+ *
+ * Отдельной функцией, чтобы её мог позвать тест на живой БД. Имена приходят из каталога
+ * (`dbSchema`), но всё равно берутся в кавычки: имя колонки может совпасть со словом SQL.
+ */
+export async function filledColumns(pool: Pool, columns: string[]): Promise<string[]> {
+  const quote = (name: string) => `"${name.replace(/"/g, '""')}"`
+  const out: string[] = []
+  for (const qualified of columns) {
+    // По ПЕРВОЙ точке: имя таблицы в public точки не содержит, а колонка — может.
+    const dot = qualified.indexOf('.')
+    const [table, column] = [qualified.slice(0, dot), qualified.slice(dot + 1)]
+    // Схема названа явно, как у `dbSchema`: иначе search_path мог бы подсунуть одноимённую
+    // таблицу из другой схемы.
+    const { rows } = await pool.query<{ filled: boolean }>(
+      `SELECT EXISTS (SELECT 1 FROM public.${quote(table)} WHERE ${quote(column)} IS NOT NULL) AS filled`,
+    )
+    if (rows[0].filled) out.push(qualified)
   }
   return out
 }
@@ -264,12 +289,20 @@ export async function main() {
   const ddl = exportDdl()
   const expected = expectedSchema(ddl)
   const expectedEnums = enumsFromDdl(ddl)
+  const before = await dbSchema(pool)
   const {
     tables: dropTables,
-    columns: dropCols,
+    columns: goneCols,
     retypes,
     enumValues,
-  } = plannedDrops(expected, await dbSchema(pool), expectedEnums, await dbEnums(pool))
+  } = plannedDrops(expected, before, expectedEnums, await dbEnums(pool))
+  const { released, held: dropCols, renameAsk } = releasedDrops(expected, before, goneCols, await filledColumns(pool, goneCols))
+  if (released.length) console.log(`[preflight] пустые колонки уйдут без потери данных: ${released.join(', ')}`)
+  if (renameAsk.length)
+    console.error(
+      `[preflight] ${renameAsk.join(', ')} — пустые, но в их таблицу добавляется колонка: drizzle-kit спросит` +
+        ' «переименована?» и без терминала ничего не применит. Разнеси удаление и добавление по двум выкаткам.',
+    )
   if (dropTables.length || dropCols.length || retypes.length || enumValues.length) {
     const what = [
       dropTables.length ? `таблицы: ${dropTables.join(', ')}` : '',
