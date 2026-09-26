@@ -49,7 +49,9 @@ describe('круг экспорт → разбор', () => {
     const parsed = parseSkillMd(toSkillMarkdown(src, 'en', { origin: 'https://setfork.test' }))
     expect(parsed.name).toBe('service-outage')
     expect(parsed.description).toBe('What to do when the service is down. Use when a health check fails.')
+    // `name` нашего экспорта — слаг; название — заголовок, и отдельным заголовком он не хранится.
     expect(parsed.title).toBe('Service outage')
+    expect(parsed.heading).toBeUndefined()
     expect(parsed.items).toEqual([
       { type: 'step', title: 'Check the network', desc: 'Ping the gateway.\n\nThen the DNS.', command: 'ping -c1 10.0.0.1', why: 'Most outages are the network', section: 'Diagnose' },
       { type: 'step', title: 'Look at the disk', level: 'optional', subtasks: ['df -h is below 90%'], refs: [{ label: 'Runbook', url: 'https://example.org/rb' }], section: 'Diagnose' },
@@ -106,7 +108,10 @@ describe('чужой скилл', () => {
     expect(p.name).toBe('pdf-tools')
     expect(p.description).toBe('Fill and merge PDF files. Use when the user asks to work with a PDF.')
     expect(p.header).toEqual({ license: 'MIT', metadata: { version: '1.2.0' } })
-    expect(p.title).toBe('PDF tools')
+    // Название — имя скилла из шапки, а не заголовок тела (решение владельца 26.09.2026):
+    // заголовок хранится отдельно, и экспорт вернёт его на место.
+    expect(p.title).toBe('pdf-tools')
+    expect(p.heading).toBe('PDF tools')
     expect(p.items).toEqual([
       { type: 'text', text: 'This skill works with PDFs through **pypdf**.' },
       { type: 'step', title: 'Install the library', command: 'pip install pypdf', section: 'Merge' },
@@ -114,6 +119,12 @@ describe('чужой скилл', () => {
       { type: 'text', text: '- a note, not a step\n- another note\n\n```python\n# 1. not a step: inside code\n```', section: 'Merge' },
     ])
     expect(p.warnings).toEqual([])
+  })
+
+  it('заголовок, равный имени, отдельно не хранится', () => {
+    const p = parseSkillMd('---\nname: finetooth\ndescription: d\n---\n# finetooth\n\n1. Do')
+    expect(p.title).toBe('finetooth')
+    expect(p.heading).toBeUndefined()
   })
 
   it('без шапки и описания — предупреждения, а не молчание', () => {

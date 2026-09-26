@@ -32,3 +32,4 @@ itest-run.log
 # байткод Python (скилл finetooth) — не исходник
 __pycache__/
 *.pyc
+/.data/

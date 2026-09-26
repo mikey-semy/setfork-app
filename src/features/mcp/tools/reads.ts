@@ -1,3 +1,4 @@
+import { authoredFileInfo } from '@/core/domain/lfs-pointer'
 import 'server-only'
 import { latestReport } from '@/features/library/verification-report'
 import { eq } from 'drizzle-orm'
@@ -8,7 +9,8 @@ import { getDraft, getFeed, getTemplateDetail } from '@/features/library/queries
 import { buildScript, scriptRefusal, toExportList } from '@/features/library/export'
 import { AUTHORED_DIALECT, dialectExt, normalizeDialect } from '@/core/domain/script-dialect'
 import { getCourseCompletion } from '@/features/quizzes/queries'
-import { SITE_URL, blockForMcp, detailByRefOrMoved, mcpCanView, type DetailStep } from './shared'
+import { SITE_URL, blockForMcp, detailByRefOrMoved, mcpCanView, mcpLang, type DetailStep } from './shared'
+import type { ContentLang } from '@/shared/i18n/iso639'
 import { headVersion } from './lists/base-version'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
@@ -41,7 +43,8 @@ export async function mcpSearch(userId: string, query: string, limit: number) {
 
 /** Блоки списка в форме MCP: та же форма у чтения и у входа записи — на ней
  *  держится и круг «прочитал → отдал обратно», и точечный патч. */
-const blocksForMcp = (rows: DetailStep[]) => rows.map((s) => ({ ...blockForMcp(s), section: tr(s.section, 'en') || undefined }))
+const blocksForMcp = (rows: DetailStep[], lang: ContentLang) =>
+  rows.map((s) => ({ ...blockForMcp(s, lang), section: tr(s.section, lang) || undefined }))
 
 export async function mcpGetList(userId: string, handle: string, slug: string) {
   const detail = await detailByRefOrMoved(handle, slug)
@@ -49,6 +52,7 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
   const { tpl, currentVersion, steps } = detail
   // Тот же единый предикат приватности, что и на сайте (у MCP админа нет).
   if (!(await mcpCanView(tpl, userId))) return null
+  const lang = mcpLang(tpl)
 
   // Свои НЕОПУБЛИКОВАННЫЕ правки показываем рядом с опубликованным составом: без
   // этого агент, начавший копить пачку (patch_list с publish:false), на следующем
@@ -71,8 +75,11 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     // Пришли по устаревшему адресу — пусть агент обновит свои ссылки (в HTTP это
     // сделал бы 301; в MCP редиректа нет).
     movedTo: detail.movedTo ?? undefined,
-    title: tr(tpl.title, 'en'),
-    desc: tr(tpl.desc, 'en'),
+    title: tr(tpl.title, lang),
+    desc: tr(tpl.desc, lang),
+    // Язык, на котором отдан текст выше и под который ляжет записанное обратно, — ФАКТИЧЕСКИЙ
+    // (mcpLang), а не колонка: у списка без языка колонка пуста, а писать всё равно во что-то.
+    lang,
     tags: tpl.tags,
     ordered: tpl.ordered,
     // ⚠️ Это ЧИСЛО КОНТРАКТА: агент присылает его обратно в baseVersion, и запись
@@ -80,7 +87,12 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     // арифметика у одной из сторон означала бы отказ по числу, которое выдала другая.
     version: head,
     ...(authored?.length
-      ? { files: authored.map((f) => ({ path: f.path, executable: f.executable || undefined, bytes: f.content.length })) }
+      ? {
+          files: authored.map((f) => {
+            const info = authoredFileInfo(f.path, f.content)
+            return { path: f.path, executable: f.executable || undefined, bytes: info.bytes, binary: info.binary || undefined }
+          }),
+        }
       : {}),
     // Шапка исходного SKILL.md — чтобы агент видел, что сохранилось и уйдёт в экспорт.
     ...(tpl.isSkill && tpl.skillHeader ? { skillHeader: tpl.skillHeader } : {}),
@@ -120,7 +132,7 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
       : null,
     // Все блоки списка (шаги + текст/картинки/опросы/видео/тесты) — полный контекст.
     // section = заголовок урока/секции (для контекста границ уроков у AI).
-    steps: blocksForMcp(steps),
+    steps: blocksForMcp(steps, lang),
     ...(pending
       ? {
           pendingEdits: {
@@ -129,7 +141,7 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
             updatedAt: pending.updatedAt.toISOString(),
             // Номер блока проставляем сами: у доменной формы поля n нет, и без него
             // агент не сопоставил бы черновик с опубликованным составом.
-            steps: blocksForMcp(pending.items.map((it, i) => ({ ...it, n: i + 1 })) as unknown as Parameters<typeof blocksForMcp>[0]),
+            steps: blocksForMcp(pending.items.map((it, i) => ({ ...it, n: i + 1 })) as unknown as Parameters<typeof blocksForMcp>[0], lang),
             hint: 'these edits are NOT published; patch them further with publish:false or call publish_draft',
           },
         }

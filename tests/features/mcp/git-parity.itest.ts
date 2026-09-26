@@ -1,6 +1,7 @@
 import { and, eq, asc } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { resetTables } from '../../helpers/reset-db'
+import { tr, type LocaleText } from '@/shared/i18n'
 
 /**
  * ПОСЛЕ ЛЮБОЙ ЗАПИСИ СОДЕРЖИМОЕ БАЗЫ И GIT СОВПАДАЮТ.
@@ -43,7 +44,9 @@ const dbTitles = async (tplId: string) => {
     .from(templateVersions)
     .where(and(eq(templateVersions.templateId, tplId), eq(templateVersions.version, tpl.current)))
   const rows = await db.select({ title: steps.title }).from(steps).where(eq(steps.versionId, ver.id)).orderBy(asc(steps.n))
-  return rows.map((r) => (r.title as Record<string, string>).en)
+  // Ключ языка здесь не предмет проверки (MCP кладёт текст под язык списка, ADR-0030) —
+  // читаем так же, как читает сайт.
+  return rows.map((r) => tr(r.title as LocaleText, 'en'))
 }
 
 /** Список заводим ТЕМ ЖЕ инструментом, каким его заводит ассистент: через MCP, черновиком.

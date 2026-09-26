@@ -22,6 +22,8 @@ import { emptyItem, toProposedItems } from '@/features/library/editor'
 import { toStepInput } from '@/shared/lib/step-input'
 import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
+import { contentRefusalOf } from '@/core/domain/content-refusal'
+import type { ContentRefusal } from '@/shared/ui/ContentRefusalAlert'
 import { MAX_VARIANTS } from './limits'
 
 async function ownerHandle(userId: string): Promise<string> {
@@ -274,7 +276,7 @@ export async function answerClarify(generationId: string, answers: string[]): Pr
 }
 
 // ── Принять кандидата → создать черновик-список (draft) ───────────────
-export async function acceptCandidate(generationId: string, candidateId: string): Promise<void> {
+export async function acceptCandidate(generationId: string, candidateId: string): Promise<{ refusal: ContentRefusal } | void> {
   const session = await requireSession()
   const gen = await db.query.generations.findFirst({ where: (g) => eq(g.id, generationId) })
   if (!gen || gen.userId !== session.userId) redirect('/explore')
@@ -318,23 +320,34 @@ export async function acceptCandidate(generationId: string, candidateId: string)
     genLang,
   )
 
-  const list = await listStore.create({
-    ownerId: session.userId,
-    slug,
-    title: { [genLang]: cand.title || gen.query },
-    desc: cand.desc ? { [genLang]: cand.desc } : {},
-    tags: cand.tags,
-    ordered: true,
-    visibility: 'public',
-    status: 'draft', // черновик: не публичен, пока владелец не опубликует
-    origin: 'ai_draft',
-    note: 'ai draft',
-    // ⚠️ ОБЩИЙ КОНВЕРТЕР, а не свой маппинг. Здесь был третий рукописный, и он
-    // выбрасывал «здесь нужен человек» вместе с вопросом — ВОСЕМЬЮ СТРОКАМИ ПОСЛЕ того,
-    // как их вычислил: `toProposedItems` пометку ставит, а этот список полей её не перечислял.
-    // Заодно терялись идентичность блока и пометка «разрушительный пункт».
-    steps: toStepInput(proposed),
-  })
+  let list
+  try {
+    list = await listStore.create({
+      ownerId: session.userId,
+      // Язык, на котором писала модель: он и есть язык оригинала.
+      lang: genLang,
+      slug,
+      title: { [genLang]: cand.title || gen.query },
+      desc: cand.desc ? { [genLang]: cand.desc } : {},
+      tags: cand.tags,
+      ordered: true,
+      visibility: 'public',
+      status: 'draft', // черновик: не публичен, пока владелец не опубликует
+      origin: 'ai_draft',
+      note: 'ai draft',
+      // ⚠️ ОБЩИЙ КОНВЕРТЕР, а не свой маппинг. Здесь был третий рукописный, и он
+      // выбрасывал «здесь нужен человек» вместе с вопросом — ВОСЕМЬЮ СТРОКАМИ ПОСЛЕ того,
+      // как их вычислил: `toProposedItems` пометку ставит, а этот список полей её не перечислял.
+      // Заодно терялись идентичность блока и пометка «разрушительный пункт».
+      steps: toStepInput(proposed),
+    })
+  } catch (e) {
+    // Страж содержимого (команда, ключ доступа) — отказ ЗНАЧЕНИЕМ: чат покажет причину и
+    // шаг, а не безымянную страницу ошибки, после которой вариант как будто потерялся.
+    const refusal = contentRefusalOf(e)
+    if (refusal) return { refusal }
+    throw e
+  }
   await db.update(generations).set({ chosenTemplateId: list.id, chosenIdx: cand.idx }).where(eq(generations.id, gen.id))
   // Тип списка переезжает на template — иначе он умирал вместе с generation,
   // и садовник/refine не знали, что перед ними рецепт (ломали структуру).

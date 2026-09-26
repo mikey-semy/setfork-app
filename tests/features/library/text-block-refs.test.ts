@@ -52,12 +52,12 @@ describe('текстовый блок в веб-редакторе', () => {
 
 describe('текстовый блок через MCP', () => {
   it('ссылки текста доезжают до записи, а не выбрасываются', () => {
-    const [p] = toProposed([{ type: 'text', text: 'Первый документ новой власти.', refs: [{ label: 'Декрет — текст', url: SOURCE.url }] }])
+    const [p] = toProposed([{ type: 'text', text: 'Первый документ новой власти.', refs: [{ label: 'Декрет — текст', url: SOURCE.url }] }], 'en')
     expect(p.refs).toEqual([{ label: { en: 'Декрет — текст' }, url: SOURCE.url }])
   })
 
   it('get_list отдаёт ссылки текста — иначе прочитанное нельзя вернуть как было', () => {
-    const out = blockForMcp({ ...textItem([SOURCE]), n: 1 } as unknown as DetailStep) as Record<string, unknown>
+    const out = blockForMcp({ ...textItem([SOURCE]), n: 1 } as unknown as DetailStep, 'en') as Record<string, unknown>
     expect(out.refs).toEqual([{ label: 'Декрет о мире — текст', url: SOURCE.url }])
   })
 
@@ -66,13 +66,13 @@ describe('текстовый блок через MCP', () => {
     // переложенным под en. Держит это движок патча (непереданное берётся у прежнего
     // блока), а не ветка текста: порча записи и чтения ссылок текста этот тест не
     // роняет, проверено. Он закрепляет сквозное поведение, а не правку #962.
-    const r = patchBlock(textItem([SOURCE]), { op: 'update', bid: 'b1', text: 'Исправленный текст.' } as McpPatchOp)
+    const r = patchBlock(textItem([SOURCE]), { op: 'update', bid: 'b1', text: 'Исправленный текст.' } as McpPatchOp, 'en')
     if ('error' in r) throw new Error(r.error)
     expect(r.refs).toEqual([SOURCE])
   })
 
   it('ссылки блоку, который их не держит, — отказ с понятным текстом, а не молчание', () => {
-    expect(() => toProposed([{ type: 'image', imageRef: 'u/1.png', refs: [{ label: 'источник', url: SOURCE.url }] }])).toThrow(
+    expect(() => toProposed([{ type: 'image', imageRef: 'u/1.png', refs: [{ label: 'источник', url: SOURCE.url }] }], 'en')).toThrow(
       /cannot carry refs — links attach to a step or a text block/,
     )
   })
@@ -80,6 +80,6 @@ describe('текстовый блок через MCP', () => {
   it('пустой список ссылок у картинки — не повод отказывать', () => {
     // get_list отдаёт блоки, и агент возвращает их как есть: пустой `refs: []` у
     // картинки — это не попытка приложить источник.
-    expect(() => toProposed([{ type: 'image', imageRef: 'u/1.png', refs: [] }])).not.toThrow()
+    expect(() => toProposed([{ type: 'image', imageRef: 'u/1.png', refs: [] }], 'en')).not.toThrow()
   })
 })

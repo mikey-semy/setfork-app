@@ -33,6 +33,7 @@ import {
 import type { Lang, LocaleText } from '../i18n'
 import type { WatchEvents } from '../../core/ports'
 import type { SkillHeader } from '../../core/domain/skill-header'
+import type { AuthoredText } from '../../core/domain/authored-path'
 
 // ── Enums ────────────────────────────────────────────────────────────
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
@@ -368,6 +369,12 @@ export const templates = pgTable(
     slug: text('slug').notNull(),
     title: jsonb('title').notNull().$type<LocaleText>(),
     desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
+    /**
+     * Язык ОРИГИНАЛА списка (ISO 639-1: `ru`, `be`, `de`…), ADR-0030. Пусто — неизвестен
+     * (списки до 25.09, пока их не заполнили): тогда язык угадывается по алфавиту текста.
+     * Языков контента столько, сколько кодов, — они не ограничены языками интерфейса.
+     */
+    lang: text('lang'),
     topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'set null' }),
     tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
     currentVersion: integer('current_version').notNull().default(1),
@@ -1168,6 +1175,13 @@ export const listDrafts = pgTable(
     meta: jsonb('meta').notNull().default({}).$type<{ tags?: string[]; ordered?: boolean; gated?: boolean }>(),
     /** Заметка к будущей версии — чтобы не набирать её заново при публикации. */
     note: text('note').notNull().default(''),
+    /**
+     * Файлы автора (`scripts/`, `references/`, `assets/`) ПОЛНЫМ набором — или `null`:
+     * «файлы не трогали», и публикация оставит их ядру перенести из родителя. Отличать
+     * «не трогали» от «убрали все» обязательно: пустой массив стирает набор.
+     * Пишет только редактор сайта; правки через агента (`patch_list`) колонку не трогают.
+     */
+    authored: jsonb('authored').$type<AuthoredText[] | null>(),
     /**
      * Счётчик правок черновика. Публикация удаляет ИМЕННО ту ревизию, которую
      * опубликовала: пока идёт вызов ядра, другой вход мог сохранить новые правки, и
@@ -2576,9 +2590,12 @@ export const indexnowSubmissions = pgTable('indexnow_submissions', {
     .primaryKey()
     .references(() => templates.id, { onDelete: 'cascade' }),
   sentUpdatedAt: timestamp('sent_updated_at', { withTimezone: true }).notNull(),
-  /** Отправленный адрес без языкового префикса — полный, с хостом (`x-default`). */
+  /** Отправленный адрес страницы — полный, с хостом; языка в адресе нет (ADR-0029). */
   sentUrl: text('sent_url').notNull(),
-  /** Языки, чьи адреса отправлены, через запятую: новый язык — повод отправить снова. */
+  /**
+   * Языки, чьи ПРЕФИКСНЫЕ адреса отправлены (`en,ru` — с 22 по 25.09), через запятую; пусто —
+   * только адрес без префикса. Расхождение с текущим набором — повод отправить снова.
+   */
   sentLangs: text('sent_langs').notNull(),
   sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
 })

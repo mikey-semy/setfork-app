@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ZoomIn } from 'lucide-react'
+import { encodedFile } from '@/shared/media/encoded-file'
 import { OverlayPanel } from './OverlayPanel'
 import { Button } from './button'
 
@@ -11,8 +12,9 @@ const MAX_ZOOM = 3
 
 /**
  * Кроп + зум аватара перед сохранением: квадратное окно, картинку двигаешь
- * пальцем/мышью (pan), масштаб — ползунком. Отдаёт квадратный webp-blob через
- * canvas. Круглая обводка — подсказка (в профиле аватар круглый), сама обрезка
+ * пальцем/мышью (pan), масштаб — ползунком. Отдаёт квадрат через canvas: просим
+ * WebP, но тип и имя файла — по тому, что кодировщик вернул (Safari WebP не кодирует
+ * и отдаёт PNG, см. encodedFile). Круглая обводка — подсказка (в профиле аватар круглый), сама обрезка
  * квадратная (одинаково подходит и для круга, и для квадрата).
  *
  * Работает надёжно с НОВЫМ файлом (objectURL — свой origin, canvas не «портится»).
@@ -109,7 +111,9 @@ export function AvatarCropper({
       ctx.drawImage(img, -pos.x / scale, -pos.y / scale, sSize, sSize, 0, 0, OUTPUT, OUTPUT)
       canvas.toBlob(
         (blob) => {
-          if (blob) onDone(new File([blob], 'avatar.webp', { type: 'image/webp' }))
+          // PNG вместо WebP у Safari — не беда: 512px заведомо меньше предела аватара,
+          // а прозрачность PNG сохраняет.
+          if (blob) onDone(encodedFile(blob, 'avatar'))
           else setErr(labels.failed)
         },
         'image/webp',

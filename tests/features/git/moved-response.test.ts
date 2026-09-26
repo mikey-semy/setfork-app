@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { gitMovedResponse } from '@/features/git/moved'
+// Импорт — на уровне модуля, а не в теле теста: загрузка модуля публикации (он тянет базу и
+// MCP) засчитывалась в тайм-аут теста и под полным прогоном перевалила 5 с дважды подряд —
+// тот же корень, что у handle-check-one-canon (#998).
+import { mergeSkillFiles } from '@/features/mcp/tools/lists/skill'
 
 /**
  * «Репозиторий переехал» для git-клиента: адрес — от адреса САЙТА, а не от запроса.
@@ -24,8 +28,7 @@ describe('gitMovedResponse', () => {
 })
 
 describe('publish_skill: слияние набора файлов', () => {
-  it('режим прежнего файла переносится только в scripts/', async () => {
-    const { mergeSkillFiles } = await import('@/features/mcp/tools/lists/skill')
+  it('режим прежнего файла переносится только в scripts/', () => {
     const bytes = (s: string) => new TextEncoder().encode(s)
     const current = [
       { path: 'scripts/run.sh', content: bytes('a'), executable: true },

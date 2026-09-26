@@ -12,7 +12,7 @@ import { pageMeta } from '@/shared/seo/page-meta'
 // своём месте.
 export async function generateMetadata() {
   const lang = await getLang()
-  return pageMeta({ title: t('catalogsTab', lang), path: '/collections', lang })
+  return pageMeta({ title: t('catalogsTab', lang), path: '/collections' })
 }
 
 export default async function CollectionsPage() {

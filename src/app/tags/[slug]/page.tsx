@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { urlLangAt, withLang } from '@/shared/seo/with-lang'
 import { notFound } from 'next/navigation'
 import { breadcrumbList, itemList, JsonLd } from '@/shared/seo/jsonld'
 import { Tag } from 'lucide-react'
@@ -16,7 +15,7 @@ import { Badge } from '@/shared/ui/badge'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE } from '@/shared/ui/control'
 
-async function baseMetadata({
+export async function generateMetadata({
   params,
   searchParams,
 }: {
@@ -43,13 +42,6 @@ async function baseMetadata({
   }
 }
 
-// Канон и `og:url` — на языке адреса, плюс `hreflang` (см. `withLang`): страница собирает
-// метаданные сама, мимо `pageMeta`, и без обёртки назвала бы каноном версию без языка.
-export async function generateMetadata(props: Parameters<typeof baseMetadata>[0]): Promise<Metadata> {
-  return withLang(await baseMetadata(props))
-}
-
-
 // Страница тега: списки с этим тегом (переиспользуем getFeed({tag}) + FeedList).
 export default async function TagPage({
   params,
@@ -60,8 +52,7 @@ export default async function TagPage({
 }) {
   const { slug: raw } = await params
   const slug = decodeSegment(raw).toLowerCase()
-  // `at` — адреса в разметке на языке адреса страницы (см. `urlLangAt`).
-  const [lang, session, sp, at] = await Promise.all([getLang(), getSession(), searchParams, urlLangAt()])
+  const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   // Сначала СЧЁТ, потом окно: у популярного тега списков могут быть сотни, и страница
   // тянула их все вместе с аватарами авторов, чтобы показать экран.
   const [tag, total] = await Promise.all([getTag(slug), countLists({ tag: slug }, session?.userId)])
@@ -81,10 +72,10 @@ export default async function TagPage({
           <JsonLd
             data={itemList(
               `#${slug}`,
-              items.map((it) => ({ name: tr(it.title, lang) || it.slug, path: at(`/${it.ownerHandle}/${it.slug}`) })),
+              items.map((it) => ({ name: tr(it.title, lang) || it.slug, path: `/${it.ownerHandle}/${it.slug}` })),
             )}
           />
-          <JsonLd data={breadcrumbList([{ name: 'Tags', path: at('/tags') }, { name: `#${slug}`, path: at(`/tags/${encodeURIComponent(slug)}`) }])} />
+          <JsonLd data={breadcrumbList([{ name: 'Tags', path: '/tags' }, { name: `#${slug}`, path: `/tags/${encodeURIComponent(slug)}` }])} />
         </>
       ) : null}
       <PageHeader

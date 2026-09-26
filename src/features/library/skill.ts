@@ -11,6 +11,7 @@ import { stepDanger } from '@/core/domain/destructive-command'
 import { blockText } from './blocks'
 import { isStepBlk, toRunnableScript, type ExportList, type ExportStep } from './export'
 import { TEXT_CLOSE, TEXT_OPEN, textNeedsFence } from './skill-parse'
+import { AUTHORED_PATH, fitsArchive } from '@/core/domain/authored-path'
 
 /** Пределы стандарта для шапки `SKILL.md`. */
 export const SKILL_NAME_MAX = 64
@@ -31,6 +32,9 @@ export interface SkillContext {
   lastRun?: { verdict: string; passed: number; total: number; at: Date } | null
   /** Авторские файлы версии из git-дерева (ADR-0028). Нет — скилл собирается из блоков. */
   authored?: AuthoredFile[] | null
+  /** Скилл снят с тега или версии (`?ref=`), а не с вершины: ссылка на архив в `SKILL.md`
+   *  обязана вести на тот же снимок, иначе файл и архив разошлись бы. */
+  ref?: string | null
 }
 
 export interface SkillFile {
@@ -50,14 +54,6 @@ export interface Skill {
    *  журнал: пропуск не должен быть молчаливым. */
   skipped: string[]
 }
-
-/** Путь авторского файла — ровно `<каталог>/<имя>`, как принимает ядро (ADR-0028). */
-export const AUTHORED_PATH = /^(scripts|references|assets)\/[^/]+$/
-/** Имя файла в заголовке ustar — не длиннее 100 байт (каталоги уходят в поле `prefix`).
- *  Запись ядро с 24.09 держит тем же пределом (`AUTHORED_NAME_MAX_BYTES`); пушем длинное
- *  имя пройти ещё может — его и отсеивает архив. Кириллица набирает 100 байт на ~50 знаках. */
-const TAR_NAME_MAX_BYTES = 100
-export const fitsArchive = (path: string): boolean => new TextEncoder().encode(path.slice(path.lastIndexOf('/') + 1)).length <= TAR_NAME_MAX_BYTES
 
 /**
  * Авторские файлы, которые можно положить в архив.
@@ -111,7 +107,8 @@ export function skillDescription(list: ExportList, lang: Lang): string {
 export const listUrl = (list: ExportList, origin: string): string => `${origin}/${list.ownerHandle}/${list.slug}`
 
 /** Адрес архива со всем скиллом — для однофайлового `SKILL.md`, которому некуда сослаться. */
-export const skillArchiveUrl = (list: ExportList, origin: string): string => `${listUrl(list, origin)}/skill.tar.gz`
+export const skillArchiveUrl = (list: ExportList, origin: string, ref?: string | null): string =>
+  `${listUrl(list, origin)}/skill.tar.gz${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`
 
 /**
  * Шапка по стандарту. `metadata` — словарь строка→строка: номер версии тоже строкой,
@@ -253,7 +250,8 @@ function skillBody(
   authoredPaths: string[],
 ): string {
   const out: string[] = []
-  out.push(`# ${tr(list.title, lang)}`, '')
+  // Заголовок тела — авторский, если скилл пришёл с другим (шапка `heading`); иначе название.
+  out.push(`# ${list.skillHeader?.heading ?? tr(list.title, lang)}`, '')
   const desc = tr(list.desc, lang).trim()
   if (desc) out.push(desc, '')
   // Та же оговорка, что в шапке `/raw`: это чужие инструкции, и агент исполняет их со
@@ -268,7 +266,7 @@ function skillBody(
       out.push(`Files from the author, exactly as in this version (review scripts before running):`, '', ...authoredPaths.map((p) => `- [${p}](${p})`), '')
     }
   } else if (withScript || authoredPaths.length) {
-    out.push(`This file is the instructions only. The full skill${withScript ? ' with the script' : ''}${authoredPaths.length ? `${withScript ? ' and' : ' with'} the author\u2019s files` : ''}: ${skillArchiveUrl(list, ctx.origin)}`, '')
+    out.push(`This file is the instructions only. The full skill${withScript ? ' with the script' : ''}${authoredPaths.length ? `${withScript ? ' and' : ' with'} the author\u2019s files` : ''}: ${skillArchiveUrl(list, ctx.origin, ctx.ref)}`, '')
   }
 
   let section = ''

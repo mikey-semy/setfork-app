@@ -4,7 +4,9 @@ import { t, type Lang } from '@/shared/i18n'
 import { getTemplateDetail } from '@/features/library/queries'
 import { isPubliclyVisible } from '@/core'
 import { embedHtml, toExportList } from '@/features/library/export'
+import { REPRESENTATION } from '@/features/library/data-envelope'
 import { cacheHeaders, noStoreHeaders, notModified } from '@/shared/http/cache'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 // GET /{handle}/{slug}/embed — самодостаточный HTML списка для вставки в <iframe>.
 // Только публичные опубликованные списки (embed идёт на внешние сайты).
@@ -26,8 +28,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   if (!isPubliclyVisible(detail.tpl)) return notFoundHtml(lang)
 
   const list = toExportList(detail)
-  const origin = new URL(req.url).origin
-  const html = embedHtml(list, lang, `${origin}/${handle}/${slug}`)
+  // Ссылка «Открыть на SetFork» — на канонический адрес, а не на адрес запроса: за прокси
+  // тот равен `0.0.0.0:3000`, и ссылка из чужого iframe вела в никуда (fe#968, корень K15).
+  const html = embedHtml(list, lang, `${appOrigin()}/${handle}/${slug}`)
 
   // Язык здесь ДОГОВОРНЫЙ: параметра ?lang= у embed нет, тело выбирается по куке и
   // Accept-Language. Значит под одним адресом живут разные представления, и общий кеш
@@ -35,7 +38,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // англоязычному сайту. Язык входит и в ETag: ревалидация не выдаст чужое тело.
   const version = detail.currentVersion?.version ?? detail.tpl.currentVersion
   const updatedAt = detail.tpl.updatedAt ?? new Date(0)
-  const etag = `W/"v${version}-${updatedAt.getTime()}-${lang}"`
+  // Поколение формы — как у data.json: смена разметки обязана пройти мимо 304.
+  const etag = `W/"${REPRESENTATION}-v${version}-${updatedAt.getTime()}-${lang}"`
   const headers: Record<string, string> = {
     'Content-Type': 'text/html; charset=utf-8',
     'Content-Security-Policy': 'frame-ancestors *', // разрешаем вставку на любые сайты

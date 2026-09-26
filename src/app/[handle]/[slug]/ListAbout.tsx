@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { RunReportLine } from '@/features/library/RunReportLine'
-import { tr, type Lang } from '@/shared/i18n'
+import { servedLang, tr, type Lang } from '@/shared/i18n'
 import { ListStats } from '@/features/library/ListStats'
 import type { ListPageData } from './load'
 import { TagChip } from '@/shared/ui/TagChip'
@@ -28,7 +28,7 @@ export function ListAbout({ tpl, base, branches, currentVersion, watchers, runRe
       {/* Описание и теги пишет человек, длину тега никто не режет — без переноса
           один тег или «слово» в описании уносит страницу за край (мобила 390px). */}
       {desc && (
-        <p className={`text-body text-ink-2 [overflow-wrap:anywhere] ${layout === 'row' ? 'leading-snug' : 'leading-relaxed'}`}>
+        <p lang={servedLang(tpl.desc, lang)} className={`text-body text-ink-2 [overflow-wrap:anywhere] ${layout === 'row' ? 'leading-snug' : 'leading-relaxed'}`}>
           {desc}
         </p>
       )}

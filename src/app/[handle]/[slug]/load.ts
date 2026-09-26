@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { and as andOp, eq } from 'drizzle-orm'
 import { hasAffiliateLink, hasMarkedAffiliate, markedAdvertisers } from '@/core'
 import { quizContentHash } from '@/core/domain/quiz-fingerprint'
+import { authoredFileInfo } from '@/core/domain/lfs-pointer'
 import { isCollaborator } from '@/features/collab/queries'
 import { digStepsWithSession } from '@/features/dig/queries'
 import { gitCore } from '@/features/git/core'
@@ -21,7 +22,7 @@ import { getRoster } from '@/shared/ai/roster'
 import { getSession } from '@/shared/auth/session'
 import { db, listLinks, templates as templatesTable, users as usersTable, publiclyVisible } from '@/shared/db'
 import { t, tr, type Lang } from '@/shared/i18n'
-import { detectTextLang } from '@/shared/i18n/detect-text-lang'
+import { isTitleForeign } from '@/shared/i18n/detect-text-lang'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 
 /**
@@ -268,9 +269,10 @@ export async function loadListPage({
   }
   const latestNote = rawNote ? (SYSTEM_NOTE_KEY[rawNote] ? t(SYSTEM_NOTE_KEY[rawNote], lang) : rawNote) : ''
   // «Перевести» и языковой бейдж имеют смысл, ТОЛЬКО если контент реально не на
-  // языке зрителя. Русский текст под ключом 'en' (неверный тег генерации) не должен
-  // предлагать «перевести на русский» — детектим по самому тексту (кириллица → ru).
-  const titleIsForeign = !tpl.title[lang] && detectTextLang(tr(tpl.title, lang), lang) !== lang
+  // языке зрителя. Язык оригинала — хранимый (ADR-0030); у списков до него — по самому
+  // тексту (кириллица → ru), а не по ключу: русский текст под 'en' (неверный тег
+  // генерации) не должен предлагать «перевести на русский».
+  const titleIsForeign = isTitleForeign(tpl.title, tpl.lang, lang)
   // Соседи по тегам — внутренняя перелинковка (Д6). До неё со страницы списка
   // не вело НИ ОДНОЙ ссылки на другой список, и обходчику корпус был доступен
   // только из ленты. У списка без тегов соседей не ищем — запрос вернёт пусто.
@@ -285,7 +287,7 @@ export async function loadListPage({
       : ((await gitCore.authoredFiles({ owner, slug }, shownVersion).catch(() => null)) ?? []).map((f) => ({
           path: f.path,
           executable: f.executable,
-          bytes: f.content.length,
+          ...authoredFileInfo(f.path, f.content),
         }))
   // Версия СКИЛЛА — его последний релиз (v0.7.0), а не номер правки списка (v6): так
   // скилл видят снаружи — в архиве, в чужих агентах, в заметках к выпуску. Как npm у

@@ -20,6 +20,7 @@ import { ChatComposer } from '@/shared/ui/ChatComposer'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
 import { t } from '@/shared/i18n'
 import { PAGE } from '@/shared/ui/control'
+import { ContentRefusalAlert, type ContentRefusal } from '@/shared/ui/ContentRefusalAlert'
 import { Field } from '@/shared/ui/Field'
 import { Input } from '@/shared/ui/input'
 import { buttonClass } from '@/shared/ui/button-style'
@@ -144,6 +145,15 @@ export function GenerationChat({ generationId, lang, candidates, status, message
   const ru = lang === 'ru'
   const router = useRouter()
   const [pending, start] = useTransition()
+  // Отказ стража содержимого при «Взять этот» — показать причину и шаг; раньше это была
+  // страница ошибки, и вариант выглядел потерянным.
+  const [refusal, setRefusal] = useState<ContentRefusal | null>(null)
+  const accept = (id: string) =>
+    start(async () => {
+      setRefusal(null)
+      const r = await acceptCandidate(generationId, id)
+      if (r && 'refusal' in r) setRefusal(r.refusal)
+    })
 
   const last = candidates[candidates.length - 1]
   const [selId, setSelId] = useState<string | undefined>(last?.id)
@@ -368,10 +378,11 @@ export function GenerationChat({ generationId, lang, candidates, status, message
         {/* Ряд действий нужен и когда варианта НЕТ: сорвалось — «ещё раз» единственный
             выход, а раньше при провале ряд не рисовался вовсе и на экране не оставалось
             ни одной кнопки (фидбек владельца со скрина). */}
+        {refusal && <ContentRefusalAlert refusal={refusal} lang={lang} className="mb-2" />}
         {!working && (last || status === 'failed') && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             {last && (
-              <Chip disabled={!selId} onClick={() => selId && start(() => acceptCandidate(generationId, selId))} selected className="font-medium">
+              <Chip disabled={!selId} onClick={() => selId && accept(selId)} selected className="font-medium">
                 <Check size={13} /> {t('generation.useOne', lang)}
               </Chip>
             )}
@@ -407,7 +418,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               working={working}
               lang={lang}
               onPick={setSelId}
-              onAccept={() => selId && start(() => acceptCandidate(generationId, selId))}
+              onAccept={() => selId && accept(selId)}
               onRegen={() => start(() => regenerateCandidate(generationId))}
             />
           }

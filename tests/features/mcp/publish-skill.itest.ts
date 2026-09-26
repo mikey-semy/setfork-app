@@ -36,7 +36,7 @@ const coreAccepts = async () => (await coreCapabilities())?.acceptsAuthoredFiles
 
 const row = async (slug: string) => {
   const [r] = await db
-    .select({ id: templates.id, version: templates.currentVersion, desc: templates.desc, isSkill: templates.isSkill })
+    .select({ id: templates.id, version: templates.currentVersion, title: templates.title, desc: templates.desc, isSkill: templates.isSkill })
     .from(templates)
     .where(eq(templates.slug, slug))
   return r
@@ -165,11 +165,22 @@ description('publish_skill', () => {
     [{ path: 'scripts/run‮hs.sh', content: 'x' }, 'text-direction'],
     [{ path: `references/${'я'.repeat(49)}.md`, content: 'x' }, 'too long'],
     [{ path: 'assets/setup.sh', content: 'rm -rf ~', executable: true }, 'cannot be executable'],
-    [{ path: 'assets/logo.png', content: Buffer.from([0x89, 0x50, 0, 1]).toString('base64'), encoding: 'base64' as const }, 'binary'],
+    // Двоичное — только в assets/ (там оно уезжает в хранилище, см. skill-assets.itest.ts).
+    [{ path: 'scripts/tool.bin', content: Buffer.from([0x89, 0x50, 0, 1]).toString('base64'), encoding: 'base64' as const }, 'binary files go to assets/'],
     [{ path: 'references/a.md', content: 'plain text, not base64!', encoding: 'base64' as const }, 'not valid base64'],
   ])('ранний отказ: %j', async (file, words) => {
     const res = await mcpPublishSkill(ownerId, { title: `Refused ${words}`, items: [{ title: 'x' }], files: [file] })
     expect(res).toEqual({ error: expect.stringContaining(words) })
+  })
+
+  it('новое название — одним языком: перевод прежнего названия не остаётся', async () => {
+    await mcpPublishSkill(ownerId, { title: 'Named skill', items: [{ title: 'x' }], lang: 'en' })
+    const r = await row('named-skill')
+    // Перевод кнопкой «Перевести» — второй ключ того же названия.
+    await db.update(templates).set({ title: { en: 'Named skill', ru: 'Названный навык' } }).where(eq(templates.id, r.id))
+    const res = await mcpPublishSkill(ownerId, { list: `${HANDLE}/named-skill`, baseVersion: r.version, title: 'Renamed skill' })
+    expect(res).toMatchObject({ version: r.version + 1 })
+    expect((await row('named-skill')).title).toEqual({ en: 'Renamed skill' })
   })
 
   it('SKILL.md целиком: шаги и текст из тела, название и описание из шапки, шапка хранится, непринятое названо', async () => {
@@ -196,9 +207,11 @@ description('publish_skill', () => {
     expect(res).toMatchObject({ ref: `${HANDLE}/pdf-tools`, parseNotes: [expect.stringContaining('x-custom')] })
     expect(JSON.stringify((res as { parseNotes: string[] }).parseNotes)).not.toContain('license')
     const [stored] = await db.select({ h: templates.skillHeader }).from(templates).where(eq(templates.slug, 'pdf-tools'))
-    expect(stored.h).toEqual({ license: 'MIT', metadata: { author: 'Ann' } })
+    // Заголовок тела не совпал с именем — хранится при шапке, экспорт вернёт его на место.
+    expect(stored.h).toEqual({ license: 'MIT', metadata: { author: 'Ann' }, heading: 'PDF tools' })
     const read = (await mcpGetList(ownerId, HANDLE, 'pdf-tools')) as { title: string; desc: string; steps: { type?: string; title?: string; command?: string; text?: string }[] }
-    expect(read.title).toBe('PDF tools')
+    // Название — имя скилла (решение владельца 26.09.2026), а не заголовок тела.
+    expect(read.title).toBe('pdf-tools')
     expect(read.desc).toBe('Fill and merge PDFs. Use when the user asks to work with a PDF.')
     expect(read.steps.map((b) => b.title ?? b.text)).toEqual(['Works through pypdf.', 'Install'])
     expect(read.steps[1]).toMatchObject({ command: 'pip install pypdf' })
@@ -213,7 +226,20 @@ description('publish_skill', () => {
     const res = await mcpPublishSkill(ownerId, { list: `${HANDLE}/pdf-tools`, baseVersion: before.version, skillMd: md2 })
     expect(res).toHaveProperty('error')
     const [stored] = await db.select({ h: templates.skillHeader }).from(templates).where(eq(templates.slug, 'pdf-tools'))
-    expect(stored.h).toEqual({ license: 'MIT', metadata: { author: 'Ann' } })
+    expect(stored.h).toEqual({ license: 'MIT', metadata: { author: 'Ann' }, heading: 'PDF tools' })
+  })
+
+  // Наш экспорт пишет `name` слагом, а заголовком — сохранённый `heading`: разбор без
+  // списка под рукой принял бы заголовок за название и переименовал бы скилл.
+  it('наш экспорт этого же скилла обратно — название и заголовок на месте', async () => {
+    const before = (await row('pdf-tools'))!
+    const md3 = ['---', 'name: "pdf-tools"', 'description: "d"', 'license: "MIT"', 'metadata:', '  author: "Ann"', `  setfork-ref: "${HANDLE}/pdf-tools"`, '---', '', '# PDF tools', '', '1. **Install** it twice'].join('\n')
+    const res = await mcpPublishSkill(ownerId, { list: `${HANDLE}/pdf-tools`, baseVersion: before.version, skillMd: md3 })
+    expect(res).toMatchObject({ version: before.version + 1 })
+    const after = (await row('pdf-tools'))!
+    expect(after.title).toEqual(before.title)
+    const [stored] = await db.select({ h: templates.skillHeader }).from(templates).where(eq(templates.slug, 'pdf-tools'))
+    expect(stored.h).toEqual({ license: 'MIT', metadata: { author: 'Ann' }, heading: 'PDF tools' })
   })
 
   it('файл дважды — отказ', async () => {

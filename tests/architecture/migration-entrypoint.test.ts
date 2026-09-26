@@ -30,6 +30,15 @@ describe('точка входа прод-миграции', () => {
     expect(src).toMatch(/await clearDanglingReverts\(pool\)/)
   })
 
+  it('барьер держит то, что правило оставило, — и ничего больше не отпускает', () => {
+    // Правило «пустая колонка уходит» покрыто юнит-тестом (releasedDrops), но склейка в
+    // main — нет: перепутай там held и released, и колонка С ДАННЫМИ уйдёт при зелёных
+    // тестах. Проверяем, что в барьер идёт именно held, а на вход правила — заполненность из БД.
+    const src = read('scripts/migrate-push.ts')
+    expect(src).toMatch(/const \{ released, held: dropCols, renameAsk \} = releasedDrops\(expected, before, goneCols, await filledColumns\(pool, goneCols\)\)/)
+    expect(src).toMatch(/if \(dropTables\.length \|\| dropCols\.length \|\| retypes\.length \|\| enumValues\.length\)/)
+  })
+
   it('Dockerfile зовёт существующую точку входа, и она зовёт main', () => {
     const cmd = read('Dockerfile').match(/CMD \[[^\]]*"(scripts\/[\w.-]+\.ts)"\]/)
     expect(cmd, 'CMD миграции в Dockerfile не найден').not.toBeNull()

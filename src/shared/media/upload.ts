@@ -4,23 +4,8 @@ import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { isS3Configured } from '@/shared/settings/media'
 import { ATTACH_MAX_BYTES, IMAGE_MAX_BYTES, megabytes, VIDEO_MAX_BYTES, type ImageRejection } from './limits'
+import { cleanImage } from './clean-image'
 import { deleteObject, putObject } from './s3'
-
-const EXT: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-}
-
-/** Реальный тип картинки по сигнатуре (magic bytes), а НЕ по client-provided mime. */
-function sniffImage(b: Buffer): string | null {
-  if (b.length >= 4 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png'
-  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg'
-  if (b.length >= 4 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'image/gif'
-  if (b.length >= 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP') return 'image/webp'
-  return null
-}
 
 /** Отказ по самому файлу (размер/формат), а не сбой хранилища. `reason` — код для
  *  интерфейса: экшен не может вернуть переводимую строку, а клиент переводит код сам.
@@ -37,23 +22,22 @@ export class ImageRejectedError extends Error {
 
 /**
  * Универсальная загрузка картинки. Тип определяется по СОДЕРЖИМОМУ (magic bytes),
- * client-provided mime игнорируется (защита от подмены). Возвращает ref:
+ * client-provided mime игнорируется (защита от подмены); метаданные (EXIF с GPS и
+ * пр.) вычищаются — см. cleanImage. Возвращает ref:
  * S3 → storage_key (`{dir}/{uuid}.ext`); иначе диск → `/uploads/{dir}/{uuid}.ext`.
  */
 export async function uploadImageFile(dir: string, file: File): Promise<string> {
   if (file.size > IMAGE_MAX_BYTES) throw new ImageRejectedError('too_big', `Файл больше ${megabytes(IMAGE_MAX_BYTES)} МБ.`)
-  const buffer = Buffer.from(await file.arrayBuffer())
-  const mime = sniffImage(buffer)
-  const ext = mime ? EXT[mime] : undefined
-  if (!ext) throw new ImageRejectedError('bad_type', 'Файл не похож на изображение (PNG, JPG, WEBP или GIF).')
-  const name = `${randomUUID()}.${ext}`
+  const img = await cleanImage(Buffer.from(await file.arrayBuffer()))
+  if (!img) throw new ImageRejectedError('bad_type', 'Файл не похож на изображение (PNG, JPG, WEBP или GIF).')
+  const name = `${randomUUID()}.${img.ext}`
 
   if (await isS3Configured()) {
-    return putObject(`${dir}/${name}`, buffer, mime!)
+    return putObject(`${dir}/${name}`, img.buffer, img.mime)
   }
   const diskDir = join(process.cwd(), 'public', 'uploads', dir)
   await mkdir(diskDir, { recursive: true })
-  await writeFile(join(diskDir, name), buffer)
+  await writeFile(join(diskDir, name), img.buffer)
   return `/uploads/${dir}/${name}`
 }
 

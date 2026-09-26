@@ -4,7 +4,7 @@ import { problemListNotFound } from '@/shared/http/problem'
 import { getReleases } from '@/features/releases/queries'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 import { isPubliclyVisible } from '@/core'
-import { SITE_ORIGIN, SITE_ORIGIN_FROM_ENV } from '@/shared/site'
+import { appOrigin } from '@/shared/auth/app-origin'
 
 // GET /{handle}/{slug}/releases.atom — Atom-фид релизов (как у GitHub).
 // Только для публичных списков: фид анонимный, приватное не отдаём.
@@ -15,18 +15,19 @@ import { SITE_ORIGIN, SITE_ORIGIN_FROM_ENV } from '@/shared/site'
 // с датой здесь и означают «выдано этим сервисом тогда-то», даже если сервис переехал.
 const TAG_AUTHORITY = 'setfork.com,2026'
 
-export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
   const meta = await getListMeta(handle, slug)
   // Публичный + опубликованный + не снят модерацией. Раньше проверялась только
   // видимость → release notes flagged/hidden/pending и публичных черновиков утекали.
   if (!meta || !isPubliclyVisible(meta)) return problemListNotFound()
 
-  // Публичный адрес, а не bind-origin запроса (за прокси req.url = 0.0.0.0:3000) — но
-  // ТОЛЬКО если он задан явно. `NEXT_PUBLIC_*` вшиваются при сборке, а демо-стенд подаёт
-  // переменную лишь в окружение контейнера: с дефолтом ленты чужого стенда ссылались бы
-  // на канон. Пусть уж лучше адрес придёт из запроса, чем уведёт читателя на другой сайт.
-  const origin = SITE_ORIGIN_FROM_ENV ? SITE_ORIGIN : new URL(req.url).origin.replace(/\/$/, '')
+  // Публичный адрес, а не bind-origin запроса (за прокси req.url = 0.0.0.0:3000). Берём
+  // серверный `appOrigin()`: он читает `APP_URL` во время работы, поэтому демо-стенд,
+  // который подаёт адрес только в окружение контейнера (а не при сборке, как
+  // `NEXT_PUBLIC_*`), получает свой адрес, а не канон. Прежний откат на адрес запроса
+  // для этого больше не нужен (fe#968, корень K15).
+  const origin = appOrigin()
   const base = `${origin}/${handle}/${slug}`
   const rels = await getReleases(meta.id)
   // Нет релизов → берём время списка (обновление/создание), НЕ эпоху 0: пустой фид

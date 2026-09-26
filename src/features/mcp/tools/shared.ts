@@ -7,6 +7,7 @@ import { and, eq } from 'drizzle-orm'
 import { db, listRedirects, templates, users, type ProposedItem } from '@/shared/db'
 import { resolveUserByHandle } from '@/shared/db/resolve-list'
 import { tr, trKey, type LocaleText } from '@/shared/i18n'
+import { isContentLang, type ContentLang } from '@/shared/i18n/iso639'
 import { detectTextLang } from '@/shared/lib/translit'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { carriesRefs, isBlockType, newOptionId } from '@/features/library/blocks'
@@ -45,8 +46,25 @@ function refsFromMcp(refs: McpItemInput['refs']): { label: string; url: string }
 }
 // Чтение: ссылка без подписи — нормальная ссылка (её показывают доменом), поэтому
 // фильтруем по «есть хоть что-то», иначе чтение теряло бы то, что записано.
-function refsForMcp(refs: { label: LocaleText; url?: string }[]): { label: string; url?: string }[] {
-  return refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label || r.url)
+function refsForMcp(refs: { label: LocaleText; url?: string }[], lang: ContentLang): { label: string; url?: string }[] {
+  return refs.map((r) => ({ label: tr(r.label, lang), url: r.url })).filter((r) => r.label || r.url)
+}
+
+/**
+ * ЯЗЫК, НА КОТОРОМ MCP ЧИТАЕТ И ПИШЕТ СПИСОК, — язык его оригинала (ADR-0030).
+ *
+ * Одно правило на обе стороны, и это главное: агент отдаёт обратно то, что прочитал. Читай
+ * MCP английский перевод, а пиши под язык оригинала — правка перевода затёрла бы оригинал
+ * (та же ошибка, что `editKey` чинил в редакторе). Раньше обе стороны стояли на `en`, и шаги
+ * русского списка из MCP ложились под `en`: список показывал «перевод» там, где был оригинал.
+ *
+ * Язык не определён (смесь, спорный) — язык, на котором лежит заголовок: под ним же лежит и
+ * остальное, если список писали на одном языке. Нет и его — прежнее предпочтение `en`.
+ */
+export function mcpLang(tpl: { lang?: string | null; title?: unknown }): ContentLang {
+  if (isContentLang(tpl.lang)) return tpl.lang
+  const key = trKey(tpl.title as LocaleText, 'en')
+  return isContentLang(key) ? key : 'en'
 }
 
 // Один блок списка через MCP. type по умолчанию 'step'. Поля по типу:
@@ -98,10 +116,10 @@ export interface McpItemInput {
   sortItems?: string[] // quiz sort — элементы в ПРАВИЛЬНОМ порядке
 }
 
-// MCP-контент нейтрален к языку → кладём под 'en' (locale-JSON, tr с фолбэком читает).
+// Текст блоков ложится под `lang` — язык списка по `mcpLang` (у нового — язык его заголовка).
 // Строим EditorItem-ы и прогоняем через общий сериализатор блоков (bid, poll/quiz/video
 // content — та же логика, что у веб-редактора). Ноль дублирования блочной модели.
-export function toProposed(items: McpItemInput[]): ProposedItem[] {
+export function toProposed(items: McpItemInput[], lang: ContentLang): ProposedItem[] {
   const editor: EditorItem[] = (items ?? []).map((it): EditorItem => {
     const type = isBlockType(it.type ?? '') ? (it.type as EditorItem['type']) : 'step'
     // Ссылки блоку, который их не держит, — ОТКАЗ, а не молчание. Раньше ветки не-шага
@@ -171,13 +189,13 @@ export function toProposed(items: McpItemInput[]): ProposedItem[] {
       refs: refsFromMcp(it.refs),
     }
   })
-  return toProposedItems(editor, 'en')
+  return toProposedItems(editor, lang)
 }
 
 // Один блок списка → представление для MCP-контекста нейросети. Отдаём ВСЕ типы
 // (не только шаги): текст/картинка/опрос/видео/тест — иначе AI видит лишь часть.
 export type DetailStep = NonNullable<Awaited<ReturnType<typeof getTemplateDetail>>>['steps'][number]
-export function blockForMcp(s: DetailStep) {
+export function blockForMcp(s: DetailStep, lang: ContentLang) {
   const type = (s.type ?? 'step') as string
   const c = (s.content ?? {}) as Record<string, unknown>
   const str = (v: unknown): string => (typeof v === 'string' ? v : '')
@@ -188,7 +206,7 @@ export function blockForMcp(s: DetailStep) {
   // Отдай мы content.bid, круг чтения-записи затирал бы канон и рвал комментарии.
   const bid = s.blockId || str(c.bid) || undefined
   if (type === 'text') {
-    const refs = refsForMcp(s.refs)
+    const refs = refsForMcp(s.refs, lang)
     return { n: s.n, bid, type, text: str(c.md), ...(refs.length ? { refs } : {}) }
   }
   if (type === 'image') return { n: s.n, bid, type, ref: str(c.ref) || undefined, caption: str(c.caption) || undefined }
@@ -227,22 +245,22 @@ export function blockForMcp(s: DetailStep) {
     n: s.n,
     bid,
     type: 'step',
-    title: tr(s.title, 'en'),
-    desc: tr(s.desc, 'en'),
+    title: tr(s.title, lang),
+    desc: tr(s.desc, lang),
     command: s.command || undefined,
     // Скриншот шага и пометка «здесь нужен человек» — часть содержимого пункта:
     // круг без них стирал картинку и приглашение ответить из личного опыта.
     imageRef: s.imageKey ?? undefined,
     needsHuman: s.needsHuman || undefined,
-    needsHumanAsk: tr(s.needsHumanAsk, 'en') || undefined,
+    needsHumanAsk: tr(s.needsHumanAsk, lang) || undefined,
     // Пометка автора и ПОДСКАЗКА детектора — раздельно. Слей их в одно поле, и
     // круг «прочитал → записал» превратил бы догадку про команду в решение автора.
     danger: s.danger || undefined,
     dangerHint: (!s.danger && findRisky(s.command ?? '')?.reason) || undefined,
     level: s.level,
-    why: tr(s.why, 'en') || undefined,
-    subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
-    refs: refsForMcp(s.refs),
+    why: tr(s.why, lang) || undefined,
+    subtasks: s.subtasks.map((x) => tr(x, lang)).filter(Boolean),
+    refs: refsForMcp(s.refs, lang),
   }
 }
 

@@ -1,6 +1,6 @@
 // Handle (ник) — правила и генерация уникального при OAuth-регистрации.
 import { randomBytes } from 'crypto'
-import { and, ne, sql } from 'drizzle-orm'
+import { and, eq, ne, sql } from 'drizzle-orm'
 import { db, userRedirects, users } from '@/shared/db'
 import { handleHoldAlive, handleHoldUntil } from '@/shared/db/resolve-list'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
@@ -56,6 +56,31 @@ export type HandleBlock =
   | { reason: 'reserved' }
   | { reason: 'taken' }
   | { reason: 'held'; until: Date }
+
+/**
+ * ЧЕЛОВЕК ПО НИКУ, НАБРАННОМУ РУКАМИ, — одно правило на все поля ввода: соавтор,
+ * получатель списка, исполнитель задачи, исполнитель и рецензент правки.
+ *
+ * Раньше каждое место искало по-своему: соавторы — без учёта регистра и без удалённых,
+ * передача — с учётом регистра, назначения — с учётом регистра и находили удалённых.
+ * «@Mike» в одном поле находился, в другом нет. Правило — как у `handleBlock` и адресов
+ * профилей: ввод нормализуется (`normalizeHandle`), сверка без учёта регистра (колонка
+ * — обычный text unique, регистрозависимый), удалённый аккаунт не находится — как у
+ * GitHub, где удалённого пользователя не добавить ни соавтором, ни исполнителем.
+ *
+ * Прежние ники (`user_redirects`) НЕ разрешаются: переход по старому адресу — для
+ * ссылок, а выдать права по нику, который человек сменил, значило бы угадывать за него.
+ */
+export async function findUserByHandle(raw: string): Promise<{ id: string; handle: string } | null> {
+  const norm = normalizeHandle(raw)
+  if (!norm) return null
+  const [row] = await db
+    .select({ id: users.id, handle: users.handle })
+    .from(users)
+    .where(and(sql`lower(${users.handle}) = ${norm}`, eq(users.deleted, false)))
+    .limit(1)
+  return row ?? null
+}
 
 export async function handleBlock(h: string, exceptUserId?: string): Promise<HandleBlock | null> {
   const norm = normalizeHandle(h)

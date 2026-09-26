@@ -43,8 +43,14 @@ export interface ParsedSkill {
   /** Имя из шапки (`name`) — годится в адрес списка. */
   name: string
   description: string
-  /** Заголовок `# …` тела; нет — имя. */
+  /**
+   * Название списка. У чужого скилла — `name` из шапки: это имя, под которым скилл знают
+   * (решение владельца 26.09.2026, «имя — name»), а заголовок `# …` — оформление тела. У
+   * нашего же экспорта наоборот: `name` там — слаг, а название написано заголовком.
+   */
   title: string
+  /** Заголовок `# …` тела, если он не совпал с названием: экспорт вернёт его как был. */
+  heading?: string
   /** Прочие поля шапки как есть (license, compatibility, metadata…). */
   header: Record<string, unknown>
   items: ParsedSkillBlock[]
@@ -126,7 +132,10 @@ export function parseSkillMd(md: string): ParsedSkill {
   }
 
   const items: ParsedSkillBlock[] = []
-  let title = ''
+  let h1 = ''
+  // Наш экспорт метит шапку `metadata.setfork-ref` — по ней и узнаём свой файл.
+  const meta = header.metadata
+  const fromSetfork = !!meta && typeof meta === 'object' && 'setfork-ref' in meta
   let section = ''
   let text: string[] = []
 
@@ -169,8 +178,8 @@ export function parseSkillMd(md: string): ParsedSkill {
     // Заголовок внутри блока кода сюда не доходит: ограждение ниже съедает код целиком.
     if (h) {
       flushText()
-      if (h[1].length === 1 && !title) {
-        title = h[2]
+      if (h[1].length === 1 && !h1) {
+        h1 = h[2]
         // Абзац сразу под заголовком, равный описанию, — наш же экспорт его повторяет.
         let j = i + 1
         while (j < lines.length && !lines[j].trim()) j++
@@ -216,10 +225,11 @@ export function parseSkillMd(md: string): ParsedSkill {
   }
   flushText()
 
-  if (!title) title = name || 'Imported skill'
+  const title = (fromSetfork ? h1 || name : name || h1) || 'Imported skill'
   if (!name) warnings.push('no name in the frontmatter — the address is taken from the title')
   if (!description) warnings.push('no description — agents decide by it whether to use the skill; add one')
-  return { name, description, title, header: rest, items, warnings }
+  const heading = !fromSetfork && h1 && h1 !== title ? h1 : undefined
+  return { name, description, title, ...(heading ? { heading } : {}), header: rest, items, warnings }
 }
 
 function closeFence(lines: string[], from: number, mark: string): number {

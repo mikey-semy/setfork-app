@@ -17,10 +17,36 @@ export const megabytes = (bytes: number): number => Math.round(bytes / 1024 / 10
  *  Связь стережёт tests/architecture/image-limit-vs-action-body.test.ts. */
 export const IMAGE_MAX_BYTES = 4 * 1024 * 1024
 
+/** Аватар: после кадрирования это квадрат 512px (AvatarCropper) — заведомо меньше;
+ *  предел держит то, что пришло в экшен профиля в обход кадрирования. Одно число на
+ *  дропзону и на сервер (avatar.ts), раньше жило двумя копиями. */
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+
 /** Форматы картинок, которые сервер распознаёт по сигнатуре (см. sniffImage). Тот же
- *  список — в `accept` поля выбора: на iOS явный список заставляет Safari перекодировать
- *  HEIC в JPEG, а `image/*` пропускает HEIC как есть, и сервер его отвергает. */
+ *  список — в `accept` поля выбора.
+ *
+ *  Про HEIC на iOS: галерея (PHPicker) в WebKit и так отдаёт «совместимое»
+ *  представление — HEIC перекодирован в JPEG — при ЛЮБОМ `accept`. Явный список важен
+ *  лишь при внутренней настройке PhotoPickerPrefersOriginalImageFormat (WebKit,
+ *  WKFileUploadPanel.mm): тогда с `image/*` пришёл бы HEIC как есть, и сервер его
+ *  отверг бы. Список оставлен как безопасный при любой настройке. */
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const
+
+export type ImageType = (typeof IMAGE_TYPES)[number]
+
+/** Расширение файла по типу — одно место на сервер (имя в хранилище) и клиент (имя
+ *  файла после уменьшения или кадрирования). */
+export const IMAGE_EXT: Record<ImageType, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+}
+
+/** Тип из списка допустимых — или null. Сужение для таблиц по типу. */
+export function asImageType(type: string): ImageType | null {
+  return (IMAGE_TYPES as readonly string[]).includes(type) ? (type as ImageType) : null
+}
 
 /** Значение `accept` для поля выбора картинки — из того же списка, а не копией строки. */
 export const IMAGE_ACCEPT = IMAGE_TYPES.join(',')
@@ -34,6 +60,6 @@ export type ImageRejection = 'too_big' | 'bad_type'
  */
 export function imageRejection(file: { size: number; type: string }): ImageRejection | null {
   if (file.size > IMAGE_MAX_BYTES) return 'too_big'
-  if (file.type && !(IMAGE_TYPES as readonly string[]).includes(file.type)) return 'bad_type'
+  if (file.type && !asImageType(file.type)) return 'bad_type'
   return null
 }

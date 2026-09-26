@@ -3,17 +3,16 @@
 // 404 — прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
 // Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
 import type { Metadata } from 'next'
-import { withLang } from '@/shared/seo/with-lang'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { DigChatHost } from '@/features/dig/DigChat'
 import { requireViewableMeta } from '@/features/library/guard'
 import { FeedList } from '@/features/library/FeedList'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { getLang } from '@/shared/i18n/server'
-import { urlLangAt } from '@/shared/seo/with-lang'
 import { howToEligible } from '@/shared/seo/howto-eligible'
-import { t, tr } from '@/shared/i18n'
-import { breadcrumbList, creativeWork, howTo, itemList, JsonLd } from '@/shared/seo/jsonld'
+import { servedLang, t, tr } from '@/shared/i18n'
+import { JsonLd } from '@/shared/seo/jsonld'
+import { listJsonLd } from './list-jsonld'
 import { PAGE, STACK } from '@/shared/ui/control'
 import { ListAbout } from './ListAbout'
 import { ListAdNotices } from './ListAdNotices'
@@ -24,6 +23,7 @@ import { ListDraftNotices } from './ListDraftNotices'
 import { ListToolbar } from './ListToolbar'
 import { ListViewBanner } from './ListViewBanner'
 import { loadListPage } from './load'
+import { Alert } from '@/shared/ui/Alert'
 
 /**
  * Мета страницы списка.
@@ -37,7 +37,7 @@ import { loadListPage } from './load'
  * показывалось название САЙТА, а не название списка (замер 28.08). То же и с
  * `description`: свой заголовок был, описание приезжало общесайтовое.
  */
-async function baseMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }): Promise<Metadata> {
   const { handle, slug } = await params
   // Вкладка браузера = человеческий title, а не slug (title гейтит requireViewableMeta).
   const [meta, lang] = await Promise.all([requireViewableMeta(handle, slug), getLang()])
@@ -60,13 +60,6 @@ async function baseMetadata({ params }: { params: Promise<{ handle: string; slug
     twitter: { card: 'summary_large_image', title, description },
   }
 }
-
-// Канон и `og:url` — на языке адреса, плюс `hreflang` (см. `withLang`): страница собирает
-// метаданные сама, мимо `pageMeta`, и без обёртки назвала бы каноном версию без языка.
-export async function generateMetadata(props: Parameters<typeof baseMetadata>[0]): Promise<Metadata> {
-  return withLang(await baseMetadata(props))
-}
-
 
 /** Описание для поисковика: своё, если автор его написал, иначе честная замена.
  *  Режем по границе слова — обрезка на середине слова читается как поломка. */
@@ -93,85 +86,44 @@ export default async function ListPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ find?: string; ref?: string; v?: string }>
+  searchParams: Promise<{ find?: string; ref?: string; v?: string; e?: string }>
 }) {
-  const [{ handle: owner, slug }, sp, lang, at] = await Promise.all([params, searchParams, getLang(), urlLangAt()])
+  const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const loaded = await loadListPage({ owner, slug, sp, lang })
   const { tpl, currentVersion, steps, related, viewer, isOwner, readOnlyView, mon, digGnomes, quizBids, quizPassed, completion, base, isStepBlock, find, firstLockedIdx } = loaded
 
   // Структурные данные — только у публично видимой страницы: у черновика их быть
   // не должно ровно потому же, почему его нет в карте сайта.
   const indexable = tpl.status === 'published' && tpl.visibility === 'public' && tpl.moderation === 'active'
-  // ⚠️ Адреса в разметке — НА ЯЗЫКЕ АДРЕСА. Страница, открытая по `/ru/…`, описывает
-  // русский текст; назвать его адресом без языка значит приписать его версии, которую
-  // поисковик считает другой страницей (находка авто-ревью к SEO-2). Касается всех
-  // адресов разметки сразу — самого списка, автора и крошек; `at` взят выше, вместе с
-  // параметрами запроса.
-  const path = at(`/${owner}/${slug}`)
+  // Разметка для поисковика — чистой функцией (см. `list-jsonld.ts`); `HowTo` — только там,
+  // где страница действительно инструкция: условия и причина каждого — в `howToEligible`.
+  const jsonLd = indexable
+    ? listJsonLd({
+        tpl: { title: tpl.title, desc: tpl.desc, tags: tpl.tags, createdAt: tpl.createdAt, updatedAt: tpl.updatedAt, ownerName: tpl.owner.name },
+        owner,
+        slug,
+        lang,
+        version: currentVersion?.version ?? tpl.currentVersion,
+        steps,
+        howToSteps: howToEligible({
+          ordered: tpl.ordered,
+          listKind: tpl.listKind,
+          readOnlyView,
+          find,
+          firstLockedIdx,
+          stepCount: steps.filter((s) => isStepBlock(s)).length,
+        })
+          ? steps.filter((s) => isStepBlock(s))
+          : null,
+      })
+    : []
 
   return (
     <>
-      {indexable ? (
-        <>
-          <JsonLd
-            data={creativeWork({
-              name: tr(tpl.title, lang),
-              description: tr(tpl.desc, lang) || undefined,
-              path,
-              authorName: tpl.owner.name || owner,
-              authorPath: at(`/${owner}`),
-              datePublished: tpl.createdAt,
-              dateModified: tpl.updatedAt,
-              tags: tpl.tags,
-              // Как ниже в печатной шапке: показанная версия может быть не текущей,
-              // а на некоторых путях её нет вовсе.
-              version: currentVersion?.version ?? tpl.currentVersion,
-            })}
-          />
-          <JsonLd data={breadcrumbList([{ name: owner, path: at(`/${owner}`) }, { name: tr(tpl.title, lang) || slug, path }])} />
-          {/* Шаги отдаём списком: это то, ЧТО здесь исполняется, и единственная
-              часть страницы, ради которой машина сюда приходит. Потолок в 25 —
-              чтобы разметка не раздувалась на курсах в сотню уроков. */}
-          <JsonLd
-            data={itemList(
-              tr(tpl.title, lang) || slug,
-              steps.slice(0, 25).map((s) => ({ name: tr(s.title, lang) || `${s.n}` })),
-            )}
-          />
-          {/* `HowTo` — только там, где страница действительно инструкция: условия и
-              причина каждого — в `howToEligible`. */}
-          {howToEligible({
-            ordered: tpl.ordered,
-            listKind: tpl.listKind,
-            readOnlyView,
-            find,
-            firstLockedIdx,
-            stepCount: steps.filter((s) => isStepBlock(s)).length,
-          }) ? (
-            <JsonLd
-              data={howTo({
-                name: tr(tpl.title, lang) || slug,
-                description: tr(tpl.desc, lang) || undefined,
-                path,
-                // ⚠️ ТОЛЬКО блоки-шаги. В списке бывают текст, картинка, опрос и тест —
-                // страница их шагами не считает (`isStepBlock`, и `ListBlocks` их
-                // нумерацию пропускает). Объявить их шагами инструкции значит соврать
-                // поисковику о составе: человек увидел бы «шаг 3: картинка».
-                // ⚠️ ВСЕ шаги, без потолка. Инструкция, обрезанная на 25-м, объявляет
-                // процедуру законченной там, где страница продолжается, — и теряет как
-                // раз последние шаги, которые обычно и доводят дело до конца (находка
-                // авто-ревью). Страница и так отдаёт все шаги целиком.
-                steps: steps
-                  .filter((s) => isStepBlock(s))
-                  .map((s) => ({
-                    name: tr(s.title, lang) || `${s.n}`,
-                    text: tr(s.desc, lang) || undefined,
-                  })),
-              })}
-            />
-          ) : null}
-        </>
-      ) : null}
+      {/* Типы блоков разметки в выдаче уникальны — ими и ключуем. */}
+      {jsonLd.map((data) => (
+        <JsonLd key={String(data['@type'])} data={data} />
+      ))}
 
       {/* Просмотр: владелец себя не накручивает, сервер дополнительно дедупит. */}
       {!isOwner && mon.viewTracking && <ViewBeacon templateId={tpl.id} />}
@@ -185,8 +137,8 @@ export default async function ListPage({
           <main className={`min-w-0 flex-1 ${STACK}`}>
             {/* Заголовок только для печати (в экране он в шапке) */}
             <div className="hidden print:block">
-              <h1 className="text-heading font-bold text-ink">{tr(tpl.title, lang)}</h1>
-              {tr(tpl.desc, lang) && <p className="mt-1 text-body text-ink-2">{tr(tpl.desc, lang)}</p>}
+              <h1 lang={servedLang(tpl.title, lang)} className="text-heading font-bold text-ink">{tr(tpl.title, lang)}</h1>
+              {tr(tpl.desc, lang) && <p lang={servedLang(tpl.desc, lang)} className="mt-1 text-body text-ink-2">{tr(tpl.desc, lang)}</p>}
               <p className="mt-1 font-mono text-caption text-muted">
                 {owner}/{slug} · v{currentVersion?.version ?? tpl.currentVersion}
               </p>
@@ -198,6 +150,10 @@ export default async function ListPage({
               <ListAbout {...loaded} lang={lang} layout="row" />
             </div>
 
+            {/* Копия «из шаблона» не создалась: в этом списке то, что сейчас не принимается
+                (опасная команда или ключ доступа, лёгшие до проверки). Причина — здесь,
+                откуда нажали, а не безымянной страницей ошибки. */}
+            {sp.e === 'copy-refused' ? <Alert variant="danger">{t('copyContentRefused', lang)}</Alert> : null}
             <ListDraftNotices {...loaded} lang={lang} />
             <ListAdNotices {...loaded} lang={lang} />
             <ListToolbar {...loaded} lang={lang} />

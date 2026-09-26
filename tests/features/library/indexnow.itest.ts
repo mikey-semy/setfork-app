@@ -10,19 +10,28 @@ import { resetTables } from '../../helpers/reset-db'
  * остальное настоящее: правило индексации, адреса по языкам, пометки, отступы, журнал.
  */
 const { db, agentActions, agentLoops, appSettings, indexnowSubmissions, jobs, templates, users } = await import('@/shared/db')
-const { runIndexNowPass, ensureIndexNowScheduled, listUrls, MAX_URLS_PER_REQUEST, INDEXNOW_KEYS } = await import('@/features/library/indexnow')
+const { runIndexNowPass, ensureIndexNowScheduled, listUrls, INDEXNOW_KEYS } = await import('@/features/library/indexnow')
 type Body = Parameters<Parameters<typeof runIndexNowPass>[0] & object>[0]
 type Send = (b: Body) => Promise<number>
 
 const KEY = 'test-key-1234'
 const ORIGIN = 'https://example.org'
-const url = (path: string) => [`${ORIGIN}/en${path}`, `${ORIGIN}/ru${path}`, `${ORIGIN}${path}`]
+/** Адрес страницы — один на все языки (ADR-0029). */
+const url = (path: string) => [`${ORIGIN}${path}`]
 let owner = ''
 
 /** Файл ключа на месте — как у живого сайта с верным APP_URL. */
 const keyOk = async () => true
 /** Проход с проверкой ключа без сети. */
 const pass = (send: Send, now?: Date, checkKey: () => Promise<boolean | null> = keyOk) => runIndexNowPass(send, now, checkKey)
+/**
+ * Потолок пачки для тестов пачек. Протокольный (десять тысяч адресов) потребовал бы
+ * десяти тысяч списков на тест и не укладывался в таймаут CI; правило то же, объём мал.
+ * Нечётный: переехавший список несёт два адреса, и при чётном потолке пачка заполнялась
+ * ровно — перебор на один адрес тест не видел (проверено мутацией).
+ */
+const CAP = 13
+const passCapped = (send: Send) => runIndexNowPass(send, undefined, keyOk, CAP)
 
 /** Поддельная отправка: помнит тела, отвечает заданным кодом. */
 function fakeSend(status = 200) {
@@ -199,14 +208,20 @@ describe('пути, которые не двигают updated_at', () => {
     expect(again.urls()).toEqual(expect.arrayContaining(url('/ghost/deploy')))
   })
 
-  it('появился язык — адреса уходят заново', async () => {
+  it('⚠️ отправлено с языковыми адресами (22–25.09) — один раз уходят адрес и прежние `/ru/`, `/en/`', async () => {
     const id = await list('deploy')
     await pass(fakeSend().send)
-    // Отправлено при наборе языков, где был только английский.
-    await db.update(indexnowSubmissions).set({ sentLangs: 'en' }).where(eq(indexnowSubmissions.templateId, id))
+    // Так выглядит строка, отправленная до ADR-0029: адреса на обоих языках.
+    await db.update(indexnowSubmissions).set({ sentLangs: 'en,ru' }).where(eq(indexnowSubmissions.templateId, id))
     const again = fakeSend()
     await pass(again.send)
-    expect(again.urls()).toContain(`${ORIGIN}/ru/alice/deploy`)
+    // Прежние языковые адреса теперь отвечают 308 — поисковик должен об этом узнать.
+    expect(again.urls().sort()).toEqual([`${ORIGIN}/alice/deploy`, `${ORIGIN}/en/alice/deploy`, `${ORIGIN}/ru/alice/deploy`].sort())
+    const [row] = await db.select().from(indexnowSubmissions).where(eq(indexnowSubmissions.templateId, id))
+    expect(row.sentLangs).toBe('')
+    const third = fakeSend()
+    await pass(third.send)
+    expect(third.bodies).toHaveLength(0)
   })
 
   it('снят с публичности — сообщается (протокол велит сообщать об удалённом); открыт снова — уходит снова', async () => {
@@ -309,21 +324,21 @@ describe('журнал петли', () => {
 describe('пачки', () => {
   it('одна пачка за проход, не больше потолка; остаток — следующим проходом', async () => {
     const perList = listUrls('h', 's', ORIGIN).length
-    const lists = Math.floor(MAX_URLS_PER_REQUEST / perList) + 1
+    const lists = Math.floor(CAP / perList) + 1
     await db.insert(templates).values(
       Array.from({ length: lists }, (_, i) => ({ ownerId: owner, slug: `bulk-${i}`, title: { en: `b${i}` }, status: 'published' as const, visibility: 'public' as const, currentVersion: 1 })),
     )
-    expect(lists * perList).toBeGreaterThan(MAX_URLS_PER_REQUEST)
+    expect(lists * perList).toBeGreaterThan(CAP)
     const first = fakeSend()
-    await pass(first.send)
+    await passCapped(first.send)
     expect(first.bodies).toHaveLength(1)
-    expect(first.bodies[0].urlList.length).toBeLessThanOrEqual(MAX_URLS_PER_REQUEST)
+    expect(first.bodies[0].urlList.length).toBeLessThanOrEqual(CAP)
     const second = fakeSend()
-    await pass(second.send)
+    await passCapped(second.send)
     expect(second.bodies).toHaveLength(1)
     expect(new Set([...first.urls(), ...second.urls()]).size).toBe(lists * perList)
     const third = fakeSend()
-    await pass(third.send)
+    await passCapped(third.send)
     expect(third.bodies).toHaveLength(0)
   })
 })
@@ -333,19 +348,19 @@ describe('пачки с переехавшими', () => {
     // Выборка ограничена числом списков под обычный размер; переехавший несёт ещё и старые
     // адреса. Потолок держит сборка пачки, а не лимит выборки, — проверяем именно её.
     const perList = listUrls('h', 's', ORIGIN).length
-    const lists = Math.floor(MAX_URLS_PER_REQUEST / perList) + 1
+    const lists = Math.floor(CAP / perList) + 1
     await db.insert(templates).values(
       Array.from({ length: lists }, (_, i) => ({ ownerId: owner, slug: `bulk-${i}`, title: { en: `b${i}` }, status: 'published' as const, visibility: 'public' as const, currentVersion: 1 })),
     )
-    await pass(fakeSend().send)
-    await pass(fakeSend().send)
+    await passCapped(fakeSend().send)
+    await passCapped(fakeSend().send)
     await db.update(users).set({ handle: 'alice-new' }).where(eq(users.id, owner))
     const moved = fakeSend()
-    await pass(moved.send)
+    await passCapped(moved.send)
     expect(moved.bodies).toHaveLength(1)
-    expect(moved.bodies[0].urlList.length).toBeLessThanOrEqual(MAX_URLS_PER_REQUEST)
+    expect(moved.bodies[0].urlList.length).toBeLessThanOrEqual(CAP)
     // Влезло максимум: следующий переехавший уже не помещается.
-    expect(moved.bodies[0].urlList.length).toBeGreaterThan(MAX_URLS_PER_REQUEST - 2 * perList)
+    expect(moved.bodies[0].urlList.length).toBeGreaterThan(CAP - 2 * perList)
   })
 })
 
