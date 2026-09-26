@@ -167,6 +167,12 @@ describe('SKILL.md по стандарту', () => {
     expect(pickSkillHeader(parseSkillMd(md).header).header).toEqual(header)
   })
 
+  it('заголовок тела — авторский, если скилл пришёл с другим; в шапку он не попадает', () => {
+    const md = toSkill(list({ skillHeader: { heading: 'Whole-repository review' } }), 'ru', ctx).markdown
+    expect(md).toMatch(/\n# Whole-repository review\n/)
+    expect(frontmatter(md).keys).not.toContain('heading')
+  })
+
   it('ключи metadata, которые YAML прочёл бы не строкой, — в кавычках', () => {
     const md = toSkill(list({ skillHeader: { metadata: { '1.0': 'a', '1': 'b', null: 'c', 'has space': 'd', plain: 'e' } } }), 'ru', ctx).markdown
     const fm = parseYaml(/^---\n([\s\S]*?)\n---\n/.exec(md)![1]) as { metadata: Record<string, string> }

@@ -16,7 +16,18 @@ export interface SkillHeader {
   compatibility?: string
   'allowed-tools'?: string
   metadata?: Record<string, string>
+  /**
+   * Заголовок `# …` тела исходника, когда он не совпал с названием. Не поле шапки
+   * стандарта, а то, что стоит сразу под ней: название списка — `name` скилла, а автор
+   * мог озаглавить тело иначе («Whole-repository review» у `finetooth`). Экспорт ставит его
+   * заголовком вместо названия — файл выходит тем, что вошёл.
+   */
+  heading?: string
 }
+
+/** Шапка с заголовком тела: пустой заголовок не храним, как и пустую шапку. */
+export const withHeading = (header: SkillHeader | null, heading: string | undefined): SkillHeader | null =>
+  heading?.trim() ? { ...header, heading: heading.trim() } : header
 
 const TEXT_KEYS = ['license', 'compatibility', 'allowed-tools'] as const
 

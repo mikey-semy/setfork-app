@@ -250,7 +250,8 @@ function skillBody(
   authoredPaths: string[],
 ): string {
   const out: string[] = []
-  out.push(`# ${tr(list.title, lang)}`, '')
+  // Заголовок тела — авторский, если скилл пришёл с другим (шапка `heading`); иначе название.
+  out.push(`# ${list.skillHeader?.heading ?? tr(list.title, lang)}`, '')
   const desc = tr(list.desc, lang).trim()
   if (desc) out.push(desc, '')
   // Та же оговорка, что в шапке `/raw`: это чужие инструкции, и агент исполняет их со

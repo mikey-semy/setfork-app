@@ -41,7 +41,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
         skillMd: z
           .string()
           .optional()
-          .describe('The whole SKILL.md instead of items: numbered steps become steps, prose becomes text blocks, the header gives title and description (explicit title/desc win). parseNotes in the answer says what was not taken over'),
+          .describe('The whole SKILL.md instead of items: numbered steps become steps, prose becomes text blocks, the header gives title (the skill name) and description (explicit title/desc win); a # heading that differs from the name is kept and comes back in the export. A new title replaces the old one in every language — translations of the old title are dropped, not left stale. parseNotes in the answer says what was not taken over'),
         files: z
           .array(
             z.object({
