@@ -1,5 +1,6 @@
 import { binaryAllowedAt, isBinary, nativeExecutable } from '@/core/domain/lfs-pointer'
-import { ATTACH_MAX_BYTES, megabytes } from '@/shared/media/limits'
+import { megabytes } from '@/shared/media/limits'
+import { SKILL_ASSETS_MAX_BYTES, SKILL_TEXT_MAX_BYTES } from '@/core/domain/skill-limits'
 import 'server-only'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 
@@ -109,13 +110,13 @@ export interface FetchedSkill {
 const AUTHORED_DIRS = ['scripts', 'references', 'assets']
 const LICENSE_NAMES = /^(LICEN[CS]E|COPYING)(\.(md|txt))?$/i
 /**
- * ⚠️ КОПИЯ пределов ядра (setfork-core `serialize.rs`: AUTHORED_MAX_FILES = 50,
- * AUTHORED_MAX_BYTES = 1 МБ). Решает здесь не она — набор судит ядро и откажет само; она
+ * ⚠️ КОПИЯ предела ядра (setfork-core `serialize.rs`: AUTHORED_MAX_FILES = 50; предел текста —
+ * `SKILL_TEXT_MAX_BYTES`). Решает здесь не она — набор судит ядро и откажет само; она
  * только останавливает СКАЧИВАНИЕ заранее: папка с тысячей файлов держала бы действие
  * человека минутами. Разойдутся — ядро всё равно скажет своё.
  */
 const FILES_MAX = 50
-const BYTES_MAX = 1024 * 1024
+const BYTES_MAX = SKILL_TEXT_MAX_BYTES
 /** LICENSE крупнее — не текст лицензии, а что-то иное: считаем неизвестной (закрытой). */
 const LICENSE_MAX_BYTES = 200 * 1024
 
@@ -169,11 +170,11 @@ export async function fetchGithubSkill(ref: GithubSkillRef, token?: string): Pro
   })
   const total = wanted.reduce((n, b) => n + (b.size ?? 0), 0)
   // Какие из них двоичные, по дереву не видно: верхняя граница — текст скилла плюс предел
-  // двоичных файлов (они уезжают в хранилище, ATTACH_MAX_BYTES). Точнее судят запись и ядро.
-  const bytesMax = BYTES_MAX + ATTACH_MAX_BYTES
+  // двоичных файлов (они уезжают в хранилище, `SKILL_ASSETS_MAX_BYTES`). Точнее судят запись и ядро.
+  const bytesMax = BYTES_MAX + SKILL_ASSETS_MAX_BYTES
   if (wanted.length > FILES_MAX || total > bytesMax) {
     return {
-      error: `the skill has ${wanted.length} files, ${Math.ceil(total / 1024)} KB — a skill holds at most ${FILES_MAX} files, ${BYTES_MAX / 1024} KB of text and ${megabytes(ATTACH_MAX_BYTES)} MB of binary files in assets/`,
+      error: `the skill has ${wanted.length} files, ${Math.ceil(total / 1024)} KB — a skill holds at most ${FILES_MAX} files, ${BYTES_MAX / 1024} KB of text and ${megabytes(SKILL_ASSETS_MAX_BYTES)} MB of binary files in assets/`,
     }
   }
   for (const b of blobs) {

@@ -1,7 +1,8 @@
 import 'server-only'
 import { AuthoredFilesError, type AuthoredFile } from '@/core'
 import { binaryAllowedAt, isBinary, lfsPointerOf, lfsPointerText, nativeExecutable } from '@/core/domain/lfs-pointer'
-import { ATTACH_MAX_BYTES, megabytes } from '@/shared/media/limits'
+import { megabytes } from '@/shared/media/limits'
+import { SKILL_ASSETS_MAX_BYTES } from '@/core/domain/skill-limits'
 import { AssetStoreUnavailable, getAsset, hasAsset, putAsset } from '@/shared/media/asset-store'
 import { captureError } from '@/shared/observability'
 
@@ -28,8 +29,8 @@ export function assetRefusalText(r: AssetRefusal): string {
 
 /**
  * Двоичные файлы набора → в хранилище, в набор — их указатели Git LFS. Текст остаётся как
- * есть. Предел — тот же, что у вложений (`ATTACH_MAX_BYTES`): на файл и на все двоичные
- * файлы скилла вместе — второго числа тут нет.
+ * есть. Предел — `SKILL_ASSETS_MAX_BYTES` на файл и на все двоичные файлы скилла вместе: он
+ * выведен из предела установщика `npx skills` (см. `skill-limits`).
  *
  * Байты кладутся ДО записи версии: если запись потом откажет, объект останется ненужным, но
  * безвредным — он неизменяем и адресован хешем, и следующая попытка найдёт его на месте.
@@ -39,7 +40,7 @@ function binaryRefusal(path: string, bytes: Uint8Array): AssetRefusal | null {
   if (!binaryAllowedAt(path)) return { code: 'binary-outside-assets', path }
   const exe = nativeExecutable(bytes)
   if (exe) return { code: 'executable', path, kind: exe }
-  if (bytes.length > ATTACH_MAX_BYTES) return { code: 'too-big', path, max: ATTACH_MAX_BYTES }
+  if (bytes.length > SKILL_ASSETS_MAX_BYTES) return { code: 'too-big', path, max: SKILL_ASSETS_MAX_BYTES }
   return null
 }
 
@@ -59,7 +60,7 @@ export async function storeBinaryFiles(files: AuthoredFile[]): Promise<{ files: 
     if (refused) return { refused }
     total += f.content.length
   }
-  if (total > ATTACH_MAX_BYTES) return { refused: { code: 'too-big-total', max: ATTACH_MAX_BYTES } }
+  if (total > SKILL_ASSETS_MAX_BYTES) return { refused: { code: 'too-big-total', max: SKILL_ASSETS_MAX_BYTES } }
   const out: AuthoredFile[] = []
   for (const f of files) {
     if (!isBinary(f.content)) {
@@ -75,7 +76,7 @@ export async function storeBinaryFiles(files: AuthoredFile[]): Promise<{ files: 
 /** Двоичные файлы набора вместе больше предела — по размерам из указателей. */
 export function assetsOverLimit(files: AuthoredFile[]): AssetRefusal | null {
   const total = files.reduce((n, f) => n + (binaryAllowedAt(f.path) ? (lfsPointerOf(f.content)?.size ?? 0) : 0), 0)
-  return total > ATTACH_MAX_BYTES ? { code: 'too-big-total', max: ATTACH_MAX_BYTES } : null
+  return total > SKILL_ASSETS_MAX_BYTES ? { code: 'too-big-total', max: SKILL_ASSETS_MAX_BYTES } : null
 }
 
 /**

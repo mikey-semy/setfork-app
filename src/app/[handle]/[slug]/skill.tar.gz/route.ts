@@ -3,6 +3,7 @@ import { gitCore } from '@/features/git/core'
 import { toSkill } from '@/features/library/skill'
 import { tarGz } from '@/shared/lib/tar'
 import { log } from '@/shared/observability'
+import { SKILL_INSTALL_DOWNLOAD_MAX_BYTES } from '@/core/domain/skill-limits'
 import { cacheHeaders } from '@/shared/http/cache'
 import { problemListNotFound, problemRefNotFound } from '@/shared/http/problem'
 
@@ -40,6 +41,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
     ...dirs.map((d) => ({ path: `${skill.name}/${d}` })),
     ...skill.files.map((f) => ({ path: `${skill.name}/${f.path}`, content: f.content, mode: f.executable ? 0o755 : 0o644 })),
   ])
+  // Крупнее предела установщика — `npx skills` его не скачает. Пределы записи держат архив
+  // ниже; если он всё же вышел больше (например, огромный SKILL.md), — не молча.
+  if (archive.length > SKILL_INSTALL_DOWNLOAD_MAX_BYTES) log.warn('skill archive over the npx skills download limit', { handle, slug, bytes: archive.length })
   return new Response(new Uint8Array(archive), {
     headers: {
       'Content-Type': 'application/gzip',
