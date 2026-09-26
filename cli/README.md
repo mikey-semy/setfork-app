@@ -48,7 +48,7 @@ sf api get_list '{"handle":"owner","slug":"slug"}'
 sf api create_issue @issue.json
 ```
 
-`sf skill publish` reads `SKILL.md` and the files directly inside `scripts/`, `references/`, `assets/` (one level, text only; the executable bit is kept for `scripts/`). Anything else in the folder is named as skipped, not silently dropped. Blocks, files and title come in **one version**; files missing from the folder are removed from the list.
+`sf skill publish` reads `SKILL.md` and the files directly inside `scripts/`, `references/`, `assets/` (one level; `scripts/` and `references/` text only, `assets/` may hold binary files — images, PDFs, data — which are stored by sha256; the executable bit is kept for `scripts/`). Anything else in the folder is named as skipped, not silently dropped. Blocks, files and title come in **one version**; files missing from the folder are removed from the list.
 
 ## GitHub Action: tag → version and release
 

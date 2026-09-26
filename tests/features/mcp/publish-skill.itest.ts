@@ -165,7 +165,8 @@ description('publish_skill', () => {
     [{ path: 'scripts/run‮hs.sh', content: 'x' }, 'text-direction'],
     [{ path: `references/${'я'.repeat(49)}.md`, content: 'x' }, 'too long'],
     [{ path: 'assets/setup.sh', content: 'rm -rf ~', executable: true }, 'cannot be executable'],
-    [{ path: 'assets/logo.png', content: Buffer.from([0x89, 0x50, 0, 1]).toString('base64'), encoding: 'base64' as const }, 'binary'],
+    // Двоичное — только в assets/ (там оно уезжает в хранилище, см. skill-assets.itest.ts).
+    [{ path: 'scripts/tool.bin', content: Buffer.from([0x89, 0x50, 0, 1]).toString('base64'), encoding: 'base64' as const }, 'binary files go to assets/'],
     [{ path: 'references/a.md', content: 'plain text, not base64!', encoding: 'base64' as const }, 'not valid base64'],
   ])('ранний отказ: %j', async (file, words) => {
     const res = await mcpPublishSkill(ownerId, { title: `Refused ${words}`, items: [{ title: 'x' }], files: [file] })

@@ -34,6 +34,9 @@ import { headVersion } from './base-version'
 import { authoredError, contentError, ownedList, writeProposed } from './write'
 import { pickSkillHeader, type SkillHeader } from '@/core/domain/skill-header'
 import { findSecretInContent } from '@/core/domain/secret-scan'
+import { binaryAllowedAt, isBinary } from '@/core/domain/lfs-pointer'
+import { assetRefusalText, assetsOverLimit, storeBinaryFiles } from '@/features/library/skill-assets'
+import { AssetStoreUnavailable } from '@/shared/media/asset-store'
 
 export interface McpSkillFileInput {
   path: string
@@ -111,8 +114,9 @@ export function decodeSkillFiles(files: McpSkillFileInput[]): { files: (Authored
     } else {
       content = new TextEncoder().encode(f.content ?? '')
     }
-    // Двоичное дерево скилла не примет (ни с сайта, ни пушем): признак тот же, что у git.
-    if (content.includes(0)) return { error: `"${path}" is a binary file — a skill keeps text only` }
+    // Двоичное — только в assets/ (байты уедут в хранилище по хешу, в дерево — указатель);
+    // скрипты и справка — текст. Признак двоичного тот же, что у git.
+    if (isBinary(content) && !binaryAllowedAt(path)) return { error: assetRefusalText({ code: 'binary-outside-assets', path }) }
     out.push({ path, content, executable: f.executable === true, execGiven: f.executable !== undefined })
   }
   return { files: out }
@@ -167,8 +171,17 @@ const notApplied = (what: string) => ({
 
 /** ОПУБЛИКОВАТЬ СКИЛЛ: блоки + файлы автора одной версией. */
 export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillInput) {
-  const decoded = decodeSkillFiles(rawInput.files ?? [])
-  if ('error' in decoded) return decoded
+  const raw = decodeSkillFiles(rawInput.files ?? [])
+  if ('error' in raw) return raw
+  // Двоичные файлы → хранилище, в набор — указатели. ДО сравнения с текущим набором: иначе
+  // та же картинка, присланная снова, считалась бы изменением (в дереве лежит указатель).
+  const stored = await storeBinaryFiles(raw.files).catch((e) => {
+    if (e instanceof AssetStoreUnavailable) return { unavailable: e.message }
+    throw e
+  })
+  if ('unavailable' in stored) return { error: stored.unavailable }
+  if ('refused' in stored) return { error: assetRefusalText(stored.refused) }
+  const decoded = { files: stored.files.map((f, i) => ({ ...f, execGiven: raw.files[i].execGiven })) }
   // SKILL.md → блоки, название, описание. Явные поля главнее: агент мог поправить описание.
   const parsed = rawInput.skillMd ? parseSkillMd(rawInput.skillMd) : null
   if (parsed && rawInput.items) return { error: 'pass either skillMd or items, not both — skillMd already becomes the blocks' }
@@ -260,6 +273,10 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
     const have = await gitCore.authoredFiles({ owner: handle, slug }, current).catch(() => null)
     if (!have) return { error: 'could not read the current files of this list from the git core — nothing was written; try again' }
     merged = mergeSkillFiles(have, decoded.files, input.removeFiles ?? [], input.replaceFiles === true)
+    // Предел двоичных файлов — на скилл целиком, а не на присланную порцию: дополнение по
+    // одной картинке иначе обходило бы его.
+    const over = assetsOverLimit(merged.files)
+    if (over) return { error: assetRefusalText(over) }
     if (merged.unknown.length) return { error: `no such files to remove: ${merged.unknown.join(', ')}` }
   }
 

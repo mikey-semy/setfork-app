@@ -14,8 +14,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { assertNoDestructiveSteps, DestructiveCommandError } from '@/core/domain/destructive-command'
 
-const h = vi.hoisted(() => ({ meta: null as null | { archivedAt: Date | null; frozenAt: Date | null } }))
+const h = vi.hoisted(() => ({ meta: null as null | { archivedAt: Date | null; frozenAt: Date | null }, stored: new Set<string>() }))
 vi.mock('@/features/library/queries', () => ({ getListMeta: async () => h.meta }))
+// Хранилище байтов — внешнее (S3): подменено оно, правило проверки — настоящее.
+vi.mock('@/shared/media/asset-store', () => ({ hasAsset: async (oid: string) => h.stored.has(oid) }))
 
 const { POST } = await import('@/app/api/internal/write-allowed/route')
 
@@ -203,5 +205,17 @@ describe('write-allowed: скрипт из files — тем же правило�
     const { verdict } = await ask({ owner: 'alice', slug: 'deploy', files: [{ path: 'references/why.md', text: 'rm -rf /' }] })
     expect(verdict).toEqual({ allow: true })
   })
-})
 
+  it('указатель двоичного файла, пришедший пушем, — только на байты, которые у нас есть', async () => {
+    const { lfsPointerText } = await import('@/core/domain/lfs-pointer')
+    const oid = 'b'.repeat(64)
+    const file = { path: 'assets/logo.png', text: lfsPointerText({ oid, size: 10 }) }
+    const denied = await ask({ owner: 'alice', slug: 'deploy', files: [file] })
+    expect(denied.verdict?.allow).toBe(false)
+    expect(denied.verdict?.reason).toMatch(/binary file bytes are not uploaded/)
+    h.stored.add(oid)
+    expect((await ask({ owner: 'alice', slug: 'deploy', files: [file] })).verdict).toEqual({ allow: true })
+    // Тот же текст вне assets/ — просто текст: двоичному там не место, и искать его байты незачем.
+    expect((await ask({ owner: 'alice', slug: 'deploy', files: [{ path: 'references/p.md', text: lfsPointerText({ oid: 'c'.repeat(64), size: 1 }) }] })).verdict).toEqual({ allow: true })
+  })
+})

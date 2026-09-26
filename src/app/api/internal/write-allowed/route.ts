@@ -2,6 +2,8 @@
 import { getListMeta } from '@/features/library/queries'
 import { canEditList, editBlockReason } from '@/core'
 import { findDestructiveInScript, findDestructiveSteps } from '@/core/domain/destructive-command'
+import { binaryAllowedAt, parseLfsPointer } from '@/core/domain/lfs-pointer'
+import { hasAsset } from '@/shared/media/asset-store'
 import { findSecret, findSecretInFile } from '@/core/domain/secret-scan'
 
 /**
@@ -69,9 +71,13 @@ interface AskedFile {
   text: string
 }
 
+/** Указатель двоичного файла без байтов у нас. Строка постоянная: ядро кладёт причину и в
+ *  метку метрики (см. проверку ниже). */
+const ASSET_MISSING = 'binary file bytes are not uploaded — publish binary files with sf skill publish or MCP publish_skill'
+
 type Verdict =
   | { allow: true }
-  | { allow: false; reason: 'archived' | 'frozen' | 'not-found' }
+  | { allow: false; reason: 'archived' | 'frozen' | 'not-found' | typeof ASSET_MISSING }
   /** Запрещённая команда: причина + МЕСТО (шаг с единицы, код правила, фрагмент). */
   | { allow: false; reason: 'destructive'; step: number; rule: string; fragment: string; path?: string }
   /** Ключ доступа: файл и строка (у команды шага — `step`), вид ключа и его НАЧАЛО. */
@@ -162,6 +168,17 @@ export async function POST(req: Request) {
     if (!/^scripts\//.test(f.path)) continue
     const hit = findDestructiveInScript(f.path, f.text)
     if (hit) return json({ allow: false, reason: 'destructive', step: 0, rule: hit.reason, fragment: hit.fragment, path: f.path })
+  }
+
+  // Указатель двоичного файла, пришедший ПУШЕМ, обязан ссылаться на байты, которые у нас есть:
+  // иначе версия ссылалась бы на файл, который никто никогда не скачает. Байты кладут
+  // `sf skill publish` и MCP `publish_skill` — git их не несёт. Причина — постоянной строкой:
+  // ядро пишет её и в метку метрики, путь там раздул бы число меток.
+  for (const f of files ?? []) {
+    const pointer = binaryAllowedAt(f.path) ? parseLfsPointer(f.text) : null
+    if (pointer && !(await hasAsset(pointer.oid).catch(() => false))) {
+      return json({ allow: false, reason: ASSET_MISSING })
+    }
   }
 
   for (const [i, b] of (blocks ?? []).entries()) {

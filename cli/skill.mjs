@@ -25,11 +25,16 @@ export function readSkillDir(dir) {
         continue
       }
       const bytes = readFileSync(full)
-      if (bytes.includes(0)) {
-        skipped.push(`${sub}/${name} (binary — a skill keeps text only)`)
+      const binary = bytes.includes(0)
+      // Двоичное сервер берёт только из assets/ (байты — в хранилище по хешу); в scripts/ и
+      // references/ — только текст, их читают глазами.
+      if (binary && sub !== 'assets') {
+        skipped.push(`${sub}/${name} (binary — binary files are kept only in assets/)`)
         continue
       }
-      const file = { path: `${sub}/${name}`, content: bytes.toString('utf8') }
+      const file = binary
+        ? { path: `${sub}/${name}`, content: bytes.toString('base64'), encoding: 'base64' }
+        : { path: `${sub}/${name}`, content: bytes.toString('utf8') }
       // Режим — только для scripts/: сервер пускает исполняемые только там.
       if (sub === 'scripts') file.executable = (st.mode & 0o111) !== 0
       files.push(file)
