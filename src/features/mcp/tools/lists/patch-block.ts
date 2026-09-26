@@ -5,6 +5,7 @@
 // присланные агентом поля в блок, ничего не потеряв по дороге.
 
 import { tr, trKey, type LocaleText } from '@/shared/i18n'
+import type { ContentLang } from '@/shared/i18n/iso639'
 import type { ProposedItem } from '@/shared/db'
 import { patchFields, type McpPatchOp } from '../../patch'
 import { blockForMcp, toProposed, type DetailStep } from '../shared'
@@ -74,14 +75,14 @@ const CONTENT_KEY: Record<string, string | undefined> = {
 }
 
 /** Ключ локали, В КОТОРЫЙ ложится правка. Это ровно тот ключ, ОТКУДА чтение взяло
- *  показанное агенту значение (trKey повторяет выбор tr): у списка с двумя
- *  переводами `{ ru: 'старое', en: 'old' }` get_list отдаёт английский, и правка
- *  обязана лечь в en. Иначе она обновит русский, а наружу продолжит отдаваться
+ *  показанное агенту значение (trKey повторяет выбор tr): у английского списка с
+ *  переводом `{ ru: 'старое', en: 'old' }` get_list отдаёт английский (язык оригинала,
+ *  `mcpLang`), и правка обязана лечь в en. Иначе она обновит русский, а наружу продолжит отдаваться
  *  прежний английский — правка выглядит принятой, но не видна. */
-const langOfField = (lt: unknown): string => trKey(lt as LocaleText, 'en') ?? 'en'
-const putLang = (before: unknown, flat: string): Record<string, string> => {
+const langOfField = (lt: unknown, lang: ContentLang): string => trKey(lt as LocaleText, lang) ?? lang
+const putLang = (before: unknown, flat: string, lang: ContentLang): Record<string, string> => {
   const base = { ...((before ?? {}) as Record<string, string>) }
-  const key = langOfField(before)
+  const key = langOfField(before, lang)
   // Очистка убирает ТОЛЬКО ту локаль, которую агент видел и стёр. Прежде она
   // сносила словарь целиком — правка «убрать описание» по-английски уносила с
   // собой и русское описание, которого агент даже не видел.
@@ -97,7 +98,7 @@ const putLang = (before: unknown, flat: string): Record<string, string> => {
  * действительно прислал: остальное берётся у прежнего блока как есть. Поэтому
  * перевод, картинка и содержимое непереданных полей переживают патч.
  */
-export function patchBlock(item: ProposedItem, op: McpPatchOp): ProposedItem | { error: string } {
+export function patchBlock(item: ProposedItem, op: McpPatchOp, lang: ContentLang): ProposedItem | { error: string } {
   const fields = patchFields(op)
   if (!Object.keys(fields).length) return { error: 'nothing to update — pass at least one field' }
   const type = item.type ?? 'step'
@@ -106,8 +107,8 @@ export function patchBlock(item: ProposedItem, op: McpPatchOp): ProposedItem | {
   if (type === 'product') return { error: 'product blocks cannot be patched through the API yet' }
   if (fields.type && fields.type !== type) return { error: `cannot change block type (${type} → ${fields.type}); delete and insert instead` }
 
-  const flatBefore = { ...blockForMcp(item as unknown as DetailStep), section: tr(item.section as LocaleText, 'en') || undefined }
-  const [built] = toProposed([{ ...flatBefore, ...fields, type }])
+  const flatBefore = { ...blockForMcp(item as unknown as DetailStep, lang), section: tr(item.section as LocaleText, lang) || undefined }
+  const [built] = toProposed([{ ...flatBefore, ...fields, type }], lang)
   if (!built) return { error: 'the patch would leave the block empty (a step needs a title)' }
 
   const out = { ...built, blockId: item.blockId } as unknown as Record<string, unknown>
@@ -116,24 +117,24 @@ export function patchBlock(item: ProposedItem, op: McpPatchOp): ProposedItem | {
   const clears = new Set<string>(Object.keys(fields))
   if (fields.needsHuman === false) clears.add('needsHumanAsk')
   for (const f of LOCALIZED) {
-    out[f] = clears.has(f) ? putLang(item[f], tr(built[f] as LocaleText, 'en')) : item[f]
+    out[f] = clears.has(f) ? putLang(item[f], tr(built[f] as LocaleText, lang), lang) : item[f]
   }
   // Списки локализованных значений сопоставляем по ПОКАЗАННОМУ тексту, а не по
   // позиции: вставка в начало сдвигала бы переводы на соседние пункты — русский
   // текст оказывался у чужой проверки. Совпал текст — элемент тот же, словарь
   // переносим целиком; не совпал — это новое значение, пишем в язык блока.
-  const blockLang = langOfField(item.title)
+  const blockLang = langOfField(item.title, lang)
   const pickLocales = (oldList: LocaleText[], flat: string): LocaleText => {
-    const same = oldList.find((o) => tr(o, 'en') === flat)
+    const same = oldList.find((o) => tr(o, lang) === flat)
     return same ?? ({ [blockLang]: flat } as LocaleText)
   }
   const oldSubs = (item.subtasks ?? []) as LocaleText[]
-  out.subtasks = 'subtasks' in fields ? (built.subtasks ?? []).map((s) => pickLocales(oldSubs, tr(s as LocaleText, 'en'))) : oldSubs
+  out.subtasks = 'subtasks' in fields ? (built.subtasks ?? []).map((s) => pickLocales(oldSubs, tr(s as LocaleText, lang))) : oldSubs
   const oldRefs = (item.refs ?? []) as { label: LocaleText; url?: string }[]
   out.refs =
     'refs' in fields
       ? (built.refs ?? []).map((r) => ({
-          label: pickLocales(oldRefs.map((x) => x.label), tr(r.label as LocaleText, 'en')),
+          label: pickLocales(oldRefs.map((x) => x.label), tr(r.label as LocaleText, lang)),
           ...(r.url ? { url: r.url } : {}),
         }))
       : oldRefs

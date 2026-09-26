@@ -9,7 +9,7 @@ import { recordAudit } from '@/shared/audit'
 import { toProposedItems } from '@/features/library/editor'
 import { assertNoDestructiveSteps, DestructiveCommandError } from '@/core/domain/destructive-command'
 import { isCollaborator } from '@/features/collab/queries'
-import { SITE_URL, mcpCanView, resolveListRefOrMoved, toProposed, type McpItemInput } from './shared'
+import { SITE_URL, mcpCanView, mcpLang, resolveListRefOrMoved, toProposed, type McpItemInput } from './shared'
 
 /**
  * Предложения правок через MCP: подать, отрецензировать, слить, откатить, применить,
@@ -149,7 +149,10 @@ export async function mcpSuggestEdit(
 ) {
   const tpl = await resolveListRef(input.list)
   if (!tpl) return { error: 'list not found' }
-  const items = toProposed(input.items ?? [])
+  // Язык правки — тот, на котором агент прочитал список (get_list), иначе предложение
+  // заменило бы оригинал под чужим ключом.
+  const [meta] = await db.select({ lang: templates.lang, title: templates.title }).from(templates).where(eq(templates.id, tpl.id))
+  const items = toProposed(input.items ?? [], mcpLang(meta ?? {}))
   if (items.length === 0) return { error: 'items must not be empty — a suggestion with no changes has nothing to accept' }
   const res = await createSuggestion(userId, tpl.id, { note: input.note ?? '', items })
   if (!res.ok) return { error: res.reason }

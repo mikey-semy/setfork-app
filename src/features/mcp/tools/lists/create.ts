@@ -32,7 +32,7 @@ export interface McpCreateInput {
   tags?: string[]
   ordered?: boolean
   items: McpItemInput[]
-  /** Язык контента ('ru'|'en'); не задан — детект по заголовку/описанию. */
+  /** Язык контента (ISO 639-1): под ним лягут заголовок и шаги; не задан — детект по заголовку/описанию. */
   lang?: string
   /** Имя полки владельца, на которую положить список. Нет такой — список остаётся без полки. */
   catalog?: string
@@ -54,7 +54,12 @@ export const normalizeTags = (tags: string[]): string[] =>
 export async function mcpCreateList(userId: string, input: McpCreateInput) {
   const title = cleanText(input.title)
   if (!title) return { error: 'title is required' }
-  const proposed = toProposed(input.items ?? [])
+  // Локаль заголовка/описания: явный lang из запроса или детект по тексту —
+  // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
+  const lang = isContentLang(input.lang) ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
+  // Шаги — под ТЕМ ЖЕ ключом, что заголовок: раньше они ложились под `en` при любом языке,
+  // и русский список из MCP выглядел как оригинал-заголовок с английским «переводом» шагов.
+  const proposed = toProposed(input.items ?? [], lang)
   if (!proposed.length) return { error: 'at least one item with a title is required' }
 
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
@@ -62,9 +67,6 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   if (!(await listQuota(userId, u?.handle)).ok) return { error: 'list quota reached — delete a list first' }
   const slug = await uniqueSlug(title, userId)
   const tags = normalizeTags(input.tags ?? [])
-  // Локаль заголовка/описания: явный lang из запроса или детект по тексту —
-  // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
-  const lang = isContentLang(input.lang) ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
   // Язык ОРИГИНАЛА: явный аргумент — факт; без него догадка по тексту идёт ПОСЛЕДНИМ запасным
   // вариантом и только осторожная — смесь или кириллица не из русского
   // алфавита дают пусто, а не `ru` навсегда (ADR-0030; ключ текста выше — по-прежнему детект).

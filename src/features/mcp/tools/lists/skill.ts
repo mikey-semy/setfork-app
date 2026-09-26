@@ -27,7 +27,7 @@ import { AUTHORED_NAME_MAX_BYTES, authoredPathProblem } from '@/core/domain/auth
 import { parseSkillMd } from '@/features/library/skill-parse'
 import { assignCatalogByName } from '@/features/catalogs/assign'
 import { gitCore } from '@/features/git/core'
-import { SITE_URL, detailByRefOrMoved, toProposed, type McpItemInput } from '../shared'
+import { SITE_URL, detailByRefOrMoved, mcpLang, toProposed, type McpItemInput } from '../shared'
 import { mcpCreateList, normalizeTags } from './create'
 import { rowsToProposed } from './patch-block'
 import { headVersion } from './base-version'
@@ -285,7 +285,8 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
   // Блоки не пришли — остаются текущие ТОЙ ЖЕ доменной формой (переводы, содержимое).
   let proposed
   if (input.items) {
-    proposed = toProposed(input.items)
+    // Явный язык — язык присланного текста; без него — язык, на котором MCP этот список читает.
+    proposed = toProposed(input.items, isContentLang(input.lang) ? input.lang : mcpLang(tpl))
   } else {
     const detail = await detailByRefOrMoved(handle, slug)
     if (!detail) return { error: 'list not found' }
