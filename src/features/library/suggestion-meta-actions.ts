@@ -1,6 +1,7 @@
 'use server'
 
 import { and, eq } from 'drizzle-orm'
+import { findUserByHandle } from '@/shared/auth/handle'
 import { revalidatePath } from 'next/cache'
 import { councilExperts, db, milestones, suggestionAssignees, suggestionReviewRequests, suggestions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
@@ -156,7 +157,7 @@ export async function toggleSuggestionAssignee(suggestionId: string, handle: str
   if (!loaded) return
   const { sug } = loaded
 
-  const [u] = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
+  const u = await findUserByHandle(handle)
   if (!u) return
   const [existing] = await db
     .select({ id: suggestionAssignees.id })
@@ -223,7 +224,7 @@ export async function toggleReviewRequest(suggestionId: string, handle: string):
   // Автор своей правки тоже может просить ревью — иначе просить было бы некому.
   if (!loaded && session.userId !== sug.authorId) return
 
-  const [u] = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
+  const u = await findUserByHandle(handle)
   if (!u) return
   // Запрета «просить о ревью только имеющих доступ» здесь нет по той же причине, что у
   // назначения исполнителя (features/issues/actions.ts): он выключил бы ревью ГНОМА на

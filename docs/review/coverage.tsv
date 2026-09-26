@@ -174,6 +174,9 @@ scripts/migrate-push.ts	H13c
 scripts/mutate.mjs	H13d
 scripts/probe/touch-sweep.mjs	H13f
 scripts/purge-lists.ts	H13f
+scripts/rekey-lang.ts	H13f
+scripts/rekey-list-lang-run.ts	H13f
+scripts/rekey-list-lang.ts	H13f
 scripts/restore.sh	H13f
 scripts/seed-demo.ts	H13c
 scripts/seed-ops.ts	H13f
@@ -1712,8 +1715,11 @@ tests/instrumentation.test.ts	H12
 tests/integration-setup.ts	H12
 tests/scripts/build-version.test.ts	V12d
 tests/scripts/dangling-forks.itest.ts	V12d
+tests/scripts/filled-columns.itest.ts	V12d
 tests/scripts/migrate-drops.test.ts	V12d
 tests/scripts/purge-lists.test.ts	V12d
+tests/scripts/rekey-lang.test.ts	V12d
+tests/scripts/rekey-list-lang.itest.ts	V12d
 tests/security/server-action-actor-identity.test.ts	H1
 tests/setup.ts	H12
 tests/shared/agents/agenda.test.ts	V12f

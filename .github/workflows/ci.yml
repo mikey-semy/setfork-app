@@ -591,7 +591,17 @@ jobs:
 
           # --no-build: сборки на проде больше нет, и если образа вдруг не окажется,
           # деплой обязан упасть, а не начать собирать — ради этого всё и затевалось.
-          $SSH "cd $APP_DIR && docker compose -f docker-compose.prod.yml -f docker-compose.override.yml -f docker-compose.image.yml up -d --no-build"
+          #
+          # Журнал миграции — В ЖУРНАЛ ПРОГОНА. `up -d` вывода контейнеров не показывает, а
+          # migrate решает необратимое: удаляет пустые колонки (`[preflight]`) или
+          # останавливает выкатку барьером. Без этого вывода причина жила только в
+          # контейнере на сервере до следующей выкатки, а запись об удалении — нигде.
+          COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.override.yml -f docker-compose.image.yml"
+          if ! $SSH "cd $APP_DIR && $COMPOSE up -d --no-build"; then
+            $SSH "cd $APP_DIR && $COMPOSE logs --no-color --tail 80 migrate" || true
+            exit 1
+          fi
+          $SSH "cd $APP_DIR && $COMPOSE logs --no-color migrate" | grep -E '\[(preflight|migrate)\]' || true
 
           # Прежние теги накапливались бы на диске: держим два последних образа
           # каждого вида, остальные убираем. Текущий не трогаем — он используется.
