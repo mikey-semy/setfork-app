@@ -23,8 +23,8 @@ vi.mock('next/navigation', () => ({
   },
 }))
 
-const { db, templates, users } = await import('@/shared/db')
-const { createTemplate, updateListMeta } = await import('@/features/library/actions/versions')
+const { db, listDrafts, templates, users } = await import('@/shared/db')
+const { createTemplate, saveDraft, updateListMeta } = await import('@/features/library/actions/versions')
 const { saveMyListLang } = await import('@/features/settings/list-lang-actions')
 
 let me = ''
@@ -72,6 +72,32 @@ describe('настройки списка → язык оригинала', () =
   })
 })
 
+describe('смена языка и права', () => {
+  it('⚠️ сменили язык — одноязычное название переезжает под новый ключ', async () => {
+    const id = await seed('rekey', { ru: 'Гарбузовы суп' }, null)
+    await updateListMeta(id, form({ title: 'Гарбузовы суп', sourceLang: 'be' }))
+    expect(await row(id)).toMatchObject({ lang: 'be', title: { be: 'Гарбузовы суп' } })
+  })
+
+  it('с переводом — ключи не трогаем: какой из них оригинал, не ясно', async () => {
+    const id = await seed('rekey-2', { ru: 'Суп', en: 'Soup' }, null)
+    await updateListMeta(id, form({ title: 'Суп', sourceLang: 'be' }))
+    expect((await row(id)).title).toEqual({ ru: 'Суп', en: 'Soup' })
+  })
+
+  it('⚠️ чужой человек язык и название не меняет', async () => {
+    const id = await seed('mine', { ru: 'Суп' }, 'ru')
+    const [other] = await db.insert(users).values({ handle: 'stranger' }).returning({ id: users.id })
+    h.session = { userId: other.id, handle: 'stranger' }
+    try {
+      await updateListMeta(id, form({ title: 'Чужое', sourceLang: 'de' }))
+    } finally {
+      h.session = { userId: me, handle: 'lang-set' }
+    }
+    expect(await row(id)).toMatchObject({ lang: 'ru', title: { ru: 'Суп' } })
+  })
+})
+
 describe('язык моих списков', () => {
   it('не код ISO — отказ; код и «не задан» — сохраняются', async () => {
     expect(await saveMyListLang('russian')).toEqual({ ok: false })
@@ -91,5 +117,18 @@ describe('язык моих списков', () => {
     const rows = await db.select({ lang: templates.lang, title: templates.title }).from(templates).where(eq(templates.ownerId, me))
     const made = rows.find((r) => Object.values(r.title).includes('Гарбузовы суп'))
     expect(made).toMatchObject({ lang: 'be', title: { be: 'Гарбузовы суп' } })
+  })
+})
+
+describe('редактор списка — ключ правки', () => {
+  it('⚠️ белорусский список, русский интерфейс: правка шага в черновике — под `be`, а не `ru`', async () => {
+    const id = await seed('draft-be', { be: 'Гарбузовы суп' }, 'be')
+    try {
+      await saveDraft(id, form({ items: JSON.stringify([{ title: 'Нарэзаць гарбуз дробна' }]) }))
+    } catch (e) {
+      if ((e as Error).message !== 'REDIRECT') throw e
+    }
+    const [d] = await db.select({ items: listDrafts.items }).from(listDrafts).where(eq(listDrafts.templateId, id))
+    expect(d?.items[0]?.title).toEqual({ be: 'Нарэзаць гарбуз дробна' })
   })
 })

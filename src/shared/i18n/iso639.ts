@@ -35,9 +35,12 @@ export const ISO_639_1 = [
   'za', 'zh', 'zu',
 ] as const
 
+/** Код языка содержимого — один из ISO 639-1. Языки интерфейса (`Lang`) — его часть. */
+export type ContentLang = (typeof ISO_639_1)[number]
+
 const CODES: ReadonlySet<string> = new Set(ISO_639_1)
 
 /** Код языка содержимого — один из ISO 639-1. */
-export function isContentLang(v: unknown): v is string {
+export function isContentLang(v: unknown): v is ContentLang {
   return typeof v === 'string' && CODES.has(v)
 }

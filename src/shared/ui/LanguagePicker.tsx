@@ -30,12 +30,10 @@ function useRows(lang: Lang): Row[] {
     const names = new Intl.DisplayNames([lang], { type: 'language' })
     return ISO_639_1.map((code) => {
       const name = names.of(code) ?? code
-      let self = name
-      try {
-        self = new Intl.DisplayNames([code], { type: 'language' }).of(code) ?? name
-      } catch {
-        /* у языка нет своей локали в ICU — самоназвания нет */
-      }
+      // ⚠️ Самоназвание — только если у языка есть своя локаль в ICU. Иначе `DisplayNames([code])`
+      // не бросает, а молча берёт локаль браузера, и «самоназванием» латыни стало бы «Latin»
+      // (так было у 42 из 183 языков — ревью по линзам).
+      const self = Intl.DisplayNames.supportedLocalesOf([code]).length ? (new Intl.DisplayNames([code], { type: 'language' }).of(code) ?? name) : name
       return { code, name, self }
     }).sort((a, b) => a.name.localeCompare(b.name, lang))
   }, [lang])
@@ -48,6 +46,9 @@ export function LanguagePicker({
   lang,
   name,
   noneLabel,
+  id,
+  label,
+  'aria-describedby': describedBy,
 }: {
   /** Выбранный код ISO 639-1; `null` — не выбран. Не задан — выбор хранит сам (режим формы). */
   value?: string | null
@@ -60,6 +61,12 @@ export function LanguagePicker({
   name?: string
   /** Подпись пустого выбора («как интерфейс»); не задана — пустой выбор не предлагается. */
   noneLabel?: string
+  /** id кнопки — чтобы `<label for>` поля вёл на неё. */
+  id?: string
+  /** Подпись поля: входит в имя кнопки для диктора вместе с выбранным значением. */
+  label?: string
+  /** Подсказка поля — её id ставит `Field`. */
+  'aria-describedby'?: string
 }) {
   const [q, setQ] = useState('')
   const [own, setOwn] = useState<string | null>(defaultValue)
@@ -104,8 +111,18 @@ export function LanguagePicker({
       <AnchoredMenu
         width={300}
         className="max-w-full"
-        button={(toggle) => (
-          <Button variant="outline" size="md" onClick={toggle} className="w-full justify-between sm:w-auto sm:min-w-56">
+        button={(toggle, open) => (
+          <Button
+            id={id}
+            variant="outline"
+            size="md"
+            onClick={toggle}
+            aria-haspopup="true"
+            aria-expanded={open}
+            aria-label={label ? `${label}: ${caption}` : undefined}
+            aria-describedby={describedBy}
+            className="w-full justify-between sm:w-auto sm:min-w-56"
+          >
             <span className="min-w-0 truncate">{caption}</span>
             <ChevronDown size={14} className="shrink-0 text-muted" />
           </Button>
@@ -116,7 +133,25 @@ export function LanguagePicker({
             title={t('lang.pickTitle', lang)}
             onClose={close}
             closeLabel={t('close', lang)}
-            search={{ value: q, onChange: setQ, placeholder: t('lang.search', lang), clearLabel: t('modelSelect.clearSearch', lang), autoFocus: true }}
+            search={{
+              value: q,
+              onChange: setQ,
+              placeholder: t('lang.search', lang),
+              clearLabel: t('modelSelect.clearSearch', lang),
+              autoFocus: true,
+              // Enter выбирает первую найденную строку, как ждёт человек, набравший «белорус».
+              // Форму вокруг он не отправляет: панель закрывается тем же нажатием, и поле уходит
+              // из формы; `preventDefault` — страховка на случай, если закрытие отстанет.
+              onKeyDown: (e) => {
+                if (e.key !== 'Enter') return
+                e.preventDefault()
+                const first = common[0] ?? rest[0]
+                if (!first) return
+                choose(first.code)
+                setQ('')
+                close()
+              },
+            }}
           >
             {noneLabel && !needle && (
               <PickerRow

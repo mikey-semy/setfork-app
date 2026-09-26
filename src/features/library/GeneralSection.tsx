@@ -58,7 +58,8 @@ export function GeneralSection({
 
         {/* htmlFor: выбиралка — кнопка с панелью, а не поле ввода. */}
         <Field label={t('lang.sourceLabel', lang)} hint={t('lang.sourceHint', lang)} htmlFor="ls-source-lang">
-          <LanguagePicker name="sourceLang" defaultValue={sourceLang} lang={lang} />
+          {/* «Не задан» можно вернуть: тогда язык угадывается по алфавиту текста. */}
+          <LanguagePicker id="ls-source-lang" name="sourceLang" defaultValue={sourceLang} lang={lang} label={t('lang.sourceLabel', lang)} noneLabel={t('lang.notSet', lang)} />
         </Field>
 
         <FormSaveBar lang={lang} />

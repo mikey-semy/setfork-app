@@ -17,12 +17,13 @@ export function MyListLangSection({ initial, lang }: { initial: string | null; l
     const prev = value
     setValue(code)
     start(async () => {
-      const res = await saveMyListLang(code)
-      if (!res.ok) {
-        setValue(prev)
-        toast.error(t('lang.saveFailed', lang))
-      }
+      // Сеть или сервер могут и бросить — это тоже «не сохранилось», а не экран ошибки.
+      const ok = await saveMyListLang(code).then((r) => r.ok, () => false)
+      if (ok) return
+      // Откат — только если за это время не выбрали другое: иначе затёрли бы новый выбор.
+      setValue((cur) => (cur === code ? prev : cur))
+      toast.error(t('lang.saveFailed', lang))
     })
   }
-  return <LanguagePicker value={value} onChange={choose} lang={lang} noneLabel={t('lang.sameAsInterface', lang)} />
+  return <LanguagePicker value={value} onChange={choose} lang={lang} noneLabel={t('lang.sameAsInterface', lang)} label={t('lang.myListsTitle', lang)} />
 }

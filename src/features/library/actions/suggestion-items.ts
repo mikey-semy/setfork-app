@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { blockComments, blockCommentThreads, db, suggestionReviews, suggestions, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { type Lang } from '@/shared/i18n'
+import { type Lang, editKey } from '@/shared/i18n'
 import { notify } from '@/features/notifications/notify'
 import { canEditList, editBlockReason } from '@/core'
 import { parseEditorItems, toProposedItems } from '../editor'
@@ -64,7 +64,7 @@ export async function updateSuggestionItems(
   const tpl = sug.template
   if (!canEditList(tpl)) return editBlockReason(tpl) === 'archived' ? 'archived' : 'frozen'
 
-  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
+  const proposed = toProposedItems(parseEditorItems(formData.get('items')), editKey(lang, tpl.lang, tpl.title))
   const err = await writeSuggestionItems(sug, proposed, session, lang, `Update suggestion by @${session.handle}`)
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.number ?? sug.id}`

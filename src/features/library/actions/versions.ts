@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation'
 import { db, repositories, steps, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { trKey, type LocaleText } from '@/shared/i18n'
+import { editKey, trKey, type LocaleText } from '@/shared/i18n'
 import { isContentLang } from '@/shared/i18n/iso639'
 import { listQuota } from '@/shared/quota'
 import { toStepInput } from '@/shared/lib/step-input'
@@ -171,7 +171,17 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
   // ⚠️ Ключ — тот, что форма ПОКАЗАЛА (`trKey`), а не язык интерфейса: белорусское название,
   // открытое русским интерфейсом без перевода, иначе сохранилось бы под `ru` рядом с `be`, и
   // оригинал раздвоился бы. Нечего было показать — язык оригинала, иначе интерфейса.
-  const keyFor = (text: LocaleText) => trKey(text, lang) ?? (isContentLang(sourceLang) ? sourceLang : lang)
+  const keyFor = (text: LocaleText) => editKey(lang, sourceLang, text)
+  // Язык сменили — одноязычные название и описание переезжают под новый ключ: иначе список
+  // объявлен белорусским, а текст лежит под `ru`, и русскому читателю перевод не предложат
+  // никогда (ревью по линзам). С переводами не трогаем — какой из ключей оригинал, не ясно.
+  // Шаги живут в версиях и не переезжают здесь.
+  const rekey = (text: LocaleText): LocaleText => {
+    const keys = Object.keys(text ?? {}).filter((k) => text[k])
+    return isContentLang(sourceLang) && sourceLang !== tpl.lang && keys.length === 1 && keys[0] !== sourceLang ? { [sourceLang]: text[keys[0]] } : text
+  }
+  const baseTitle = rekey(tpl.title as LocaleText)
+  const baseDesc = rekey(tpl.desc as LocaleText)
   // Мета пишется здесь МИМО фасада, и его страж ключей её не видит. Название публичного
   // списка видно в ленте и поиске раньше шагов — ключ в нём утекает первым.
   const leak = findSecretInContent([], undefined, { title, desc, tags })
@@ -179,8 +189,8 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
   await db
     .update(templates)
     .set({
-      title: carryField({ [keyFor(tpl.title as LocaleText)]: title }, tpl.title as LocaleText),
-      desc: carryField(desc ? { [keyFor(tpl.desc as LocaleText)]: desc } : {}, tpl.desc as LocaleText),
+      title: carryField({ [keyFor(baseTitle)]: title }, baseTitle),
+      desc: carryField(desc ? { [keyFor(baseDesc)]: desc } : {}, baseDesc),
       lang: sourceLang,
       tags,
       ordered,
@@ -257,7 +267,7 @@ async function upsertDraftFromForm(templateId: string, formData: FormData, mode:
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) redirect('/')
   if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${editBlockReason(tpl) ?? 'frozen'}`)
 
-  const items = toProposedItems(parseEditorItems(formData.get('items')), lang)
+  const items = toProposedItems(parseEditorItems(formData.get('items')), editKey(lang, tpl.lang, tpl.title as LocaleText))
   const meta = {
     tags: parseTags(formData.get('tags')),
     ordered: formData.get('ordered') !== 'unordered',
