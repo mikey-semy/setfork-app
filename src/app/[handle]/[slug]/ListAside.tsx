@@ -27,6 +27,7 @@ type Props = Pick<
   | 'currentVersion'
   | 'watchers'
   | 'runReport'
+  | 'latestRelease'
 > & { lang: Lang }
 
 /** Сколько участников показываем в сайдбаре; остальные — в зачёте вкладов. */

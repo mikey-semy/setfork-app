@@ -5,7 +5,7 @@ import { ListStats } from '@/features/library/ListStats'
 import type { ListPageData } from './load'
 import { TagChip } from '@/shared/ui/TagChip'
 
-type Props = Pick<ListPageData, 'tpl' | 'base' | 'branches' | 'currentVersion' | 'watchers' | 'runReport'> & {
+type Props = Pick<ListPageData, 'tpl' | 'base' | 'branches' | 'currentVersion' | 'watchers' | 'runReport' | 'latestRelease' | 'isOwner'> & {
   lang: Lang
   /** row — сводка строкой (мобильная шапка), column — колонкой (сайдбар на lg). */
   layout: 'row' | 'column'
@@ -18,8 +18,11 @@ type Props = Pick<ListPageData, 'tpl' | 'base' | 'branches' | 'currentVersion' |
  * копии разметки, и они успели разойтись (у сайдбарной не было переноса длинных слов,
  * и один тег без пробелов распирал колонку).
  */
-export function ListAbout({ tpl, base, branches, currentVersion, watchers, runReport, lang, layout }: Props) {
+export function ListAbout({ tpl, base, branches, currentVersion, watchers, runReport, latestRelease, isOwner, lang, layout }: Props) {
   const desc = tr(tpl.desc, lang)
+  const revision = currentVersion?.version ?? tpl.currentVersion
+  // Сколько правок после релиза: текущий текст новее выпуска — как `v0.7.0-1` у git describe.
+  const release = latestRelease ? { tag: latestRelease.tag, ahead: Math.max(0, revision - latestRelease.version) } : null
   return (
     <>
       {/* Описание и теги пишет человек, длину тега никто не режет — без переноса
@@ -52,7 +55,10 @@ export function ListAbout({ tpl, base, branches, currentVersion, watchers, runRe
           watchers={watchers}
           runs={tpl.runsCount}
           branches={Math.max(1, branches.length)}
-          version={currentVersion?.version ?? tpl.currentVersion}
+          version={revision}
+          release={release}
+          // Скилл без релиза — версии у него нет; позвать выпустить может только тот, кто вправе.
+          releaseHint={!!tpl.isSkill && !latestRelease && isOwner}
           verificationLevel={currentVersion?.verificationLevel}
           verifiedAt={currentVersion?.verifiedAt}
           visibility={tpl.visibility}

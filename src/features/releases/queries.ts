@@ -34,13 +34,28 @@ export async function countReleases(templateId: string): Promise<number> {
  * какую страницу открыли.
  */
 export async function getLatestReleaseId(templateId: string): Promise<string | null> {
+  return (await getLatestRelease(templateId))?.id ?? null
+}
+
+/** Последний релиз целиком — тег и правка, из которой он выпущен. */
+export interface LatestRelease {
+  id: string
+  tag: string
+  version: number
+}
+
+/**
+ * Последний релиз: новейший НЕ пред-релиз (как «Latest» у GitHub). Одно правило на
+ * метку «последний» в каталоге релизов и на версию скилла в сводке списка.
+ */
+export async function getLatestRelease(templateId: string): Promise<LatestRelease | null> {
   const [r] = await db
-    .select({ id: releases.id })
+    .select({ id: releases.id, tag: releases.tag, version: releases.version })
     .from(releases)
     .where(and(eq(releases.templateId, templateId), eq(releases.prerelease, false)))
     .orderBy(desc(releases.createdAt), asc(releases.id))
     .limit(1)
-  return r?.id ?? null
+  return r ?? null
 }
 
 /**

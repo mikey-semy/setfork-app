@@ -32,6 +32,8 @@ export function ListStats({
   runs,
   branches,
   version,
+  release,
+  releaseHint,
   verificationLevel,
   verifiedAt,
   visibility,
@@ -47,6 +49,12 @@ export function ListStats({
   runs: number
   branches: number
   version: number
+  /** Версия СКИЛЛА — последний релиз и сколько правок после него. Есть — показывается
+   *  вместо номера правки: так скилл видят снаружи (npm у пакета, «Latest» у GitHub). */
+  release?: { tag: string; ahead: number } | null
+  /** Скилл без релиза, смотрит тот, кто вправе выпустить: рядом с номером правки —
+   *  ссылка «Новый релиз», иначе у скилла так и не будет версии. */
+  releaseHint?: boolean
   /** Уровень проверки текущей версии и дата (0018). */
   verificationLevel?: string | null
   verifiedAt?: Date | string | null
@@ -76,10 +84,29 @@ export function ListStats({
       <Link href={`${base}/releases`} className={link}>
         {/* v и число — одним узлом: во flex-ряду с gap они иначе разъезжаются («v 1»). */}
         <Tag size={14} className="text-muted" />
-        <span>
-          v<b className="text-ink">{version}</b>
-        </span>
+        {release ? (
+          // Номер правки (v6) остаётся в строке последней правки — это аналог хеша
+          // коммита у GitHub; здесь — версия продукта.
+          <span>
+            <b className="text-ink">{release.tag}</b>
+            {release.ahead > 0 ? (
+              <span className="text-muted">
+                {' · +'}
+                {release.ahead} {plural(release.ahead, 'edits', lang)}
+              </span>
+            ) : null}
+          </span>
+        ) : (
+          <span>
+            v<b className="text-ink">{version}</b>
+          </span>
+        )}
       </Link>
+      {releaseHint ? (
+        <Link href={`${base}/releases/new`} className={`${link} text-accent`}>
+          {t('newRelease', lang)}
+        </Link>
+      ) : null}
       {/* Уровень проверки — сразу за версией, потому что относится к НЕЙ: правка сбрасывает
           его в породу (0018). Порода не рисуется: отсутствие метки и есть «не проверялось». */}
       <VerificationBadge level={verificationLevel} verifiedAt={verifiedAt} lang={lang} className={item} />
