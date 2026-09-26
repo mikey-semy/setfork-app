@@ -1,8 +1,9 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
-import type { List, ListStore, Moderation, NewStepInput } from '@/core'
+import type { CreateListInput, List, ListStore, Moderation, NewStepInput } from '@/core'
 import { canEditList, editBlockReason, ListWriteError } from '@/core'
-import { db, templateVersions, templates } from '@/shared/db'
+import { db, templateVersions, templates, users } from '@/shared/db'
+import { isContentLang } from '@/shared/i18n/iso639'
 import { initialModeration } from '@/shared/moderation/publication-state'
 import { captureError } from '@/shared/observability'
 import { listStore as drizzleStore } from './list-store.adapter'
@@ -132,6 +133,40 @@ async function withCarriedTranslations(templateId: string, input: NewStepInput[]
   return carryTranslations(steps as NextStep[], prev as PrevStep[]) as NewStepInput[]
 }
 
+/**
+ * Язык оригинала нового списка (ADR-0030) — ЧИСТОЕ правило, без базы: известный язык
+ * содержимого → (если язык не задан содержимым целиком) настройка автора «язык моих списков» →
+ * запасной вариант. Не код ISO 639-1 — не пишем: пусто лучше неверного, пустой язык угадывается
+ * по алфавиту.
+ */
+export function pickListLang(o: { lang?: string | null; fromContent?: boolean; setting?: string | null; fallback?: string | null }): string | null {
+  if (isContentLang(o.lang)) return o.lang
+  if (o.fromContent) return null
+  if (isContentLang(o.setting)) return o.setting
+  return isContentLang(o.fallback) ? o.fallback : null
+}
+
+/**
+ * Язык нового списка — на ЕДИНОЙ точке создания, как модерация: правило, размазанное по семи
+ * путям создания, в одном из них потерялось бы. Ядро пока про язык не знает (шаг 3 — поле в
+ * каноне `list.v1`), поэтому он ставится апдейтом после вставки.
+ *
+ * ⚠️ Сбой здесь списка НЕ роняет: он уже создан в ядре, и исключение отдало бы вызывающему
+ * ошибку при существующем списке — повтор упёрся бы в занятый адрес. Пустой язык допустим.
+ */
+async function setListLang(listId: string, input: CreateListInput): Promise<void> {
+  try {
+    const setting =
+      isContentLang(input.lang) || input.langFromContent
+        ? null
+        : (await db.select({ listLang: users.listLang }).from(users).where(eq(users.id, input.ownerId)).limit(1))[0]?.listLang
+    const lang = pickListLang({ lang: input.lang, fromContent: input.langFromContent, setting, fallback: input.langFallback })
+    if (lang) await db.update(templates).set({ lang }).where(eq(templates.id, listId))
+  } catch (e) {
+    captureError(e, { where: 'listStore.create.lang', listId })
+  }
+}
+
 export const listStore: ListStore = {
   ...base,
   async addVersion(templateId, input) {
@@ -149,9 +184,12 @@ export const listStore: ListStore = {
     // Точка одна и обойти её нельзя — как барьер moderate ниже и assertVersionAllowed
     // выше: правило, размазанное по семи местам создания списка, теряется в одном из них.
     const moderation = await initialModeration(input)
-    const list = await base.create({ ...input, moderation })
+    const { lang: _lang, langFromContent: _fromContent, langFallback: _fallback, ...rest } = input
+    const list = await base.create({ ...rest, moderation })
     await enforceModeration(list, moderation)
+    // Барьер модерации — ДО языка: он обязан сработать при любом исходе шага языка.
     await moderate(list.id)
+    await setListLang(list.id, input)
     return list
   },
 }

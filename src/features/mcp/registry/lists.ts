@@ -2,6 +2,13 @@ import { z } from 'zod'
 import { mcpMyCatalogs, mcpBulkCreate, mcpCreateList, mcpDeleteList, mcpDiscardDraft, mcpImportSkill, mcpMyDrafts, mcpPatchList, mcpPublishDraft, mcpPublishLists, mcpPublishSkill, mcpRenameList, mcpUpdateList, MCP_PUBLISH_MAX } from '@/features/mcp/tools'
 import { itemShape, itemShapeLean } from './block-schema'
 import { json, err, type ToolKit } from './kit'
+import { isContentLang } from '@/shared/i18n/iso639'
+
+/**
+ * Язык содержимого — любой код ISO 639-1, а не только языки интерфейса: список пишут на
+ * белорусском, немецком, казахском (ADR-0030). Он же становится языком оригинала списка.
+ */
+const contentLang = z.string().refine(isContentLang, { message: 'lang must be an ISO 639-1 code: en, ru, be, de, …' })
 
 /** Списки: создание, замена, точечная правка, публикация черновика, удаление. */
 export function registerLists({ readTool, writeTool }: ToolKit) {
@@ -25,7 +32,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
           .describe('Description — agents decide whether to use the skill by it: say what it does AND when to use it'),
         tags: z.array(z.string()).optional(),
         ordered: z.boolean().optional(),
-        lang: z.enum(['ru', 'en']).optional().describe('Language of title/desc (default: detected)'),
+        lang: contentLang.optional().describe('Language of the skill text, ISO 639-1 (en, ru, be, de, …); becomes the list\'s source language. Default: detected (only en/ru can be told apart)'),
         catalog: z.string().optional().describe('Your catalog to file the skill into'),
         items: z
           .array(itemShapeLean)
@@ -85,7 +92,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
         'Create a new list owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site. For an Agent Skill that carries files (scripts/, references/, assets/) use publish_skill instead: blocks and files land in one version. Publishing makes version 1; every later edit makes the next version, and old ones stay readable. Items can be plain steps or richer blocks (text, image, poll, video, quiz) — set each item\'s "type". Content language is auto-detected (or pass "lang"); the slug is generated from the title (Cyrillic is transliterated). Per-step "subtasks" are VERIFICATION CHECKS shown to the person doing the step — phrase them as checkable conditions, not sub-steps. If you need an existing list\'s ref, call search_lists first. Creating several lists at once? Use bulk_create_lists — one call instead of N.\n\nHOW TO LAY A LIST OUT — one block is one thing, and headings live in "section":\n• "section" is a HEADING ABOVE a block and works on ANY block type. Consecutive blocks sharing it are grouped under it and it lands in the table of contents. Do not fake headings by writing "## Heading" at the top of a text block — the reader sees it glued to that block, the next block looks like part of it, and the contents misses it.\n• One block = one item. A person, a rule, an idea — its own block, so it can be moved, quoted and patched by bid later.\n• "step" for something the reader DOES (it gets a number and a checkbox); "text" for prose that is only read. Mixing them is fine: frames as text, actions as steps.\n• Sources and links go in "refs" — on a step OR a text block; they show under the block as link chips. Do not write a "Sources: [..](..)" line into the text: there they are not the block\'s links and cannot be edited as links.\n• Markdown inside a block is for emphasis, lists, quotes and code — not for structure. Structure is blocks and sections.\n• ⚠️ Rendering is strict CommonMark: a SINGLE newline inside a paragraph is NOT a line break — it is joined into one line, unlike GitHub comments. Separate paragraphs with a BLANK line. You cannot see the result, so this is the one layout rule you have to take on trust.',
       inputSchema: {
         title: z.string().describe('List title'),
-        lang: z.enum(['en', 'ru']).optional().describe('Content language; omit to auto-detect from the title/description'),
+        lang: contentLang.optional().describe('Content language, ISO 639-1 (en, ru, be, de, …); becomes the list\'s source language. Omit to auto-detect from the title/description — only en/ru can be told apart, so pass it for any other language'),
         desc: z.string().optional().describe('One-line description'),
         tags: z.array(z.string()).optional().describe('3-6 short tags'),
         catalog: z
@@ -353,7 +360,7 @@ export function registerLists({ readTool, writeTool }: ToolKit) {
           .array(
             z.object({
               title: z.string().describe('List title'),
-              lang: z.enum(['en', 'ru']).optional(),
+              lang: contentLang.optional(),
               desc: z.string().optional(),
               tags: z.array(z.string()).optional(),
               catalog: z.string().optional().describe('Name of one of your catalogs to file this list under'),

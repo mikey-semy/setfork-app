@@ -195,6 +195,7 @@
         "src/features/mcp/tools/runs.ts",
         "src/features/mcp/tools/sources.ts",
         "src/features/mcp/tools/suggestions.ts",
+        "tests/features/mcp/create-lang.itest.ts",
         "tests/features/mcp/danger-carry.itest.ts",
         "tests/features/mcp/git-parity.itest.ts",
         "tests/features/mcp/issues-tools.itest.ts",
@@ -1469,6 +1470,7 @@
         "tests/shared/i18n/negotiate.test.ts",
         "tests/shared/i18n/lang-cookie.test.ts",
         "tests/shared/i18n/list-source-lang.test.ts",
+        "tests/shared/i18n/iso639.test.ts",
         "tests/shared/i18n/plural-forms.test.ts",
         "tests/shared/i18n/tr-with-lang.test.ts",
         "tests/shared/jobs/backoff.test.ts",
@@ -1736,6 +1738,9 @@
         "tests/features/generation/prompt-examples.test.ts",
         "tests/features/library/agent-draft-detail.itest.ts",
         "tests/features/library/draft-tags-registry.itest.ts",
+        "tests/features/library/list-source-lang-create.itest.ts",
+        "tests/features/library/create-list-lang.itest.ts",
+        "tests/features/library/pick-list-lang.test.ts",
         "tests/features/library/needs-human-store.itest.ts"
       ],
       "ref_paths": []

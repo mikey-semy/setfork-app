@@ -356,6 +356,7 @@ src/app/verify-email/page.tsx	V11
 src/core/README.md	H15
 src/core/domain/access.ts	H15
 src/core/domain/affiliate.ts	H15
+src/core/domain/authored-path.ts	H15
 src/core/domain/block-identity.ts	H15
 src/core/domain/content-refusal.ts	H15
 src/core/domain/destructive-command.ts	H15
@@ -706,6 +707,7 @@ src/features/library/list-editor/PollBlockBody.tsx	V1b
 src/features/library/list-editor/ProductBlockBody.tsx	V1b
 src/features/library/list-editor/ProductDialog.tsx	V1b
 src/features/library/list-editor/QuizBlockBody.tsx	V1b
+src/features/library/list-editor/SkillFilesEditor.tsx	V1b
 src/features/library/list-editor/SlashMenu.tsx	V1b
 src/features/library/list-editor/StepBlockBody.tsx	V1b
 src/features/library/list-editor/block-fields.tsx	V1b
@@ -1108,6 +1110,7 @@ src/shared/i18n/detect-text-lang.ts	H6
 src/shared/i18n/dict/en.ts	H6
 src/shared/i18n/dict/ru.ts	H6
 src/shared/i18n/index.ts	H6
+src/shared/i18n/iso639.ts	H6
 src/shared/i18n/negotiate.ts	H6
 src/shared/i18n/page-source-lang.ts	H6
 src/shared/i18n/server.ts	H6
@@ -1528,6 +1531,7 @@ tests/features/library/change-summary.test.ts	V1k
 tests/features/library/closing-refs.test.ts	V1,V1k
 tests/features/library/commits-keyset.itest.ts	V1g
 tests/features/library/cover-section.test.tsx	V1k
+tests/features/library/create-list-lang.itest.ts	V8c
 tests/features/library/create-reason.test.ts	V1d,V1k
 tests/features/library/create-refusal-keeps-input.test.ts	V1d,V1k
 tests/features/library/create-wire.test.ts	V1d,V1k
@@ -1542,6 +1546,7 @@ tests/features/library/draft-overwrite-visible.itest.ts	V1d
 tests/features/library/draft-publish.itest.ts	V1d
 tests/features/library/draft-tags-registry.itest.ts	V8c
 tests/features/library/drag-geometry.test.ts	V1k
+tests/features/library/editor-files.test.ts	V1k
 tests/features/library/editor.test.ts	V1k
 tests/features/library/embed-privacy.itest.ts	V1g
 tests/features/library/export.more.test.ts	V1g,V1k
@@ -1560,6 +1565,7 @@ tests/features/library/keyset-indexes.itest.ts	V1g
 tests/features/library/lineage.itest.ts	V1d
 tests/features/library/list-actions-menu.test.tsx	V1k
 tests/features/library/list-editor/block-uploads.test.tsx	V1k
+tests/features/library/list-source-lang-create.itest.ts	V8c
 tests/features/library/list-store-authored.test.ts	V1k
 tests/features/library/localized-content.test.ts	V1k
 tests/features/library/maintainer-parity.itest.ts	V1
@@ -1577,6 +1583,7 @@ tests/features/library/outline-numbering.test.tsx	V1k
 tests/features/library/owner-lists-isolation.itest.ts	V1d
 tests/features/library/ownership-breadth.itest.ts	V1d
 tests/features/library/page-stability.itest.ts	V1g
+tests/features/library/pick-list-lang.test.ts	V1k,V8c
 tests/features/library/pr-settings.test.ts	V1,V1k
 tests/features/library/publication-state.itest.ts	V1d
 tests/features/library/publish-still-eligible.itest.ts	V1d
@@ -1595,6 +1602,7 @@ tests/features/library/search-ranking.itest.ts	V1g
 tests/features/library/selfgen-outcome.test.ts	V1h,V1k
 tests/features/library/semantic-order.itest.ts	V1g
 tests/features/library/set-verification-level.itest.ts	V1h
+tests/features/library/skill-files-editor.test.tsx	V1k
 tests/features/library/skill-files.test.tsx	V1k
 tests/features/library/skill-import/github-url.test.ts	V1k
 tests/features/library/skill-load.test.ts	V1k
@@ -1630,6 +1638,7 @@ tests/features/linkcheck/deliver.itest.ts	V4
 tests/features/linkcheck/linkcheck.itest.ts	V4
 tests/features/mcp/bulk.itest.ts	H4
 tests/features/mcp/create-catalog.itest.ts	H4
+tests/features/mcp/create-lang.itest.ts	H4b
 tests/features/mcp/danger-carry.itest.ts	H4b
 tests/features/mcp/get-script-steps.itest.ts	H4
 tests/features/mcp/git-parity.itest.ts	H4b
@@ -1788,6 +1797,7 @@ tests/shared/geo.test.ts	V12f
 tests/shared/gh-handle-privesc.itest.ts	V12f
 tests/shared/handle.test.ts	V12f
 tests/shared/http/cache.test.ts	V12f
+tests/shared/i18n/iso639.test.ts	V12f
 tests/shared/i18n/lang-by-page.itest.ts	H6
 tests/shared/i18n/lang-cookie.test.ts	V12f
 tests/shared/i18n/lang-url.test.ts	H6
