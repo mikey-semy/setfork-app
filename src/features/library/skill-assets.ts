@@ -61,15 +61,12 @@ export async function storeBinaryFiles(files: AuthoredFile[]): Promise<{ files: 
     total += f.content.length
   }
   if (total > SKILL_ASSETS_MAX_BYTES) return { refused: { code: 'too-big-total', max: SKILL_ASSETS_MAX_BYTES } }
-  const out: AuthoredFile[] = []
-  for (const f of files) {
-    if (!isBinary(f.content)) {
-      out.push(f)
-      continue
-    }
-    const pointer = await putAsset(f.content)
-    out.push({ ...f, content: new TextEncoder().encode(lfsPointerText(pointer)), executable: false })
-  }
+  // Файлы независимы — кладём разом; порядок набора сохраняет map.
+  const out = await Promise.all(
+    files.map(async (f) =>
+      isBinary(f.content) ? { ...f, content: new TextEncoder().encode(lfsPointerText(await putAsset(f.content))), executable: false } : f,
+    ),
+  )
   return { files: out }
 }
 
@@ -85,21 +82,19 @@ export function assetsOverLimit(files: AuthoredFile[]): AssetRefusal | null {
  * вместо картинки текст указателя значило бы молча положить агенту мусор.
  */
 export async function resolveAssetFiles(files: AuthoredFile[], where: Record<string, unknown>): Promise<{ files: AuthoredFile[]; missing: string[] }> {
-  const out: AuthoredFile[] = []
-  const missing: string[] = []
-  for (const f of files) {
-    const pointer = binaryAllowedAt(f.path) ? lfsPointerOf(f.content) : null
-    if (!pointer) {
-      out.push(f)
-      continue
-    }
-    const bytes = await getAsset(pointer).catch((e) => {
-      captureError(e, { where: 'skill-assets.resolve', path: f.path, oid: pointer.oid, ...where })
-      return null
-    })
-    if (bytes) out.push({ ...f, content: bytes })
-    else missing.push(f.path)
-  }
+  const resolved = await Promise.all(
+    files.map(async (f) => {
+      const pointer = binaryAllowedAt(f.path) ? lfsPointerOf(f.content) : null
+      if (!pointer) return f
+      const bytes = await getAsset(pointer).catch((e) => {
+        captureError(e, { where: 'skill-assets.resolve', path: f.path, oid: pointer.oid, ...where })
+        return null
+      })
+      return bytes ? { ...f, content: bytes } : { missing: f.path }
+    }),
+  )
+  const out = resolved.filter((r): r is AuthoredFile => !('missing' in r))
+  const missing = resolved.flatMap((r) => ('missing' in r ? [r.missing] : []))
   return { files: out, missing }
 }
 
@@ -113,13 +108,19 @@ export async function assertAssetsStored(files: AuthoredFile[] | undefined): Pro
   if (!files) return
   const over = assetsOverLimit(files)
   if (over) throw new AuthoredFilesError('invalid', assetRefusalText(over))
-  for (const f of files) {
+  const pointers = files.flatMap((f) => {
     const pointer = binaryAllowedAt(f.path) ? lfsPointerOf(f.content) : null
-    if (!pointer) continue
-    const stored = await hasAsset(pointer.oid).catch((e) => {
-      if (e instanceof AssetStoreUnavailable) throw new AuthoredFilesError('invalid', e.message)
-      throw e
-    })
-    if (!stored) throw new AuthoredFilesError('invalid', `${f.path}: its bytes are not in storage — upload the file again`)
-  }
+    return pointer ? [{ path: f.path, oid: pointer.oid }] : []
+  })
+  const stored = await Promise.all(
+    pointers.map((p) =>
+      hasAsset(p.oid).catch((e) => {
+        if (e instanceof AssetStoreUnavailable) throw new AuthoredFilesError('invalid', e.message)
+        throw e
+      }),
+    ),
+  )
+  // Первый по порядку набора — чтобы отказ называл один и тот же файл при повторе.
+  const lost = pointers.find((_, i) => !stored[i])
+  if (lost) throw new AuthoredFilesError('invalid', `${lost.path}: its bytes are not in storage — upload the file again`)
 }
