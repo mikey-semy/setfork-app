@@ -31,7 +31,7 @@ import { mcpCreateList, normalizeTags } from './create'
 import { rowsToProposed } from './patch-block'
 import { headVersion } from './base-version'
 import { authoredError, contentError, ownedList, writeProposed } from './write'
-import { pickSkillHeader, type SkillHeader } from '@/core/domain/skill-header'
+import { pickSkillHeader, withHeading, type SkillHeader } from '@/core/domain/skill-header'
 import { findSecretInContent } from '@/core/domain/secret-scan'
 import { binaryAllowedAt, isBinary } from '@/core/domain/lfs-pointer'
 import { assetRefusalText, assetsOverLimit, storeBinaryFiles } from '@/features/library/skill-assets'
@@ -152,6 +152,10 @@ export function mergeSkillFiles(
   return { files: [...next.values()], added, changed, removed, unknown }
 }
 
+/** Новый текст поля на языке `lang`: тот же — `undefined` (менять нечего), другой — один язык. */
+const retext = (was: unknown, lang: string, next: string): Record<string, string> | undefined =>
+  (was as Record<string, string> | null)?.[lang] === next ? undefined : { [lang]: next }
+
 /** Метка «Скилл» — publish_skill ставит её сам: намерение названо вызовом, как у GitHub
  *  шаблон ставят галочкой. Снять её можно в настройках; вызов её не снимает. */
 const markSkill = (where: ReturnType<typeof eq>, header?: { header: SkillHeader | null }) =>
@@ -193,9 +197,11 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         items: parsed.items as McpItemInput[],
       }
     : rawInput
-  // Шапка исходника (license, compatibility, allowed-tools, metadata) хранится при списке и
-  // возвращается экспортом. Что сохранить не вышло — называем, а не теряем молча.
-  const picked = parsed ? pickSkillHeader(parsed.header) : undefined
+  // Шапка исходника (license, compatibility, allowed-tools, metadata) и заголовок тела, если
+  // он не совпал с названием, хранятся при списке и возвращаются экспортом. Что сохранить не
+  // вышло — называем, а не теряем молча.
+  const fromHeader = parsed ? pickSkillHeader(parsed.header) : undefined
+  let picked = fromHeader && { ...fromHeader, header: withHeading(fromHeader.header, parsed?.heading) }
   const parseNotes = parsed
     ? [...parsed.warnings, ...(picked?.dropped.length ? [`not kept from the SKILL.md header: ${picked.dropped.join(', ')}`] : [])]
     : []
@@ -279,15 +285,25 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
     if (merged.unknown.length) return { error: `no such files to remove: ${merged.unknown.join(', ')}` }
   }
 
-  // Мета — патчем: title/desc только если их меняют, на языке входа, прочие переводы целы.
+  // Вернулся наш же экспорт этого списка: заголовком в нём стоит сохранённый `heading`, и
+  // разбор, не зная этого, принял его за название. Название тогда не меняется, заголовок цел.
+  const storedHeading = (tpl.skillHeader as SkillHeader | null)?.heading
+  const ownExport = !!storedHeading && !!parsed && !parsed.heading && !rawInput.title && parsed.title === storedHeading
+  if (ownExport && picked) picked = { ...picked, header: withHeading(picked.header, storedHeading) }
+  const newTitle = ownExport ? undefined : input.title
+
+  // Мета — патчем: title/desc только если их меняют, и тогда ОДНИМ языком. Переводы (кнопкой
+  // «Перевести») были переводом прежнего текста: оставь их — и зритель на другом языке видел бы
+  // старое название («finetooth» → «Whole-repository review», 26.09.2026). Перевести заново можно
+  // той же кнопкой. Текст не изменился — переводы целы.
   // Без явного `lang` — язык ОРИГИНАЛА списка (ADR-0030), а не догадка детектора: иначе новое
   // название белорусского списка легло бы под `ru` рядом со старым под `be`, и зритель видел бы
   // старое. Язык самого списка обновление не меняет — оригинал объявляется при создании.
   // Тот же ключ, что у блоков ниже и у чтения (`mcpLang`): у списка без языка это ключ его
   // заголовка, а не догадка по новому тексту — иначе заголовок и шаги легли бы под разные ключи.
   const lang = isContentLang(input.lang) ? input.lang : mcpLang(tpl)
-  const title = input.title?.trim() ? { ...(tpl.title as Record<string, string>), [lang]: input.title.trim() } : undefined
-  const desc = input.desc !== undefined ? { ...(tpl.desc as Record<string, string>), [lang]: input.desc.trim() } : undefined
+  const title = newTitle?.trim() ? retext(tpl.title, lang, newTitle.trim()) : undefined
+  const desc = input.desc !== undefined ? retext(tpl.desc, lang, input.desc.trim()) : undefined
 
   const filesChanged = merged ? merged.added.length + merged.changed.length + merged.removed.length > 0 : false
   if (!input.items && !filesChanged && !title && !desc && !input.tags && input.ordered === undefined) {
