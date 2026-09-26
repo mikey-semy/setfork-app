@@ -1416,6 +1416,8 @@ export const en = {
   skillFilesTitle: 'Skill files',
   skillFilesCount: '{n} files',
   skillFileFailed: 'Could not open the file.',
+  skillFileLoading: 'Opening the file…',
+  skillFileRaw: 'Open as plain text',
   skillFilesHint: 'They travel with the skill: scripts in scripts/, reference texts in references/, templates and samples in assets/. Text only, no subfolders.',
   skillFileAdd: 'Add file',
   skillFileUpload: 'Upload file',

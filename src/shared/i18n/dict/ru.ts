@@ -1412,6 +1412,8 @@ export const ru: Record<DictKey, string> = {
   skillFilesTitle: 'Файлы скилла',
   skillFilesCount: 'файлов: {n}',
   skillFileFailed: 'Не удалось открыть файл.',
+  skillFileLoading: 'Открываю файл…',
+  skillFileRaw: 'Открыть как текст',
   skillFilesHint: 'Едут вместе со скиллом: скрипты — в scripts/, справочные тексты — в references/, шаблоны и примеры — в assets/. Только текст, без подпапок.',
   skillFileAdd: 'Добавить файл',
   skillFileUpload: 'Загрузить файл',

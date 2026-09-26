@@ -89,7 +89,13 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               На под-вкладках (Задачи/Предложения/…) название по-прежнему скрыто
               целиком — как GitHub, где на под-вкладках видны только табы. */}
           <ShowOnListRoot base={base}>
-          <div className="order-2 flex w-full min-w-0 items-start gap-2.5 sm:order-none sm:w-auto sm:items-center">
+          <div className="order-2 flex w-full min-w-0 items-baseline gap-2.5 sm:order-none sm:w-auto sm:items-center">
+            {/* items-baseline на телефоне, а не items-start: название там переносится, и
+                плашки должны стоять у ПЕРВОЙ строки — но по её линии текста, а не по
+                верхнему краю. У плашки 23px против 27px строки заголовка, и при
+                items-start «Скилл» висела на 3px выше букв (замечание владельца 25.09).
+                Базовая линия выравнивает текст плашки с текстом названия при любом
+                переносе; на sm+ название в одну строку — там центр. */}
             {/* Аватар автора — только на широком: на телефоне он и так в бредкрамбе
                 и в строке коммита, а 36px ширины нужнее самому названию. */}
             <Link href={`/${meta.ownerHandle}`} aria-label={meta.ownerHandle} className="hidden shrink-0 sm:block">

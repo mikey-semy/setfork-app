@@ -45,12 +45,19 @@ export function CodeSurface({
   label,
   lines,
   lang,
+  actions,
 }: {
   code: string
   label: string
   lines: CodeToken[][]
   lang?: Lang
+  /** Дополнительные действия в полосе, слева от копирования (просмотр файла: «открыть
+   *  как текст», «закрыть») — одна полоса на блок, а не вторая шапка над ним. */
+  actions?: React.ReactNode
 }) {
+  // Колонка номеров — по числу цифр последнего номера: зашитые 20px вмещали две цифры,
+  // а файл скилла бывает в тысячи строк. `ch` — ширина цифры моноширинного шрифта.
+  const numWidth = `${Math.max(2, String(lines.length).length)}ch`
   // Выбор общий с редактором списка: и там, и тут это одно решение читателя.
   const [wrap, toggle] = useCodeWrap()
   const [scrollable, setScrollable] = useState(false)
@@ -101,6 +108,7 @@ export function CodeSurface({
               </button>
             </Tooltip>
           )}
+          {actions}
           <CopyButton text={code} lang={lang} size="sm" />
         </div>
       </div>
@@ -123,7 +131,10 @@ export function CodeSurface({
             // Ни отступа под служебный угол, ни исключений для первой строки: все строки
             // равны — иначе рвётся выравнивание, а в коде колонки несут смысл.
             <div key={i} className="flex w-full gap-2 px-2.5">
-              <span className="sticky left-0 z-10 w-5 shrink-0 select-none bg-surface-2 text-right text-caption leading-[1.7] text-muted print:static">
+              <span
+                style={{ width: numWidth }}
+                className="sticky left-0 z-10 shrink-0 select-none bg-surface-2 text-right text-caption leading-[1.7] text-muted print:static"
+              >
                 {i + 1}
               </span>
               <span

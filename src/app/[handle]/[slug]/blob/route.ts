@@ -2,6 +2,7 @@ import { gitCore } from '@/features/git/core'
 import { requireViewableDetail } from '@/features/library/guard'
 import { cacheHeaders } from '@/shared/http/cache'
 import { problem, problemListNotFound } from '@/shared/http/problem'
+import { highlightLines, resolveHighlightLang } from '@/shared/ui/highlight-code'
 import { binaryAllowedAt, lfsPointerOf } from '@/core/domain/lfs-pointer'
 import { getAsset } from '@/shared/media/asset-store'
 
@@ -54,6 +55,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
         ...cacheHeaders({ shared: false }),
       },
     })
+  }
+  // ?format=lines — для просмотра на странице: строки уже подсвечены НА СЕРВЕРЕ, как у
+  // CodeCard (highlight.js в бандл клиента не попадает). Токены — текст, клиент кладёт
+  // их текстом, не HTML, так что `text/plain`-защита выше тут не нужна.
+  if (url.searchParams.get('format') === 'lines') {
+    const code = new TextDecoder().decode(file.content)
+    const ext = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1) : ''
+    const language = resolveHighlightLang(ext)
+    return Response.json(
+      { code, language, lines: highlightLines(code, ext) },
+      { headers: { 'X-Content-Type-Options': 'nosniff', ...cacheHeaders({ shared: false }) } },
+    )
   }
   return new Response(file.content as unknown as BodyInit, {
     headers: {

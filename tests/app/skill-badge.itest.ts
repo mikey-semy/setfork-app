@@ -60,6 +60,36 @@ beforeEach(() => {
   h.files = [{ path: 'assets/page.html', content: new TextEncoder().encode('<script>alert(1)</script>'), executable: false }]
 })
 
+const getLines = (slug: string, path: string) =>
+  blob.GET(new Request(`http://localhost/${OWNER}/${slug}/blob?path=${encodeURIComponent(path)}&format=lines`), {
+    params: Promise.resolve({ handle: OWNER, slug }),
+  })
+
+describe('blob?format=lines — просмотр на странице', () => {
+  it('строки уже подсвечены на сервере, язык — по расширению', async () => {
+    h.files = [{ path: 'scripts/run.py', content: new TextEncoder().encode('def f():\n    return 1'), executable: true }]
+    const res = await getLines('badge-skill', 'scripts/run.py')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { code: string; language: string; lines: { text: string; cls: string }[][] }
+    expect(body.language).toBe('python')
+    expect(body.lines).toHaveLength(2)
+    expect(body.lines[0].some((t) => t.cls.includes('hljs-keyword') && t.text === 'def')).toBe(true)
+  })
+
+  it('html автора — токенами-текстом в JSON, не разметкой', async () => {
+    const res = await getLines('badge-skill', 'assets/page.html')
+    expect(res.headers.get('content-type')).toContain('application/json')
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+    const body = (await res.json()) as { code: string }
+    expect(body.code).toBe('<script>alert(1)</script>')
+  })
+
+  it('видимость та же: приватный скилл чужому — 404', async () => {
+    h.session = { userId: strangerId, handle: 'badge-stranger' }
+    expect((await getLines('badge-private', 'assets/page.html')).status).toBe(404)
+  })
+})
+
 describe('blob — файл автора текстом', () => {
   it('html автора уходит текстом, не страницей', async () => {
     const res = await get('badge-skill', 'assets/page.html')
