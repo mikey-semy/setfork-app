@@ -108,3 +108,25 @@ describe('разрушительный пункт', () => {
     expect(script).toMatch(/^systemctl restart app$/m)
   })
 })
+
+describe('пункт «здесь нужен человек»', () => {
+  it('команда закомментирована, вопрос автора — рядом, причина пропуска — needs_human', () => {
+    const human = list([
+      step({ n: 1, bid: 'b-1', title: { en: 'Pay the invoice' }, command: './pay.sh --amount 100', needsHuman: true, needsHumanAsk: { en: 'Is the amount right?' } }),
+      step({ n: 2, bid: 'b-2', title: { en: 'Check' }, command: 'echo ok' }),
+    ])
+    const { script, included, skipped } = buildScript(human, 'en', 'https://x/raw')
+    expect(script).toContain('# ./pay.sh --amount 100')
+    expect(script).not.toMatch(/^\.\/pay\.sh/m)
+    expect(script).toContain('A human decides here: Is the amount right?')
+    expect(script).toContain('skipped (needs a human)')
+    expect(skipped).toEqual([{ n: 1, bid: 'b-1', reason: 'needs_human' }])
+    expect(included.map((i) => i.bid)).toEqual(['b-2'])
+  })
+
+  it('пометка без команды — обычный пункт: пропускать нечего', () => {
+    const { skipped } = buildScript(list([step({ n: 1, bid: 'b-1', title: { en: 'Decide' }, command: '', needsHuman: true })]), 'en', 'https://x/raw')
+    expect(skipped).toEqual([])
+  })
+})
+

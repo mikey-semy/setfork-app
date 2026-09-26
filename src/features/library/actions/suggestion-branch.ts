@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db, suggestions } from '@/shared/db'
 import { findDestructiveSteps } from '@/core/domain/destructive-command'
+import { findSecretInContent } from '@/core/domain/secret-scan'
 import { captureError } from '@/shared/observability'
 import { requireSession } from '@/shared/auth/session'
 import { notify } from '@/features/notifications/notify'
@@ -189,6 +190,9 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
     // самое «кнопка выглядит сломанной», от которого текст и заводили.
     redirect(`${path}?blocked=${encodeURIComponent(match.reason)}&step=${index + 1}`)
   }
+  // Ключ доступа — та же дыра тем же ходом: в main он уедет навсегда, в историю и зеркала.
+  const leak = findSecretInContent(content.steps, undefined, { title: content.title, desc: content.desc, tags: content.tags })
+  if (leak) redirect(`${path}?secret=${encodeURIComponent(leak.match.rule)}&step=${leak.step}`)
 
   let mergedVersion: number | null = null
   try {

@@ -1,5 +1,5 @@
 // Экспорт списка в Markdown / автономный HTML (для скачивания и печати).
-import { tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { servedLang, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { blockIdentity } from '@/core'
 import type { StepLevel } from '@/shared/db'
 import { safeHref } from '@/shared/lib/safe-url'
@@ -8,6 +8,7 @@ import { markdownCodeBlock } from '@/shared/lib/markdown'
 import { stepDanger } from '@/core/domain/destructive-command'
 import { productItems, blockText } from './blocks'
 import { carriesCommands, dialectSpec, flatten, hashComment, scriptFilename, scriptUrl, type ScriptDialect } from '@/core/domain/script-dialect'
+import type { SkillHeader } from '@/core/domain/skill-header'
 
 export interface ExportStep {
   n: number
@@ -90,6 +91,8 @@ export interface ExportList {
   slug: string
   /** Подпись версии из ядра. Пусто — законно: у списков до git-слоя коммита нет. */
   commitSha?: string | null
+  /** Шапка исходного SKILL.md — экспорт скилла отдаёт её обратно. */
+  skillHeader?: SkillHeader | null
   steps: ExportStep[]
 }
 
@@ -113,6 +116,7 @@ export function toExportList(detail: TemplateDetail, commitSha?: string | null):
     version: currentVersion?.version ?? tpl.currentVersion,
     ownerHandle: tpl.owner.handle,
     slug: tpl.slug,
+    skillHeader: tpl.skillHeader ?? null,
     steps: steps.map((s) => ({
       n: s.n,
       type: s.type,
@@ -216,6 +220,8 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
  *  футер-ссылка назад. Для вставки в <iframe> на внешних сайтах. */
 export function embedHtml(list: ExportList, lang: Lang, backUrl: string): string {
   const title = esc(tr(list.title, lang))
+  // Рамка (число пунктов, «Открыть на SetFork») — на языке зрителя, текст списка — на своём.
+  const textLang = esc(servedLang(list.title, lang))
   const count = list.steps.filter(isStepBlk).length
   const itemsWord = lang === 'ru' ? 'пунктов' : 'items'
   const openWord = lang === 'ru' ? 'Открыть на SetFork' : 'Open on SetFork'
@@ -269,10 +275,10 @@ export function embedHtml(list: ExportList, lang: Lang, backUrl: string): string
 <body>
 <div class="wrap">
   <header>
-    <div class="title">${title}</div>
+    <div class="title" lang="${textLang}">${title}</div>
     <div class="sub">${esc(list.ownerHandle)}/${esc(list.slug)} · v${list.version} · ${count} ${itemsWord}</div>
   </header>
-  <ol class="steps">${steps}</ol>
+  <ol class="steps" lang="${textLang}">${steps}</ol>
   <footer><span>${count} ${itemsWord}</span><a href="${esc(backUrl)}" target="_blank" rel="noopener">↗ ${openWord}</a></footer>
 </div>
 </body>
@@ -313,7 +319,7 @@ export function toHtml(list: ExportList, lang: Lang): string {
       return `<div class="step">
   <div class="step-head"><span class="n">${marker}</span><h2>${esc(tr(s.title, lang))}</h2>${badge}</div>
   ${d ? `<p class="d">${d}</p>` : ''}
-  ${why ? `<p class="why"><b>Why:</b> ${why}</p>` : ''}
+  ${why ? `<p class="why"><b lang="en">Why:</b> ${why}</p>` : ''}
   ${cmd}
   ${subs ? `<ul class="subs">${subs}</ul>` : ''}
   ${refs ? `<ul class="refs">${refs}</ul>` : ''}
@@ -322,7 +328,7 @@ export function toHtml(list: ExportList, lang: Lang): string {
     .join('\n')
 
   return `<!doctype html>
-<html lang="${lang}">
+<html lang="${esc(servedLang(list.title, lang))}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -380,7 +386,7 @@ function scriptVariables(steps: ExportStep[]): string[] {
 export interface ScriptSkip {
   n: number
   bid?: string | null
-  /** Ключ причины из детектора (RISKY) или 'danger' — пометка автора. */
+  /** Ключ причины из детектора (RISKY), 'danger' — пометка автора, 'needs_human' — решает человек. */
   reason: string
 }
 
@@ -523,6 +529,16 @@ export function buildScript(
       out.push(d.echo(`==> ${n}. ${st} — skipped (destructive)`))
       out.push(hashComment(cmd))
       skipped.push({ n, bid: s.bid, reason: danger })
+    } else if (cmd && s.needsHuman) {
+      // «ЗДЕСЬ НУЖЕН ЧЕЛОВЕК» — решение за человеком, а не за скриптом: автор пометил,
+      // что дальше без его выбора (платёж, пароль, «проверь, что это твой сервер») идти
+      // нельзя. Команда остаётся на месте, но закомментированной, с вопросом автора, —
+      // так же, как у разрушительного пункта, и так же, как её показывает SKILL.md.
+      const ask = flatten(tr(s.needsHumanAsk, lang))
+      out.push(hashComment(`🧑 A human decides here${ask ? `: ${ask}` : ''} — skipped. Run it yourself once decided.`))
+      out.push(d.echo(`==> ${n}. ${st} — skipped (needs a human)`))
+      out.push(hashComment(cmd))
+      skipped.push({ n, bid: s.bid, reason: 'needs_human' })
     } else {
       out.push(d.echo(`==> ${n}. ${st}`))
       if (cmd) out.push(cmd)

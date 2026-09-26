@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, asc, eq, sql } from 'drizzle-orm'
 import { assertNoDestructiveSteps } from '@/core/domain/destructive-command'
+import { assertNoSecrets } from '@/core/domain/secret-scan'
 import { db, listDrafts, steps, templates, templateVersions, type ProposedItem } from '@/shared/db'
 import { applyPatchOps, type McpPatchOp } from '../../patch'
 import { deleteDraft, publishDraftFor } from '@/features/library/draft'
@@ -12,7 +13,7 @@ import { detailByRefOrMoved, toProposed, type DetailStep, type McpItemInput } fr
 import { patchBlock, rowsToProposed } from './patch-block'
 import { duplicateBid, listWritable, lockList } from './draft-store'
 import { draftBaseMismatch, headVersion, staleBase } from './base-version'
-import { destructiveError, ownedList, writeProposed } from './write'
+import { contentError, ownedList, writeProposed } from './write'
 import { normalizeTags } from './create'
 
 /** Обновить список (только владелец): новая версия через ядро, либо накопление в рабочей
@@ -79,6 +80,7 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
         // Страж исполняемого выхода стоит и на рабочей копии: иначе `rm -rf /` доехал бы
         // до человека при публикации, на непонятном ему шаге.
         assertNoDestructiveSteps(stepInput(proposed))
+        assertNoSecrets(stepInput(proposed), undefined)
         // МЕТА едет вместе с составом: `tags` и `ordered` — часть того же запроса, и
         // публикация черновика берёт их ИЗ НЕГО (publishDraftFor читает draft.meta).
         // Без этого API отвечал бы «правки приняты», а теги с порядком молча пропадали
@@ -113,7 +115,7 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
         }
       })
     } catch (e) {
-      const refused = destructiveError(e)
+      const refused = contentError(e)
       if (refused) return refused
       throw e
     }
@@ -216,6 +218,7 @@ export async function mcpPatchList(
         // через API можно положить `rm -rf /` в чужую рабочую копию, и отказ прилетел
         // бы человеку при публикации, на непонятном ему шаге.
         assertNoDestructiveSteps(stepInput(appliedDraft.items))
+        assertNoSecrets(stepInput(appliedDraft.items), undefined)
         await tx
           .insert(listDrafts)
           .values({
@@ -242,7 +245,7 @@ export async function mcpPatchList(
         }
       })
     } catch (e) {
-      const refused = destructiveError(e)
+      const refused = contentError(e)
       if (refused) return refused
       throw e
     }
@@ -290,6 +293,8 @@ export async function mcpPublishDraft(userId: string, handle: string, slug: stri
       // своя арифметика здесь врала бы агенту в предпросмотре.
       wouldBeVersion: headVersion(tpl) + 1,
       blocks: draft.items.length,
+      // Правка файлов из редактора сайта едет той же версией — агент должен её видеть.
+      ...(draft.authored ? { files: draft.authored.map((f) => f.path) } : {}),
       note: (note ?? draft.note).trim() || 'edit',
       updatedAt: draft.updatedAt.toISOString(),
       hint: 'nothing published yet — these edits include everything pending on this list (yours and whatever was left in the editor); call again with confirm:true to publish them as one version',
@@ -301,9 +306,19 @@ export async function mcpPublishDraft(userId: string, handle: string, slug: stri
     // Наблюдатели узнают о версии так же, как при сохранении из редактора.
     const { notifyWatchersNewVersion } = await import('@/features/library/suggestion-side-effects')
     await notifyWatchersNewVersion(tpl.id, userId).catch(() => {})
-    return { ref: `${handle}/${slug}`, status: 'published' as const, version: res.version, blocks: res.blocks }
+    return {
+      ref: `${handle}/${slug}`,
+      status: 'published' as const,
+      version: res.version,
+      blocks: res.blocks,
+      ...(res.files !== undefined ? { files: res.files } : {}),
+      // Блоки вышли, набор файлов ядро не подтвердило: правка файлов лежит в черновике.
+      ...(res.filesNotApplied
+        ? { warning: 'the blocks are published but the git core did not confirm the files — the file edits stay pending; call publish_draft again' }
+        : {}),
+    }
   } catch (e) {
-    const refused = destructiveError(e)
+    const refused = contentError(e)
     if (refused) return refused
     throw e
   }

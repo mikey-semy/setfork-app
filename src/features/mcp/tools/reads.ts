@@ -82,6 +82,8 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     ...(authored?.length
       ? { files: authored.map((f) => ({ path: f.path, executable: f.executable || undefined, bytes: f.content.length })) }
       : {}),
+    // Шапка исходного SKILL.md — чтобы агент видел, что сохранилось и уйдёт в экспорт.
+    ...(tpl.isSkill && tpl.skillHeader ? { skillHeader: tpl.skillHeader } : {}),
     /* ⚠️ ПОЛЯ `verified` ЗДЕСЬ НЕТ. Решение 0006: публичного знака проверки не
        существует, потому что видимый публичный список и есть прошедший проверку.
        Отдавать флаг агенту значило бы обещать вторую проверку, которой нет, — и агент

@@ -15,6 +15,9 @@ import { listStore } from '../list-store'
 import { slugify } from '../slug'
 import { enqueueReindex } from '../jobs'
 import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from '../pr-settings'
+import { authoredFilesOf, ownerHandle } from './shared'
+import { canBePublic } from '@/core/domain/skill-license'
+import { contentRefusalOf } from '@/core/domain/content-refusal'
 
 /**
  * Копии чужого списка: форк (со связью с оригиналом) и «использовать как шаблон»
@@ -98,29 +101,77 @@ export async function useTemplate(templateId: string): Promise<void> {
   const srcSteps = srcCurrent
     ? await db.select().from(steps).where(eq(steps.versionId, srcCurrent.id)).orderBy(asc(steps.n))
     : []
-  const created = await listStore.create({
-    ownerId: session.userId,
-    slug,
-    title: src.title,
-    desc: src.desc,
-    tags: src.tags,
-    ordered: src.ordered,
-    visibility: 'public',
-    status: 'published',
-    origin: 'authored', // шаблон — стартовая точка, не fork-связь
-    forkedFromId: null,
-    note: `from template ${src.slug}`,
-    // ⚠️ КОПИЯ СОБИРАЕТСЯ ОБЩИМ КОНВЕРТЕРОМ, а не своим маппингом. Здесь был четвёртый
-    // рукописный: он терял «здесь нужен человек» с вопросом, идентичность блока и
-    // пометку «разрушительный пункт». Последнее видно снаружи и стоит дорого — без
-    // `danger` закомментированный `# make reset` собирается в исполняемый `make reset`.
-    // Соседний форк в этом же файле чинили дважды и всё равно не дочинили: пока каждый
-    // путь копирует поля сам, один из них однажды забудет очередное.
-    steps: toStepInput(srcSteps as unknown as ProposedItem[]),
-  })
+  let created: Awaited<ReturnType<typeof listStore.create>>
+  try {
+    created = await listStore.create({
+      ownerId: session.userId,
+      // Копия — на языке источника: текст скопирован как есть (ADR-0030).
+      lang: src.lang,
+      langFromContent: true,
+      slug,
+      title: src.title,
+      desc: src.desc,
+      tags: src.tags,
+      ordered: src.ordered,
+      // Копия импорта без открытой лицензии — тоже только приватная: иначе запрет обходился
+      // бы «использовать как шаблон» своего же приватного списка.
+      visibility: canBePublic(src) ? 'public' : 'private',
+      status: 'published',
+      origin: 'authored', // шаблон — стартовая точка, не fork-связь
+      forkedFromId: null,
+      note: `from template ${src.slug}`,
+      // ⚠️ КОПИЯ СОБИРАЕТСЯ ОБЩИМ КОНВЕРТЕРОМ, а не своим маппингом. Здесь был четвёртый
+      // рукописный: он терял «здесь нужен человек» с вопросом, идентичность блока и
+      // пометку «разрушительный пункт». Последнее видно снаружи и стоит дорого — без
+      // `danger` закомментированный `# make reset` собирается в исполняемый `make reset`.
+      // Соседний форк в этом же файле чинили дважды и всё равно не дочинили: пока каждый
+      // путь копирует поля сам, один из них однажды забудет очередное.
+      steps: toStepInput(srcSteps as unknown as ProposedItem[]),
+      authored: await copiedFiles(src, srcCurrent?.version),
+      // Шапка — в создание, а не догоняющим апдейтом: у git-first рождения v1 уже коммит.
+      skillHeader: src.skillHeader,
+    })
+  } catch (e) {
+    // Страж содержимого: в источнике то, что сейчас не принимается (команда, ключ) —
+    // назвать причину, а не показать страницу ошибки.
+    if (contentRefusalOf(e)) redirect(`/${await ownerHandle(src.ownerId)}/${src.slug}?e=copy-refused`)
+    throw e
+  }
+  if (src.isSkill) await db.update(templates).set({ isSkill: true, skillHeader: src.skillHeader }).where(eq(templates.id, created.id))
+  // Источник и лицензия импорта — наследуются: копия чужого скилла остаётся с указанием
+  // автора, а запрет на публичность не теряется на следующей смене видимости.
+  if (src.sourceUrl) await inheritSource(src, created.id)
   // Копия публикуется — но состояние публикации ей задал фасад create, до записи.
   revalidatePath('/', 'layout')
   redirect(`/${session.handle}/${slug}`)
+}
+
+/**
+ * Файлы автора источника — в копию (форк, «из шаблона»), чтобы скилл копировался целиком,
+ * а не одними блоками. Пустой набор — `undefined`: ядру незачем набор, которого нет.
+ * Сбой чтения не глушится: ядро, не отдавшее файлы, не записало бы и саму копию, а
+ * копия скилла без `scripts/` — тихая потеря.
+ */
+async function copiedFiles(src: { ownerId: string; slug: string }, version: number | undefined) {
+  if (!version) return undefined
+  const files = await authoredFilesOf(await ownerHandle(src.ownerId), src.slug, version)
+  return files?.length ? files : undefined
+}
+
+/**
+ * Источник и лицензия импорта — в копию. Не легли — копия удаляется и ошибка идёт дальше:
+ * копия закрытого импорта без записанного запрета стала бы обходом правила владельца.
+ */
+async function inheritSource(src: { sourceUrl: string | null; sourceLicense: string | null; sourceLicenseOpen: boolean | null }, copyId: string) {
+  try {
+    await db
+      .update(templates)
+      .set({ sourceUrl: src.sourceUrl, sourceLicense: src.sourceLicense, sourceLicenseOpen: src.sourceLicenseOpen })
+      .where(eq(templates.id, copyId))
+  } catch (e) {
+    await db.delete(templates).where(eq(templates.id, copyId)).catch(() => {}) // каскад, как у удаления списка
+    throw e
+  }
 }
 
 export type ForkResult = { error?: string }
@@ -204,24 +255,37 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
     : []
   // Инвариант «один форк» держит уникальный индекс в БД, а проверка выше лишь
   // экономит работу. Проигравший гонку получает не ошибку, а свой уже созданный форк.
-  const created = await createForkOrNull({
-    ownerId: session.userId,
-    slug,
-    title: src.title,
-    desc,
-    tags: src.tags,
-    ordered: src.ordered,
-    visibility: src.visibility,
-    status: 'published',
-    origin: 'forked',
-    forkedFromId: src.id,
-    note: `forked from ${src.slug} v${srcCurrent?.version ?? 1}`,
-    // Копия собирается ОБЩИМ конвертером (см. выше, в «использовать как шаблон»):
-    // перенос полей — одно правило на все пути записи, а не список, который каждый путь
-    // ведёт сам. Прежний здешний маппинг дважды доучивали (needsHuman, blockId) и всё
-    // равно не доложили `danger`.
-    steps: toStepInput(srcSteps as unknown as ProposedItem[]),
-  })
+  let created: Awaited<ReturnType<typeof createForkOrNull>>
+  try {
+    created = await createForkOrNull({
+      lang: src.lang,
+      langFromContent: true,
+      ownerId: session.userId,
+      slug,
+      title: src.title,
+      desc,
+      tags: src.tags,
+      ordered: src.ordered,
+      visibility: src.visibility,
+      status: 'published',
+      origin: 'forked',
+      forkedFromId: src.id,
+      note: `forked from ${src.slug} v${srcCurrent?.version ?? 1}`,
+      // Копия собирается ОБЩИМ конвертером (см. выше, в «использовать как шаблон»):
+      // перенос полей — одно правило на все пути записи, а не список, который каждый путь
+      // ведёт сам. Прежний здешний маппинг дважды доучивали (needsHuman, blockId) и всё
+      // равно не доложили `danger`.
+      steps: toStepInput(srcSteps as unknown as ProposedItem[]),
+      authored: await copiedFiles(src, srcCurrent?.version),
+      // Шапка — в создание, а не догоняющим апдейтом: у git-first рождения v1 уже коммит.
+      skillHeader: src.skillHeader,
+    })
+  } catch (e) {
+    // Страж содержимого: в источнике то, что сейчас не принимается (команда, ключ) —
+    // назвать причину, а не показать страницу ошибки.
+    if (contentRefusalOf(e)) return { error: t('copyContentRefused', await getLang()) }
+    throw e
+  }
 
   // Гонку проиграли: параллельный запрос уже создал форк этого источника, и уникальный
   // индекс не дал сделать второй. Ведём на существующий — счётчик форков и уведомление
@@ -236,6 +300,12 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
     return { error: t('forkFailed', await getLang()) }
   }
   const forked = created
+  // Форк скилла — скилл: метка и шапка — про содержимое, не про владельца. Шапка уже
+  // приехала созданием (в канон v1); запись здесь — на окно выкатки, пока ядро поля не знает.
+  if (src.isSkill) await db.update(templates).set({ isSkill: true, skillHeader: src.skillHeader }).where(eq(templates.id, forked.id))
+  // Источник и лицензия импорта — наследуются: копия чужого скилла остаётся с указанием
+  // автора, а запрет на публичность не теряется на следующей смене видимости.
+  if (src.sourceUrl) await inheritSource(src, forked.id)
 
   await db
     .update(templates)

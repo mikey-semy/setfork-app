@@ -111,12 +111,12 @@ describe('что агент получает в SKILL.md', () => {
 })
 
 describe('архив', () => {
-  it('папка с именем скилла: SKILL.md, фон и скрипт — и ничего больше', async () => {
+  it('папка с именем скилла: SKILL.md и скрипт — и ничего больше (текст — в SKILL.md)', async () => {
     const res = await getTar('runbook')
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toBe('application/gzip')
     const { paths } = await unpack(res)
-    expect(paths).toEqual(['runbook/SKILL.md', 'runbook/references/context.md', 'runbook/scripts/run.sh'])
+    expect(paths).toEqual(['runbook/SKILL.md', 'runbook/scripts/run.sh'])
   })
 
   it('слаг с дефисом на конце — папка и name без него, и они совпадают', async () => {
@@ -137,5 +137,66 @@ describe('архив', () => {
   it('список без команд — scripts/ в архиве нет', async () => {
     const { paths } = await unpack(await getTar('prose'))
     expect(paths.some((p) => p.includes('/scripts/'))).toBe(false)
+  })
+})
+
+/**
+ * `?ref=` — СКИЛЛ ТЕГА ИЛИ ВЕРСИИ, а не вершины. Ради чего: агент ставит `v0.7.0`, а сайт
+ * тем временем ушёл вперёд. Скилл «тега», собранный из текущей версии, врал бы ровно тем,
+ * ради чего его просили; неизвестный тег — 404, а не молчаливая вершина.
+ */
+describe('скилл по тегу релиза и по версии', () => {
+  const SLUG = 'tagged'
+  const at = (tail: string) => new Request(`http://localhost/${OWNER}/${SLUG}/${tail}`)
+
+  beforeAll(async () => {
+    const { releases } = await import('@/shared/db')
+    await makeList(SLUG, {}, [{ title: { en: 'Old step' }, command: 'echo old' }])
+    const [t] = await db.select({ id: templates.id }).from(templates).where(eq(templates.slug, SLUG))
+    const [v2] = await db.insert(templateVersions).values({ templateId: t.id, version: 2, note: 'v2' }).returning({ id: templateVersions.id })
+    await db.insert(steps).values({ versionId: v2.id, n: 1, title: { en: 'New step' }, command: 'echo new' })
+    await db.update(templates).set({ currentVersion: 2 }).where(eq(templates.id, t.id))
+    await db.insert(releases).values({ templateId: t.id, version: 1, tag: 'v0.1.0', authorId: uid.owner })
+  })
+
+  it('без ref — вершина', async () => {
+    const body = await (await skillMd.GET(at('SKILL.md'), params(SLUG))).text()
+    expect(body).toContain('New step')
+    expect(body).not.toContain('Old step')
+  })
+
+  it('тег релиза — шаги ТОЙ версии, и ссылка на архив несёт тот же тег', async () => {
+    const res = await skillMd.GET(at('SKILL.md?ref=v0.1.0'), params(SLUG))
+    expect(res.status).toBe(200)
+    const body = await res.text()
+    expect(body).toContain('Old step')
+    expect(body).not.toContain('New step')
+    expect(body).toContain('/skill.tar.gz?ref=v0.1.0')
+  })
+
+  it('номер версии тоже ref', async () => {
+    expect(await (await skillMd.GET(at('SKILL.md?ref=v2'), params(SLUG))).text()).toContain('New step')
+    expect(await (await skillMd.GET(at('SKILL.md?ref=v1'), params(SLUG))).text()).toContain('Old step')
+  })
+
+  it('архив тега: имя файла с тегом, скрипт той версии', async () => {
+    const res = await skillTar.GET(at('skill.tar.gz?ref=v0.1.0'), params(SLUG))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Disposition')).toBe('attachment; filename="tagged-v0.1.0.tar.gz"')
+    const { dir, paths } = await unpack(res)
+    const run = paths.find((p) => p.endsWith('scripts/run.sh'))!
+    const script = readFileSync(join(dir, run), 'utf8')
+    expect(script).toContain('echo old')
+    expect(script).not.toContain('echo new')
+  })
+
+  it.each(['v9', 'v0.2.0', 'main', 'v0'])('неизвестный ref «%s» — 404, а не вершина', async (ref) => {
+    expect((await skillMd.GET(at(`SKILL.md?ref=${ref}`), params(SLUG))).status).toBe(404)
+    expect((await skillTar.GET(at(`skill.tar.gz?ref=${ref}`), params(SLUG))).status).toBe(404)
+  })
+
+  it('приватный список с ref — тот же 404: тег не выдаёт, что список есть', async () => {
+    const res = await skillMd.GET(new Request(`http://localhost/${OWNER}/priv/SKILL.md?ref=v1`), params('priv'))
+    expect(res.status).toBe(404)
   })
 })

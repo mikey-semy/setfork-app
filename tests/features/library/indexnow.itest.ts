@@ -16,7 +16,8 @@ type Send = (b: Body) => Promise<number>
 
 const KEY = 'test-key-1234'
 const ORIGIN = 'https://example.org'
-const url = (path: string) => [`${ORIGIN}/en${path}`, `${ORIGIN}/ru${path}`, `${ORIGIN}${path}`]
+/** Адрес страницы — один на все языки (ADR-0029). */
+const url = (path: string) => [`${ORIGIN}${path}`]
 let owner = ''
 
 /** Файл ключа на месте — как у живого сайта с верным APP_URL. */
@@ -199,14 +200,20 @@ describe('пути, которые не двигают updated_at', () => {
     expect(again.urls()).toEqual(expect.arrayContaining(url('/ghost/deploy')))
   })
 
-  it('появился язык — адреса уходят заново', async () => {
+  it('⚠️ отправлено с языковыми адресами (22–25.09) — один раз уходят адрес и прежние `/ru/`, `/en/`', async () => {
     const id = await list('deploy')
     await pass(fakeSend().send)
-    // Отправлено при наборе языков, где был только английский.
-    await db.update(indexnowSubmissions).set({ sentLangs: 'en' }).where(eq(indexnowSubmissions.templateId, id))
+    // Так выглядит строка, отправленная до ADR-0029: адреса на обоих языках.
+    await db.update(indexnowSubmissions).set({ sentLangs: 'en,ru' }).where(eq(indexnowSubmissions.templateId, id))
     const again = fakeSend()
     await pass(again.send)
-    expect(again.urls()).toContain(`${ORIGIN}/ru/alice/deploy`)
+    // Прежние языковые адреса теперь отвечают 308 — поисковик должен об этом узнать.
+    expect(again.urls().sort()).toEqual([`${ORIGIN}/alice/deploy`, `${ORIGIN}/en/alice/deploy`, `${ORIGIN}/ru/alice/deploy`].sort())
+    const [row] = await db.select().from(indexnowSubmissions).where(eq(indexnowSubmissions.templateId, id))
+    expect(row.sentLangs).toBe('')
+    const third = fakeSend()
+    await pass(third.send)
+    expect(third.bodies).toHaveLength(0)
   })
 
   it('снят с публичности — сообщается (протокол велит сообщать об удалённом); открыт снова — уходит снова', async () => {

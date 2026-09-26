@@ -27,6 +27,9 @@ export function GET() {
       issuer: AUTH_ISSUER,
       authorization_endpoint: `${AUTH_ISSUER}/oauth/authorize`,
       token_endpoint: `${AUTH_ISSUER}/oauth/token`,
+      // RFC 7009 + RFC 8414 §2: где отзывать и чем клиент подтверждает себя (публичный — никак).
+      revocation_endpoint: `${AUTH_ISSUER}/oauth/revoke`,
+      revocation_endpoint_auth_methods_supported: ['none'],
       response_types_supported: ['code'],
       grant_types_supported: ['authorization_code', 'refresh_token'],
       code_challenge_methods_supported: ['S256'],

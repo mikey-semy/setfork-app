@@ -30,7 +30,10 @@ const files = (dir: string): string[] =>
 /** Ключи, у которых объявлены формы, — источник тот же, что у `plural()`. */
 const pluralKeys = (): string[] => {
   const src = readFileSync('src/shared/i18n/index.ts', 'utf8')
-  const block = src.slice(src.indexOf('const PLURALS'), src.indexOf('} as const'))
+  // Конец блока ищем ПОСЛЕ его начала: `} as const` бывает у констант выше, и срез от первого
+  // вхождения был пустым — узда падала от соседней константы, а не от несогласованного числа.
+  const start = src.indexOf('const PLURALS')
+  const block = src.slice(start, src.indexOf('} as const', start))
   return [...block.matchAll(/^\s{2}([A-Za-z][A-Za-z0-9]*)\s*:\s*\{/gm)].map((m) => m[1])
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { exchangeCode, pruneExpiredCodes, refreshTokens } from '@/shared/auth/oauth-server'
 import { clientIp, rateLimit } from '@/shared/rate-limit'
+import { OAUTH_RATE_PER_MIN } from '@/shared/auth/oauth-meta'
 
 /**
  * Обмен кода на токен и обновление доступа.
@@ -14,7 +15,6 @@ import { clientIp, rateLimit } from '@/shared/rate-limit'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const RATE_PER_MIN = 30
 
 function fail(error: string, status = 400): NextResponse {
   return NextResponse.json({ error }, { status, headers: { 'Cache-Control': 'no-store' } })
@@ -23,7 +23,7 @@ function fail(error: string, status = 400): NextResponse {
 export async function POST(req: Request): Promise<NextResponse> {
   // Подбор кода и refresh-токена — единственный способ их угадать, поэтому лимит стоит
   // до разбора тела: отказ должен быть дешевле проверки.
-  const limited = await rateLimit(`oauth:token:${clientIp(req)}`, RATE_PER_MIN, 60_000)
+  const limited = await rateLimit(`oauth:token:${clientIp(req)}`, OAUTH_RATE_PER_MIN, 60_000)
   if (!limited.ok) return fail('slow_down', 429)
 
   const ctype = req.headers.get('content-type') ?? ''

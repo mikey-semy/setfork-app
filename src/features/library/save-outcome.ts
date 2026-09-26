@@ -12,10 +12,21 @@ import type { DraftRef } from './draft'
  * случаи, — что именно человек должен узнать. Молчание здесь и есть тот дефект, который
  * чинится: затирание чужих правок и запрещённая команда раньше не сообщались никак.
  */
-export function saveOutcomeQuery(o: { overwrote: boolean; destructiveStep: number | null }): string {
+export function saveOutcomeQuery(o: {
+  overwrote: boolean
+  destructiveStep: number | null
+  secret?: { step: number; rule: string } | null
+  /** Находка не в шаге, а в файле автора: место — его путь (шаг тогда 0). */
+  file?: { kind: 'destructive'; path: string } | { kind: 'secret'; path: string; rule: string } | null
+}): string {
   const parts = ['saved=1']
   if (o.overwrote) parts.push('over=1')
-  if (o.destructiveStep !== null) parts.push('warn=destructive', `step=${o.destructiveStep}`)
+  // Предупреждение одно, и ключ доступа — первым: команда опасна тому, кто её запустит,
+  // а ключ утекает в момент публикации. Команду назовёт следующее сохранение.
+  if (o.secret) parts.push('warn=secret', `step=${o.secret.step}`, `kind=${o.secret.rule}`)
+  else if (o.destructiveStep !== null) parts.push('warn=destructive', `step=${o.destructiveStep}`)
+  else if (o.file?.kind === 'secret') parts.push('warn=secret', 'step=0', `kind=${o.file.rule}`, `file=${encodeURIComponent(o.file.path)}`)
+  else if (o.file?.kind === 'destructive') parts.push('warn=destructive', 'step=0', `file=${encodeURIComponent(o.file.path)}`)
   return parts.join('&')
 }
 

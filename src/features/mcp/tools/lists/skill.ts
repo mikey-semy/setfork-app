@@ -18,11 +18,12 @@
 // входа, слияние набора и дружелюбный ранний отказ.
 
 import 'server-only'
+import { isContentLang } from '@/shared/i18n/iso639'
 import { and, eq } from 'drizzle-orm'
 import { isPubliclyVisible, type AuthoredFile } from '@/core'
 import { db, listDrafts, templates } from '@/shared/db'
 import { detectTextLang } from '@/shared/lib/translit'
-import { AUTHORED_PATH, fitsArchive } from '@/features/library/skill'
+import { AUTHORED_NAME_MAX_BYTES, authoredPathProblem } from '@/core/domain/authored-path'
 import { parseSkillMd } from '@/features/library/skill-parse'
 import { assignCatalogByName } from '@/features/catalogs/assign'
 import { gitCore } from '@/features/git/core'
@@ -30,7 +31,9 @@ import { SITE_URL, detailByRefOrMoved, toProposed, type McpItemInput } from '../
 import { mcpCreateList, normalizeTags } from './create'
 import { rowsToProposed } from './patch-block'
 import { headVersion } from './base-version'
-import { authoredError, destructiveError, ownedList, writeProposed } from './write'
+import { authoredError, contentError, ownedList, writeProposed } from './write'
+import { pickSkillHeader, type SkillHeader } from '@/core/domain/skill-header'
+import { findSecretInContent } from '@/core/domain/secret-scan'
 
 export interface McpSkillFileInput {
   path: string
@@ -44,6 +47,8 @@ export interface McpSkillFileInput {
 export interface McpPublishSkillInput {
   /** Существующий список «handle/slug» — обновить; не задан — создать новый. */
   list?: string
+  /** Видимость НОВОГО списка (внутренний вход импорта — через инструмент не выставляется). */
+  visibility?: 'public' | 'private'
   /** Для существующего — версия, от которой собрана правка (get_list). Обязательна. */
   baseVersion?: number
   title?: string
@@ -66,21 +71,24 @@ export interface McpPublishSkillInput {
   note?: string
 }
 
-/** Символы, которые ломают отображение имени или распаковку: управляющие, `\` и символы
- *  направления текста. Правило то же, что у ядра (`input_name_ok`); здесь — ранний отказ. */
-const BAD_NAME_CHAR = /[\p{Cc}\\‎‏‪-‮⁦-⁩]/u
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/
 
+/** Причина отказа по пути — текстом для агента; правило одно с редактором сайта. */
 function pathProblem(path: string, executable: boolean | undefined): string | null {
-  const name = path.slice(path.lastIndexOf('/') + 1)
-  if (!AUTHORED_PATH.test(path) || path.split('/').includes('..'))
-    return `bad file path "${path}": files live directly in scripts/, references/ or assets/ — one level, no subfolders`
-  if (name.startsWith('.')) return `bad file name "${path}": a name must not start with a dot`
-  if (BAD_NAME_CHAR.test(name)) return `bad file name "${path}": control, backslash or text-direction characters`
-  // Длиннее — лёг бы в дерево, но не в архив скилла: установился бы скилл без файла.
-  if (!fitsArchive(path)) return `file name too long "${path}": at most 100 bytes (about 50 Cyrillic letters)`
-  if (executable && !path.startsWith('scripts/')) return `"${path}" cannot be executable: only files in scripts/ may be`
-  return null
+  switch (authoredPathProblem(path, executable)) {
+    case 'path':
+      return `bad file path "${path}": files live directly in scripts/, references/ or assets/ — one level, no subfolders`
+    case 'dot':
+      return `bad file name "${path}": a name must not start with a dot`
+    case 'chars':
+      return `bad file name "${path}": control, backslash or text-direction characters`
+    case 'long':
+      return `file name too long "${path}": at most ${AUTHORED_NAME_MAX_BYTES} bytes (about ${AUTHORED_NAME_MAX_BYTES / 2} Cyrillic letters)`
+    case 'exec':
+      return `"${path}" cannot be executable: only files in scripts/ may be`
+    case null:
+      return null
+  }
 }
 
 /** Вход → байты с ранним отказом. Число и размер не проверяем: их судит ядро, а вторая
@@ -143,7 +151,12 @@ export function mergeSkillFiles(
 
 /** Метка «Скилл» — publish_skill ставит её сам: намерение названо вызовом, как у GitHub
  *  шаблон ставят галочкой. Снять её можно в настройках; вызов её не снимает. */
-const markSkill = (where: ReturnType<typeof eq>) => db.update(templates).set({ isSkill: true }).where(where)
+const markSkill = (where: ReturnType<typeof eq>, header?: { header: SkillHeader | null }) =>
+  db
+    .update(templates)
+    // Шапку трогаем, только если пришёл SKILL.md: правка блоками её не касается.
+    .set({ isSkill: true, ...(header ? { skillHeader: header.header } : {}) })
+    .where(where)
 
 const installLine = (ref: string) => `npx skills add ${SITE_URL}/${ref}/skill.tar.gz`
 
@@ -168,15 +181,17 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         items: parsed.items as McpItemInput[],
       }
     : rawInput
-  // Что из исходника в список не попадает (license, compatibility, metadata…) — называем,
-  // а не теряем молча; хранение шапки — следующий шаг трека.
-  const headerKeys = parsed ? Object.keys(parsed.header) : []
+  // Шапка исходника (license, compatibility, allowed-tools, metadata) хранится при списке и
+  // возвращается экспортом. Что сохранить не вышло — называем, а не теряем молча.
+  const picked = parsed ? pickSkillHeader(parsed.header) : undefined
   const parseNotes = parsed
-    ? [
-        ...parsed.warnings,
-        ...(headerKeys.length ? [`not stored yet from the SKILL.md header: ${headerKeys.join(', ')}`] : []),
-      ]
+    ? [...parsed.warnings, ...(picked?.dropped.length ? [`not kept from the SKILL.md header: ${picked.dropped.join(', ')}`] : [])]
     : []
+  // Шапка публикуется вместе со скиллом — ключ в лицензии или metadata утёк бы так же.
+  const headerLeak = picked?.header ? findSecretInContent([], undefined, picked.header) : null
+  if (headerLeak) {
+    return { error: `refused: the SKILL.md header contains what looks like an access key for ${headerLeak.match.provider} (${headerLeak.match.rule}): ${headerLeak.match.fragment} — remove it; if it was ever shared, revoke it with the provider` }
+  }
 
   if (!input.list) {
     if (!input.title?.trim()) return { error: 'title is required for a new skill (or pass list to update an existing one)' }
@@ -194,9 +209,11 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         // У нового списка «без файлов» — это просто без файлов: слать пустой набор ядру
         // незачем, а старое ядро на нём отказало бы скиллу, которому файлы и не нужны.
         authored: authored.length ? authored : undefined,
+        skillHeader: picked?.header,
+        visibility: input.visibility,
       })
       if ('error' in res) return res
-      await markSkill(and(eq(templates.ownerId, userId), eq(templates.slug, res.ref.split('/')[1]))!)
+      await markSkill(and(eq(templates.ownerId, userId), eq(templates.slug, res.ref.split('/')[1]))!, picked)
       if (authored.length && res.authoredApplied !== true) return notApplied(`the draft ${res.ref} (version 1)`)
       const { authoredApplied: _applied, ...rest } = res
       return {
@@ -208,7 +225,7 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
         note: `Created as a draft with its files in version 1 — only you see it. To let agents install it, publish it with publish_lists (confirm:true); moderation may hold a new author's list for review first. After that: ${installLine(res.ref)}`,
       }
     } catch (e) {
-      const refused = destructiveError(e) ?? authoredError(e)
+      const refused = contentError(e) ?? authoredError(e)
       if (refused) return refused
       throw e
     }
@@ -247,13 +264,20 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
   }
 
   // Мета — патчем: title/desc только если их меняют, на языке входа, прочие переводы целы.
-  const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${input.title ?? ''} ${input.desc ?? ''}`)
+  // Без явного `lang` — язык ОРИГИНАЛА списка (ADR-0030), а не догадка детектора: иначе новое
+  // название белорусского списка легло бы под `ru` рядом со старым под `be`, и зритель видел бы
+  // старое. Язык самого списка обновление не меняет — оригинал объявляется при создании.
+  const lang = isContentLang(input.lang)
+    ? input.lang
+    : isContentLang(tpl.lang)
+      ? tpl.lang
+      : detectTextLang(`${input.title ?? ''} ${input.desc ?? ''}`)
   const title = input.title?.trim() ? { ...(tpl.title as Record<string, string>), [lang]: input.title.trim() } : undefined
   const desc = input.desc !== undefined ? { ...(tpl.desc as Record<string, string>), [lang]: input.desc.trim() } : undefined
 
   const filesChanged = merged ? merged.added.length + merged.changed.length + merged.removed.length > 0 : false
   if (!input.items && !filesChanged && !title && !desc && !input.tags && input.ordered === undefined) {
-    await markSkill(eq(templates.id, tpl.id))
+    await markSkill(eq(templates.id, tpl.id), picked)
     if (input.catalog) await assignCatalogByName(tpl.id, userId, input.catalog)
     return { ref: `${handle}/${slug}`, version: current, note: 'Nothing to change — the files and blocks are already like this; no version was made.' }
   }
@@ -267,23 +291,38 @@ export async function mcpPublishSkill(userId: string, rawInput: McpPublishSkillI
     if (!detail) return { error: 'list not found' }
     proposed = rowsToProposed(detail.steps)
   }
-  const res = await writeProposed(
-    tpl,
-    handle,
-    slug,
-    proposed,
-    input.note?.trim() || 'skill via API',
-    {
-      tags: input.tags ? normalizeTags(input.tags) : tpl.tags,
-      ordered: input.ordered ?? tpl.ordered,
-      ...(title ? { title } : {}),
-      ...(desc ? { desc } : {}),
-    },
-    input.baseVersion,
-    // Файлы не трогали — поля нет: ядро перенесёт набор родителя как есть.
-    merged && filesChanged ? merged.files : undefined,
-  )
-  if ('error' in res) return res
+  // Шапку — ДО версии: канон версии ядро собирает из строки списка, и она обязана попасть
+  // в ту же версию, что и блоки из этого же SKILL.md. Версию не приняли — шапка
+  // возвращается прежней: иначе экспорт отдавал бы новую лицензию со старыми шагами.
+  const headerBefore = picked ? tpl.skillHeader : undefined
+  const restoreHeader = () => (picked ? db.update(templates).set({ skillHeader: headerBefore ?? null }).where(eq(templates.id, tpl.id)) : undefined)
+  if (picked) await markSkill(eq(templates.id, tpl.id), picked)
+  let res: Awaited<ReturnType<typeof writeProposed>>
+  try {
+    res = await writeProposed(
+      tpl,
+      handle,
+      slug,
+      proposed,
+      input.note?.trim() || 'skill via API',
+      {
+        tags: input.tags ? normalizeTags(input.tags) : tpl.tags,
+        ordered: input.ordered ?? tpl.ordered,
+        ...(title ? { title } : {}),
+        ...(desc ? { desc } : {}),
+      },
+      input.baseVersion,
+      // Файлы не трогали — поля нет: ядро перенесёт набор родителя как есть.
+      merged && filesChanged ? merged.files : undefined,
+    )
+  } catch (e) {
+    await restoreHeader()
+    throw e
+  }
+  if ('error' in res) {
+    await restoreHeader()
+    return res
+  }
   await markSkill(eq(templates.id, tpl.id))
   if (merged && filesChanged && res.authoredApplied !== true) return notApplied(`version ${res.version}`)
   const filed = input.catalog ? await assignCatalogByName(tpl.id, userId, input.catalog) : undefined

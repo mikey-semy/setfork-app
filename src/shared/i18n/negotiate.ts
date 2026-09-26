@@ -13,6 +13,16 @@ import { DEFAULT_LANG, isLang, type Lang } from './index'
  * (строка на входе, язык на выходе), поэтому проверяется таблицей без сети и Next.
  */
 export function negotiateLang(header: string | null | undefined, fallback: Lang = DEFAULT_LANG): Lang {
+  return preferredLang(header) ?? fallback
+}
+
+/**
+ * Язык, который клиент ЯВНО назвал в `Accept-Language`, — или `null`, если не назвал ни одного
+ * знакомого (заголовка нет, `*`, только чужие языки). Отличать «не назвал» от «английский»
+ * нужно зрителю без предпочтения — роботу: ему страница списка отдаётся на языке самого списка
+ * (ADR-0030), а не на английском по умолчанию.
+ */
+export function preferredLang(header: string | null | undefined): Lang | null {
   const ranked: { lang: Lang; q: number; order: number }[] = []
   let order = 0
   for (const raw of (header ?? '').split(',')) {
@@ -30,7 +40,7 @@ export function negotiateLang(header: string | null | undefined, fallback: Lang 
     if (q <= 0) continue
     ranked.push({ lang: code, q, order })
   }
-  if (!ranked.length) return fallback
+  if (!ranked.length) return null
   // Больший вес важнее; при равном весе выигрывает тот, кто в заголовке раньше.
   ranked.sort((a, b) => b.q - a.q || a.order - b.order)
   return ranked[0].lang
@@ -45,4 +55,14 @@ function quality(params: string[]): number {
     return Number.isFinite(q) ? q : 1
   }
   return 1
+}
+
+/**
+ * Прислал ли клиент хоть какое-то языковое предпочтение. Пустой заголовок и `*` («любой») —
+ * нет: так приходит робот поисковика, и ему страница списка отдаётся на языке самого списка
+ * (ADR-0030). Любой названный язык — да, даже незнакомый нам.
+ */
+export function hasLangPreference(header: string | null | undefined): boolean {
+  const h = (header ?? '').trim()
+  return h !== '' && h !== '*'
 }

@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, ne, notInArray, sql } from 'drizzle-orm'
-import { db, jobs, steps, templates, templateVersions } from '@/shared/db'
+import { db, jobs, steps, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { captureError } from '@/shared/observability'
 import { moderateContent, type ModerationVerdict } from '@/shared/ai/moderate'
@@ -8,6 +8,8 @@ import { getApiKey } from '@/shared/settings/ai'
 import { publicationDecision } from '@/shared/moderation/publication-state'
 import { globalBudgetOk } from '@/shared/quota'
 import { enqueueJob } from '@/shared/jobs/queue'
+// eslint-disable-next-line boundaries/dependencies -- файлы автора берутся у git-порта: в базе их нет, только в дереве
+import { gitCore } from '@/features/git/core'
 import {
   checkSpamHeuristics,
   contentFingerprint,
@@ -38,9 +40,35 @@ export const MODERATE_DAILY_CAP = 20
 
 interface LoadedList {
   signals: ListSignals
+  /** Тексты файлов автора — только для классификатора. В эвристики спама не идут:
+   *  справка скилла законно ссылается на десяток доменов документации, и «ферма
+   *  ссылок» по ней была бы ложной (находка ревью). */
+  authored: string
   stepTitles: string[]
   ownerId: string
   moderation: string
+}
+
+/**
+ * Тексты файлов автора (скилл: `scripts/`, `references/`, `assets/`) — в ту же проверку,
+ * что и блоки: `references/howto.md` читают и ставят так же, как шаги, и опасное how-to,
+ * вынесенное туда, иначе проходило бы мимо. Идут ПОСЛЕ блоков: классификатор видит начало
+ * текста, и список судится прежде всего по тому, что видно на его странице.
+ *
+ * Не прочитались (ядро не ответило) — проверяем без них и сообщаем в наблюдаемость: блоки
+ * всё равно должны пройти проверку, а молча пропущенные файлы нашлись бы только по жалобе.
+ */
+async function authoredTexts(tpl: { ownerId: string; slug: string }, version: number | undefined): Promise<string[]> {
+  if (!version) return []
+  const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId))
+  if (!owner) return []
+  try {
+    const files = (await gitCore.authoredFiles({ owner: owner.handle, slug: tpl.slug }, version)) ?? []
+    return files.map((f) => `[${f.path}]\n${new TextDecoder().decode(f.content)}`)
+  } catch (e) {
+    captureError(e, { where: 'moderation.authoredTexts', slug: tpl.slug })
+    return []
+  }
 }
 
 /** Сигналы списка для проверки: текст (LLM + извлечение ссылок), заголовки шагов
@@ -51,7 +79,7 @@ async function loadListSignals(templateId: string): Promise<LoadedList | null> {
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return null
   const [ver] = await db
-    .select({ id: templateVersions.id })
+    .select({ id: templateVersions.id, version: templateVersions.version })
     .from(templateVersions)
     .where(eq(templateVersions.templateId, templateId))
     .orderBy(desc(templateVersions.version))
@@ -67,20 +95,26 @@ async function loadListSignals(templateId: string): Promise<LoadedList | null> {
     [flat(s.title), flat(s.desc), s.command, ...contentStrings(s.why), ...contentStrings(s.section), ...contentStrings(s.subtasks), ...contentStrings(s.content)]
       .filter(Boolean)
       .join(' ')
-  const text = [flat(tpl.title), flat(tpl.desc), ...refUrls, ...refLabels, ...stepRows.map(stepBody)]
-    .filter(Boolean)
-    .join('\n')
+  const text = [flat(tpl.title), flat(tpl.desc), ...refUrls, ...refLabels, ...stepRows.map(stepBody)].filter(Boolean).join('\n')
   return {
     signals: { title: flat(tpl.title), stepCount: stepRows.length, text },
+    // Шапка скилла (лицензия, требования, metadata) уходит в публичный SKILL.md — судится
+    // вместе с файлами, классификатором; в эвристики спама не идёт.
+    authored: [...contentStrings(tpl.skillHeader), ...(await authoredTexts(tpl, ver?.version))].filter(Boolean).join('\n'),
     stepTitles: stepRows.map((s) => flat(s.title)),
     ownerId: tpl.ownerId,
     moderation: tpl.moderation,
   }
 }
 
+/** Текст для классификатора: блоки, затем файлы автора — список судится прежде всего
+ *  по тому, что видно на его странице. */
+const classifierText = (l: LoadedList) => [l.signals.text, l.authored].filter(Boolean).join('\n')
+
 /** Текст списка для ручной ИИ-проверки из админки. */
 export async function buildListText(templateId: string): Promise<string> {
-  return (await loadListSignals(templateId))?.signals.text ?? ''
+  const loaded = await loadListSignals(templateId)
+  return loaded ? classifierText(loaded) : ''
 }
 
 export function verdictReason(v: ModerationVerdict): string {
@@ -337,7 +371,7 @@ export async function runModerateJob(payload: unknown, attempt: { attempts: numb
     return
   }
 
-  const verdict = await moderateContent(loaded.signals.text, { refId: p.templateId })
+  const verdict = await moderateContent(classifierText(loaded), { refId: p.templateId })
   if (!verdict) {
     if (attempt.attempts >= attempt.maxAttempts) {
       if (!gate) return

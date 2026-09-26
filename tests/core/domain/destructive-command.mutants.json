@@ -1,6 +1,8 @@
 {
   "target": "src/core/domain/destructive-command.ts",
-  "tests": ["tests/core/domain/destructive-command.test.ts"],
+  "tests": [
+    "tests/core/domain/destructive-command.test.ts"
+  ],
   "mutants": [
     {
       "name": "H1 обёртки не пропускаются",
@@ -101,6 +103,26 @@
       "name": "N4 дедуп массивом вместо множества",
       "from": "    if (t && !seen.has(t)) {\n      seen.add(t)\n      parts.push(t)\n    }",
       "to": "    if (t && !parts.includes(t)) parts.push(t)"
+    },
+    {
+      "name": "PY1 скрипт не на шелле судится целиком — ложный отказ на print",
+      "from": "  if (isShellScript(path, text)) return findDestructive(text)",
+      "to": "  if (true) return findDestructive(text)"
+    },
+    {
+      "name": "PY2 команды из вызовов исполнения не вынимаются",
+      "from": "      out.push(unquote(lit[1]))\n      continue",
+      "to": "      continue"
+    },
+    {
+      "name": "PY3 список аргументов subprocess не собирается",
+      "from": "      if (parts.length) out.push(parts.join(' '))",
+      "to": "      void parts"
+    },
+    {
+      "name": "PY4 удаление корня средствами языка не видно",
+      "from": "  return root ? { reason: 'wipesFilesystem', fragment: root[0] } : null",
+      "to": "  return null"
     }
   ]
 }

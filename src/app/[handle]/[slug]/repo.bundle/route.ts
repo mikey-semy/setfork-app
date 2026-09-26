@@ -1,4 +1,5 @@
 import { requireViewableMeta } from '@/features/library/guard'
+import { problem, problemListNotFound } from '@/shared/http/problem'
 import { gitCore } from '@/features/git/core'
 
 // GET /{handle}/{slug}/repo.bundle — git-бандл всей истории версий.
@@ -9,10 +10,10 @@ export const dynamic = 'force-dynamic'
 export async function GET(_req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
   const meta = await requireViewableMeta(handle, slug)
-  if (!meta) return new Response('Not found', { status: 404 })
+  if (!meta) return problemListNotFound()
 
   const buf = await gitCore.bundle({ owner: handle, slug })
-  if (!buf) return new Response('Could not build bundle', { status: 500 })
+  if (!buf) return problem(500, 'bundle_failed', { detail: 'Could not build the bundle. Try again later.' })
   return new Response(new Uint8Array(buf), {
     headers: {
       'Content-Type': 'application/octet-stream',

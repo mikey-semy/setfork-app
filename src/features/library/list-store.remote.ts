@@ -2,6 +2,7 @@ import 'server-only'
 import { Code, ConnectError, createClient } from '@connectrpc/connect'
 import { coreTransport } from '@/shared/core-transport'
 import { assertNoDestructiveContent } from '@/core/domain/destructive-command'
+import { assertNoSecrets } from '@/core/domain/secret-scan'
 import { AuthoredFilesError, ListWriteError } from '@/core'
 import type { AuthoredFile, Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
 import { coreCapabilities } from '@/shared/core-capabilities'
@@ -255,6 +256,7 @@ const toPbStep = (s: NewVersionInput['steps'][number]) => ({
 export const listWriteRemote = {
   async addVersion(listId: string, input: NewVersionInput): Promise<Version> {
     assertNoDestructiveContent(input.steps, input.authored)
+    assertNoSecrets(input.steps, input.authored, input.meta)
     if (input.authored !== undefined) await assertCoreAcceptsAuthored()
     const res = await callAddVersion({
       listId,
@@ -280,6 +282,7 @@ export const listWriteRemote = {
   },
   async create(input: CreateListInput): Promise<List> {
     assertNoDestructiveContent(input.steps, input.authored)
+    assertNoSecrets(input.steps, input.authored, { title: input.title, desc: input.desc, tags: input.tags, skillHeader: input.skillHeader })
     if (input.authored !== undefined) await assertCoreAcceptsAuthored()
     const res = await callCreate({
       ownerId: input.ownerId,
@@ -298,6 +301,7 @@ export const listWriteRemote = {
       // рождается pending, а не становится им догоняющим апдейтом (окно между
       // insert в ядре и update в БД — это время, когда он публичен). '' = active.
       moderation: input.moderation ?? '',
+      skillHeaderJson: input.skillHeader ? JSON.stringify(input.skillHeader) : '',
       authored: toPbAuthored(input.authored),
     })
     return input.authored === undefined ? toList(res) : { ...toList(res), authoredApplied: res.authoredApplied }

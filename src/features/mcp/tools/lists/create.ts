@@ -6,6 +6,8 @@
 // украшение, а условие её существования (см. комментарий у mcpBulkCreate).
 
 import 'server-only'
+import { isContentLang } from '@/shared/i18n/iso639'
+import { classifyListLang } from '@/shared/i18n/detect-text-lang'
 import { eq } from 'drizzle-orm'
 import { db, repositories, templates, users } from '@/shared/db'
 import { listQuota } from '@/shared/quota'
@@ -21,6 +23,8 @@ import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { toProposed, type McpItemInput } from '../shared'
 import type { AuthoredFile } from '@/core'
+import type { SkillHeader } from '@/core/domain/skill-header'
+import { contentError } from './write'
 
 export interface McpCreateInput {
   title: string
@@ -34,6 +38,11 @@ export interface McpCreateInput {
   catalog?: string
   /** Файлы автора в первую версию (ADR-0028) — тем же коммитом, что и блоки. */
   authored?: AuthoredFile[]
+  /** Шапка исходного SKILL.md — в первую версию, как и файлы. */
+  skillHeader?: SkillHeader | null
+  /** Видимость черновика; не задана — публичный (решает публикация). Импорт чужого скилла
+   *  без открытой лицензии задаёт 'private' — такой список публичным не станет. */
+  visibility?: 'public' | 'private'
 }
 
 /** Теги с MCP — в той же форме, что с сайта: нижний регистр, без пунктуации, не больше 8.
@@ -55,22 +64,41 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   const tags = normalizeTags(input.tags ?? [])
   // Локаль заголовка/описания: явный lang из запроса или детект по тексту —
   // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
-  const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
+  const lang = isContentLang(input.lang) ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
+  // Язык ОРИГИНАЛА: явный аргумент — факт; без него догадка по тексту идёт ПОСЛЕДНИМ запасным
+  // вариантом и только осторожная — смесь или кириллица не из русского
+  // алфавита дают пусто, а не `ru` навсегда (ADR-0030; ключ текста выше — по-прежнему детект).
+  const guessed = classifyListLang(
+    [title, input.desc ?? '', ...(input.items ?? []).flatMap((it) => [it.title ?? '', it.desc ?? ''])],
+    false,
+  )
 
-  const list = await listStore.create({
-    ownerId: userId,
-    slug,
-    title: { [lang]: title },
-    desc: cleanText(input.desc) ? { [lang]: cleanText(input.desc) } : {},
-    tags,
-    ordered: input.ordered ?? true,
-    visibility: 'public',
-    status: 'draft',
-    origin: 'authored',
-    note: 'created via API',
-    steps: stepInput(proposed),
-    authored: input.authored,
-  })
+  // Отказ стража содержимого — ответ с местом, а не исключение: иначе агент видел код
+  // `destructive_command:rm_rf` без шага, а пачка (`bulk_create_lists`) падала целиком.
+  let list
+  try {
+    list = await listStore.create({
+      ownerId: userId,
+      lang: isContentLang(input.lang) ? input.lang : null,
+      langFallback: guessed === 'ru' || guessed === 'en' ? guessed : null,
+      slug,
+      title: { [lang]: title },
+      desc: cleanText(input.desc) ? { [lang]: cleanText(input.desc) } : {},
+      tags,
+      ordered: input.ordered ?? true,
+      visibility: input.visibility ?? 'public',
+      status: 'draft',
+      origin: 'authored',
+      note: 'created via API',
+      steps: stepInput(proposed),
+      authored: input.authored,
+      skillHeader: input.skillHeader,
+    })
+  } catch (e) {
+    const refused = contentError(e)
+    if (refused) return refused
+    throw e
+  }
 
   // Полка — тем же правилом, что и в форме сайта (features/catalogs/assign): своя,
   // под замком, и молчаливо ничего не выдумывает. Отчёт называет исход: имя, которого

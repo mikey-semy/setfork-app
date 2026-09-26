@@ -172,12 +172,15 @@ description('publish_skill', () => {
     expect(res).toEqual({ error: expect.stringContaining(words) })
   })
 
-  it('SKILL.md целиком: шаги и текст из тела, название и описание из шапки, непринятое названо', async () => {
+  it('SKILL.md целиком: шаги и текст из тела, название и описание из шапки, шапка хранится, непринятое названо', async () => {
     const md = [
       '---',
       'name: pdf-tools',
       'description: Fill and merge PDFs. Use when the user asks to work with a PDF.',
       'license: MIT',
+      'metadata:',
+      '  author: Ann',
+      'x-custom: nope',
       '---',
       '# PDF tools',
       '',
@@ -190,13 +193,27 @@ description('publish_skill', () => {
       '   ```',
     ].join('\n')
     const res = await mcpPublishSkill(ownerId, { skillMd: md })
-    expect(res).toMatchObject({ ref: `${HANDLE}/pdf-tools`, parseNotes: [expect.stringContaining('license')] })
+    expect(res).toMatchObject({ ref: `${HANDLE}/pdf-tools`, parseNotes: [expect.stringContaining('x-custom')] })
+    expect(JSON.stringify((res as { parseNotes: string[] }).parseNotes)).not.toContain('license')
+    const [stored] = await db.select({ h: templates.skillHeader }).from(templates).where(eq(templates.slug, 'pdf-tools'))
+    expect(stored.h).toEqual({ license: 'MIT', metadata: { author: 'Ann' } })
     const read = (await mcpGetList(ownerId, HANDLE, 'pdf-tools')) as { title: string; desc: string; steps: { type?: string; title?: string; command?: string; text?: string }[] }
     expect(read.title).toBe('PDF tools')
     expect(read.desc).toBe('Fill and merge PDFs. Use when the user asks to work with a PDF.')
     expect(read.steps.map((b) => b.title ?? b.text)).toEqual(['Works through pypdf.', 'Install'])
     expect(read.steps[1]).toMatchObject({ command: 'pip install pypdf' })
     expect(await mcpPublishSkill(ownerId, { skillMd: md, items: [{ title: 'x' }] })).toEqual({ error: expect.stringContaining('either skillMd or items') })
+  })
+
+  // Отказ ВНУТРИ записи версии (страж фасада), то есть уже после того, как шапка легла:
+  // ранние отказы (устаревшая база, черновик) до шапки не доходят и откат не проверяют.
+  it('новый SKILL.md, но версию не приняли — шапка осталась прежней', async () => {
+    const before = (await row('pdf-tools'))!
+    const md2 = ['---', 'name: pdf-tools', 'description: d', 'license: GPL-3.0', '---', '# PDF tools', '', '1. **Wipe** it', '', '   ```bash', '   rm -rf /', '   ```'].join('\n')
+    const res = await mcpPublishSkill(ownerId, { list: `${HANDLE}/pdf-tools`, baseVersion: before.version, skillMd: md2 })
+    expect(res).toHaveProperty('error')
+    const [stored] = await db.select({ h: templates.skillHeader }).from(templates).where(eq(templates.slug, 'pdf-tools'))
+    expect(stored.h).toEqual({ license: 'MIT', metadata: { author: 'Ann' } })
   })
 
   it('файл дважды — отказ', async () => {
@@ -212,5 +229,19 @@ description('publish_skill', () => {
     })
     expect(res).toEqual({ error: expect.stringContaining('scripts/clean.sh has a destructive command') })
     expect(await row('dangerous-skill')).toBeUndefined()
+  })
+
+  it('ключ доступа в references/ — отказ с файлом и строкой, ключ целиком не повторяется, списка нет', async () => {
+    // Собран из кусков: литерал остановил бы наш собственный push (push protection).
+    const tail = Array.from({ length: 64 }, (_, i) => '0123456789abcdef'[(i * 7 + 3) % 16]).join('')
+    const key = ['sk', 'or', 'v1', tail].join('-')
+    const res = await mcpPublishSkill(ownerId, {
+      title: 'Leaky skill',
+      items: [{ title: 'Configure' }],
+      files: [{ path: 'references/setup.md', content: `# Setup\n\nOPENROUTER_API_KEY=${key}\n` }],
+    })
+    expect(res).toEqual({ error: expect.stringContaining('references/setup.md, line 3 contains what looks like an access key for OpenRouter') })
+    expect(JSON.stringify(res)).not.toContain(tail)
+    expect(await row('leaky-skill')).toBeUndefined()
   })
 })

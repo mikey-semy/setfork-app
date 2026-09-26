@@ -15,6 +15,7 @@ const h = vi.hoisted(() => ({
   tpl: null as null | Record<string, unknown>,
   rateOk: true,
   collaborator: false,
+  created: 0,
 }))
 
 vi.mock('next/navigation', () => ({
@@ -37,6 +38,16 @@ vi.mock('@/shared/db', () => ({
   // теперь читают задачи. Мок обязан отдавать всё, что импортирует граф, — иначе падает
   // не проверка, а загрузка модуля.
   issues: {},
+}))
+
+// Хранилище предложений — ядро, внешний край: считаем, дошла ли запись до него.
+vi.mock('@/features/collab-store/store', () => ({
+  collabStore: {
+    createSuggestion: async () => {
+      h.created++
+      throw new Error('запись дошла до ядра')
+    },
+  },
 }))
 
 const { submitSuggestion } = await import('@/features/library/actions/suggestion-submit')
@@ -94,5 +105,15 @@ describe('отказ на отправке правки', () => {
     const hidden = await submitSuggestion('t1', null, form())
     expect(missing).toBe(hidden)
     expect(missing).toBe('unavailable')
+  })
+
+  it('ключ доступа в правке — отказ значением, и до ядра запись не доходит', async () => {
+    h.tpl = list()
+    const fd = form()
+    const tail = Array.from({ length: 64 }, (_, i) => '0123456789abcdef'[(i * 7 + 3) % 16]).join('')
+    fd.set('note', `Мой ключ ${['sk', 'or', 'v1', tail].join('-')}`)
+    h.created = 0
+    expect(await submitSuggestion('t1', null, fd)).toBe('secret')
+    expect(h.created).toBe(0)
   })
 })

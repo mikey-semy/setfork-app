@@ -29,6 +29,20 @@ export async function gitPort() {
   return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError }
 }
 
+/**
+ * Файлы автора версии — для КОПИИ содержимого: откат к версии, форк, список из шаблона.
+ *
+ * Без них копия несла бы только блоки: откат к v3 оставлял бы файлы v7 (запись переносит
+ * набор из РОДИТЕЛЯ, то есть из текущей версии), а форк скилла приезжал без `scripts/`.
+ * `undefined` — ядро о файлах не знает (версии нет в дереве или ядро старое): пишущий
+ * ведёт себя как раньше. Сбой чтения — исключение, а НЕ «файлов нет»: пустой набор при
+ * откате стёр бы файлы молча.
+ */
+export async function authoredFilesOf(owner: string, slug: string, version: number) {
+  const { gitCore } = await gitPort()
+  return (await gitCore.authoredFiles({ owner, slug }, version)) ?? undefined
+}
+
 /** Ник владельца: из него собираются пути страниц и адреса git-репозиториев. */
 export async function ownerHandle(userId: string): Promise<string> {
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))

@@ -29,7 +29,7 @@ export function PickerPanel({
   onClose?: () => void
   /** Поле поиска в шапке. Не передан — поиска нет (например, когда выбирать не из чего).
    *  autoFocus — для панелей, открывающихся ради поиска (люди по handle). */
-  search?: { value: string; onChange: (v: string) => void; placeholder: string; clearLabel: string; autoFocus?: boolean }
+  search?: { value: string; onChange: (v: string) => void; placeholder: string; clearLabel: string; autoFocus?: boolean; onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void }
   children: ReactNode
   /** Нижняя секция за разделителем — создание новой ветки/папки. */
   footer?: ReactNode
@@ -50,6 +50,7 @@ export function PickerPanel({
             placeholder={search.placeholder}
             clearLabel={search.clearLabel}
             autoFocus={search.autoFocus}
+            onKeyDown={search.onKeyDown}
             size="sm"
           />
         </div>

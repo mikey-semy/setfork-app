@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 // @ts-expect-error -- у встроенной копии Next нет файла типов; берём её сознательно
 import { pathToRegexp } from 'next/dist/compiled/path-to-regexp'
 import config from '../../next.config.mjs'
+import { LOCALES } from '@/shared/i18n'
 
 /**
  * ЗАГОЛОВКИ БЕЗОПАСНОСТИ И ВСТРАИВАЕМАЯ СТРАНИЦА.
@@ -58,5 +59,30 @@ describe('заголовки безопасности', () => {
       expect(applied, `${path}: HSTS`).toContain('Strict-Transport-Security')
       expect(applied, `${path}: Permissions-Policy`).toContain('Permissions-Policy')
     }
+  })
+})
+
+/**
+ * COOP — ВЕЗДЕ, КРОМЕ ПУТИ ВХОДА. OAuth-клиент (claude.ai) вправе открыть авторизацию
+ * всплывающим окном и ждать ответа через `opener`; страница с COOP на пути окна рвёт
+ * эту связь навсегда. Путь входа — авторизация, страница входа (с подстраницами) и
+ * колбэки провайдеров, с языковым префиксом и без.
+ */
+describe('Cross-Origin-Opener-Policy', () => {
+  const coopOn = async (path: string) =>
+    (await rules()).filter((r) => hits(r.source, path)).some((r) => r.headers.some((h) => h.key === 'Cross-Origin-Opener-Policy' && h.value === 'same-origin'))
+  const LOGIN_FLOW = ['/oauth/authorize', '/oauth/token', '/login', '/login/telegram', '/api/auth/callback/github', '/api/auth/signin']
+
+  it.each(LOGIN_FLOW)('%s — без COOP', async (path) => {
+    expect(await coopOn(path)).toBe(false)
+  })
+
+  it('⚠️ языковой префикс не возвращает COOP на путь входа — по каждому языку словаря', async () => {
+    for (const lang of LOCALES) for (const path of LOGIN_FLOW) expect(await coopOn(`/${lang}${path}`), `/${lang}${path}`).toBe(false)
+  })
+
+  // Ник и слаг пишет человек: «oauth» и «login» в них законны, защита не теряется.
+  it.each([USUAL, EMBED, '/', '/explore', '/ru/explore', '/oauthfan/list', '/login-club', '/miki/login', '/ru/loginer/x'])('%s — с COOP', async (path) => {
+    expect(await coopOn(path)).toBe(true)
   })
 })

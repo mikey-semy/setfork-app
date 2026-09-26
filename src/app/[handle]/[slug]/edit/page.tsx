@@ -10,6 +10,10 @@ import { discardDraft, publishEdits, saveDraft } from '@/features/library/action
 import { draftRefField } from '@/features/library/save-outcome'
 import { BackLink } from '@/shared/ui/BackLink'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
+import { SkillFilesEditor } from '@/features/library/list-editor/SkillFilesEditor'
+import { FilesPublishNotice } from '@/features/library/FilesPublishNotice'
+import { gitCore } from '@/features/git/core'
+import type { AuthoredText } from '@/core/domain/authored-path'
 import { GatedToggle, ListTypeToggle } from '@/features/library/ListFormToggles'
 import { ListSettingsSheet } from '@/features/library/ListSettingsSheet'
 import { TagInput } from '@/shared/ui/TagInput'
@@ -20,9 +24,29 @@ import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { Alert } from '@/shared/ui/Alert'
+import { ContentRefusalAlert } from '@/shared/ui/ContentRefusalAlert'
+import { contentRefusalFrom } from '@/core/domain/content-refusal'
+import { secretWhere } from '@/shared/ui/secret-where'
+import { secretProvider } from '@/core/domain/secret-scan'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { FloatingActions } from '@/shared/ui/FloatingActions'
 import { timeAgo } from '@/shared/ui/timeAgo'
+
+/**
+ * Файлы автора текущей версии ТЕКСТОМ — для правки. `null` — прочитать не вышло: ядро не
+ * ответило или файл не декодируется как UTF-8. Такой файл нельзя показать и отправить
+ * обратно без порчи байтов, поэтому правка файлов тогда закрыта целиком, а не частично.
+ */
+async function editableFiles(owner: string, slug: string, version: number): Promise<AuthoredText[] | null> {
+  try {
+    // `null` от ядра — оно о файлах версии не знает: файлов у неё нет.
+    const files = (await gitCore.authoredFiles({ owner, slug }, version)) ?? []
+    const utf8 = new TextDecoder('utf-8', { fatal: true })
+    return files.map((f) => ({ path: f.path, text: utf8.decode(f.content), executable: f.executable }))
+  } catch {
+    return null
+  }
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -34,9 +58,10 @@ export default async function EditPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ blocked?: string; step?: string; saved?: string; e?: string; over?: string; warn?: string; held?: string }>
+  searchParams: Promise<{ blocked?: string; secret?: string; kind?: string; step?: string; file?: string; fd?: string; saved?: string; e?: string; over?: string; warn?: string; held?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
+  const refusal = contentRefusalFrom(sp)
   if (!session) redirect('/login')
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
@@ -64,6 +89,8 @@ export default async function EditPage({
   const draftGated = draft?.meta.gated ?? tpl.gated
   // Черновик, снятый со СТАРОЙ версии: список ушёл вперёд, пока правки лежали.
   const stale = !!draft && draft.baseVersion !== tpl.currentVersion
+  // Файлы: правка из черновика главнее опубликованного набора — как и у блоков.
+  const files = draft?.authored ?? (await editableFiles(owner, slug, tpl.currentVersion))
   const action = saveDraft.bind(null, tpl.id)
 
   return (
@@ -72,18 +99,9 @@ export default async function EditPage({
       {/* На длинном списке верхняя ссылка уезжает — плавающий дубль слева-внизу (фидбек владельца). */}
       <FloatingBack href={`/${owner}/${slug}`} label={tr(tpl.title, lang) || `${tpl.owner.handle}/${tpl.slug}`} />
 
-      {/* Отказ стража исполняемых команд: причина названа словами и привязана к
-          номеру шага — иначе кнопка «Сохранить» выглядит как сломанная. */}
-      {sp.blocked && (
-        <Alert variant="danger" className="mb-4">
-          <span className="block font-semibold">{t('destructiveBlockedTitle', lang)}</span>
-          <span className="block">
-            {t('destructiveBlockedBody', lang)
-              .replace('{n}', sp.step ?? '?')
-              .replace('{reason}', t(`destructive.${sp.blocked}` as Parameters<typeof t>[0], lang))}
-          </span>
-        </Alert>
-      )}
+      {/* Отказ стража содержимого (команда или ключ доступа): причина названа словами и
+          привязана к шагу — иначе кнопка «Сохранить» выглядит как сломанная. */}
+      {refusal && <ContentRefusalAlert refusal={refusal} lang={lang} className="mb-4" />}
 
       <form action={action}>
         {/* Редакция черновика, от которой правит автор. Запись сверит её с текущей и
@@ -128,12 +146,24 @@ export default async function EditPage({
             {sp.held ? <span className="block font-semibold">{t('publishHeldRepeat', lang)}</span> : null}
           </Alert>
         )}
+        {/* Ключ доступа: черновик видит только автор, но публикация откажет — сказать сейчас. */}
+        {sp.saved && sp.warn === 'secret' && (
+          <Alert variant="warn" className="mb-4">
+            <span className="block">
+              {t('draftSecretWarn', lang)
+                .replace('{where}', secretWhere(sp.step ?? '0', lang, sp.file))
+                .replace('{provider}', secretProvider(sp.kind ?? '') ?? sp.kind ?? '')}
+            </span>
+          </Alert>
+        )}
         {/* Запрещённая команда: сказать СРАЗУ и тому, кто её написал. Отказ приходил
             при публикации — позже и, как правило, другому человеку. */}
         {sp.saved && sp.warn === 'destructive' && (
           <Alert variant="warn" className="mb-4">
             <span className="block">
-              {t('draftDestructiveWarn', lang).replace('{step}', String(sp.step ?? ''))}
+              {sp.file
+                ? t('draftDestructiveFileWarn', lang).replace('{path}', sp.file)
+                : t('draftDestructiveWarn', lang).replace('{step}', String(sp.step ?? ''))}
             </span>
           </Alert>
         )}
@@ -159,6 +189,7 @@ export default async function EditPage({
             <span className="block">{t('draftNothing', lang)}</span>
           </Alert>
         )}
+        <FilesPublishNotice e={sp.e} detail={sp.fd} lang={lang} />
         {sp.e === 'empty' && (
           <Alert variant="warn" className="mb-4">
             <span className="block">{t('draftEmpty', lang)}</span>
@@ -221,6 +252,13 @@ export default async function EditPage({
           // На странице создания списка его нет, и режим «код» там не предлагается.
           canonOf={tpl.id}
         />
+
+        {/* Файлы скилла — в той же форме: уходят в ту же версию, что и шаги. `key` — ревизия
+            черновика: сменился черновик (сохранили, дописал агент) — раздел берёт его набор
+            заново, а не держит копию, снятую при первом показе. Раздел — у
+            скилла или у списка, где файлы уже есть: рецепту он только мешал бы. Первый
+            файл обычному списку добавляют, пометив его скиллом в настройках. */}
+        {tpl.isSkill || (files?.length ?? 0) > 0 ? <SkillFilesEditor key={draftRefField(tpl.currentVersion, draft)} initial={files} dirty={!!draft?.authored} lang={lang} /> : null}
 
         {/* ОБЕ кнопки в одной форме: публикация обязана взять то, что человек видит
             сейчас, а не прошлое сохранение (иначе дописанное пропадает молча).

@@ -17,6 +17,8 @@ import { TagsAndCatalogFields } from '@/features/library/TagsAndCatalogFields'
 import { getCatalogTagProfiles } from '@/features/catalogs/queries'
 import { PAGE_NARROW } from '@/shared/ui/control'
 import { Asterisk } from 'lucide-react'
+import { SkillImportForm } from '@/features/library/SkillImportForm'
+import { importSkillAction } from './actions'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -42,6 +44,10 @@ export default async function NewListPage() {
     blockedReasons: Object.fromEntries(
       DESTRUCTIVE_REASONS.map((r) => [r, t(`destructive.${r}` as Parameters<typeof t>[0], lang)]),
     ),
+    secretTitle: t('secretBlockedTitle', lang),
+    secretBody: t('secretBlockedBody', lang),
+    secretWhereStep: t('secretWhereStep', lang),
+    secretWhereMeta: t('secretWhereMeta', lang),
     quotaReached: t('listQuotaReached', lang),
     noTitle: t('listTitleRequired', lang),
   }
@@ -49,6 +55,18 @@ export default async function NewListPage() {
   return (
     <div className={PAGE_NARROW}>
       <FloatingBack href={'/my-lists'} label={t('myLists', lang)} />
+      {/* Второй путь к черновику — чужой скилл с GitHub (решение владельца 25.09.2026:
+          видимость следует лицензии). Свёрнут: основное здесь — редактор. */}
+      <SkillImportForm
+        importAction={importSkillAction}
+        texts={{
+          title: t('importSkillTitle', lang),
+          hint: t('importSkillHint', lang),
+          button: t('importSkillButton', lang),
+          placeholder: t('importSkillPlaceholder', lang),
+          required: t('importSkillPlaceholder', lang),
+        }}
+      />
       <NewListForm texts={texts} lang={lang}>
         {/* Название страницы уже стоит в шапке приложения. */}
         <PageHeader hideTitle title={t('newList', lang)} />

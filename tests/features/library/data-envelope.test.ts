@@ -72,5 +72,30 @@ describe('dataEtag: кеш меняется ровно при изменении
     expect(dataEtag(7, new Date(AT.getTime() + 1000), 'ru')).not.toBe(base)
     // Один и тот же список на двух языках — разные тела, значит и метки разные.
     expect(dataEtag(7, AT, 'en')).not.toBe(base)
+    // Форма ответа сменилась при том же списке (fe#968) — клиент с кешем обязан получить новое тело.
+    expect(base).not.toBe(`W/"v7-${AT.getTime()}-ru"`)
   })
 })
+
+/**
+ * `lang` — ЯЗЫК ОТДАННОГО ТЕКСТА, а не запрошенный (fe#968). На проде русский список отвечал
+ * `"lang": "en"` на английский запрос: перевода нет, отдан оригинал, а метка — от просьбы.
+ * Чужой код и агенты не видят текст глазами и верят полю.
+ */
+describe('toDataEnvelope: язык', () => {
+  const RU_ONLY: ExportList = { ...LIST, title: { ru: 'Ноль, который списывал всё' }, desc: { ru: 'Оригинал' } }
+
+  it('перевода нет — lang оригинала, requestedLang — что просили', () => {
+    const env = toDataEnvelope(RU_ONLY, 'en', 'https://x', AT)
+    expect(env.title).toBe('Ноль, который списывал всё')
+    expect(env.lang).toBe('ru')
+    expect(env.requestedLang).toBe('en')
+  })
+
+  it('перевод есть — lang совпадает с запрошенным', () => {
+    const env = toDataEnvelope(LIST, 'en', 'https://x', AT)
+    expect(env.lang).toBe('en')
+    expect(env.requestedLang).toBe('en')
+  })
+})
+

@@ -339,6 +339,8 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       ownerHandle: users.handle,
       ownerName: users.name,
       ownerAvatarUrl: users.avatarUrl,
+      /** Язык оригинала (ADR-0030) — настройкам списка и шапке. */
+      lang: templates.lang,
       // Нужно правилу видимости: черновик служебного аккаунта админ обязан открыть,
       // черновик человека — нет. Поле едет вместе с метой, а не спрашивается отдельно:
       // иначе каждый вызывающий обязан вспомнить про этот шаг, и один из них забудет.
@@ -372,6 +374,10 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       pinned: templates.pinned,
       isTemplate: templates.isTemplate,
       isSkill: templates.isSkill,
+      // Импорт чужого скилла: источник, лицензия и можно ли быть публичным (шапка и настройки).
+      sourceUrl: templates.sourceUrl,
+      sourceLicense: templates.sourceLicense,
+      sourceLicenseOpen: templates.sourceLicenseOpen,
       living: templates.living, // лента: свежесть вместо полноты, рост вместо полировки
       repositoryId: templates.repositoryId,
       visibility: templates.visibility,

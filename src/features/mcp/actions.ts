@@ -1,6 +1,7 @@
 'use server'
 
 import { and, eq } from 'drizzle-orm'
+import { revokeGrantOfAccessToken } from '@/shared/auth/oauth-server'
 import { revalidatePath } from 'next/cache'
 import { apiTokens, db } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
@@ -24,6 +25,10 @@ export async function createApiToken(name: string, scope: 'read' | 'write' = 'wr
 
 export async function revokeApiToken(id: string): Promise<void> {
   const session = await requireSession()
+  // OAuth-токен: сначала его грант, пока строка токена ещё есть (удаление обнулит ссылку).
+  // Иначе удалённый здесь токен вернулся бы на первом обновлении — refresh выпустил бы новый.
+  const [own] = await db.select({ id: apiTokens.id }).from(apiTokens).where(and(eq(apiTokens.id, id), eq(apiTokens.userId, session.userId))).limit(1)
+  if (own) await revokeGrantOfAccessToken(own.id)
   await db.delete(apiTokens).where(and(eq(apiTokens.id, id), eq(apiTokens.userId, session.userId)))
   await recordAudit('token.revoke', { actorId: session.userId, targetType: 'token', targetId: id })
   revalidatePath('/settings')
