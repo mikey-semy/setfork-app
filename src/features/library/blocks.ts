@@ -2,6 +2,7 @@
 // используется и на сервере, и в редакторе. См. дизайн-док по блочному редактору.
 
 import { type Lang, type LocaleText, trLoose } from '@/shared/i18n'
+import { UPLOAD_KINDS } from '@/shared/media/limits'
 
 // Терпимое чтение поля, которое может быть строкой (одноязычный блок) или
 // LocaleText. Живёт в shared/i18n — его читают и другие фичи, а features друг
@@ -87,8 +88,9 @@ export interface VideoBlockContent {
   url: string
   caption?: string
 }
-// File-блок: вложение (PDF/архив/…) — ссылка + имя файла. Загрузка через
-// uploadAttachmentFile (диск, 25МБ, белый список расширений). Отдаётся ссылкой на скачивание.
+// File-блок: вложение (PDF/архив/…) — ссылка + имя файла. Загрузка напрямую в S3
+// (shared/media/upload-client, белый список UPLOAD_KINDS.file); ссылка `/media/…`
+// отдаёт файл скачиванием. Старые `/uploads/files/…` в данных отдаются как есть.
 export interface FileBlockContent {
   bid?: string
   url: string
@@ -103,16 +105,21 @@ export type { ProductBlockContent, ProductItem, ProductTier } from '@/core'
 // Quiz-домен (QuizBlockContent, стрип ответов, оценка) переехал в @/core —
 // чистые функции нужны и рендеру, и server-оценке (quizzes), и MCP.
 
+/** Расширения прямого видеофайла — из той же таблицы, по которой принимается свой клип:
+ *  загруженный `.ogv` иначе показывался бы ссылкой вместо плеера. */
+const VIDEO_FILE_RE = new RegExp(`\\.(${Object.keys(UPLOAD_KINDS.video.ext).join('|')})(\\?.*)?$`, 'i')
+
 /** Разбор video-URL в БЕЗОПАСНУЮ встройку: iframe только для известных
  *  провайдеров (YouTube/Vimeo — не встраиваем произвольный src, это XSS-риск);
- *  прямой файл (.mp4/.webm/.ogg) → <video>; иначе — просто ссылка. */
+ *  прямой файл (.mp4/.webm/.ogv/.ogg — свой клип `/media/videos/…` или чужой по
+ *  ссылке) → <video>; иначе — просто ссылка. */
 export function parseVideoEmbed(url: string): { kind: 'youtube' | 'vimeo' | 'file' | 'link'; src: string } {
   const u = (url ?? '').trim()
   const yt = u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/)
   if (yt) return { kind: 'youtube', src: `https://www.youtube.com/embed/${yt[1]}` }
   const vm = u.match(/vimeo\.com\/(?:video\/)?(\d+)/)
   if (vm) return { kind: 'vimeo', src: `https://player.vimeo.com/video/${vm[1]}` }
-  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(u)) return { kind: 'file', src: u }
+  if (VIDEO_FILE_RE.test(u)) return { kind: 'file', src: u }
   return { kind: 'link', src: u }
 }
 

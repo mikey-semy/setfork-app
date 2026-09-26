@@ -10,7 +10,7 @@ import { IssueRefList } from './IssueRefList'
 import { useEditorHistory } from './use-editor-history'
 import { useIssueRef } from './use-issue-ref'
 import { useUploads } from './use-uploads'
-import { IMAGE_ACCEPT } from '@/shared/media/limits'
+import { IMAGE_ACCEPT, uploadAccept } from '@/shared/media/limits'
 
 type Props = {
   name: string
@@ -139,7 +139,7 @@ export function MarkdownEditor({
       <EditorToolbar lang={lang} tab={tab} onTab={setTab} ops={ops} onPickImage={() => imgInput.current?.click()} onPickFile={() => fileInput.current?.click()} />
 
       <input ref={imgInput} type="file" accept={IMAGE_ACCEPT} multiple className="hidden" onChange={(e) => { uploads.fromEvent(e.target.files, e); e.target.value = '' }} />
-      <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => { uploads.fromEvent(e.target.files, e); e.target.value = '' }} />
+      <input ref={fileInput} type="file" accept={uploadAccept('file')} multiple className="hidden" onChange={(e) => { uploads.fromEvent(e.target.files, e); e.target.value = '' }} />
 
       <div className={`relative ${tab === 'preview' ? 'hidden' : ''}`}>
         <textarea

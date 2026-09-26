@@ -1,10 +1,13 @@
 import { getSession } from '@/shared/auth/session'
-import { imageUrl, uploadAttachmentFile, uploadImageFile } from '@/shared/media'
-import { rateLimit, tooMany } from '@/shared/rate-limit'
+import { imageUrl, uploadImageFile } from '@/shared/media'
+import { uploadRateLimit } from '@/shared/media/direct-upload'
+import { tooMany } from '@/shared/rate-limit'
 import { crossOriginBlock } from '@/shared/csrf'
 
-// Загрузка из markdown-редактора (issues/комментарии). Только для залогиненных.
-// Картинка → { url, kind:'image' } (S3→imgproxy / диск); иначе вложение → { url, kind:'file', name }.
+// Загрузка КАРТИНКИ из markdown-редактора (issues/комментарии). Только для залогиненных.
+// Картинка → { url, kind:'image' } (S3→imgproxy / диск). Вложения сюда больше не идут:
+// они грузятся напрямую в S3 (/api/uploads, shared/media/direct-upload) — через
+// приложение 25 МБ не проходят, а диск контейнера не переживает выкатку.
 export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
@@ -12,21 +15,19 @@ export async function POST(req: Request) {
   if (blocked) return blocked
   const session = await getSession()
   if (!session) return Response.json({ error: 'unauthorized' }, { status: 401 })
-  const rl = await rateLimit(`upload:${session.userId}`, 40, 5 * 60_000) // 40 загрузок / 5 мин
+  const rl = await uploadRateLimit(session.userId)
   if (!rl.ok) return tooMany(rl)
 
   const form = await req.formData().catch(() => null)
   const file = form?.get('file')
   if (!(file instanceof File)) return Response.json({ error: 'no file' }, { status: 400 })
+  // Не картинка — код, а не текст: клиент переводит его сам (upload.error.bad_type).
+  if (!file.type.startsWith('image/')) return Response.json({ error: 'bad_type' }, { status: 415 })
 
   try {
-    if (file.type.startsWith('image/')) {
-      const ref = await uploadImageFile('issues', file)
-      const url = (await imageUrl(ref, 'rs:fit:1600:1600')) ?? ref
-      return Response.json({ url, kind: 'image', name: file.name })
-    }
-    const { url, name } = await uploadAttachmentFile(file)
-    return Response.json({ url, kind: 'file', name })
+    const ref = await uploadImageFile('issues', file)
+    const url = (await imageUrl(ref, 'rs:fit:1600:1600')) ?? ref
+    return Response.json({ url, kind: 'image', name: file.name })
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 400 })
   }

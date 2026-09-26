@@ -70,7 +70,7 @@ export async function register() {
   // РАЗОВЫЕ джобы перечислены здесь руками — их ставит пользовательское действие.
   // ПЕТЛИ берутся из реестра shared/agents/loops: раньше их приходилось вписывать дважды
   // (обработчик + самозапуск), и `feedpull` уехал в прод с обработчиком, но без запуска.
-  const [{ startWorker }, { LOOPS }, { LOOP_WIRING }, notifications, generation, library, moderation, gnomeReview, gnomeTask, mirror, gitPush] =
+  const [{ startWorker }, { LOOPS }, { LOOP_WIRING }, notifications, generation, library, moderation, gnomeReview, gnomeTask, mirror, gitPush, uploadsSweep] =
     await Promise.all([
       import('@/shared/jobs/worker'),
       import('@/shared/agents/loops'),
@@ -83,6 +83,7 @@ export async function register() {
       import('@/features/library/gnome-task-jobs'),
       import('@/features/library/mirror-jobs'),
       import('@/features/git/push-effects'),
+      import('@/shared/media/sweep-job'),
     ])
   // РАБОТА КОМПАНИИ ПОМЕЧАЕТСЯ ЗДЕСЬ — в одной точке, а не в каждом вызове модели.
   // Всё, что петля позовёт внутри, попадёт в журнал расхода как вызов компании, а не
@@ -118,6 +119,7 @@ export async function register() {
       gnome_task: gnomeTask.runGnomeTaskJob,
       mirror: mirror.runMirrorJob,
       git_push: gitPush.runGitPushEffects,
+      uploads_sweep: uploadsSweep.runUploadsSweepJob,
       ...loopHandlers,
     },
     finalizers,
@@ -126,6 +128,8 @@ export async function register() {
   // Ф2: подметальщик упавших зеркал. Не петля агента (там политика, журнал и
   // предохранитель) — обычная инфраструктурная задача, поэтому здесь руками.
   void mirror.startMirrorSweepChain()
+  // Подметальщик брошенных прямых загрузок в S3 — тоже служебная задача, не петля.
+  void uploadsSweep.ensureUploadsSweepScheduled().catch((e) => captureError(e, { where: 'uploads_sweep.ensure' }))
 
   // САМОЗАПУСК ПЕТЕЛЬ — из того же реестра, что и обработчики: два рукописных списка
   // неизбежно разъезжаются, и один раз уже разъехались (feedpull зарегистрирован, но не

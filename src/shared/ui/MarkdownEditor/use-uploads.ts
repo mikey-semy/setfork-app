@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { t, type Lang } from '@/shared/i18n'
+import { uploadErrorText, uploadFile } from '@/shared/media/upload-client'
 
 /**
  * Загрузка картинок и вложений прямо из поля: вставкой, перетаскиванием или кнопкой.
@@ -9,7 +10,24 @@ import { t, type Lang } from '@/shared/i18n'
  * загрузки не путают друг друга, а человек видит, что происходит, и продолжает писать.
  * Ответ сервера заменяет токен ссылкой; ошибка — курсивной пометкой на месте, а не
  * молчанием.
+ *
+ * Картинка идёт через приложение (`/api/upload`, ≤4 МБ, imgproxy); любой другой файл —
+ * напрямую в S3 (`upload-client`): через приложение 25 МБ не проходят, а диск контейнера
+ * не переживает выкатку.
  */
+async function uploadImage(file: File, lang: Lang): Promise<string> {
+  const fd = new FormData()
+  fd.append('file', file)
+  const res = await fetch('/api/upload', { method: 'POST', body: fd })
+  const data = (await res.json().catch(() => ({}))) as { url?: string; name?: string; error?: string }
+  return res.ok && data.url ? `![${data.name ?? file.name}](${data.url})` : `*(${data.error ?? t('editor.uploadFailed', lang)})*`
+}
+
+async function uploadAttachment(file: File, lang: Lang): Promise<string> {
+  const res = await uploadFile('file', file)
+  return 'error' in res ? `*(${uploadErrorText(res.error, 'file', lang)})*` : `[📎 ${res.name}](${res.url})`
+}
+
 export function useUploads(ctx: {
   lang: Lang
   read: () => string
@@ -27,16 +45,7 @@ export function useUploads(ctx: {
       insert(token + '\n')
       setBusy((b) => b + 1)
       try {
-        const fd = new FormData()
-        fd.append('file', file)
-        const res = await fetch('/api/upload', { method: 'POST', body: fd })
-        const data = (await res.json().catch(() => ({}))) as { url?: string; kind?: string; name?: string; error?: string }
-        const md =
-          res.ok && data.url
-            ? data.kind === 'image'
-              ? `![${data.name ?? file.name}](${data.url})`
-              : `[📎 ${data.name ?? file.name}](${data.url})`
-            : `*(${data.error ?? t('editor.uploadFailed', lang)})*`
+        const md = isImg ? await uploadImage(file, lang) : await uploadAttachment(file, lang)
         replace(read().replace(token, md))
       } catch {
         replace(read().replace(token, `*(${t('editor.uploadFailed', lang)})*`))

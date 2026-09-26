@@ -909,6 +909,43 @@ export const embeddings = pgTable(
 )
 
 // ── App settings (key-value, в т.ч. AI-настройки) ────────────────────
+/**
+ * Тяжёлые загрузки напрямую в S3 (вложение file-блока, свой клип video-блока).
+ *
+ * Строка заводится ДО загрузки (`pending`: сервер выдал подписанную политику на этот
+ * ключ) и становится `done` после финализации — когда объект в бакете проверен по
+ * размеру и сигнатуре. Раздача `/media/<key>` отдаёт только `done`: объект, который
+ * лёг в бакет в обход финализации, по нашей ссылке не откроется.
+ *
+ * `pending` старше суток — брошенная загрузка: её объект и строку убирает
+ * `sweepPendingUploads` (shared/media/direct-upload).
+ */
+export const uploads = pgTable(
+  'uploads',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Вид загрузки из `UPLOAD_KINDS` (shared/media/limits): 'file' | 'video'. text, не enum — виды добавляются без миграции. */
+    kind: text('kind').notNull(),
+    /** storage_key без префикса окружения; его придумал сервер (`{kind}s/{userId}/{uuid}.{ext}`). */
+    key: text('key').notNull().unique(),
+    /** Исходное имя файла — для `Content-Disposition` при скачивании. */
+    name: text('name').notNull(),
+    /** Размер: заявленный при начале, реальный (из хранилища) после финализации. */
+    size: bigint('size', { mode: 'number' }).notNull(),
+    contentType: text('content_type').notNull(),
+    status: text('status').notNull().default('pending'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  // Подметальщик ищет брошенные: status='pending' и старые по createdAt.
+  (t) => [index('uploads_status_created_idx').on(t.status, t.createdAt)],
+)
+
+export type Upload = typeof uploads.$inferSelect
+
 export const appSettings = pgTable('app_settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
@@ -982,6 +1019,8 @@ export const JOB_TYPES = [
   'git_push',
   // IndexNow: периодический проход, сообщающий поисковикам о новых версиях публичных списков.
   'indexnow',
+  // Подметальщик брошенных прямых загрузок в S3 (shared/media/sweep-job): раз в час.
+  'uploads_sweep',
 ] as const
 export type JobType = (typeof JOB_TYPES)[number]
 

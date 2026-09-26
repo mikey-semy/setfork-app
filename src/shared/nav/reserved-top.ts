@@ -30,6 +30,9 @@ export const RESERVED_TOP = new Set([
   'openapi.json',
   'opensearch.xml',
   'login',
+  // Раздача прямых загрузок (`/media/<key>` → подписанная ссылка S3): ник `media`
+  // отдал бы свои списки под этот адрес.
+  'media',
   'my-lists',
   'new',
   'notifications',
