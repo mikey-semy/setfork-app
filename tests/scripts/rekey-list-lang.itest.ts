@@ -6,33 +6,38 @@ import { resetTables } from '../helpers/reset-db'
 /**
  * ПЕРЕКЛАДКА КЛЮЧЕЙ ЯЗЫКА НА ЖИВОЙ БАЗЕ И ЯДРЕ (ADR-0030).
  *
- * Воспроизводится состояние прода: русский список (lang = ru), у которого шаги лежат под `en`
- * — так их писал MCP до setfork-app#1033. План обязан его найти и ничего не записать;
- * применение — переложить новой версией через ядро; повтор — не делать ничего. Спорное поле
- * (два чужих ключа) остаётся как было. Фикстура пишется доменной записью с ключом `en` явно, а
- * не через MCP: MCP теперь кладёт текст под язык списка, и тест потерял бы предмет проверки.
+ * Воспроизводится состояние прода: русский список (lang = ru), у которого текст лежит под `en`
+ * — так его писал MCP до setfork-app#1033. План обязан его найти и ничего не записать;
+ * применение — переложить новой версией через ядро, не потеряв НИ ОДНОГО другого поля блока;
+ * повтор — не делать ничего. Не трогаются: переведённый список, список без языка или с мусором
+ * в языке, список с открытым черновиком. Фикстура пишется доменной записью с ключом `en` явно,
+ * а не через MCP: MCP теперь кладёт текст под язык списка, и тест потерял бы предмет проверки.
  */
-const { db, steps, templates, templateVersions, users } = await import('@/shared/db')
+const { db, listDrafts, steps, templates, templateVersions, users } = await import('@/shared/db')
 const { listStore } = await import('@/features/library/list-store')
 const { planRekey, applyRekey, REKEY_NOTE } = await import('../../scripts/rekey-list-lang')
 
 const HANDLE = 'rekey-owner'
 let ownerId = ''
 
-const step = (n: number, title: Record<string, string>, extra: Record<string, unknown> = {}) => ({
-  n, type: 'step', content: {}, blockId: randomUUID(), title, desc: {}, command: '', level: 'required', why: {},
+const block = (n: number, extra: Record<string, unknown>) => ({
+  n, type: 'step', content: {}, blockId: randomUUID(), title: {}, desc: {}, command: '', level: 'required', why: {},
   needsHuman: false, needsHumanAsk: {}, section: {}, subtasks: [], refs: [], imageRef: null, ...extra,
 })
 
-async function make(slug: string, lang: string, stepList: ReturnType<typeof step>[], desc: Record<string, string> = {}) {
+async function make(slug: string, lang: string | null, blocks: ReturnType<typeof block>[], meta: { title?: Record<string, string>; desc?: Record<string, string> } = {}) {
   const created = (await listStore.create({
-    ownerId, slug, title: { [lang]: `Список ${slug}` }, desc, tags: ['суп'], status: 'published', lang, steps: stepList,
+    ownerId, slug, title: meta.title ?? { [lang ?? 'ru']: `Список ${slug}` }, desc: meta.desc ?? {}, tags: ['суп'], ordered: false,
+    status: 'published', lang, steps: blocks,
   } as never)) as { id: string }
   return created.id
 }
 
 async function current(slug: string) {
-  const [tpl] = await db.select({ id: templates.id, v: templates.currentVersion, desc: templates.desc, tags: templates.tags }).from(templates).where(eq(templates.slug, slug))
+  const [tpl] = await db
+    .select({ id: templates.id, v: templates.currentVersion, title: templates.title, desc: templates.desc, tags: templates.tags, ordered: templates.ordered })
+    .from(templates)
+    .where(eq(templates.slug, slug))
   const [ver] = await db
     .select({ id: templateVersions.id, note: templateVersions.note })
     .from(templateVersions)
@@ -41,63 +46,88 @@ async function current(slug: string) {
   return { ...tpl, note: ver.note, rows }
 }
 
+/** Строка шага без полей, которые у новой версии обязаны быть новыми. */
+const shape = (r: Record<string, unknown>) => {
+  const { id: _id, versionId: _v, createdAt: _c, ...rest } = r
+  return rest
+}
+
 beforeAll(async () => {
   await resetTables([templates, users])
   const [u] = await db.insert(users).values({ handle: HANDLE, email: 'rekey@x.dev' }).returning({ id: users.id })
   ownerId = u.id
-  await make('mcp-soup', 'ru', [
-    step(1, { en: 'Замочить горох' }, { desc: { en: 'На ночь' }, subtasks: [{ en: 'Горох разбух' }], refs: [{ label: { en: 'Рецепт' }, url: 'https://example.com' }] }),
-    step(2, { en: 'Сварить' }, { command: 'echo варить', section: { en: 'Готовка' } }),
-  ], { en: 'Густой суп' })
-  await make('clean-soup', 'ru', [step(1, { ru: 'Нарезать' })])
-  await make('translated-be', 'be', [step(1, { ru: 'Нарэзаць', en: 'Cut' }), step(2, { en: 'Зварыць' })])
+  // Полный набор: шаг со ВСЕМИ полями, текстовый блок, картинка с подписью, опрос.
+  await make(
+    'mcp-soup',
+    'ru',
+    [
+      block(1, {
+        title: { en: 'Замочить горох' }, desc: { en: 'На ночь' }, why: { en: 'Быстрее варится' }, section: { en: 'Подготовка' },
+        needsHuman: true, needsHumanAsk: { en: 'Какой горох?' }, danger: true, command: 'echo замочить', level: 'optional',
+        imageRef: 'u/pea.png', subtasks: [{ en: 'Горох разбух' }], refs: [{ label: { en: 'Рецепт' }, url: 'https://example.com' }],
+      }),
+      block(2, { type: 'text', content: { md: { en: 'Абзац про горох' }, bid: randomUUID() } }),
+      block(3, { type: 'image', content: { ref: 'u/soup.png', caption: { en: 'Готовый суп' }, bid: randomUUID() } }),
+      block(4, { type: 'poll', content: { question: 'Солить?', options: [{ id: 'o1', text: 'Да' }], bid: randomUUID() } }),
+    ],
+    { title: { en: 'Гороховый суп' }, desc: { en: 'Густой суп' } },
+  )
+  await make('clean-soup', 'ru', [block(1, { title: { ru: 'Нарезать' } })])
+  await make('translated-pie', 'ru', [block(1, { title: { ru: 'Разогреть', en: 'Preheat' } }), block(2, { title: { en: 'Check the oven' } })])
+  await make('no-lang', null, [block(1, { title: { en: 'Без языка' } })], { title: { en: 'Без языка' } })
+  await db.update(templates).set({ lang: null }).where(eq(templates.slug, 'no-lang'))
+  await make('junk-lang', 'ru', [block(1, { title: { en: 'Мусор в языке' } })])
+  await db.update(templates).set({ lang: 'ru-RU' as never }).where(eq(templates.slug, 'junk-lang'))
+  const draftId = await make('drafted', 'ru', [block(1, { title: { en: 'С черновиком' } })])
+  await db.insert(listDrafts).values({ templateId: draftId, authorId: ownerId, baseVersion: 1, items: [], meta: {}, note: '' })
 })
 
 describe('план', () => {
-  it('находит списки с чужими ключами и ничего не пишет', async () => {
+  it('находит списки с чужими ключами, называет переведённый и ничего не пишет', async () => {
     const before = await current('mcp-soup')
     const plan = await planRekey()
-    expect(plan).toEqual([
-      { ref: `${HANDLE}/mcp-soup`, lang: 'ru', version: before.v, moved: 7, ambiguous: 0 },
-      { ref: `${HANDLE}/translated-be`, lang: 'be', version: expect.any(Number), moved: 1, ambiguous: 1 },
+    expect(plan.map((r) => [r.ref.split('/')[1], r.moved, r.held, r.sample ?? null])).toEqual([
+      ['drafted', 1, false, 'С черновиком'],
+      ['mcp-soup', 11, false, 'Замочить горох'],
+      ['translated-pie', 1, true, 'Check the oven'],
     ])
     expect((await current('mcp-soup')).v).toBe(before.v)
   })
 })
 
 describe('применение', () => {
-  it('перекладывает новой версией через ядро, остальное — как было', async () => {
-    const before = await current('mcp-soup')
-    const done = await applyRekey()
-    expect(done.map((d) => [d.ref, d.error ?? null])).toEqual([
-      [`${HANDLE}/mcp-soup`, null],
-      [`${HANDLE}/translated-be`, null],
+  let before: Awaited<ReturnType<typeof current>>
+  let done: Awaited<ReturnType<typeof applyRekey>>
+  beforeAll(async () => {
+    before = await current('mcp-soup')
+    done = await applyRekey()
+  })
+
+  it('пишет только однозначный список; черновик — отказ в итоге, остальное не трогается', () => {
+    expect(done.map((d) => [d.ref.split('/')[1], !!d.error])).toEqual([
+      ['drafted', true],
+      ['mcp-soup', false],
     ])
+  })
+
+  it('новая версия через ядро: ключи переложены, ВСЕ прочие поля — как были', async () => {
     const after = await current('mcp-soup')
-    expect(after.v).toBe(before.v + 1)
-    expect(after.note).toBe(REKEY_NOTE)
-    expect(after.desc).toEqual({ ru: 'Густой суп' })
-    expect(after.tags).toEqual(before.tags)
-    expect(after.rows.map((r) => [r.title, r.desc, r.section, r.subtasks, r.refs, r.command, r.blockId])).toEqual([
-      [{ ru: 'Замочить горох' }, { ru: 'На ночь' }, {}, [{ ru: 'Горох разбух' }], [{ label: { ru: 'Рецепт' }, url: 'https://example.com' }], '', before.rows[0].blockId],
-      [{ ru: 'Сварить' }, {}, { ru: 'Готовка' }, [], [], 'echo варить', before.rows[1].blockId],
-    ])
+    expect([after.v, after.note]).toEqual([before.v + 1, REKEY_NOTE])
+    expect([after.title, after.desc, after.tags, after.ordered]).toEqual([{ ru: 'Гороховый суп' }, { ru: 'Густой суп' }, before.tags, before.ordered])
+    const ru = (v: unknown) => JSON.parse(JSON.stringify(v).replaceAll('"en":', '"ru":'))
+    expect(after.rows.map(shape)).toEqual(before.rows.map((r) => ru(shape(r))))
   })
 
-  it('спорное поле остаётся как было, однозначное рядом — переложено', async () => {
-    const after = await current('translated-be')
-    expect(after.rows.map((r) => r.title)).toEqual([{ ru: 'Нарэзаць', en: 'Cut' }, { be: 'Зварыць' }])
+  it('переведённый, без языка, с мусором в языке, чистый, с черновиком — без новой версии', async () => {
+    for (const slug of ['translated-pie', 'no-lang', 'junk-lang', 'clean-soup', 'drafted']) {
+      expect((await current(slug)).note, slug).not.toBe(REKEY_NOTE)
+    }
+    expect((await current('translated-pie')).rows.map((r) => r.title)).toEqual([{ ru: 'Разогреть', en: 'Preheat' }, { en: 'Check the oven' }])
   })
 
-  it('чистый список не получает версию', async () => {
-    const clean = await current('clean-soup')
-    expect(clean.note).not.toBe(REKEY_NOTE)
-  })
-
-  it('повторный запуск ничего не делает', async () => {
+  it('повторный запуск пишет нечего: остаются только отказы', async () => {
     const v = (await current('mcp-soup')).v
-    expect(await applyRekey()).toEqual([])
+    expect((await applyRekey()).map((d) => [d.ref.split('/')[1], !!d.error])).toEqual([['drafted', true]])
     expect((await current('mcp-soup')).v).toBe(v)
-    expect((await planRekey()).map((r) => [r.ref, r.moved])).toEqual([[`${HANDLE}/translated-be`, 0]])
   })
 })

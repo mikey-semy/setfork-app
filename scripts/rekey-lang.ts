@@ -11,7 +11,7 @@
 type LocaleText = Partial<Record<string, string>>
 
 /** Поле, которое можно переложить: один непустой ключ, и это не язык списка. */
-export type FieldVerdict = 'keep' | 'move' | 'ambiguous'
+export type FieldVerdict = 'keep' | 'move' | 'ambiguous' | 'translated'
 
 /**
  * Что делать с одним многоязычным полем.
@@ -23,22 +23,31 @@ export type FieldVerdict = 'keep' | 'move' | 'ambiguous'
  */
 export function fieldVerdict(v: LocaleText | null | undefined, lang: string): FieldVerdict {
   const keys = Object.keys(v ?? {}).filter((k) => (v ?? {})[k])
-  if (!keys.length || keys.includes(lang)) return 'keep'
+  if (!keys.length) return 'keep'
+  // Ключ языка есть, и рядом другие — список ПЕРЕВОДИЛИ. Само поле не трогаем, но это сигнал
+  // для всего списка (см. rekeyList): одиночный чужой ключ в нём может быть переводом.
+  if (keys.includes(lang)) return keys.length > 1 ? 'translated' : 'keep'
   return keys.length === 1 ? 'move' : 'ambiguous'
 }
 
 export interface RekeyTally {
   moved: number
   ambiguous: number
+  /** Поля с ключом языка списка РЯДОМ с другими — признак переведённого списка. */
+  translated: number
+  /** Первый перекладываемый текст — чтобы в плане было видно, оригинал ли это. */
+  sample?: string
 }
 
 /** Переложить одно поле; счёт ведётся в `tally`. */
 function rekeyText<T extends LocaleText | null | undefined>(v: T, lang: string, tally: RekeyTally): T {
   const verdict = fieldVerdict(v, lang)
   if (verdict === 'ambiguous') tally.ambiguous++
+  if (verdict === 'translated') tally.translated++
   if (verdict !== 'move') return v
   tally.moved++
   const [value] = Object.values(v as LocaleText).filter(Boolean)
+  tally.sample ??= value
   return { [lang]: value } as T
 }
 
@@ -78,22 +87,30 @@ export function rekeyBlock<T extends RekeyBlock>(block: T, lang: string, tally: 
   return out
 }
 
-/** Весь список: блоки плюс заголовок и описание самого списка. */
+/**
+ * Весь список: блоки плюс заголовок и описание самого списка.
+ *
+ * ⚠️ Список, который ПЕРЕВОДИЛИ (есть спорные поля или поля с ключом языка рядом с другими),
+ * не перекладывается вовсе — `held`. В нём одиночный чужой ключ может оказаться не оригиналом, а
+ * переводом: до #1028 редактор ставил ключ по языку интерфейса, и подшаг, добавленный из
+ * английского интерфейса к русскому списку, лёг как `{ en: 'Check the oven' }`. Переложить его
+ * под `ru` — объявить английский текст русским оригиналом, и кнопка «Перевести» его больше не
+ * предложит. Такие списки называются в плане, решает человек.
+ */
 export function rekeyList<T extends RekeyBlock>(
   list: { lang: string; title: LocaleText; desc: LocaleText; blocks: T[] },
-): { blocks: T[]; title?: LocaleText; desc?: LocaleText; tally: RekeyTally } {
-  const tally: RekeyTally = { moved: 0, ambiguous: 0 }
+): { blocks: T[]; title?: LocaleText; desc?: LocaleText; tally: RekeyTally; held: boolean } {
+  const tally: RekeyTally = { moved: 0, ambiguous: 0, translated: 0 }
   const blocks = list.blocks.map((b) => rekeyBlock(b, list.lang, tally))
-  const metaTally: RekeyTally = { moved: 0, ambiguous: 0 }
-  const title = rekeyText(list.title, list.lang, metaTally)
-  const desc = rekeyText(list.desc, list.lang, metaTally)
-  tally.moved += metaTally.moved
-  tally.ambiguous += metaTally.ambiguous
+  const title = rekeyText(list.title, list.lang, tally)
+  const desc = rekeyText(list.desc, list.lang, tally)
+  if (tally.ambiguous || tally.translated) return { blocks: list.blocks, tally, held: true }
   // Мету отдаём, ТОЛЬКО если она меняется: патч меты, отсутствующее поле ядро не трогает.
   return {
     blocks,
     ...(title !== list.title ? { title } : {}),
     ...(desc !== list.desc ? { desc } : {}),
     tally,
+    held: false,
   }
 }

@@ -12,12 +12,12 @@
 // мог измениться. Повторный запуск ничего не делает — перекладывать уже нечего.
 //
 // Модулем, а не сценарием: функции зовёт итест. Точка входа — rekey-list-lang-run.ts.
-import { isNotNull } from 'drizzle-orm'
-import { db, templates } from '../src/shared/db'
+import { eq, isNotNull } from 'drizzle-orm'
+import { db, listDrafts, templates } from '../src/shared/db'
 import { detailByRef } from '../src/features/mcp/tools/shared'
 import { rowsToProposed } from '../src/features/mcp/tools/lists/patch-block'
 import { ownedList, writeProposed } from '../src/features/mcp/tools/lists/write'
-import { headVersion } from '../src/features/mcp/tools/lists/base-version'
+import { isContentLang } from '../src/shared/i18n/iso639'
 import { rekeyList } from './rekey-lang'
 
 export const REKEY_NOTE = 'Ключи языка приведены к языку списка (ADR-0030)'
@@ -28,15 +28,24 @@ export interface RekeyPlanRow {
   version: number
   moved: number
   ambiguous: number
+  translated: number
+  /** Список переводили — не перекладывается (см. rekeyList). */
+  held: boolean
+  sample?: string
+}
+
+/** Только списки с настоящим кодом языка: `{ '': текст }` или `{ 'ru-RU': текст }` tr не найдёт. */
+async function candidates() {
+  const rows = await db.select({ id: templates.id, lang: templates.lang, ownerId: templates.ownerId }).from(templates).where(isNotNull(templates.lang))
+  return rows.flatMap((r) => (isContentLang(r.lang) ? [{ ...r, lang: r.lang }] : []))
 }
 
 /** Что перекладывается и что остаётся спорным, по каждому списку с языком. Ничего не пишет. */
 export async function planRekey(): Promise<RekeyPlanRow[]> {
-  const rows = await db.select({ id: templates.id, lang: templates.lang }).from(templates).where(isNotNull(templates.lang))
   const plan: RekeyPlanRow[] = []
-  for (const { id, lang } of rows) {
-    const found = await prepare(id, lang!)
-    if (found && (found.tally.moved || found.tally.ambiguous)) plan.push(found.row)
+  for (const { id, lang } of await candidates()) {
+    const found = await prepare(id, lang)
+    if (found && found.tally.moved) plan.push(found.row)
   }
   return plan.sort((a, b) => a.ref.localeCompare(b.ref))
 }
@@ -55,7 +64,16 @@ async function prepare(id: string, lang: string) {
     handle: meta.handle,
     slug: meta.slug,
     ...r,
-    row: { ref, lang, version: detail.tpl.currentVersion, moved: r.tally.moved, ambiguous: r.tally.ambiguous },
+    row: {
+      ref,
+      lang,
+      version: detail.tpl.currentVersion,
+      moved: r.tally.moved,
+      ambiguous: r.tally.ambiguous,
+      translated: r.tally.translated,
+      held: r.held,
+      ...(r.tally.sample ? { sample: r.tally.sample } : {}),
+    },
   }
 }
 
@@ -63,36 +81,70 @@ export interface RekeyApplied {
   ref: string
   moved: number
   version?: number
+  /** Отказ по этому списку: вердикт ядра, архив, открытый черновик, сбой. */
   error?: string
+}
+
+export interface ApplyOptions {
+  /** Пауза между записями, мс. Лимит ядра на AddVersion — ОБЩИЙ на весь прод (окно 60 с на
+   *  метод, не на клиента: setfork-core/src/ratelimit.rs), и прогон без пауз выбрал бы его
+   *  целиком: у живых людей на эту минуту отказывало бы любое сохранение списка. */
+  pauseMs?: number
+  /** Итог по каждому списку — сразу, а не в конце: оборванный прогон иначе не сказал бы,
+   *  что уже переложено. */
+  onResult?: (r: RekeyApplied) => void
 }
 
 /**
  * Переложить ключи новой версией у каждого списка, где есть что перекладывать. Спорные поля
- * не трогаются; список, где перекладывать нечего, — тоже. Отказ по одному списку (архив,
- * заморозка, гонка версий) не останавливает остальные: он попадает в итог.
+ * не трогаются; список, где перекладывать нечего, — тоже. Отказ по одному списку — любой,
+ * включая сбой ядра или базы, — попадает в итог и не останавливает остальные.
+ *
+ * Список с ОТКРЫТЫМ ЧЕРНОВИКОМ (рабочая копия редактора или MCP publish:false) пропускается:
+ * новая версия сделала бы черновик устаревшим — автор не смог бы его опубликовать, а
+ * перенесённые вручную тексты вернули бы старые ключи. Такой список переложит повторный запуск.
  */
-export async function applyRekey(): Promise<RekeyApplied[]> {
-  const rows = await db.select({ id: templates.id, lang: templates.lang, ownerId: templates.ownerId }).from(templates).where(isNotNull(templates.lang))
+export async function applyRekey(opts: ApplyOptions = {}): Promise<RekeyApplied[]> {
+  const rows = await candidates()
   const out: RekeyApplied[] = []
+  const report = (r: RekeyApplied) => {
+    out.push(r)
+    opts.onResult?.(r)
+  }
+  let wrote = false
   for (const { id, lang, ownerId } of rows) {
-    const p = await prepare(id, lang!)
-    if (!p || !p.tally.moved) continue
-    const owned = await ownedList(ownerId, p.handle, p.slug)
-    if ('error' in owned) {
-      out.push({ ref: p.ref, moved: p.tally.moved, error: owned.error })
-      continue
+    let p: Awaited<ReturnType<typeof prepare>> = null
+    try {
+      p = await prepare(id, lang)
+      if (!p || !p.tally.moved || p.held) continue
+      const [draft] = await db.select({ id: listDrafts.templateId }).from(listDrafts).where(eq(listDrafts.templateId, id)).limit(1)
+      if (draft) {
+        report({ ref: p.ref, moved: p.tally.moved, error: 'open draft — skipped, run again after it is published or discarded' })
+        continue
+      }
+      const owned = await ownedList(ownerId, p.handle, p.slug)
+      if ('error' in owned) {
+        report({ ref: p.ref, moved: p.tally.moved, error: owned.error })
+        continue
+      }
+      const { tpl } = owned
+      if (wrote && opts.pauseMs) await new Promise((r) => setTimeout(r, opts.pauseMs))
+      wrote = true
+      const res = await writeProposed(
+        tpl,
+        p.handle,
+        p.slug,
+        p.blocks,
+        REKEY_NOTE,
+        { tags: tpl.tags, ordered: tpl.ordered, ...(p.title ? { title: p.title } : {}), ...(p.desc ? { desc: p.desc } : {}) },
+        // Версия, от которой собран СОСТАВ, а не перечитанная позже: правка автора, легшая
+        // между чтениями, иначе прошла бы сверку и была бы молча откачена составом от старой.
+        p.row.version,
+      )
+      report('error' in res ? { ref: p.ref, moved: p.tally.moved, error: res.error } : { ref: p.ref, moved: p.tally.moved, version: res.version })
+    } catch (e) {
+      report({ ref: p?.ref ?? id, moved: p?.tally.moved ?? 0, error: e instanceof Error ? e.message : String(e) })
     }
-    const { tpl } = owned
-    const res = await writeProposed(
-      tpl,
-      p.handle,
-      p.slug,
-      p.blocks,
-      REKEY_NOTE,
-      { tags: tpl.tags, ordered: tpl.ordered, ...(p.title ? { title: p.title } : {}), ...(p.desc ? { desc: p.desc } : {}) },
-      headVersion(tpl),
-    )
-    out.push('error' in res ? { ref: p.ref, moved: p.tally.moved, error: res.error } : { ref: p.ref, moved: p.tally.moved, version: res.version })
   }
   return out.sort((a, b) => a.ref.localeCompare(b.ref))
 }
