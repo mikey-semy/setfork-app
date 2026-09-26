@@ -155,8 +155,17 @@ export interface PassResult {
 /**
  * Один проход — одна пачка. Сначала снятые с публичности (убрать из выдачи важнее), затем
  * новые и изменённые, пока влезает в потолок. Пометки — только после принятого ответа.
+ *
+ * `maxUrls` — потолок пачки; в работе всегда протокольный. Передаётся ради тестов, как
+ * `send` и `checkKey`: проверка «не больше потолка, остаток — следующим проходом» на
+ * протокольном потолке требует десяти тысяч списков и не укладывалась в таймаут CI.
  */
-export async function runIndexNowPass(send: SendFn = postIndexNow, now: Date = new Date(), checkKey: CheckKeyFn = checkKeyFile): Promise<PassResult> {
+export async function runIndexNowPass(
+  send: SendFn = postIndexNow,
+  now: Date = new Date(),
+  checkKey: CheckKeyFn = checkKeyFile,
+  maxUrls: number = MAX_URLS_PER_REQUEST,
+): Promise<PassResult> {
   const result: PassResult = { status: 'ok', sentLists: 0, withdrawnLists: 0, sentUrls: 0 }
   const key = indexNowKey()
   if (!key) {
@@ -178,7 +187,7 @@ export async function runIndexNowPass(send: SendFn = postIndexNow, now: Date = n
   const host = new URL(origin).host
   const keyLocation = `${origin}${indexNowKeyPath(key)}`
   // Сколько адресов у списка — из того же правила, что строит адреса, а не числом.
-  const rowsCap = Math.floor(MAX_URLS_PER_REQUEST / listUrls('h', 's', origin).length)
+  const rowsCap = Math.floor(maxUrls / listUrls('h', 's', origin).length)
   // Текущий адрес без префикса — той же формы, что `listUrls(…).at(-1)`: сравнивается с отправленным.
   const currentUrl = sql<string>`${origin} || '/' || ${users.handle} || '/' || ${templates.slug}`
 
@@ -217,7 +226,7 @@ export async function runIndexNowPass(send: SendFn = postIndexNow, now: Date = n
 
   // Набираем пачку до потолка: снятые первыми, затем новые и изменённые.
   const urlList: string[] = []
-  const fits = (urls: string[]) => urlList.length + urls.length <= MAX_URLS_PER_REQUEST
+  const fits = (urls: string[]) => urlList.length + urls.length <= maxUrls
   const takenWithdrawn: string[] = []
   for (const w of withdrawn) {
     const urls = sentUrls(w.sentUrl, w.sentLangs)

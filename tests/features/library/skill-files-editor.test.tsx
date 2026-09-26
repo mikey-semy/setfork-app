@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { SkillFilesEditor } from '@/features/library/list-editor/SkillFilesEditor'
 
 /**
@@ -47,5 +47,39 @@ describe('SkillFilesEditor', () => {
     expect(screen.getByText(/could not be read/)).toBeTruthy()
     expect(field(container)).toBeNull()
     expect(screen.queryByRole('button', { name: 'Add file' })).toBeNull()
+  })
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('двоичный файл — размер, а не текст указателя; править нельзя', () => {
+    const pointer = `version https://git-lfs.github.com/spec/v1\noid sha256:${'a'.repeat(64)}\nsize 2048\n`
+    render(<SkillFilesEditor initial={[{ path: 'assets/logo.png', text: pointer, executable: false }]} dirty={false} lang="en" />)
+    expect(screen.getByText('2.0 KB')).toBeTruthy()
+    fireEvent.click(screen.getByText('assets/logo.png'))
+    expect(screen.getByText(/A binary file/)).toBeTruthy()
+    expect(screen.queryByText(/oid sha256/)).toBeNull()
+  })
+
+  it('загрузка с диска: файл уходит в /api/skill-asset, ответ ложится в набор под своим путём', async () => {
+    const pointer = `version https://git-lfs.github.com/spec/v1\noid sha256:${'b'.repeat(64)}\nsize 3\n`
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ path: 'scripts/logo.png', kind: 'binary', text: pointer, size: 3 })))
+    vi.stubGlobal('fetch', fetchMock)
+    const { container } = render(<SkillFilesEditor initial={[]} dirty={false} lang="en" />)
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!
+    fireEvent.change(input, { target: { files: [new File([new Uint8Array([1, 0, 2])], 'logo.png')] } })
+    await waitFor(() => expect(field(container)).not.toBeNull())
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, { body: FormData }]
+    expect(url).toBe('/api/skill-asset')
+    // Папка по умолчанию — scripts/: путь уходит тем, что выбрано в форме.
+    expect(init.body.get('path')).toBe('scripts/logo.png')
+    expect(JSON.parse(field(container)!.value)).toEqual([{ path: 'scripts/logo.png', text: pointer, executable: false }])
+  })
+
+  it('отказ загрузки — причина видна, набор не тронут', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'too big' }), { status: 400 })))
+    const { container } = render(<SkillFilesEditor initial={[]} dirty={false} lang="en" />)
+    fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [new File(['x'], 'a.bin')] } })
+    await waitFor(() => expect(screen.getByText('The file was not uploaded: too big')).toBeTruthy())
+    expect(field(container)).toBeNull()
   })
 })

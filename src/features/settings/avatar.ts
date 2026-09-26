@@ -3,14 +3,8 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { deleteByPrefix, isS3Configured, putObject } from '@/shared/media'
-
-const MAX_BYTES = 2 * 1024 * 1024
-const EXT: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-}
+import { cleanImage } from '@/shared/media/clean-image'
+import { AVATAR_MAX_BYTES, megabytes } from '@/shared/media/limits'
 
 // Локальный фолбэк (public/uploads/avatars), если S3 не сконфигурирован.
 const DISK_DIR = join(process.cwd(), 'public', 'uploads', 'avatars')
@@ -23,21 +17,23 @@ const DISK_PREFIX = '/uploads/avatars'
  * Бросает Error при ошибке валидации.
  */
 export async function saveAvatar(userId: string, file: File): Promise<string> {
-  const ext = EXT[file.type]
-  if (!ext) throw new Error('Неподдерживаемый формат (нужен PNG, JPG, WEBP или GIF).')
-  if (file.size > MAX_BYTES) throw new Error('Файл больше 2 МБ.')
-  const buffer = Buffer.from(await file.arrayBuffer())
+  if (file.size > AVATAR_MAX_BYTES) throw new Error(`Файл больше ${megabytes(AVATAR_MAX_BYTES)} МБ.`)
+  // Тип — по сигнатуре, а не по `file.type`: его присылает клиент, и Safari после
+  // кадрирования называл PNG «avatar.webp» (canvas не кодирует WebP). Метаданные
+  // чистит та же функция, что у остальных картинок.
+  const img = await cleanImage(Buffer.from(await file.arrayBuffer()))
+  if (!img) throw new Error('Неподдерживаемый формат (нужен PNG, JPG, WEBP или GIF).')
 
   if (await isS3Configured()) {
     await deleteByPrefix(`avatars/${userId}/`).catch(() => {}) // убрать прошлые
-    const key = `avatars/${userId}/${randomUUID()}.${ext}`
-    return putObject(key, buffer, file.type)
+    const key = `avatars/${userId}/${randomUUID()}.${img.ext}`
+    return putObject(key, img.buffer, img.mime)
   }
 
   await mkdir(DISK_DIR, { recursive: true })
   await removeDiskAvatars(userId)
-  const filename = `${userId}-${Date.now()}.${ext}`
-  await writeFile(join(DISK_DIR, filename), buffer)
+  const filename = `${userId}-${Date.now()}.${img.ext}`
+  await writeFile(join(DISK_DIR, filename), img.buffer)
   return `${DISK_PREFIX}/${filename}`
 }
 

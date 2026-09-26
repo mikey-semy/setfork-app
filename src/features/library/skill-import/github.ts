@@ -1,3 +1,6 @@
+import { binaryAllowedAt, isBinary, nativeExecutable } from '@/core/domain/lfs-pointer'
+import { megabytes } from '@/shared/media/limits'
+import { SKILL_ASSETS_MAX_BYTES, SKILL_TEXT_MAX_BYTES } from '@/core/domain/skill-limits'
 import 'server-only'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 
@@ -107,13 +110,13 @@ export interface FetchedSkill {
 const AUTHORED_DIRS = ['scripts', 'references', 'assets']
 const LICENSE_NAMES = /^(LICEN[CS]E|COPYING)(\.(md|txt))?$/i
 /**
- * ⚠️ КОПИЯ пределов ядра (setfork-core `serialize.rs`: AUTHORED_MAX_FILES = 50,
- * AUTHORED_MAX_BYTES = 1 МБ). Решает здесь не она — набор судит ядро и откажет само; она
+ * ⚠️ КОПИЯ предела ядра (setfork-core `serialize.rs`: AUTHORED_MAX_FILES = 50; предел текста —
+ * `SKILL_TEXT_MAX_BYTES`). Решает здесь не она — набор судит ядро и откажет само; она
  * только останавливает СКАЧИВАНИЕ заранее: папка с тысячей файлов держала бы действие
  * человека минутами. Разойдутся — ядро всё равно скажет своё.
  */
 const FILES_MAX = 50
-const BYTES_MAX = 1024 * 1024
+const BYTES_MAX = SKILL_TEXT_MAX_BYTES
 /** LICENSE крупнее — не текст лицензии, а что-то иное: считаем неизвестной (закрытой). */
 const LICENSE_MAX_BYTES = 200 * 1024
 
@@ -166,8 +169,13 @@ export async function fetchGithubSkill(ref: GithubSkillRef, token?: string): Pro
     return AUTHORED_DIRS.includes(top) && restPath.length === 1
   })
   const total = wanted.reduce((n, b) => n + (b.size ?? 0), 0)
-  if (wanted.length > FILES_MAX || total > BYTES_MAX) {
-    return { error: `the skill has ${wanted.length} files, ${Math.ceil(total / 1024)} KB — a skill holds at most ${FILES_MAX} files and ${BYTES_MAX / 1024} KB` }
+  // Какие из них двоичные, по дереву не видно: верхняя граница — текст скилла плюс предел
+  // двоичных файлов (они уезжают в хранилище, `SKILL_ASSETS_MAX_BYTES`). Точнее судят запись и ядро.
+  const bytesMax = BYTES_MAX + SKILL_ASSETS_MAX_BYTES
+  if (wanted.length > FILES_MAX || total > bytesMax) {
+    return {
+      error: `the skill has ${wanted.length} files, ${Math.ceil(total / 1024)} KB — a skill holds at most ${FILES_MAX} files, ${BYTES_MAX / 1024} KB of text and ${megabytes(SKILL_ASSETS_MAX_BYTES)} MB of binary files in assets/`,
+    }
   }
   for (const b of blobs) {
     if (!b.path.startsWith(prefix)) continue
@@ -181,8 +189,14 @@ export async function fetchGithubSkill(ref: GithubSkillRef, token?: string): Pro
     }
     const content = await raw(ref, sha, b.path)
     if (!content) return { error: `could not read ${b.path} from GitHub — try again` }
-    if (content.includes(0)) {
-      skipped.push({ path: rel, why: 'binary — a skill keeps text only' })
+    // Двоичное — только в assets/ (байты уедут в хранилище по хешу), и не программы.
+    if (isBinary(content) && !binaryAllowedAt(rel)) {
+      skipped.push({ path: rel, why: 'binary — binary files are kept only in assets/' })
+      continue
+    }
+    const exe = isBinary(content) ? nativeExecutable(content) : null
+    if (exe) {
+      skipped.push({ path: rel, why: `a native program (${exe}) — a skill does not ship executables` })
       continue
     }
     files.push({ path: rel, content, executable: top === 'scripts' && b.mode === '100755' })
