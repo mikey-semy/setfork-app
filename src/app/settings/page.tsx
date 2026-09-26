@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import { eq } from 'drizzle-orm'
-import { BarChart3, Bell, Fingerprint, KeyRound, Link2, Mail, Monitor, Palette, ShieldCheck, TriangleAlert, User, UserRoundPlus } from 'lucide-react'
+import { BarChart3, Bell, Fingerprint, KeyRound, Languages, Link2, Mail, Monitor, Palette, ShieldCheck, TriangleAlert, User, UserRoundPlus } from 'lucide-react'
 import { db, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { avatarSrc } from '@/shared/media'
@@ -33,6 +33,7 @@ import { PAGE_X } from '@/shared/ui/control'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { cardClass } from '@/shared/ui/card-style'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
+import { MyListLangSection } from '@/features/settings/MyListLangSection'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -114,6 +115,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           hint={lang === 'ru' ? 'Тема, акцентный цвет и шрифт интерфейса.' : 'Theme, accent color and interface font.'}
         >
           <AppearanceSettings lang={lang} initialAccent={user.uiAccent ?? ''} initialFont={user.uiFont ?? ''} initialScale={user.uiScale ?? ''} />
+        </SettingsSection>
+      ),
+    },
+    {
+      id: 'list-language',
+      title: t('lang.myListsTitle', lang),
+      icon: <Languages size={15} />,
+      keywords: ['language', 'lists', 'original', 'content', 'язык', 'списки', 'оригинал', 'содержимое'],
+      content: (
+        <SettingsSection title={t('lang.myListsTitle', lang)} hint={t('lang.myListsHint', lang)}>
+          <MyListLangSection initial={user.listLang} lang={lang} />
         </SettingsSection>
       ),
     },

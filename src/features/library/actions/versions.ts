@@ -4,10 +4,11 @@ import { classifyListLang } from '@/shared/i18n/detect-text-lang'
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, repositories, steps, templates, type ProposedItem } from '@/shared/db'
+import { db, repositories, steps, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { type LocaleText } from '@/shared/i18n'
+import { trKey, type LocaleText } from '@/shared/i18n'
+import { isContentLang } from '@/shared/i18n/iso639'
 import { listQuota } from '@/shared/quota'
 import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, editBlockReason, ListWriteError } from '@/core'
@@ -72,14 +73,13 @@ function fallbackUnlessContradicted(uiLang: string, texts: string[]): string | n
 
 export async function createTemplate(_prev: NewListRefusal | null, formData: FormData): Promise<NewListRefusal | null> {
   const session = await requireSession()
-  const lang = await getLang()
+  const uiLang = await getLang()
   const title = String(formData.get('title') ?? '').trim()
   const desc = String(formData.get('desc') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
   const visibility = formData.get('visibility') === 'private' ? 'private' : 'public'
   const ordered = formData.get('ordered') !== 'unordered'
   const gated = formData.get('gated') === 'on'
-  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   // Пустое название раньше просто НИЧЕГО не делало: человек жал «Создать» и не получал
   // ни списка, ни объяснения. `required` в разметке прикрывает обычный путь, но не
   // отправку без JS и не одни пробелы в поле.
@@ -87,6 +87,14 @@ export async function createTemplate(_prev: NewListRefusal | null, formData: For
   // Квота на число списков (мягкая защита от абьюза; админ без лимита).
   const quota = await listQuota(session.userId, session.handle)
   if (!quota.ok) return { kind: 'list_quota', limit: quota.limit }
+
+  // Текст нового списка ложится под ЯЗЫК ОРИГИНАЛА: настройка «язык моих списков», иначе язык
+  // интерфейса (ADR-0030). Иначе у автора с русским интерфейсом и настройкой `be` белорусский
+  // текст лёг бы под `ru`, а список объявил бы себя белорусским — ключ и язык разошлись бы.
+  // Запрос — ПОСЛЕ отказов выше: им база не нужна.
+  const [me] = await db.select({ listLang: users.listLang }).from(users).where(eq(users.id, session.userId)).limit(1)
+  const lang = isContentLang(me?.listLang) ? me.listLang : uiLang
+  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
   let slug = slugify(title)
   const owned = await db
@@ -157,6 +165,13 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
   const desc = String(formData.get('desc') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
   const ordered = formData.get('ordered') !== 'unordered'
+  // Язык оригинала (ADR-0030): код ISO 639-1 или пусто — «не задан». Чужое значение не пишем.
+  const rawSource = String(formData.get('sourceLang') ?? '')
+  const sourceLang = rawSource === '' ? null : isContentLang(rawSource) ? rawSource : tpl.lang
+  // ⚠️ Ключ — тот, что форма ПОКАЗАЛА (`trKey`), а не язык интерфейса: белорусское название,
+  // открытое русским интерфейсом без перевода, иначе сохранилось бы под `ru` рядом с `be`, и
+  // оригинал раздвоился бы. Нечего было показать — язык оригинала, иначе интерфейса.
+  const keyFor = (text: LocaleText) => trKey(text, lang) ?? (isContentLang(sourceLang) ? sourceLang : lang)
   // Мета пишется здесь МИМО фасада, и его страж ключей её не видит. Название публичного
   // списка видно в ленте и поиске раньше шагов — ключ в нём утекает первым.
   const leak = findSecretInContent([], undefined, { title, desc, tags })
@@ -164,8 +179,9 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
   await db
     .update(templates)
     .set({
-      title: carryField({ [lang]: title }, tpl.title as LocaleText),
-      desc: carryField(desc ? { [lang]: desc } : {}, tpl.desc as LocaleText),
+      title: carryField({ [keyFor(tpl.title as LocaleText)]: title }, tpl.title as LocaleText),
+      desc: carryField(desc ? { [keyFor(tpl.desc as LocaleText)]: desc } : {}, tpl.desc as LocaleText),
+      lang: sourceLang,
       tags,
       ordered,
       updatedAt: new Date(),

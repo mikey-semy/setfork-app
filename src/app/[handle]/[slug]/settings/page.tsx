@@ -67,6 +67,7 @@ export default async function ListSettingsPage({
           desc={meta.desc}
           tags={meta.tags}
           ordered={meta.ordered}
+          sourceLang={meta.lang}
           lang={lang}
         />
       ),
