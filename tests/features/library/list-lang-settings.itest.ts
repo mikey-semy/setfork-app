@@ -3,8 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetTables } from '../../helpers/reset-db'
 
 /**
- * ЯЗЫК ОРИГИНАЛА В НАСТРОЙКАХ (ADR-0030, шаг 2b): у списка — полем «Основного», у автора —
- * «языком моих списков». Подменены сессия, язык интерфейса и переходы Next; база, ядро и
+ * ЯЗЫК ОРИГИНАЛА В НАСТРОЙКАХ СПИСКА (ADR-0030, шаг 2b) — полем «Основного». Подменены сессия, язык интерфейса и переходы Next; база, ядро и
  * действия — настоящие.
  */
 const h = vi.hoisted(() => ({ session: null as null | { userId: string; handle: string }, ui: 'ru' as 'ru' | 'en' }))
@@ -24,8 +23,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 const { db, listDrafts, templates, users } = await import('@/shared/db')
-const { createTemplate, saveDraft, updateListMeta } = await import('@/features/library/actions/versions')
-const { saveMyListLang } = await import('@/features/settings/list-lang-actions')
+const { saveDraft, updateListMeta } = await import('@/features/library/actions/versions')
 
 let me = ''
 beforeAll(async () => {
@@ -36,7 +34,6 @@ beforeAll(async () => {
 })
 beforeEach(async () => {
   h.ui = 'ru'
-  await db.update(users).set({ listLang: null }).where(eq(users.id, me))
 })
 
 async function seed(slug: string, title: Record<string, string>, lang: string | null) {
@@ -95,28 +92,6 @@ describe('смена языка и права', () => {
       h.session = { userId: me, handle: 'lang-set' }
     }
     expect(await row(id)).toMatchObject({ lang: 'ru', title: { ru: 'Суп' } })
-  })
-})
-
-describe('язык моих списков', () => {
-  it('не код ISO — отказ; код и «не задан» — сохраняются', async () => {
-    expect(await saveMyListLang('russian')).toEqual({ ok: false })
-    expect(await saveMyListLang('be')).toEqual({ ok: true })
-    expect((await db.select({ l: users.listLang }).from(users).where(eq(users.id, me)))[0].l).toBe('be')
-    expect(await saveMyListLang(null)).toEqual({ ok: true })
-    expect((await db.select({ l: users.listLang }).from(users).where(eq(users.id, me)))[0].l).toBeNull()
-  })
-
-  it('⚠️ новый список из веба — текст под языком настройки, а не интерфейса; язык списка — тот же', async () => {
-    await saveMyListLang('be')
-    try {
-      await createTemplate(null, form({ title: 'Гарбузовы суп', items: JSON.stringify([{ title: 'Нарэзаць гарбуз' }]) }))
-    } catch (e) {
-      if ((e as Error).message !== 'REDIRECT') throw e
-    }
-    const rows = await db.select({ lang: templates.lang, title: templates.title }).from(templates).where(eq(templates.ownerId, me))
-    const made = rows.find((r) => Object.values(r.title).includes('Гарбузовы суп'))
-    expect(made).toMatchObject({ lang: 'be', title: { be: 'Гарбузовы суп' } })
   })
 })
 

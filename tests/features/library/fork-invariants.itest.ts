@@ -157,8 +157,7 @@ describe('язык оригинала у копии (ADR-0030)', () => {
     expect(copy?.lang).toBe('be')
   })
 
-  it('⚠️ источник без языка — копия без языка, а не с настройкой того, кто копирует', async () => {
-    await db.update(users).set({ listLang: 'be' }).where(eq(users.id, ctx.forker))
+  it('⚠️ источник без языка — копия без языка, а не с догадкой', async () => {
     const [src] = await db
       .insert(templates)
       .values({ ownerId: ctx.owner, slug: 'src-nolang', title: { ru: 'Старый список' }, currentVersion: 1, visibility: 'public', status: 'published' })
@@ -169,8 +168,6 @@ describe('язык оригинала у копии (ADR-0030)', () => {
       await forkTemplate(src.id)
     } catch (e) {
       if ((e as Error).message !== 'REDIRECT') throw e
-    } finally {
-      await db.update(users).set({ listLang: null }).where(eq(users.id, ctx.forker))
     }
     const [copy] = await db
       .select({ lang: templates.lang })
@@ -180,7 +177,6 @@ describe('язык оригинала у копии (ADR-0030)', () => {
   })
 
   it('⚠️ «как шаблон» у источника без языка — тоже без языка', async () => {
-    await db.update(users).set({ listLang: 'be' }).where(eq(users.id, ctx.forker))
     const [src] = await db
       .insert(templates)
       .values({ ownerId: ctx.owner, slug: 'tpl-nolang', title: { ru: 'Старый шаблон' }, currentVersion: 1, visibility: 'public', status: 'published', isTemplate: true })
@@ -191,8 +187,6 @@ describe('язык оригинала у копии (ADR-0030)', () => {
       await useTemplate(src.id)
     } catch (e) {
       if ((e as Error).message !== 'REDIRECT') throw e
-    } finally {
-      await db.update(users).set({ listLang: null }).where(eq(users.id, ctx.forker))
     }
     const [copy] = await db
       .select({ lang: templates.lang })

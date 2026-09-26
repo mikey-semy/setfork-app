@@ -936,7 +936,6 @@ src/features/settings/AppearanceSettings.tsx	V11
 src/features/settings/AvatarDropzone.tsx	V11
 src/features/settings/DangerZone.tsx	V11
 src/features/settings/EmailSection.tsx	V11
-src/features/settings/MyListLangSection.tsx	V11
 src/features/settings/PasskeysSection.tsx	V11
 src/features/settings/PasswordSection.tsx	V11
 src/features/settings/SettingsForm.tsx	V11
@@ -946,7 +945,6 @@ src/features/settings/actions.ts	V11
 src/features/settings/appearance-actions.ts	V11
 src/features/settings/appearance.ts	V11
 src/features/settings/avatar.ts	V11
-src/features/settings/list-lang-actions.ts	V11
 src/features/settings/password-actions.ts	V11
 src/features/settings/socials.tsx	V11
 src/features/star-folders/StarFolderMenu.tsx	V5

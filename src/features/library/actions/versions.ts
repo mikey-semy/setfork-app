@@ -4,7 +4,7 @@ import { classifyListLang } from '@/shared/i18n/detect-text-lang'
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, repositories, steps, templates, users, type ProposedItem } from '@/shared/db'
+import { db, repositories, steps, templates, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { editKey, trKey, type LocaleText } from '@/shared/i18n'
@@ -88,12 +88,8 @@ export async function createTemplate(_prev: NewListRefusal | null, formData: For
   const quota = await listQuota(session.userId, session.handle)
   if (!quota.ok) return { kind: 'list_quota', limit: quota.limit }
 
-  // Текст нового списка ложится под ЯЗЫК ОРИГИНАЛА: настройка «язык моих списков», иначе язык
-  // интерфейса (ADR-0030). Иначе у автора с русским интерфейсом и настройкой `be` белорусский
-  // текст лёг бы под `ru`, а список объявил бы себя белорусским — ключ и язык разошлись бы.
-  // Запрос — ПОСЛЕ отказов выше: им база не нужна.
-  const [me] = await db.select({ listLang: users.listLang }).from(users).where(eq(users.id, session.userId)).limit(1)
-  const lang = isContentLang(me?.listLang) ? me.listLang : uiLang
+  // Автор пишет на языке интерфейса — под ним и текст нового списка (ADR-0030).
+  const lang = uiLang
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
   let slug = slugify(title)
@@ -110,8 +106,8 @@ export async function createTemplate(_prev: NewListRefusal | null, formData: For
   try {
     list = await listStore.create({
       ownerId: session.userId,
-      // Автор пишет на языке интерфейса — это запасной язык списка; настройка «язык моих
-      // списков» старше (ADR-0030, решает фасад). ⚠️ Но только если текст ему не противоречит:
+      // Автор пишет на языке интерфейса — это запасной язык списка (ADR-0030). ⚠️ Но только
+      // если текст ему не противоречит:
       // английский список автора с русским интерфейсом иначе навсегда записался бы русским, и
       // робот увидел бы русскую страницу над английским текстом (ревью по линзам).
       langFallback: fallbackUnlessContradicted(lang, [title, desc ?? '', ...proposed.map((p) => `${p.title ?? ''} ${p.desc ?? ''}`)]),

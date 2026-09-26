@@ -66,7 +66,7 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
   const lang = isContentLang(input.lang) ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
   // Язык ОРИГИНАЛА: явный аргумент — факт; без него догадка по тексту идёт ПОСЛЕДНИМ запасным
-  // вариантом (настройка автора старше) и только осторожная — смесь или кириллица не из русского
+  // вариантом и только осторожная — смесь или кириллица не из русского
   // алфавита дают пусто, а не `ru` навсегда (ADR-0030; ключ текста выше — по-прежнему детект).
   const guessed = classifyListLang(
     [title, input.desc ?? '', ...(input.items ?? []).flatMap((it) => [it.title ?? '', it.desc ?? ''])],

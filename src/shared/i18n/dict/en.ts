@@ -2536,10 +2536,6 @@ export const en = {
   'lang.notSet': 'Not set',
   'lang.sourceLabel': 'Language of the original',
   'lang.sourceHint': "The language the list is written in. Search engines and screen readers read the page by it; the Translate button offers a translation when it differs from the reader's language.",
-  'lang.myListsTitle': 'Language of my lists',
-  'lang.myListsHint': 'The language of the original for your new lists. Not set — the language of the interface. You can change it for each list in its settings.',
-  'lang.sameAsInterface': 'Same as the interface',
-  'lang.saveFailed': 'Could not save the language — try again',
 } as const
 
 export type DictKey = keyof typeof en

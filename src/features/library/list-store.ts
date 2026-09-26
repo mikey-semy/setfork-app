@@ -2,7 +2,7 @@ import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import type { CreateListInput, List, ListStore, Moderation, NewStepInput } from '@/core'
 import { canEditList, editBlockReason, ListWriteError } from '@/core'
-import { db, templateVersions, templates, users } from '@/shared/db'
+import { db, templateVersions, templates } from '@/shared/db'
 import { isContentLang } from '@/shared/i18n/iso639'
 import { initialModeration } from '@/shared/moderation/publication-state'
 import { captureError } from '@/shared/observability'
@@ -135,14 +135,12 @@ async function withCarriedTranslations(templateId: string, input: NewStepInput[]
 
 /**
  * Язык оригинала нового списка (ADR-0030) — ЧИСТОЕ правило, без базы: известный язык
- * содержимого → (если язык не задан содержимым целиком) настройка автора «язык моих списков» →
- * запасной вариант. Не код ISO 639-1 — не пишем: пусто лучше неверного, пустой язык угадывается
- * по алфавиту.
+ * содержимого → (если язык не задан содержимым целиком) запасной вариант. Не код ISO 639-1 — не
+ * пишем: пусто лучше неверного, пустой язык угадывается по алфавиту.
  */
-export function pickListLang(o: { lang?: string | null; fromContent?: boolean; setting?: string | null; fallback?: string | null }): string | null {
+export function pickListLang(o: { lang?: string | null; fromContent?: boolean; fallback?: string | null }): string | null {
   if (isContentLang(o.lang)) return o.lang
   if (o.fromContent) return null
-  if (isContentLang(o.setting)) return o.setting
   return isContentLang(o.fallback) ? o.fallback : null
 }
 
@@ -156,11 +154,7 @@ export function pickListLang(o: { lang?: string | null; fromContent?: boolean; s
  */
 async function setListLang(listId: string, input: CreateListInput): Promise<void> {
   try {
-    const setting =
-      isContentLang(input.lang) || input.langFromContent
-        ? null
-        : (await db.select({ listLang: users.listLang }).from(users).where(eq(users.id, input.ownerId)).limit(1))[0]?.listLang
-    const lang = pickListLang({ lang: input.lang, fromContent: input.langFromContent, setting, fallback: input.langFallback })
+    const lang = pickListLang({ lang: input.lang, fromContent: input.langFromContent, fallback: input.langFallback })
     if (lang) await db.update(templates).set({ lang }).where(eq(templates.id, listId))
   } catch (e) {
     captureError(e, { where: 'listStore.create.lang', listId })

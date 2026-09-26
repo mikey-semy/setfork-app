@@ -7,20 +7,17 @@ import { resetTables } from '../../helpers/reset-db'
 /**
  * ЯЗЫК ОРИГИНАЛА НОВОГО СПИСКА — НА ЕДИНОЙ ТОЧКЕ СОЗДАНИЯ (ADR-0030).
  *
- * Правило: известный язык содержимого (генерация, форк, MCP) → настройка автора «язык моих
- * списков» → язык, на котором он пишет (интерфейс). Не код ISO 639-1 — не пишем: пусто лучше
+ * Правило: известный язык содержимого (генерация, форк, MCP) → запасной вариант (язык, на
+ * котором автор пишет, или уверенная догадка по тексту). Не код ISO 639-1 — не пишем: пусто лучше
  * неверного. Через настоящее ядро: фасад ставит язык после вставки, и тест обязан видеть строку.
  */
 let plain = ''
-let withSetting = ''
 let n = 0
 
 beforeAll(async () => {
   await resetTables([templates, users])
   const [a] = await db.insert(users).values({ handle: 'lang-plain' }).returning({ id: users.id })
-  const [b] = await db.insert(users).values({ handle: 'lang-be', listLang: 'be' }).returning({ id: users.id })
   plain = a.id
-  withSetting = b.id
 })
 
 async function create(ownerId: string, extra: { lang?: string | null; langFallback?: string | null; langFromContent?: boolean }) {
@@ -43,15 +40,11 @@ async function create(ownerId: string, extra: { lang?: string | null; langFallba
 }
 
 describe('язык оригинала при создании', () => {
-  it('известный язык содержимого главнее настройки автора', async () => {
-    expect(await create(withSetting, { lang: 'ru', langFallback: 'en' })).toBe('ru')
+  it('известный язык содержимого главнее запасного', async () => {
+    expect(await create(plain, { lang: 'ru', langFallback: 'en' })).toBe('ru')
   })
 
-  it('не известен — настройка автора главнее языка, на котором он пишет', async () => {
-    expect(await create(withSetting, { langFallback: 'ru' })).toBe('be')
-  })
-
-  it('нет ни того, ни другого — язык, на котором автор пишет', async () => {
+  it('не известен — запасной: язык, на котором автор пишет', async () => {
     expect(await create(plain, { langFallback: 'ru' })).toBe('ru')
   })
 
@@ -59,8 +52,8 @@ describe('язык оригинала при создании', () => {
     expect(await create(plain, { lang: 'russian', langFallback: 'xx' })).toBeNull()
   })
 
-  it('⚠️ язык задан только содержимым (копия): не задан — пусто, настройку автора НЕ берём', async () => {
-    expect(await create(withSetting, { lang: null, langFromContent: true, langFallback: 'ru' })).toBeNull()
+  it('⚠️ язык задан только содержимым (копия): не задан — пусто, запасной НЕ берём', async () => {
+    expect(await create(plain, { lang: null, langFromContent: true, langFallback: 'ru' })).toBeNull()
   })
 
   it('ничего не известно — пусто (язык угадают по алфавиту)', async () => {
