@@ -1712,6 +1712,7 @@ tests/instrumentation.test.ts	H12
 tests/integration-setup.ts	H12
 tests/scripts/build-version.test.ts	V12d
 tests/scripts/dangling-forks.itest.ts	V12d
+tests/scripts/filled-columns.itest.ts	V12d
 tests/scripts/migrate-drops.test.ts	V12d
 tests/scripts/purge-lists.test.ts	V12d
 tests/security/server-action-actor-identity.test.ts	H1

@@ -1,4 +1,5 @@
-// Что прод-миграция УДАЛИЛА БЫ: чистая часть барьера из migrate-push.ts.
+// Что прод-миграция УДАЛИЛА БЫ и что из этого барьер отпускает: чистая часть барьера
+// из migrate-push.ts (из БД туда приходит только «какие колонки заполнены»).
 //
 // Отдельным модулем, потому что migrate-push.ts — исполняемый скрипт (зовёт main() на
 // импорте и лезет в БД), а это правило должно быть покрыто обычным юнит-тестом.
@@ -106,7 +107,8 @@ export function typeFamily(raw: string): string | null {
 export interface PlannedChanges {
   /** Таблицы, которых нет в схеме кода: push снёс бы их целиком. */
   tables: string[]
-  /** Колонки, которых нет в схеме кода: push снёс бы их вместе с данными. */
+  /** Колонки, которых нет в схеме кода: push снёс бы их вместе с данными, если они есть
+   *  (пустые отпускает `releasedDrops`). */
   columns: string[]
   /** Колонки, у которых меняется СЕМЕЙСТВО типа: имя то же, а данные — нет. */
   retypes: { column: string; from: string; to: string }[]
@@ -208,4 +210,50 @@ export function enumDrift(expected: Schema, have: Schema, expectedEnums: Enums, 
     }
   }
   return out
+}
+
+/**
+ * КАКИЕ ИСЧЕЗАЮЩИЕ КОЛОНКИ БАРЬЕР ОТПУСКАЕТ — без флага, с записью в лог.
+ *
+ * Барьер стоит против ПОТЕРИ ДАННЫХ, а колонка без единого значения их не несёт: так
+ * уходит поле, которое код перестал читать и писать (users.list_lang, ADR-0030). Флаг
+ * `ALLOW_DESTRUCTIVE_MIGRATION` для этого шире нужного — он пропускает ЛЮБОЕ удаление.
+ *
+ * Держатся всё равно две:
+ * - ЗАПОЛНЕННАЯ (`filled` — хоть одно значение не NULL): это данные;
+ * - пустая, если в ТУ ЖЕ таблицу добавляется колонка. drizzle-kit в такой паре спрашивает
+ *   «создана или переименована?», и `--force` этот вопрос не снимает, а без терминала push
+ *   ничего не применяет. Барьер называет причину сам, вместо невнятного «push не применился».
+ *
+ * ⚠️ «Пусто» верно на миг проверки. Правило годится для колонки, которую работающий прод
+ * уже НЕ пишет: иначе значение, записанное между проверкой и push, пропадёт.
+ */
+export function releasedDrops(
+  expected: Schema,
+  have: Schema,
+  gone: string[],
+  filled: string[],
+): { released: string[]; held: string[]; renameAsk: string[] } {
+  const gainsColumn = (table: string) => {
+    const exp = expected.get(table)
+    const cur = have.get(table)
+    return !!exp && !!cur && [...exp.keys()].some((c) => !cur.has(c))
+  }
+  const released: string[] = []
+  const held: string[] = []
+  // Подмножество held: пустые, которые держатся ТОЛЬКО из-за вопроса о переименовании, —
+  // чтобы барьер назвал эту причину, а не «потеряет данные».
+  const renameAsk: string[] = []
+  for (const col of gone) {
+    const table = col.slice(0, col.indexOf('.'))
+    if (filled.includes(col)) {
+      held.push(col)
+    } else if (gainsColumn(table)) {
+      held.push(col)
+      renameAsk.push(col)
+    } else {
+      released.push(col)
+    }
+  }
+  return { released, held, renameAsk }
 }

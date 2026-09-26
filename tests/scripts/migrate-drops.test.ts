@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { enumDrift, enumsFromDdl, plannedDrops, typeFamily, typeMods, type Enums, type Schema } from '../../scripts/migrate-drops'
+import { enumDrift, enumsFromDdl, plannedDrops, releasedDrops, typeFamily, typeMods, type Enums, type Schema } from '../../scripts/migrate-drops'
 
 /**
  * ПРОД-МИГРАЦИЯ НЕ УДАЛЯЕТ МОЛЧА.
@@ -197,5 +197,33 @@ describe('сверка после push: перечисления', () => {
 
   it('типа нет вовсе', () => {
     expect(enumDrift(code, m({ notifications: { type: 'notification_type' } }), codeEnums, new Map())).toEqual(['нет типа notification_type'])
+  })
+})
+
+describe('какие исчезающие колонки барьер отпускает', () => {
+  const code = m({ users: { id: 'uuid', handle: 'text' } })
+  const db = m({ users: { id: 'uuid', handle: 'text', list_lang: 'text', bio_old: 'text' } })
+  const gone = ['users.list_lang', 'users.bio_old']
+
+  it('пустая уходит, заполненная держит — каждая по себе, порядок не важен', () => {
+    expect(releasedDrops(code, db, gone, ['users.bio_old'])).toEqual({ released: ['users.list_lang'], held: ['users.bio_old'], renameAsk: [] })
+    expect(releasedDrops(code, db, [...gone].reverse(), ['users.bio_old'])).toEqual({ released: ['users.list_lang'], held: ['users.bio_old'], renameAsk: [] })
+  })
+
+  it('все пустые — держать нечего', () => {
+    expect(releasedDrops(code, db, gone, [])).toEqual({ released: gone, held: [], renameAsk: [] })
+  })
+
+  it('пустая при новой колонке в той же таблице держит: drizzle-kit спросит «переименована?»', () => {
+    const codeWithNew = m({ users: { id: 'uuid', handle: 'text', content_lang: 'text' } })
+    expect(releasedDrops(codeWithNew, db, gone, [])).toEqual({ released: [], held: gone, renameAsk: gone })
+    // Заполненная в той же таблице держится как ДАННЫЕ, а не как вопрос о переименовании.
+    expect(releasedDrops(codeWithNew, db, gone, ['users.bio_old'])).toEqual({ released: [], held: gone, renameAsk: ['users.list_lang'] })
+  })
+
+  it('новая колонка в ДРУГОЙ таблице пустую не держит', () => {
+    const codeElsewhere = m({ users: { id: 'uuid', handle: 'text' }, templates: { id: 'uuid', lang: 'text' } })
+    const dbElsewhere = m({ users: { id: 'uuid', handle: 'text', list_lang: 'text' }, templates: { id: 'uuid' } })
+    expect(releasedDrops(codeElsewhere, dbElsewhere, ['users.list_lang'], [])).toEqual({ released: ['users.list_lang'], held: [], renameAsk: [] })
   })
 })
