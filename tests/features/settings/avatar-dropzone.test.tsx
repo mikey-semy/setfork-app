@@ -14,7 +14,7 @@ import { describe, expect, it, vi } from 'vitest'
 const crop = vi.hoisted(() => ({ result: null as File | null }))
 vi.mock('@/shared/ui/AvatarCropper', () => ({
   AvatarCropper: ({ open, onDone }: { open: boolean; onDone: (f: File) => void }) =>
-    open ? <button onClick={() => onDone(crop.result!)}>готово</button> : null,
+    open ? <button type="button" onClick={() => onDone(crop.result!)}>готово</button> : null,
 }))
 URL.createObjectURL = vi.fn(() => 'blob:x')
 URL.revokeObjectURL = vi.fn()
